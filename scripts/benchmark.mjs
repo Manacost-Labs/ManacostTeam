@@ -1,5 +1,5 @@
 // Reproducible baseline, not a performance gate. Run after `pnpm build`.
-// Usage: node scripts/benchmark.mjs [replay.xml] [iterations]
+// Usage: node --expose-gc scripts/benchmark.mjs [replay.xml] [iterations]
 import { readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -16,7 +16,7 @@ function* chunks(text, size) {
     yield text.slice(offset, offset + size);
 }
 
-async function measure(label, action) {
+async function measure(label, action, unit) {
   await action();
   const samples = [];
   for (let i = 0; i < iterations; i++) {
@@ -26,32 +26,50 @@ async function measure(label, action) {
   }
   samples.sort((a, b) => a - b);
   const median = samples[Math.floor(samples.length / 2)];
-  const min = samples[0];
   console.log(
-    `${label.padEnd(18)} median ${median.toFixed(1).padStart(7)} ms   min ${min.toFixed(1).padStart(7)} ms   ${(megabytes / (median / 1000)).toFixed(1).padStart(6)} MB/s`,
+    `${label.padEnd(20)} median ${median.toFixed(1).padStart(7)} ms   min ${samples[0].toFixed(1).padStart(7)} ms   ${unit(median).padStart(16)}`,
   );
   return median;
 }
 
 const replay = parseReplay(xml);
+const events = extractEvents(replay);
 console.log(`file        ${path}`);
 console.log(`size        ${bytes} bytes (${megabytes.toFixed(2)} MB)`);
-console.log(`packets     ${replay.packetCount}   entities ${replay.entities.size}`);
+console.log(
+  `packets     ${replay.packetCount}   entities ${replay.entities.size}   events ${events.length}`,
+);
 console.log(`iterations  ${iterations}   node ${process.version}`);
-await measure('parse', () => parseReplay(xml));
-await measure('parse (stream 64k)', () => parseReplayStream(chunks(xml, 65536)));
-await measure('extractEvents', () => extractEvents(replay));
+await measure(
+  'parse',
+  () => parseReplay(xml),
+  (ms) => `${(megabytes / (ms / 1000)).toFixed(1)} MB/s`,
+);
+await measure(
+  'parse (stream 64k)',
+  () => parseReplayStream(chunks(xml, 65536)),
+  (ms) => `${(megabytes / (ms / 1000)).toFixed(1)} MB/s`,
+);
+await measure(
+  'extractEvents',
+  () => extractEvents(replay),
+  (ms) => `${Math.round(events.length / (ms / 1000)).toLocaleString('en-US')} events/s`,
+);
 if (globalThis.gc) {
   globalThis.gc();
   const before = process.memoryUsage().heapUsed;
+  let peak = before;
   const kept = parseReplay(xml);
+  peak = Math.max(peak, process.memoryUsage().heapUsed);
+  const keptEvents = extractEvents(kept);
+  peak = Math.max(peak, process.memoryUsage().heapUsed);
   globalThis.gc();
   const after = process.memoryUsage().heapUsed;
   console.log(
-    `heap        ${((after - before) / 1_048_576).toFixed(1)} MB retained by one parsed replay (${kept.packetCount} packets)`,
+    `heap        retained ${((after - before) / 1_048_576).toFixed(1)} MB by one parsed replay + ${keptEvents.length} events; peak delta ${((peak - before) / 1_048_576).toFixed(1)} MB`,
   );
 } else {
   console.log(
-    'heap        run with `node --expose-gc scripts/benchmark.mjs` to measure retained memory',
+    'heap        run with `node --expose-gc scripts/benchmark.mjs` to measure retained and peak memory',
   );
 }

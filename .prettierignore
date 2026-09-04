@@ -6,3 +6,4 @@ test/fixtures/*.json
 coverage
 .claude
 test/corpus/manifest.json
+docs/generated

@@ -16,6 +16,10 @@ export interface CorpusEntry {
   readonly notes: string;
   /** Documented deviations from the usual invariants, e.g. `TURN_NOT_MONOTONIC`, `GAME_RESET`. */
   readonly knownAnomalies: readonly string[];
+  /** Features confirmed from the packets by the import tool (never from file names). */
+  readonly features: readonly string[];
+  /** Set when the file is a plain copy of an annotated fixture of the same game. */
+  readonly duplicateOf?: string | null;
   /** Semantic event counts per type recorded on the current rules; a change here is a rule change. */
   readonly eventCounts: Readonly<Record<string, number>>;
   readonly sizeBytes: number;

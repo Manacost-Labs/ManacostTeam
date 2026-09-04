@@ -30,7 +30,6 @@ export const SemanticRuleId = {
   DAMAGE: 'DAMAGE',
   DAMAGE_SOURCE: 'DAMAGE_SOURCE',
   HEALING: 'HEALING',
-  HEALING_SOURCE: 'HEALING_SOURCE',
   TRIGGERED: 'TRIGGERED',
   FATIGUE: 'FATIGUE',
   CONCEDED: 'CONCEDED',
@@ -151,12 +150,6 @@ export const SEMANTIC_RULES: Readonly<Record<SemanticRuleId, SemanticRule>> = {
     level: 'observed',
     source:
       'META_DATA of type HEALING: amount from data, one event per Info target; blockEntity is the entity of the innermost enclosing block.',
-  },
-  HEALING_SOURCE: {
-    id: 'HEALING_SOURCE',
-    level: 'derived',
-    source:
-      'META_DATA of type HEALING followed, in the same container, by a TAG_CHANGE of LAST_AFFECTED_BY on the target.',
   },
   TRIGGERED: {
     id: 'TRIGGERED',

@@ -152,6 +152,63 @@ const mutations: Mutation[] = [
     reports: [DiagnosticCode.UNEXPECTED_TEXT],
   },
   {
+    name: 'duplicate attribute',
+    apply: (game) => gameXml(game).replace('<Game id=', '<Game id="9" id='),
+    throws: ReplayParseError,
+  },
+  {
+    name: 'namespace-prefixed element in packet position',
+    apply: (game) => gameXml(game, '<x:TagChange xmlns:x="urn:x" entity="1" tag="1" value="1"/>'),
+    reports: [DiagnosticCode.UNKNOWN_NODE],
+    extraPackets: 1,
+  },
+  {
+    name: 'large whitespace runs, comments and processing instructions between packets',
+    apply: (game) =>
+      gameXml(
+        game,
+        `${' '.repeat(5000)}\n\t<!-- a comment -->\n<?hint value="1"?>\n<TagChange entity="1" tag="1" value="1"/>`,
+      ),
+    extraPackets: 1,
+  },
+  {
+    name: 'empty elements in both syntaxes',
+    apply: (game) =>
+      gameXml(
+        game,
+        '<Block entity="1" type="5"></Block><Block entity="1" type="5"/><MetaData meta="0"></MetaData>',
+      ),
+    extraPackets: 3,
+  },
+  {
+    name: 'very large packet count',
+    apply: (game) => gameXml(game, '<TagChange entity="1" tag="1" value="1"/>'.repeat(20000)),
+    extraPackets: 20000,
+  },
+  {
+    name: 'truncated inside a multi-byte character',
+    apply: (game) => {
+      const bytes = new TextEncoder().encode(gameXml({ ...game, playerName: '玩家玩家' }));
+      return new TextDecoder().decode(bytes.subarray(0, bytes.length - 40));
+    },
+    throws: ReplayParseError,
+  },
+  {
+    name: 'DOCTYPE with a public identifier',
+    apply: (game) =>
+      gameXml(game).replace(
+        DOCTYPE,
+        '<!DOCTYPE hsreplay PUBLIC "-//HearthSim//DTD HSReplay 1.7//EN" "https://hearthsim.info/hsreplay/dtd/hsreplay-1.7.dtd">',
+      ),
+  },
+  {
+    name: 'no DOCTYPE and no XML declaration',
+    apply: (game) =>
+      gameXml(game)
+        .replace(DOCTYPE, '')
+        .replace(/<\?xml[^>]*\?>/, ''),
+  },
+  {
     name: 'UTF-8 byte order mark and CRLF line endings',
     apply: (game) => `\uFEFF${gameXml(game).replace(/\n/g, '\r\n')}`,
   },
@@ -215,7 +272,7 @@ describe('mutation properties', () => {
             );
           }
         }),
-        { numRuns: 25 },
+        { numRuns: mutation.name === 'very large packet count' ? 3 : 25 },
       );
     },
   );

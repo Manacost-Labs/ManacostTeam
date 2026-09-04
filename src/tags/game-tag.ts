@@ -75,7 +75,7 @@ export const GameTag = {
 export type GameTagName = keyof typeof GameTag;
 export type GameTagId = (typeof GameTag)[GameTagName];
 
-/** `Zone` enum values (tag 49). */
+/** `Zone` enum values (tag 49), from HearthSim's `hearthstone.enums.Zone`. */
 export const Zone = {
   INVALID: 0,
   PLAY: 1,
@@ -85,11 +85,13 @@ export const Zone = {
   REMOVEDFROMGAME: 5,
   SETASIDE: 6,
   SECRET: 7,
+  LETTUCE_ABILITY: 8,
+  COSMETIC: 9,
 } as const;
 
 export type ZoneId = (typeof Zone)[keyof typeof Zone];
 
-/** `CardType` enum values (tag 202). */
+/** `CardType` enum values (tag 202), from HearthSim's `hearthstone.enums.CardType`. */
 export const CardType = {
   INVALID: 0,
   GAME: 1,
@@ -104,13 +106,15 @@ export const CardType = {
   HERO_POWER: 10,
   BLANK: 11,
   GAME_MODE_BUTTON: 12,
-  MOVE_MINION_HOVER_TARGET: 13,
-  LETTUCE_ABILITY: 14,
-  BATTLEGROUND_SPELL: 15,
-  LOCATION: 16,
-  BATTLEGROUND_QUEST_REWARD: 17,
-  BATTLEGROUND_ANOMALY: 18,
-  BATTLEGROUND_TRINKET: 19,
+  MOVE_MINION_HOVER_TARGET: 22,
+  LETTUCE_ABILITY: 23,
+  BATTLEGROUND_HERO_BUDDY: 24,
+  LOCATION: 39,
+  BATTLEGROUND_QUEST_REWARD: 40,
+  BATTLEGROUND_SPELL: 42,
+  BATTLEGROUND_ANOMALY: 43,
+  BATTLEGROUND_TRINKET: 44,
+  PET: 45,
 } as const;
 
 export type CardTypeId = (typeof CardType)[keyof typeof CardType];

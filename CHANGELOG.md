@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.5.0
+
+Compatibility, corpus and reliability release. No architectural change.
+
+### Added
+
+- `CACHED_TAG_FOR_DORMANT_CHANGE`, `RESET_GAME` and `VO_SPELL` packets for the elements python-hsreplay writes when converting Power.log files; previously `UNKNOWN`.
+- `ENTITY_DIED.viaDeathsBlock`: whether the entity left play inside a DEATHS block (false for a weapon replaced by a new one).
+- `analyzeUnknowns`: `fileCount`, `firstBuild`, `lastBuild`, `sampleFile` / `samplePacketIndex` (first occurrence in the newest build) per unknown; `LabeledReplay.build`.
+- Corpus tooling: `pnpm corpus:import` (checksum, dedupe, metadata from the file, confirmed features, accepted-license check), `pnpm corpus:refresh` (recompute derived manifest fields), `pnpm corpus:report` (`docs/generated/corpus-report.{md,json}` with per-rule coverage), `pnpm corpus:unknowns` (diff against `docs/generated/unknowns-baseline.json`), `pnpm benchmark:corpus`.
+- Differential harness outcomes `MATCH` / `DIVERGENCE` / `REFERENCE_UNSUPPORTED` / `OUR_FAILURE`, report artifacts, pinned `scripts/differential/requirements.txt`, weekly `Differential` workflow.
+- `docs/api-stability.md` (stable / experimental / internal exports).
+
+### Changed
+
+- `CARD_PLAYED` is no longer emitted when the played entity has a known card type that is not a playable card: Battlegrounds tavern buttons (CardType 12, 177 blocks in the corpus), hero buddies and drag targets (22, 238) and Mercenaries abilities (23, 230) go through PLAY blocks too. Never-revealed entities (opponent secrets) are still reported with `cardType` undefined.
+- `CardType` values corrected from HearthSim's `hearthstone.enums`: `LOCATION` is 39 (was 16), `MOVE_MINION_HOVER_TARGET` 22, `LETTUCE_ABILITY` 23, `BATTLEGROUND_QUEST_REWARD` 40, `BATTLEGROUND_SPELL` 42, `BATTLEGROUND_ANOMALY` 43, `BATTLEGROUND_TRINKET` 44; added `BATTLEGROUND_HERO_BUDDY` 24 and `PET` 45. `MetaDataType` 17–28, `Step` 18–20, `Zone` 8–9 and `BlockType.DECK_ACTION` (13) added; `HOLD_DRAWN_CARD` is 17 (was 18). `MAIN_STEPS` exported. The old `LOCATION` value never matched a real entity, so location activations and location deaths are reported for the first time.
+- `HEALING` no longer has a `source`, and `SemanticRuleId.HEALING_SOURCE` is gone: the log writes no LAST_AFFECTED_BY for healing (0 of 338 healing packets in the corpus), so the rule could never fire.
+- Package scripts call tools as `node node_modules/<tool>/…` (see README); `packageManager` pinned to pnpm 10.34.5; `pnpm-workspace.yaml` allows the esbuild build script.
+- Package smoke test now also compiles a TypeScript consumer against the shipped declarations and bundles the core entry for the browser with esbuild, failing on any `node:` import.
+
+### Fixed
+
+- `TagValueRecord` history and `analyzeUnknowns` handle the new packet types; `ENTITY_DIED` no longer fires for unknown card types that only exist in Battlegrounds/Mercenaries logs.
+
+### Testing
+
+- Corpus grown from 37 to 104 real replays (81.7 MB, 30 client builds 10956–250339, HSReplay 1.0–1.7, Standard/Wild/Classic/Battlegrounds/Mercenaries/Puzzle Lab/Tavern Brawl/friendly), each with recorded semantic event counts.
+- New properties: corpus replays under random byte chunking and random checkpoint intervals, unknown attribute/element preservation with telemetry agreement; nine more XML mutations (duplicate attributes, namespace prefixes, whitespace/comments/PIs, empty elements, 20 000 packets, truncated UTF-8, DOCTYPE variants, no prolog); Unicode player names in eight scripts; GAME_RESET timeline and tag-history tests on every reset replay.
+- Coverage thresholds (95% statements/lines, 93% functions, 85% branches overall; parser/state/semantic per-directory gates).
+
+### Compatibility
+
+- Differential run: 94 MATCH, 0 DIVERGENCE, 0 OUR_FAILURE, 10 REFERENCE_UNSUPPORTED (allowlisted: HSReplay 1.0 `<Action>`, time-only timestamps).
+- Unknowns baseline: 715 unnamed GameTags and 18 unnamed enum values recorded for patch tracking; no unknown elements remain in the corpus.
+
 ## 0.4.0
 
 Hardening release: same architecture, more evidence.

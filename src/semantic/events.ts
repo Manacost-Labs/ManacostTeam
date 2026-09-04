@@ -147,6 +147,8 @@ export interface ZoneChangedEvent extends BaseSemanticEvent, EntityFacts {
 
 export interface EntityDiedEvent extends BaseSemanticEvent, EntityFacts {
   readonly type: typeof SemanticEventType.ENTITY_DIED;
+  /** True when the zone change happened inside a DEATHS block (regular deaths); false for e.g. a weapon replaced by a new one. */
+  readonly viaDeathsBlock: boolean;
 }
 
 export interface DamageEvent extends BaseSemanticEvent {
@@ -163,7 +165,7 @@ export interface HealingEvent extends BaseSemanticEvent {
   readonly type: typeof SemanticEventType.HEALING;
   readonly target: EntityRef;
   readonly amount: number;
-  readonly source?: number;
+  /** Entity of the innermost enclosing block. The log records no LAST_AFFECTED_BY for healing, so there is no `source`. */
   readonly blockEntity?: number;
 }
 

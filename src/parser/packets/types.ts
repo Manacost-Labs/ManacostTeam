@@ -18,6 +18,9 @@ export const ReplayPacketType = {
   OPTIONS: 'OPTIONS',
   SEND_OPTION: 'SEND_OPTION',
   SHUFFLE_DECK: 'SHUFFLE_DECK',
+  CACHED_TAG_FOR_DORMANT_CHANGE: 'CACHED_TAG_FOR_DORMANT_CHANGE',
+  RESET_GAME: 'RESET_GAME',
+  VO_SPELL: 'VO_SPELL',
   UNKNOWN: 'UNKNOWN',
 } as const;
 
@@ -236,6 +239,28 @@ export interface ShuffleDeckPacket extends BaseReplayPacket {
   readonly playerId: number;
 }
 
+/** A tag value cached while an entity is Dormant (CACHED_TAG_FOR_DORMANT_CHANGE); it does not change the entity's live tags. */
+export interface CachedTagForDormantChangePacket extends BaseReplayPacket {
+  readonly type: typeof ReplayPacketType.CACHED_TAG_FOR_DORMANT_CHANGE;
+  readonly entity: EntityRef;
+  readonly tag: number;
+  readonly value: number;
+}
+
+/** RESET_GAME marker written by python-hsreplay conversions; carries only a timestamp. */
+export interface ResetGamePacket extends BaseReplayPacket {
+  readonly type: typeof ReplayPacketType.RESET_GAME;
+}
+
+/** Voice-over spell cue (VO_SPELL); purely cosmetic. */
+export interface VoSpellPacket extends BaseReplayPacket {
+  readonly type: typeof ReplayPacketType.VO_SPELL;
+  readonly brassRingGuid?: string;
+  readonly voSpellPrefabGuid?: string;
+  readonly blocking?: boolean;
+  readonly additionalDelayMs?: number;
+}
+
 /** Any element in packet position that the parser does not understand, kept losslessly. */
 export interface UnknownPacket extends BaseReplayPacket {
   readonly type: typeof ReplayPacketType.UNKNOWN;
@@ -263,6 +288,9 @@ export type ReplayPacket =
   | OptionsPacket
   | SendOptionPacket
   | ShuffleDeckPacket
+  | CachedTagForDormantChangePacket
+  | ResetGamePacket
+  | VoSpellPacket
   | UnknownPacket;
 
 /** Packets that contain further packets and therefore define the hierarchy. */

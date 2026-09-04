@@ -9,7 +9,7 @@ import {
 } from '../parser/packets/types.js';
 import { type Entity, getCardType, getController, getZone } from '../state/entity.js';
 import { applyPacket, GameState } from '../state/engine.js';
-import { BlockType, GameEntityState, MetaDataType, PlayState, Step } from '../tags/enums.js';
+import { BlockType, GameEntityState, MAIN_STEPS, MetaDataType, PlayState } from '../tags/enums.js';
 import { CardType, GameTag, Zone } from '../tags/game-tag.js';
 import {
   type EntityFacts,
@@ -56,6 +56,15 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
 type Draft = DistributiveOmit<SemanticEvent, 'index' | 'evidence'>;
 type Pending = DistributiveOmit<SemanticEvent, 'index'>;
 
+/** Card types a player can play from hand; everything else (tavern buttons, abilities, unknown) is not a card play. */
+const PLAYABLE_CARD_TYPES: ReadonlySet<number> = new Set([
+  CardType.MINION,
+  CardType.SPELL,
+  CardType.WEAPON,
+  CardType.HERO,
+  CardType.LOCATION,
+]);
+
 /** Card types for which leaving play for the graveyard means the entity died. */
 const DYING_CARD_TYPES: ReadonlySet<number> = new Set([
   CardType.MINION,
@@ -65,13 +74,7 @@ const DYING_CARD_TYPES: ReadonlySet<number> = new Set([
 ]);
 
 function isMainStep(step: number | undefined): boolean {
-  return (
-    step !== undefined &&
-    step >= Step.MAIN_BEGIN &&
-    step <= Step.MAIN_START_TRIGGERS &&
-    step !== Step.FINAL_WRAPUP &&
-    step !== Step.FINAL_GAMEOVER
-  );
+  return step !== undefined && MAIN_STEPS.has(step);
 }
 
 interface BlockContext {
@@ -239,6 +242,9 @@ class EventExtractor {
       case ReplayPacketType.FULL_ENTITY:
       case ReplayPacketType.SEND_CHOICES:
       case ReplayPacketType.SHUFFLE_DECK:
+      case ReplayPacketType.CACHED_TAG_FOR_DORMANT_CHANGE:
+      case ReplayPacketType.RESET_GAME:
+      case ReplayPacketType.VO_SPELL:
       case ReplayPacketType.UNKNOWN:
         applyPacket(this.state, packet, this.diagnostics);
         return;
@@ -299,21 +305,26 @@ class EventExtractor {
     siblings: readonly ReplayPacket[],
     position: number,
   ): void {
-    const kind =
-      packet.meta === MetaDataType.DAMAGE
-        ? { type: SemanticEventType.DAMAGE, plain: 'DAMAGE', attributed: 'DAMAGE_SOURCE' }
-        : packet.meta === MetaDataType.HEALING
-          ? { type: SemanticEventType.HEALING, plain: 'HEALING', attributed: 'HEALING_SOURCE' }
-          : undefined;
-    if (!kind) return;
+    if (packet.meta !== MetaDataType.DAMAGE && packet.meta !== MetaDataType.HEALING) return;
     const blockEntity = this.resolve(this.innermostBlock()?.packet.entity);
     for (const info of packet.info) {
+      if (packet.meta === MetaDataType.HEALING) {
+        // The log never writes LAST_AFFECTED_BY for healing (0 of 338 healing packets in the corpus).
+        this.emit('HEALING', [packet.index], {
+          type: SemanticEventType.HEALING,
+          ...this.base(packet.index),
+          target: info.entity,
+          amount: packet.data,
+          ...(blockEntity === undefined ? {} : { blockEntity }),
+        });
+        continue;
+      }
       const affected = findLastAffectedBy(siblings, position, info.entity);
       this.emit(
-        affected ? (kind.attributed as SemanticRuleId) : (kind.plain as SemanticRuleId),
+        affected ? 'DAMAGE_SOURCE' : 'DAMAGE',
         affected ? [packet.index, affected.packetIndex] : [packet.index],
         {
-          type: kind.type,
+          type: SemanticEventType.DAMAGE,
           ...this.base(packet.index),
           target: info.entity,
           amount: packet.data,
@@ -385,18 +396,27 @@ class EventExtractor {
       return;
     }
     const facts = this.facts(entityId);
-    const isHeroPower = facts.cardType === CardType.HERO_POWER;
-    this.slots[slot] = this.withEvidence(
-      isHeroPower ? 'HERO_POWER_USED' : 'CARD_PLAYED',
-      [block.index],
-      {
-        type: isHeroPower ? SemanticEventType.HERO_POWER_USED : SemanticEventType.CARD_PLAYED,
+    if (facts.cardType === CardType.HERO_POWER) {
+      this.slots[slot] = this.withEvidence('HERO_POWER_USED', [block.index], {
+        type: SemanticEventType.HERO_POWER_USED,
         ...base,
         ...facts,
         initiator,
         ...(target === undefined ? {} : { target }),
-      },
-    );
+      });
+      return;
+    }
+    // Tavern buttons and Mercenaries abilities go through PLAY blocks too; the log says PLAY,
+    // but nothing says a card was played. An entity whose type is still unknown (an opponent's
+    // secret, played from hand and never revealed) is a card play and keeps cardType undefined.
+    if (facts.cardType !== undefined && !PLAYABLE_CARD_TYPES.has(facts.cardType)) return;
+    this.slots[slot] = this.withEvidence('CARD_PLAYED', [block.index], {
+      type: SemanticEventType.CARD_PLAYED,
+      ...base,
+      ...facts,
+      initiator,
+      ...(target === undefined ? {} : { target }),
+    });
   }
 
   private afterTagChange(
@@ -478,6 +498,7 @@ class EventExtractor {
         type: SemanticEventType.ENTITY_DIED,
         ...this.base(packetIndex),
         ...facts,
+        viaDeathsBlock: this.blocks.some((block) => block.packet.blockType === BlockType.DEATHS),
       });
     }
   }

@@ -64,3 +64,43 @@ describe('real-world format deviations', () => {
     ]);
   });
 });
+
+describe('elements written by python-hsreplay (Power.log conversions)', () => {
+  it('parses CachedTagForDormantChange, ResetGame and VOSpell as typed packets', () => {
+    const replay = parseReplay(
+      wrapGame(`<CachedTagForDormantChange entity="22" tag="47" value="2"/>
+        <ResetGame ts="2026-09-04T10:00:00"/>
+        <VOSpell brass_ring_guid="BR_1" vo_spell_prefab_guid="VO_1:abcd" blocking="True" additional_delay_ms="250"/>`),
+    );
+    expect(replay.packets.map((packet) => packet.type)).toEqual([
+      'CACHED_TAG_FOR_DORMANT_CHANGE',
+      'RESET_GAME',
+      'VO_SPELL',
+    ]);
+    expect(replay.packets[0]).toEqual({
+      index: 0,
+      type: 'CACHED_TAG_FOR_DORMANT_CHANGE',
+      entity: { kind: 'id', id: 22 },
+      tag: 47,
+      value: 2,
+    });
+    expect(replay.packets[1]).toEqual({ index: 1, type: 'RESET_GAME', ts: '2026-09-04T10:00:00' });
+    expect(replay.packets[2]).toEqual({
+      index: 2,
+      type: 'VO_SPELL',
+      brassRingGuid: 'BR_1',
+      voSpellPrefabGuid: 'VO_1:abcd',
+      blocking: true,
+      additionalDelayMs: 250,
+    });
+    expect(replay.diagnostics.filter((d) => d.code === DiagnosticCode.UNKNOWN_NODE)).toEqual([]);
+  });
+
+  it('does not let a cached dormant tag touch the entity state', () => {
+    const replay = parseReplay(
+      wrapGame(`<FullEntity id="22"><Tag tag="47" value="1"/></FullEntity>
+        <CachedTagForDormantChange entity="22" tag="47" value="2"/>`),
+    );
+    expect(replay.entities.get(22)?.tags.get(47)).toBe(1);
+  });
+});

@@ -45,7 +45,7 @@ jobs:
           if-no-files-found: error
 
   package:
-    name: Package smoke test
+    name: Package, TypeScript and browser smoke test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

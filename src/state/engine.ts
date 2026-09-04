@@ -104,6 +104,9 @@ export function applyPacket(
     case ReplayPacketType.OPTIONS:
     case ReplayPacketType.SEND_OPTION:
     case ReplayPacketType.SHUFFLE_DECK:
+    case ReplayPacketType.CACHED_TAG_FOR_DORMANT_CHANGE:
+    case ReplayPacketType.RESET_GAME:
+    case ReplayPacketType.VO_SPELL:
     case ReplayPacketType.UNKNOWN:
       // Informational packets: they describe choices and options, not entity state.
       break;

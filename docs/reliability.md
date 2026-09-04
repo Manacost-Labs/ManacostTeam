@@ -23,7 +23,9 @@ Every semantic event carries `evidence: { level, rule, packetIndices }`.
   `src/semantic/rules.ts`, is unit-tested on synthetic layouts and is
   checked on every replay of the corpus by invariants and recorded event
   counts. "Checked" is not "proven": there is no ground truth for what
-  really happened in a game, only the log. `CARD_DRAWN`
+  really happened in a game, only the log. The
+  [corpus report](generated/corpus-report.md) shows how many files and
+  events exercise each rule; a rule with few events is weakly validated. `CARD_DRAWN`
   is `ZONE` DECK → HAND during a MAIN step; `ENTITY_DIED` is `ZONE` PLAY →
   GRAVEYARD of a minion, hero, weapon or location; `DAMAGE_SOURCE` reads the
   `LAST_AFFECTED_BY` tag the log writes right after the damage.
@@ -74,11 +76,11 @@ raises `ReplayParseError` with line and column.
 - `timeline.stateAt(i)` equals applying the leaf packets `0..i` in order for
   any checkpoint interval.
 - `collectTagHistory` ends, for every tag, on the value the final state holds.
-- In a manual run on the corpus (2026-09-04), entities, card ids, tags,
-  player ids, packet order and game results agreed with python-hsreplay /
-  python-hslog on every file both implementations can read (see
-  `docs/differential-testing.md`). The differential harness is not part of
-  CI.
+- Differential run on the corpus (2026-09-04, and weekly in CI): entities,
+  card ids, tags, player ids, packet order and game results agree with
+  python-hsreplay / python-hslog on all 94 files both implementations can
+  read; the 10 files the reference rejects are allowlisted in the manifest
+  (see `docs/differential-testing.md`).
 
 Not a simulator: it does not know what a tag means, never infers a tag that
 the log did not write, and reports re-created entities (`ENTITY_RECREATED`)
@@ -88,8 +90,25 @@ after a `GAME_RESET` block rather than deciding what happened.
 
 - **Completeness.** Mechanics the rules do not cover produce no event.
   Opening-hand dealing and mulligan replacements are deliberately not
-  `CARD_DRAWN`; spells and enchantments leaving play are not `ENTITY_DIED`;
-  an entity whose card type was never revealed never dies.
+  `CARD_DRAWN`; cards that go from deck to graveyard (burned or milled) are
+  reported only as `ZONE_CHANGED` because the log does not say why; spells
+  and enchantments leaving play are not `ENTITY_DIED`; an entity whose card
+  type was never revealed never dies.
+- **Card plays.** `CARD_PLAYED` requires the entity to be a minion, spell,
+  weapon, hero or location once the PLAY block has been applied, or to have no
+  card type at all (an opponent's secret played from hand and never revealed).
+  Battlegrounds tavern buttons, hero buddies and Mercenaries abilities also go
+  through PLAY blocks and are not reported (645 such blocks in the corpus).
+  Location activations are `CARD_PLAYED` with `cardType` LOCATION (16 in the
+  corpus).
+- **"Died".** `ENTITY_DIED` means the entity was destroyed: minions and heroes
+  through DEATHS blocks, weapons also when replaced by a new weapon
+  (`viaDeathsBlock: false`, 12 of 76 weapon cases in the corpus). A future
+  major version may rename it `ENTITY_DESTROYED`; the field
+  `viaDeathsBlock` already lets consumers separate the two today.
+- **Healing.** The log writes no `LAST_AFFECTED_BY` for healing (0 of 338
+  healing packets in the corpus), so `HEALING` carries `blockEntity` only and
+  the former `HEALING_SOURCE` rule was removed rather than left unvalidated.
 - **Attribution.** `DAMAGE.source` exists only when the log wrote
   `LAST_AFFECTED_BY` for the target before its next hit; absorbed hits
   (Divine Shield, Immune) never carry it, and a layout the rule does not
@@ -106,13 +125,18 @@ after a `GAME_RESET` block rather than deciding what happened.
   backwards after `GAME_RESET` and in logs that are themselves inconsistent
   (one such file is in the corpus, flagged `TURN_NOT_MONOTONIC`).
 - **Game modes.** Rules were validated on constructed games (Standard, Wild,
-  Tavern Brawl, friendly, vs AI), three Mercenaries logs and two tiny
-  Battlegrounds logs. Battlegrounds combat phases, Duels and Arena are not
-  covered by the corpus and the rules have not been checked against them.
-- **Client builds.** The corpus spans builds 10956 to 250339. Newer logs may
-  introduce elements, attributes, tags and enum values the library does not
-  name; they are preserved and surfaced by `analyzeUnknowns`, not
-  interpreted.
+  Classic, Tavern Brawl, friendly, vs AI), nine Mercenaries logs, two Puzzle
+  Lab logs and fourteen Battlegrounds games. In Battlegrounds the rules stay
+  conservative: no draws (there are none), no card plays for tavern buttons,
+  attacks and deaths from the real combat phases. Arena, Twist and Duels are
+  not in the corpus (see `docs/replay-corpus.md`).
+- **Client builds.** The corpus spans 30 builds from 10956 to 250339, but only
+  two files are newer than 2024. Newer logs may introduce elements,
+  attributes, tags and enum values the library does not name; they are
+  preserved and surfaced by `analyzeUnknowns` and `pnpm corpus:unknowns`,
+  not interpreted. The current baseline lists 715 unnamed tags and 18
+  unnamed enum values (`BlockType` 13, `CardType` 22/23/39/40/42/44, `Step`
+  18–20, `MetaDataType` 19–25, `Zone` 8).
 
 ## How to extend a rule
 

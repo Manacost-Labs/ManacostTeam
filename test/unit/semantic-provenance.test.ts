@@ -188,3 +188,86 @@ describe('DAMAGE attribution with several targets', () => {
     ]);
   });
 });
+
+describe('CARD_PLAYED on non-card entities', () => {
+  it('is not emitted for game-mode buttons, but is for never-revealed and location entities', () => {
+    const list = events(`${HERO}${MAIN_ACTION}
+      <FullEntity id="60" cardID="TB_BaconShop_Button"><Tag tag="49" value="1"/><Tag tag="50" value="1"/><Tag tag="202" value="12"/></FullEntity>
+      <FullEntity id="61"><Tag tag="49" value="3"/><Tag tag="50" value="1"/></FullEntity>
+      <FullEntity id="62" cardID="LOC_1"><Tag tag="49" value="3"/><Tag tag="50" value="1"/><Tag tag="202" value="39"/></FullEntity>
+      <Block entity="60" type="7"><TagChange entity="60" tag="43" value="1"/></Block>
+      <Block entity="61" type="7"><TagChange entity="61" tag="49" value="1"/></Block>
+      <Block entity="62" type="7"><TagChange entity="62" tag="49" value="1"/></Block>`);
+    const played = list.filter((event) => event.type === SemanticEventType.CARD_PLAYED);
+    expect(played.map((event) => [event.entity, event.cardType])).toEqual([
+      [61, undefined],
+      [62, CardType.LOCATION],
+    ]);
+  });
+});
+
+describe('HEALING', () => {
+  it('never claims a source, because the log does not record one for healing', () => {
+    const list = events(`${HERO}${MAIN_ACTION}
+      <Block entity="72" type="3">
+        <MetaData meta="2" data="4"><Info entity="74"/></MetaData>
+        <TagChange entity="74" tag="18" value="72"/>
+        <TagChange entity="74" tag="44" value="0"/>
+      </Block>`);
+    const healing = list.find((event) => event.type === SemanticEventType.HEALING);
+    expect(healing).toMatchObject({
+      amount: 4,
+      blockEntity: 72,
+      evidence: { level: 'observed', rule: SemanticRuleId.HEALING },
+    });
+    expect(healing && 'source' in healing).toBe(false);
+    expect('HEALING_SOURCE' in SemanticRuleId).toBe(false);
+  });
+});
+
+describe('ENTITY_DIED', () => {
+  it('records whether the entity left play inside a DEATHS block', () => {
+    const list = events(`${HERO}${MAIN_ACTION}
+      <FullEntity id="22" cardID="MINION"><Tag tag="49" value="1"/><Tag tag="50" value="1"/><Tag tag="202" value="4"/></FullEntity>
+      <FullEntity id="23" cardID="WEAPON"><Tag tag="49" value="1"/><Tag tag="50" value="1"/><Tag tag="202" value="7"/></FullEntity>
+      <Block entity="1" type="6"><TagChange entity="22" tag="49" value="4"/></Block>
+      <Block entity="72" type="7"><TagChange entity="23" tag="49" value="4"/></Block>`);
+    const died = list.filter((event) => event.type === SemanticEventType.ENTITY_DIED);
+    expect(died.map((event) => [event.entity, event.viaDeathsBlock])).toEqual([
+      [22, true],
+      [23, false],
+    ]);
+  });
+});
+
+describe('CARD_PLAYED for hidden and location entities', () => {
+  it('reports an opponent secret played from hand even though the card is never revealed', () => {
+    const list = events(`${HERO}${MAIN_ACTION}
+      <FullEntity id="80"><Tag tag="49" value="3"/><Tag tag="50" value="2"/></FullEntity>
+      <Block entity="80" type="7"><TagChange entity="80" tag="49" value="7"/></Block>`);
+    const played = list.filter((event) => event.type === SemanticEventType.CARD_PLAYED);
+    expect(played).toHaveLength(1);
+    expect(played[0]).toMatchObject({ entity: 80, playerEntityId: 3, initiator: 'player' });
+    expect(played[0]?.cardType).toBeUndefined();
+  });
+
+  it('reports a location activation as CARD_PLAYED of a LOCATION (card type 39)', () => {
+    const list = events(`${HERO}${MAIN_ACTION}
+      <FullEntity id="81" cardID="REV_290"><Tag tag="49" value="1"/><Tag tag="50" value="1"/><Tag tag="202" value="39"/></FullEntity>
+      <Block entity="81" type="7"><TagChange entity="81" tag="43" value="1"/></Block>`);
+    const played = list.filter((event) => event.type === SemanticEventType.CARD_PLAYED);
+    expect(played.map((event) => [event.entity, event.cardType])).toEqual([
+      [81, CardType.LOCATION],
+    ]);
+  });
+
+  it('counts a draw during the newer MAIN_PRE_ACTION / MAIN_POST_ACTION steps', () => {
+    const list = events(`${HERO}
+      <FullEntity id="82"><Tag tag="49" value="2"/><Tag tag="50" value="1"/></FullEntity>
+      <TagChange entity="1" tag="19" value="${String(Step.MAIN_POST_ACTION)}"/>
+      <TagChange entity="82" tag="49" value="3"/>`);
+    expect(
+      list.filter((event) => event.type === SemanticEventType.CARD_DRAWN).map((e) => e.entity),
+    ).toEqual([82]);
+  });
+});

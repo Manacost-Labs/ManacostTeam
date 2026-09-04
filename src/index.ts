@@ -101,6 +101,7 @@ export {
   OptionType,
   PlayState,
   Step,
+  MAIN_STEPS,
   TAG_VALUE_ENUMS,
   describeTagValue,
   enumName,

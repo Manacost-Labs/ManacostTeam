@@ -15,11 +15,29 @@ replay.xml ──► python scripts/differential/dump-reference.py ─► ref.js
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install hsreplay hearthstone "setuptools<80"   # pkg_resources is still imported by hsreplay
+.venv/bin/pip install -r scripts/differential/requirements.txt   # pinned reference versions
 pnpm build
-PYTHON=.venv/bin/python pnpm differential                     # whole corpus
-PYTHON=.venv/bin/python pnpm differential path/to/replay.xml  # single file
+PYTHON=.venv/bin/python pnpm differential                          # whole corpus
+PYTHON=.venv/bin/python pnpm differential --report-dir out a.xml   # single file + report artifacts
 ```
+
+Reference versions are pinned in `scripts/differential/requirements.txt`
+(`hsreplay==1.16.2`, `hslog==1.20.0`, `hearthstone==9.20.12`); bump them
+deliberately and re-run.
+
+## Outcomes
+
+| Outcome                 | Meaning                                                                 | CI                                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `MATCH`                 | both sides agree on players, entities, tags, packet sequence and result | pass                                                                                                |
+| `DIVERGENCE`            | both parse, results differ                                              | **fail**                                                                                            |
+| `OUR_FAILURE`           | this library cannot parse the file                                      | **fail**                                                                                            |
+| `REFERENCE_UNSUPPORTED` | the reference raises before producing a document                        | **fail**, unless the manifest entry lists `REFERENCE_UNSUPPORTED` in `knownAnomalies` (allowlisted) |
+
+`compare.mjs --report-dir DIR` writes `differential-report.json` and
+`differential-report.md`. The workflow `.github/workflows/differential.yml`
+runs weekly and on demand and uploads both as the `differential-report`
+artifact.
 
 ## What is compared
 
@@ -40,24 +58,22 @@ Normalisation notes:
 - Timestamps, `effectCardId`, annotation attributes and diagnostics are not
   compared: the reference does not expose them in comparable form.
 
-## Results of a manual run on the corpus (2026-09-04, hsreplay 1.16.2, hslog 1.20.0, hearthstone 9.20.12)
+## Latest run (2026-09-04, hsreplay 1.16.2, hslog 1.20.0, hearthstone 9.20.12)
 
-The harness needs a Python environment and is run by hand; CI does not
-repeat it. Re-run it after any change to the parser or the state engine.
+| Outcome                             | Files |
+| ----------------------------------- | ----: |
+| MATCH                               |    94 |
+| DIVERGENCE                          |     0 |
+| OUR_FAILURE                         |     0 |
+| REFERENCE_UNSUPPORTED (allowlisted) |    10 |
 
-| Outcome                   | Files                                                                                                                                                             |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Identical                 | 35 of 37                                                                                                                                                          |
-| Reference cannot parse    | `legacy/4_4_17_power.annotated.replay.xml` (time-only `ts` values reject in aniso8601), `edge/hslog.xml` (HSReplay 1.0 `<Action>` unsupported by python-hsreplay) |
-| This library cannot parse | none                                                                                                                                                              |
+The ten allowlisted files: `edge/hslog.xml` (HSReplay 1.0 `<Action>`, unknown
+to python-hsreplay), `legacy/4_4_17_power.annotated.replay.xml` and the eight
+`converted/` files (time-only `ts` values, which aniso8601 rejects even
+though python-hsreplay wrote them itself). This library reads all ten.
 
 No divergence in entities, card ids, tags, player ids, packet order or game
-results was found on any file both implementations can read. The two files
-the reference rejects are handled here on purpose: the format allows them and
-the data is recoverable.
-
-The comparison is not proof of correctness. Both implementations read the
-same XML; agreement means the raw and state layers do not lose or reorder
-information relative to the reference, nothing more. The semantic layer has
-no reference implementation and is validated by invariants and rule tests
-instead.
+results was found on any file both implementations can read. Agreement
+means the raw and state layers do not lose or reorder information relative
+to the reference; it is not proof of correctness, and the semantic layer has
+no reference implementation at all.

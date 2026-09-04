@@ -80,6 +80,16 @@ synthetic unit-test fixture, not by `test.xml`.
 | Empty self-closing `<Block …/>`                                         | allowed             | `BLOCK` packet with zero children                                 |
 | `Choices`, `ChosenEntities`, `SendChoices` inside `Block`               | allowed             | packets inside the block hierarchy                                |
 
+## Elements seen only in other real replays (v0.5 corpus)
+
+| Element                     | Attributes                                                                   | Origin                                    | Handling                                                    |
+| --------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------- |
+| `Action`                    | as `Block`                                                                   | HSReplay 1.0 (`edge/hslog.xml`)           | `BLOCK` packet + `LEGACY_ELEMENT` info                      |
+| `CachedTagForDormantChange` | `entity`, `tag`, `value`                                                     | python-hsreplay ≥ 1.13 (Dormant mechanic) | `CACHED_TAG_FOR_DORMANT_CHANGE`; does not touch entity tags |
+| `ResetGame`                 | `ts`                                                                         | python-hsreplay (RESET_GAME power)        | `RESET_GAME`                                                |
+| `VOSpell`                   | `brass_ring_guid`, `vo_spell_prefab_guid`, `blocking`, `additional_delay_ms` | python-hsreplay (VO_SPELL power)          | `VO_SPELL`, cosmetic                                        |
+| `Target` without `entity`   | `index`, `error`                                                             | HSReplay 1.5 options                      | `OptionTarget.entity` optional                              |
+
 ## Packet containers vs. payload elements
 
 Three elements contain a sequence of packets and define the hierarchy:

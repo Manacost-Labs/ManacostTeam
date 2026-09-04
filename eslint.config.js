@@ -47,7 +47,12 @@ export default tseslint.config(
         URL: 'readonly',
         TextEncoder: 'readonly',
         TextDecoder: 'readonly',
+        Buffer: 'readonly',
       },
+    },
+    rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
     },
   },
   {

@@ -6,8 +6,8 @@ TypeScript / Node.js and usable in the browser.
 
 The goal of the project is a reliable foundation for everything that comes
 after: semantic events, statistics, replay viewers and data preparation for
-AI/ML. Version 0.4 covers the first four layers of the pipeline and hardens them
-against a corpus of real replays:
+AI/ML. Version 0.5 covers the first four layers of the pipeline and validates them
+against a corpus of 104 real replays:
 
 ```
 XML  →  raw packets  →  entity store / game state  →  semantic events
@@ -211,22 +211,31 @@ event types.
 
 ## Corpus, telemetry and validation
 
-The tests run against 37 real replays (HearthSim's CC0 `hsreplay-test-data`
-fixtures plus `test.xml`) spanning HSReplay 1.0–1.7 and client builds
-10956–250339, checking invariants rather than counts; property-based tests
-(fast-check) cover parser roundtrips, random streaming chunkings, state
-snapshots and timeline reconstruction; mutation tests feed the parser
-unknown nodes, missing attributes, huge integers, deep nesting, entity
-expansion attempts and split UTF-8; and a differential harness compares the
-raw and state layers with python-hsreplay. After a Hearthstone patch:
+Validated against 104 real replay fixtures (CC0 and MIT sources, see
+[docs/replay-corpus.md](docs/replay-corpus.md)) spanning HSReplay 1.0–1.7,
+30 client builds from 10956 to 250339 and Standard, Wild, Classic,
+Battlegrounds, Mercenaries, Tavern Brawl, Puzzle Lab and friendly games.
+That is the claim; "works with every Hearthstone replay" is not, and Arena,
+Twist and Duels are not covered yet. Every fixture is checked for parser and
+state invariants and for its recorded semantic event counts; property-based
+tests (fast-check) cover parser roundtrips, random streaming chunkings of
+synthetic and real files, snapshot isolation and timeline reconstruction;
+mutation tests feed the parser malformed and hostile XML; a weekly
+differential run compares the raw and state layers with python-hsreplay
+(94 matches, 0 divergences on the current corpus). After a Hearthstone patch:
 
 ```ts
 import { analyzeUnknowns } from '@manacost/hearthstone-replay';
 
 const report = analyzeUnknowns(replays);
 console.log(report.tags, report.enumValues, report.nodes, report.attributes);
-// { '2175': { count: 37, files: ['…'], firstFile: '…', firstPacketIndex: 812 }, … }
+// { '2175': { count: 37, fileCount: 3, firstBuild: 195635, lastBuild: 250339, firstFile: '…', samplePacketIndex: 812, … }, … }
 ```
+
+`pnpm corpus:unknowns` diffs the corpus against a recorded baseline and
+`pnpm corpus:report` regenerates [docs/generated/corpus-report.md](docs/generated/corpus-report.md)
+with per-rule coverage. API guarantees per export are listed in
+[docs/api-stability.md](docs/api-stability.md).
 
 ## Streaming
 
@@ -306,8 +315,9 @@ integers.
 
 ## Roadmap
 
-- **v0.5** – statistics over events (tempo, resources, damage per turn), a
-  viewer-oriented board model per turn, secrets and weapon events.
+- **v0.6** – Arena / Twist / recent-build fixtures as they become available,
+  location and secret events once the corpus proves them, statistics over
+  events (tempo, resources, damage per turn), a viewer-oriented board model.
 - **later** – Power.log parser sharing the packet layer, card database hooks,
   ML feature extraction.
 
@@ -318,11 +328,11 @@ pnpm install
 pnpm typecheck
 pnpm lint
 pnpm test            # unit, integration, golden, property, corpus
-pnpm test:coverage
+pnpm test:coverage   # with thresholds
 pnpm build
-pnpm pack:smoke      # installs the packed tarball into a scratch project and imports both entry points
-pnpm benchmark       # reproducible baseline, not a gate
-pnpm corpus:verify
+pnpm pack:smoke      # tarball contents, Node import, TypeScript consumer, browser bundle of the core entry
+pnpm benchmark       # one replay; pnpm benchmark:corpus for the whole corpus (baselines, not gates)
+pnpm corpus:verify && pnpm corpus:report && pnpm corpus:unknowns
 PYTHON=.venv/bin/python pnpm differential   # see docs/differential-testing.md
 ```
 

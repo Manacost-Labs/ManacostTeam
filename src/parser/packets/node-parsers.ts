@@ -4,6 +4,7 @@ import { AttributeReader, MalformedElementError } from './attributes.js';
 import {
   type BaseReplayPacket,
   type BlockPacket,
+  type CachedTagForDormantChangePacket,
   type ChangeEntityPacket,
   type ChoiceEntry,
   type ChoicesPacket,
@@ -19,6 +20,7 @@ import {
   type OptionsPacket,
   type OptionTarget,
   type PlayerPacket,
+  type ResetGamePacket,
   type ReplayPacket,
   ReplayPacketType,
   type SendChoicesPacket,
@@ -31,6 +33,7 @@ import {
   type TagChangePacket,
   type TagPair,
   type UnknownPacket,
+  type VoSpellPacket,
 } from './types.js';
 
 /** What a node parser needs from the packetizer that drives it. */
@@ -536,6 +539,46 @@ export function parseShuffleDeck(element: XmlElement, ctx: NodeParseContext): Sh
   );
 }
 
+export function parseCachedTagForDormantChange(
+  element: XmlElement,
+  ctx: NodeParseContext,
+): CachedTagForDormantChangePacket {
+  const reader = new AttributeReader(element, ctx.diagnostics, ctx.index);
+  const entity = reader.entity('entity');
+  const tag = reader.int('tag');
+  const value = reader.int('value');
+  const { unknown } = partitionChildren(element, ctx, new Set());
+  return build<CachedTagForDormantChangePacket>(
+    ReplayPacketType.CACHED_TAG_FOR_DORMANT_CHANGE,
+    reader,
+    ctx.index,
+    { entity, tag, value },
+    unknown,
+  );
+}
+
+export function parseResetGame(element: XmlElement, ctx: NodeParseContext): ResetGamePacket {
+  const reader = new AttributeReader(element, ctx.diagnostics, ctx.index);
+  const { unknown } = partitionChildren(element, ctx, new Set());
+  return build<ResetGamePacket>(ReplayPacketType.RESET_GAME, reader, ctx.index, {}, unknown);
+}
+
+export function parseVoSpell(element: XmlElement, ctx: NodeParseContext): VoSpellPacket {
+  const reader = new AttributeReader(element, ctx.diagnostics, ctx.index);
+  const brassRingGuid = reader.optionalString('brass_ring_guid');
+  const voSpellPrefabGuid = reader.optionalString('vo_spell_prefab_guid');
+  const blocking = reader.optionalBool('blocking');
+  const additionalDelayMs = reader.optionalInt('additional_delay_ms');
+  const { unknown } = partitionChildren(element, ctx, new Set());
+  return build<VoSpellPacket>(
+    ReplayPacketType.VO_SPELL,
+    reader,
+    ctx.index,
+    { brassRingGuid, voSpellPrefabGuid, blocking, additionalDelayMs },
+    unknown,
+  );
+}
+
 export function parseUnknown(element: XmlElement, ctx: NodeParseContext): UnknownPacket {
   const packet: UnknownPacket = {
     index: ctx.index,
@@ -582,4 +625,7 @@ export const NODE_PARSERS: ReadonlyMap<string, NodeParser> = new Map<string, Nod
   ['Options', parseOptions],
   ['SendOption', parseSendOption],
   ['ShuffleDeck', parseShuffleDeck],
+  ['CachedTagForDormantChange', parseCachedTagForDormantChange],
+  ['ResetGame', parseResetGame],
+  ['VOSpell', parseVoSpell],
 ]);

@@ -14,13 +14,21 @@ import {
 } from '../tags/enums.js';
 import { CardType, defaultTagRegistry, GameTag, type TagRegistry, Zone } from '../tags/game-tag.js';
 
-/** Where an unknown value was first seen. */
+/** Where and how often an unknown value was seen. */
 export interface UnknownOccurrence {
   readonly count: number;
   /** Labels of the replays it appeared in, in first-seen order. */
   readonly files: readonly string[];
+  readonly fileCount: number;
   readonly firstFile: string;
+  /** Packet index of the first occurrence in `firstFile`; undefined for document-level values. */
   readonly firstPacketIndex: number | undefined;
+  /** Replay and packet of the first occurrence in the newest build seen: the place to start reading after a patch. */
+  readonly sampleFile: string;
+  readonly samplePacketIndex: number | undefined;
+  /** Lowest and highest client build among the replays that carried it; null when none stated a build. */
+  readonly firstBuild: number | null;
+  readonly lastBuild: number | null;
 }
 
 export interface UnknownReport {
@@ -44,6 +52,8 @@ export interface AnalyzeUnknownsOptions {
 export interface LabeledReplay {
   readonly label: string;
   readonly packets: readonly ReplayPacket[];
+  /** Client build of the replay, when known. Used for the build range of each unknown. */
+  readonly build?: number;
 }
 
 interface MutableOccurrence {
@@ -51,6 +61,10 @@ interface MutableOccurrence {
   files: string[];
   firstFile: string;
   firstPacketIndex: number | undefined;
+  sampleFile: string;
+  samplePacketIndex: number | undefined;
+  firstBuild: number | null;
+  lastBuild: number | null;
 }
 type Bucket = Map<string, MutableOccurrence>;
 
@@ -89,17 +103,31 @@ export function analyzeUnknowns(
       'label' in replay
         ? replay.label
         : (replay.metadata.game.id ?? `replay-${String(++unlabeled)}`).toString();
+    const build = 'label' in replay ? (replay.build ?? null) : (replay.metadata.build ?? null);
     const record = (bucket: Bucket, key: string, packetIndex: number | undefined): void => {
       const existing = bucket.get(key);
       if (existing) {
         existing.count++;
         if (existing.files[existing.files.length - 1] !== label) existing.files.push(label);
+        if (build !== null) {
+          existing.firstBuild =
+            existing.firstBuild === null ? build : Math.min(existing.firstBuild, build);
+          if (existing.lastBuild === null || build > existing.lastBuild) {
+            existing.lastBuild = build;
+            existing.sampleFile = label;
+            existing.samplePacketIndex = packetIndex;
+          }
+        }
       } else {
         bucket.set(key, {
           count: 1,
           files: [label],
           firstFile: label,
           firstPacketIndex: packetIndex,
+          sampleFile: label,
+          samplePacketIndex: packetIndex,
+          firstBuild: build,
+          lastBuild: build,
         });
       }
     };
@@ -166,10 +194,15 @@ export function analyzeUnknowns(
           for (const option of packet.options)
             recordEnum('OptionType', OptionType, option.optionType, packet.index);
           break;
+        case ReplayPacketType.CACHED_TAG_FOR_DORMANT_CHANGE:
+          recordTag(packet.tag, packet.value, packet.index);
+          break;
         case ReplayPacketType.SUB_SPELL:
         case ReplayPacketType.CHOSEN_ENTITIES:
         case ReplayPacketType.SEND_OPTION:
         case ReplayPacketType.SHUFFLE_DECK:
+        case ReplayPacketType.RESET_GAME:
+        case ReplayPacketType.VO_SPELL:
           break;
       }
     }
@@ -210,6 +243,9 @@ const ELEMENT_NAMES: Readonly<Record<Exclude<ReplayPacketType, 'UNKNOWN'>, strin
   OPTIONS: 'Options',
   SEND_OPTION: 'SendOption',
   SHUFFLE_DECK: 'ShuffleDeck',
+  CACHED_TAG_FOR_DORMANT_CHANGE: 'CachedTagForDormantChange',
+  RESET_GAME: 'ResetGame',
+  VO_SPELL: 'VOSpell',
 };
 
 /** XML element name of a packet, so keys read like the file (`TagChange.GameTagName`). */
@@ -222,6 +258,9 @@ function freeze(bucket: Bucket): Readonly<Record<string, UnknownOccurrence>> {
     (a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]),
   );
   return Object.fromEntries(
-    sorted.map(([key, value]) => [key, { ...value, files: [...value.files] }]),
+    sorted.map(([key, value]) => [
+      key,
+      { ...value, files: [...value.files], fileCount: value.files.length },
+    ]),
   );
 }

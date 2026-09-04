@@ -28,7 +28,28 @@ export const Step = {
   FINAL_GAMEOVER: 15,
   MAIN_CLEANUP: 16,
   MAIN_START_TRIGGERS: 17,
+  MAIN_SET_ACTION_STEP_TYPE: 18,
+  MAIN_PRE_ACTION: 19,
+  MAIN_POST_ACTION: 20,
 } as const;
+
+/** Steps of the main phase, during which normal game actions (draws, plays, attacks) happen. */
+export const MAIN_STEPS: ReadonlySet<number> = new Set([
+  Step.MAIN_BEGIN,
+  Step.MAIN_READY,
+  Step.MAIN_RESOURCE,
+  Step.MAIN_DRAW,
+  Step.MAIN_START,
+  Step.MAIN_ACTION,
+  Step.MAIN_COMBAT,
+  Step.MAIN_END,
+  Step.MAIN_NEXT,
+  Step.MAIN_CLEANUP,
+  Step.MAIN_START_TRIGGERS,
+  Step.MAIN_SET_ACTION_STEP_TYPE,
+  Step.MAIN_PRE_ACTION,
+  Step.MAIN_POST_ACTION,
+]);
 
 /** `PlayState` values (tag 17). */
 export const PlayState = {
@@ -60,7 +81,7 @@ export const MulliganState = {
   DONE: 4,
 } as const;
 
-/** `BlockType` (PowSubType) values of `Block.type`. Value 13 appears in recent logs and is not named yet. */
+/** `BlockType` values of `Block.type`, from HearthSim's `hearthstone.enums.BlockType`. */
 export const BlockType = {
   INVALID: 0,
   ATTACK: 1,
@@ -75,9 +96,10 @@ export const BlockType = {
   REVEAL_CARD: 10,
   GAME_RESET: 11,
   MOVE_MINION: 12,
+  DECK_ACTION: 13,
 } as const;
 
-/** `MetaDataType` values of `MetaData.meta`. Values above 18 are not named yet. */
+/** `MetaDataType` values of `MetaData.meta`, from HearthSim's `hearthstone.enums.MetaDataType`. */
 export const MetaDataType = {
   TARGET: 0,
   DAMAGE: 1,
@@ -96,8 +118,18 @@ export const MetaDataType = {
   BURNED_CARD: 14,
   EFFECT_SELECTION: 15,
   BEGIN_LISTENING_FOR_TURN_EVENTS: 16,
-  END_LISTENING_FOR_TURN_EVENTS: 17,
-  HOLD_DRAWN_CARD: 18,
+  HOLD_DRAWN_CARD: 17,
+  CONTROLLER_AND_ZONE_CHANGE: 18,
+  ARTIFICIAL_PAUSE: 19,
+  SLUSH_TIME: 20,
+  ARTIFICIAL_HISTORY_INTERRUPT: 21,
+  POISONOUS: 22,
+  CRITICAL_HIT: 23,
+  HISTORY_TRIGGER_SOURCE: 24,
+  HISTORY_SOURCE_OWNER: 25,
+  HISTORY_REMOVE_ENTITIES: 26,
+  SPEND_HEALTH: 27,
+  SPEND_ARMOR: 28,
 } as const;
 
 /** `ChoiceType` values of `Choices.type` / `SendChoices.type`. */

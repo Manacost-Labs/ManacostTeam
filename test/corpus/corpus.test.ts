@@ -256,6 +256,52 @@ describe.each(manifest.entries.map((entry) => [entry.file, entry] as const))(
   },
 );
 
+describe('annotated and plain copies of the same game', () => {
+  const pairs = manifest.entries.filter(
+    (entry) => entry.duplicateOf !== null && entry.duplicateOf !== undefined,
+  );
+  it('exist for the hsreplaynet fixtures that ship both variants', () => {
+    expect(pairs.length).toBeGreaterThanOrEqual(5);
+  });
+  it.each(pairs.map((entry) => [entry.file, entry] as const))(
+    '%s parses to the same packets and events as its annotated twin, annotations aside',
+    (_file, entry) => {
+      const twin = manifest.entries.find((candidate) => candidate.file === entry.duplicateOf)!;
+      const plain = parseReplayDocument(readFileSync(resolveCorpusPath(entry), 'utf8')).games[0]!;
+      const annotated = parseReplayDocument(readFileSync(resolveCorpusPath(twin), 'utf8'))
+        .games[0]!;
+      const strip = (packets: readonly ReplayPacket[]): unknown =>
+        JSON.parse(
+          JSON.stringify(packets, (key, value: unknown) =>
+            key === 'unknownAttributes' ? undefined : value,
+          ),
+        );
+      expect(strip(plain.packets)).toEqual(strip(annotated.packets));
+      expect(entityDump(plain)).toEqual(entityDump(annotated));
+      expect(entry.eventCounts).toEqual(twin.eventCounts);
+    },
+  );
+});
+
+describe('semantic rules exercised by the corpus', () => {
+  it('include a location activation and a hidden card played to the secret zone', () => {
+    const seen = { location: 0, hidden: 0 };
+    for (const entry of manifest.entries) {
+      if (!entry.features.includes('LOCATION') && !entry.features.includes('SECRET_ZONE')) continue;
+      const game = parseReplayDocument(readFileSync(resolveCorpusPath(entry), 'utf8')).games[0]!;
+      for (const event of extractEvents(game, {
+        types: new Set([SemanticEventType.CARD_PLAYED]),
+      })) {
+        if (event.type !== SemanticEventType.CARD_PLAYED) continue;
+        if (event.cardType === 39) seen.location++;
+        if (event.cardType === undefined) seen.hidden++;
+      }
+    }
+    expect(seen.location).toBeGreaterThan(0);
+    expect(seen.hidden).toBeGreaterThan(0);
+  });
+});
+
 describe('corpus manifest', () => {
   it('lists every replay file exactly once with a checksum and known anomalies', () => {
     const files = manifest.entries.map((entry) => entry.file);

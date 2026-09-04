@@ -1,24 +1,41 @@
-// Compares this library with python-hsreplay over the corpus.
-// Usage: PYTHON=/path/to/venv/bin/python node scripts/differential/compare.mjs [replay.xml ...]
-// Without arguments every entry of test/corpus/manifest.json is compared.
+// Compares this library with python-hsreplay over the corpus (or given files).
+//
+//   PYTHON=.venv/bin/python node scripts/differential/compare.mjs [--report-dir DIR] [replay.xml ...]
+//
+// Every file ends in one of four outcomes:
+//   MATCH                  both sides agree
+//   DIVERGENCE             both parse, results differ            → failure
+//   OUR_FAILURE            this library cannot parse the file     → failure
+//   REFERENCE_UNSUPPORTED  the reference cannot parse the file    → failure unless the manifest
+//                          entry lists REFERENCE_UNSUPPORTED in knownAnomalies
+// Writes differential-report.json and differential-report.md when --report-dir is given.
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const python = process.env.PYTHON ?? 'python3';
-const files = process.argv.slice(2);
-if (files.length === 0) {
-  const manifest = JSON.parse(
-    readFileSync(new URL('../../test/corpus/manifest.json', import.meta.url), 'utf8'),
-  );
-  for (const entry of manifest.entries)
-    files.push(fileURLToPath(new URL(`../../test/corpus/${entry.file}`, import.meta.url)));
-}
+const args = process.argv.slice(2);
+const reportDirIndex = args.indexOf('--report-dir');
+const reportDir = reportDirIndex >= 0 ? args.splice(reportDirIndex, 2)[1] : undefined;
 
-let failures = 0;
+const manifestUrl = new URL('../../test/corpus/manifest.json', import.meta.url);
+const manifest = JSON.parse(readFileSync(manifestUrl, 'utf8'));
+const allowlist = new Set(
+  manifest.entries
+    .filter((e) => e.knownAnomalies.includes('REFERENCE_UNSUPPORTED'))
+    .map((e) => fileURLToPath(new URL(e.file, manifestUrl))),
+);
+const files =
+  args.length > 0
+    ? args.map((file) => resolve(file))
+    : manifest.entries.map((e) => fileURLToPath(new URL(e.file, manifestUrl)));
+
+const results = [];
 for (const file of files) {
   const label = file.split('/').slice(-2).join('/');
+  const result = { file: label, outcome: 'MATCH', details: [] };
   let ours;
   let reference;
   try {
@@ -26,38 +43,95 @@ for (const file of files) {
       execFileSync('node', [`${here}dump-ours.mjs`, file], { maxBuffer: 1 << 28 }).toString(),
     );
   } catch (error) {
-    console.log(`${label}\tOURS FAILED\t${String(error.message).split('\n')[0]}`);
-    failures++;
+    result.outcome = 'OUR_FAILURE';
+    result.details = [String(error.message).split('\n')[0]];
+    results.push(result);
     continue;
   }
   try {
     reference = JSON.parse(
-      execFileSync(python, [`${here}dump-reference.py`, file], { maxBuffer: 1 << 28 }).toString(),
+      execFileSync(python, [`${here}dump-reference.py`, file], {
+        maxBuffer: 1 << 28,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }).toString(),
     );
   } catch (error) {
-    console.log(
-      `${label}\tREFERENCE FAILED\t${
-        String(error.stderr ?? error.message)
-          .trim()
-          .split('\n')
-          .slice(-1)[0]
-      }`,
-    );
+    result.outcome = 'REFERENCE_UNSUPPORTED';
+    result.allowlisted = allowlist.has(file);
+    result.details = [
+      String(error.stderr ?? error.message)
+        .trim()
+        .split('\n')
+        .slice(-1)[0],
+    ];
+    results.push(result);
     continue;
   }
   const differences = compareDocuments(ours, reference);
-  if (differences.length === 0) {
-    console.log(
-      `${label}\tOK\tentities=${ours.games[0]?.entities.length ?? 0} packets=${ours.games[0]?.packets.length ?? 0}`,
-    );
+  if (differences.length > 0) {
+    result.outcome = 'DIVERGENCE';
+    result.details = differences.slice(0, 20);
   } else {
-    failures++;
-    console.log(`${label}\tDIFF`);
-    for (const difference of differences.slice(0, 12)) console.log(`    ${difference}`);
-    if (differences.length > 12) console.log(`    … ${differences.length - 12} more`);
+    result.details = [
+      `entities=${ours.games[0]?.entities.length ?? 0} packets=${ours.games[0]?.packets.length ?? 0}`,
+    ];
+  }
+  results.push(result);
+}
+
+const summary = {
+  MATCH: 0,
+  DIVERGENCE: 0,
+  REFERENCE_UNSUPPORTED: 0,
+  REFERENCE_UNSUPPORTED_ALLOWLISTED: 0,
+  OUR_FAILURE: 0,
+};
+for (const r of results) {
+  if (r.outcome === 'REFERENCE_UNSUPPORTED' && r.allowlisted)
+    summary.REFERENCE_UNSUPPORTED_ALLOWLISTED++;
+  else summary[r.outcome]++;
+  const tag = r.outcome + (r.allowlisted ? ' (allowlisted)' : '');
+  console.log(`${r.file}\t${tag}\t${r.details[0] ?? ''}`);
+  if (r.outcome === 'DIVERGENCE') for (const d of r.details.slice(1, 12)) console.log(`    ${d}`);
+}
+console.log(JSON.stringify(summary));
+const failed = summary.DIVERGENCE + summary.OUR_FAILURE + summary.REFERENCE_UNSUPPORTED;
+
+if (reportDir) {
+  mkdirSync(reportDir, { recursive: true });
+  const versions = referenceVersions();
+  const report = { generatedAt: new Date().toISOString(), python: versions, summary, results };
+  writeFileSync(
+    join(reportDir, 'differential-report.json'),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
+  const rows = results.map(
+    (r) =>
+      `| ${r.file} | ${r.outcome}${r.allowlisted ? ' (allowlisted)' : ''} | ${(r.details[0] ?? '').replace(/\|/g, '\\|')} |`,
+  );
+  writeFileSync(
+    join(reportDir, 'differential-report.md'),
+    `# Differential report\n\n${report.generatedAt} · reference: ${versions}\n\n| outcome | files |\n| --- | ---: |\n${Object.entries(
+      summary,
+    )
+      .map(([k, v]) => `| ${k} | ${v} |`)
+      .join('\n')}\n\n| file | outcome | detail |\n| --- | --- | --- |\n${rows.join('\n')}\n`,
+  );
+}
+process.exit(failed === 0 ? 0 : 1);
+
+function referenceVersions() {
+  try {
+    return execFileSync(python, [
+      '-c',
+      'import importlib.metadata as m; print(", ".join(f"{p} {m.version(p)}" for p in ("hsreplay","hslog","hearthstone")))',
+    ])
+      .toString()
+      .trim();
+  } catch {
+    return 'unknown';
   }
 }
-process.exit(failures === 0 ? 0 : 1);
 
 function compareDocuments(ours, reference) {
   const out = [];
