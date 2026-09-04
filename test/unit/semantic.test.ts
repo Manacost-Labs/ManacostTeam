@@ -27,6 +27,7 @@ const BOARD = `
   <Block entity="1" type="5">
     <TagChange entity="2" tag="23" value="1"/>
     <TagChange entity="1" tag="20" value="1"/>
+    <TagChange entity="1" tag="19" value="10"/>
   </Block>`;
 
 describe('extractEvents', () => {
@@ -72,13 +73,14 @@ describe('extractEvents', () => {
       turn: 1,
     });
     const damage = list.find((event) => event.type === SemanticEventType.DAMAGE);
-    expect(damage).toMatchObject({ target: { kind: 'id', id: 74 }, amount: 3, source: 10 });
+    expect(damage).toMatchObject({ target: { kind: 'id', id: 74 }, amount: 3, blockEntity: 10 });
+    expect(damage && 'source' in damage).toBe(false);
     expect(list.indexOf(played!)).toBeLessThan(list.indexOf(damage!));
     const heroPower = list.find((event) => event.type === SemanticEventType.HERO_POWER_USED);
     expect(heroPower).toMatchObject({ entity: 75, cardId: 'HERO_01bp', playerEntityId: 2 });
     expect(heroPower && 'target' in heroPower).toBe(false);
     const healing = list.find((event) => event.type === SemanticEventType.HEALING);
-    expect(healing).toMatchObject({ target: { kind: 'id', id: 72 }, amount: 2, source: 75 });
+    expect(healing).toMatchObject({ target: { kind: 'id', id: 72 }, amount: 2, blockEntity: 75 });
     const zone = list.find(
       (event) => event.type === SemanticEventType.ZONE_CHANGED && event.entity === 10,
     );

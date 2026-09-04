@@ -6,12 +6,29 @@ TypeScript / Node.js and usable in the browser.
 
 The goal of the project is a reliable foundation for everything that comes
 after: semantic events, statistics, replay viewers and data preparation for
-AI/ML. Version 0.3 covers the first four layers of the pipeline:
+AI/ML. Version 0.4 covers the first four layers of the pipeline and hardens them
+against a corpus of real replays:
 
 ```
 XML  →  raw packets  →  entity store / game state  →  semantic events
-                         (timeline, tag history)
+        (observed)      (observed, accumulated)      (interpretation, with evidence)
+                         timeline, tag history
 ```
+
+Three kinds of truth, and the library never blurs them:
+
+- **raw packets** are the most exact representation of the replay: every
+  element, attribute and value, in document order, nothing interpreted;
+- **state** is the observed state: the tags the log has set so far, no rules
+  of the game applied;
+- **semantic events** are interpretation: each one says which rule produced
+  it and from which packets (`evidence`); every rule is checked against the
+  invariants, rule tests and recorded event counts of the corpus, and rules
+  with known counter-examples are not shipped.
+
+See [docs/reliability.md](docs/reliability.md) for the exact guarantees of
+each layer and [docs/replay-corpus.md](docs/replay-corpus.md) for what the
+library has actually been validated on.
 
 ## Installation
 
@@ -139,7 +156,24 @@ primitives underneath, usable on their own.
 
 `extractEvents` replays the packets through the state engine and reports what
 happened in game terms. It is a separate layer: nothing in the packets or the
-state depends on it, and every event keeps the `packetIndex` it came from.
+state depends on it, and every event keeps the `packetIndex` it came from
+plus an `evidence` record saying how it was inferred:
+
+```ts
+const events = extractEvents(replay);
+
+for (const event of events) {
+  console.log(event.type, event.evidence.level, event.evidence.rule, event.evidence.packetIndices);
+}
+// CARD_DRAWN derived CARD_DRAWN [ 521 ]
+// DAMAGE derived DAMAGE_SOURCE [ 704, 706 ]   ← MetaData packet + LAST_AFFECTED_BY tag change
+// ZONE_CHANGED observed ZONE_CHANGED [ 521 ]
+```
+
+`evidence.level` is `observed` (the event restates one packet), `derived`
+(a rule combined the packet with known state) or `heuristic` (reserved for
+rules with known counter-examples; none ship today). The rules themselves
+are listed in `SEMANTIC_RULES` with their source and caveats.
 
 ```ts
 import { extractEvents, SemanticEventType } from '@manacost/hearthstone-replay';
@@ -174,6 +208,25 @@ for (const event of extractEvents(replay)) {
 
 Pass `{ types: new Set([SemanticEventType.CARD_PLAYED]) }` to keep only some
 event types.
+
+## Corpus, telemetry and validation
+
+The tests run against 37 real replays (HearthSim's CC0 `hsreplay-test-data`
+fixtures plus `test.xml`) spanning HSReplay 1.0–1.7 and client builds
+10956–250339, checking invariants rather than counts; property-based tests
+(fast-check) cover parser roundtrips, random streaming chunkings, state
+snapshots and timeline reconstruction; mutation tests feed the parser
+unknown nodes, missing attributes, huge integers, deep nesting, entity
+expansion attempts and split UTF-8; and a differential harness compares the
+raw and state layers with python-hsreplay. After a Hearthstone patch:
+
+```ts
+import { analyzeUnknowns } from '@manacost/hearthstone-replay';
+
+const report = analyzeUnknowns(replays);
+console.log(report.tags, report.enumValues, report.nodes, report.attributes);
+// { '2175': { count: 37, files: ['…'], firstFile: '…', firstPacketIndex: 812 }, … }
+```
 
 ## Streaming
 
@@ -239,17 +292,21 @@ integers.
 - `GameTag` names and enum tables cover a fundamental subset; everything else
   is numeric (`BlockType` 13 and `MetaDataType` 20/24 seen in current logs are
   not named yet).
-- Semantic events interpret patterns observed in current logs (see
-  `docs/replay-format.md`). Mechanics the extractor does not know appear only
-  as `ZONE_CHANGED` / `TRIGGERED` / raw packets, never as wrong events.
-- `ATTACK.defender` relies on the DEFENDING tag; `DAMAGE.source` is the
-  enclosing block's entity, which is the attacker or the effect source but not
-  a full attribution chain.
+- Semantic rules are validated on the corpus described in
+  `docs/replay-corpus.md`: constructed games from 2016 to 2026, three
+  Mercenaries logs and two tiny Battlegrounds logs. Battlegrounds combat,
+  Duels and Arena are not covered. Mechanics the extractor does not know
+  appear only as `ZONE_CHANGED` / `TRIGGERED` / raw packets rather than as
+  guessed events; whether a rule fires wrongly on a mechanic outside the
+  corpus cannot be excluded.
+- `DAMAGE.source` exists only when the log recorded LAST_AFFECTED_BY for the
+  target before its next hit (about seven damage events out of eight in the
+  corpus; absorbed hits never carry it); `blockEntity` is context.
 - No Power.log support, no card database.
 
 ## Roadmap
 
-- **v0.4** – statistics over events (tempo, resources, damage per turn), a
+- **v0.5** – statistics over events (tempo, resources, damage per turn), a
   viewer-oriented board model per turn, secrets and weapon events.
 - **later** – Power.log parser sharing the packet layer, card database hooks,
   ML feature extraction.
@@ -260,13 +317,19 @@ integers.
 pnpm install
 pnpm typecheck
 pnpm lint
-pnpm test
+pnpm test            # unit, integration, golden, property, corpus
+pnpm test:coverage
 pnpm build
+pnpm pack:smoke      # installs the packed tarball into a scratch project and imports both entry points
+pnpm benchmark       # reproducible baseline, not a gate
+pnpm corpus:verify
+PYTHON=.venv/bin/python pnpm differential   # see docs/differential-testing.md
 ```
 
 `pnpm test:golden` regenerates `test/fixtures/test.expected.json` after an
 intentional parser change.
 
-Scripts invoke tools through `pnpm exec` on purpose: a project directory whose
-name contains `:` (as in `@manacost:hearthstone-replay`) breaks the
-`node_modules/.bin` `PATH` entry that plain `tsc` / `vitest` calls rely on.
+Scripts invoke tools as `node node_modules/<tool>/…` on purpose: a project
+directory whose name contains `:` (as in `@manacost:hearthstone-replay`)
+breaks the `node_modules/.bin` `PATH` entry that plain `tsc` / `vitest`
+calls rely on, and `pnpm exec` behaves differently across pnpm majors.

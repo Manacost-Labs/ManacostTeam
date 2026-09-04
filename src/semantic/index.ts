@@ -1,6 +1,8 @@
 export { extractEvents } from './extract.js';
 export type { ExtractEventsOptions } from './extract.js';
 export { SemanticEventType } from './events.js';
+export { SEMANTIC_RULES, SemanticRuleId } from './rules.js';
+export type { SemanticEvidence, SemanticEvidenceLevel, SemanticRule } from './rules.js';
 export type {
   AttackEvent,
   BaseSemanticEvent,
@@ -12,8 +14,10 @@ export type {
   DamageEvent,
   EntityDiedEvent,
   EntityFacts,
+  EventInitiator,
   FatigueEvent,
   GameEndedEvent,
+  GameResetEvent,
   GameStartedEvent,
   HealingEvent,
   HeroPowerUsedEvent,

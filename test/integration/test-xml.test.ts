@@ -186,7 +186,7 @@ describe('test.xml timeline and history', () => {
     );
     const midTurn = turns[Math.floor(turns.length / 2)]!;
     expect(timeline.stateAt(midTurn.packetIndex).turn).toBe(midTurn.value);
-    expect(timeline.stateAt(midTurn.packetIndex - 1).turn).toBe(midTurn.value - 1);
+    expect(timeline.stateAt(midTurn.packetIndex - 1).turn).toBe(midTurn.value! - 1);
     expect(timeline.stateAt(-1).entities.size).toBe(0);
   });
 });
@@ -270,20 +270,56 @@ describe('test.xml semantic events', () => {
     );
     expect(count(SemanticEventType.DAMAGE)).toBe(infoCount);
 
+    // Cross-check against the tag history (an independent reading of the packets):
+    // every draw is a DECK → HAND transition after the game reached its main phase,
+    // every death is a PLAY → GRAVEYARD transition of a minion, hero or weapon.
     const zones = collectTagHistory(replay.packets, { tags: new Set([GameTag.ZONE]) });
-    let draws = 0;
-    let deaths = 0;
-    for (const byTag of zones.values()) {
+    const transitions = new Map<string, number>();
+    for (const [entityId, byTag] of zones) {
       const values = byTag.get(GameTag.ZONE)!;
       for (let i = 1; i < values.length; i++) {
-        if (values[i - 1]!.value === Zone.DECK && values[i]!.value === Zone.HAND) draws++;
-        if (values[i - 1]!.value === Zone.PLAY && values[i]!.value === Zone.GRAVEYARD) deaths++;
+        const from = values[i - 1]!.value;
+        const to = values[i]!.value;
+        if (from !== undefined && to !== undefined) {
+          transitions.set(`${String(entityId)}@${String(values[i]!.packetIndex)}`, from * 100 + to);
+        }
       }
     }
-    expect(count(SemanticEventType.CARD_DRAWN)).toBe(draws);
-    expect(count(SemanticEventType.ENTITY_DIED)).toBe(deaths);
-    expect(draws).toBeGreaterThan(20);
-    expect(deaths).toBeGreaterThan(10);
+    const firstTurn = turns[0]!.packetIndex;
+    const drawn = events.filter((event) => event.type === SemanticEventType.CARD_DRAWN);
+    expect(drawn.length).toBeGreaterThan(20);
+    for (const event of drawn) {
+      expect(transitions.get(`${String(event.entity)}@${String(event.packetIndex)}`)).toBe(
+        Zone.DECK * 100 + Zone.HAND,
+      );
+      expect(event.packetIndex).toBeGreaterThan(firstTurn);
+      expect(event.evidence).toEqual({
+        level: 'derived',
+        rule: 'CARD_DRAWN',
+        packetIndices: [event.packetIndex],
+      });
+    }
+    const died = events.filter((event) => event.type === SemanticEventType.ENTITY_DIED);
+    expect(died.length).toBeGreaterThan(10);
+    const dying = new Set<number>([
+      CardType.MINION,
+      CardType.HERO,
+      CardType.WEAPON,
+      CardType.LOCATION,
+    ]);
+    for (const event of died) {
+      expect(transitions.get(`${String(event.entity)}@${String(event.packetIndex)}`)).toBe(
+        Zone.PLAY * 100 + Zone.GRAVEYARD,
+      );
+      expect(dying.has(replay.entities.get(event.entity)!.tags.get(GameTag.CARDTYPE)!)).toBe(true);
+    }
+    const spellsLeavingPlay = [...transitions.entries()].filter(
+      ([key, transition]) =>
+        transition === Zone.PLAY * 100 + Zone.GRAVEYARD &&
+        replay.entities.get(Number(key.split('@')[0]))!.tags.get(GameTag.CARDTYPE) ===
+          CardType.SPELL,
+    );
+    expect(spellsLeavingPlay.length).toBeGreaterThan(0);
 
     const ended = events[events.length - 1];
     expect(

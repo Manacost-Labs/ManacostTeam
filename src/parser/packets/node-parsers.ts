@@ -438,9 +438,11 @@ function readTargets(
   ctx: NodeParseContext,
 ): { targets: OptionTarget[]; unknown: XmlElement[] } {
   const { items, unknown } = parsePayload(element, ctx, TARGET_CHILDREN, (target): OptionTarget => {
+    const index = target.int('index');
+    const entity = target.optionalEntity('entity');
     const entry: OptionTarget = {
-      index: target.int('index'),
-      entity: target.entity('entity'),
+      index,
+      ...(entity === undefined ? {} : { entity }),
       ...optionalError(target),
     };
     target.unknown();
@@ -548,6 +550,17 @@ export function parseUnknown(element: XmlElement, ctx: NodeParseContext): Unknow
   return ts === undefined ? packet : { ...packet, ts };
 }
 
+/** HSReplay 1.0 wrote `Action` where later versions write `Block`; same attributes, same children. */
+export function parseLegacyAction(element: XmlElement, ctx: NodeParseContext): BlockPacket {
+  ctx.diagnostics.infoOnce(
+    DiagnosticCode.LEGACY_ELEMENT,
+    element.name,
+    `legacy <${element.name}> element treated as <Block>`,
+    { packetIndex: ctx.index, line: element.line, column: element.column },
+  );
+  return parseBlock(element, ctx);
+}
+
 export type NodeParser = (element: XmlElement, ctx: NodeParseContext) => ReplayPacket;
 
 /** Element name → parser, for every element that may appear in packet position. */
@@ -560,6 +573,7 @@ export const NODE_PARSERS: ReadonlyMap<string, NodeParser> = new Map<string, Nod
   ['HideEntity', parseHideEntity],
   ['TagChange', parseTagChange],
   ['Block', parseBlock],
+  ['Action', parseLegacyAction],
   ['SubSpell', parseSubSpell],
   ['MetaData', parseMetaData],
   ['Choices', parseChoices],

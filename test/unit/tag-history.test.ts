@@ -38,3 +38,23 @@ describe('collectTagHistory', () => {
     expect([...history.get(4)!.keys()]).toEqual([GameTag.CONTROLLER]);
   });
 });
+
+describe('collectTagHistory and entity re-definition', () => {
+  it('records tags cleared by a second FullEntity for the same id, as the state engine does', () => {
+    const replay = parseReplay(
+      wrapGame(`
+    <FullEntity id="4"><Tag tag="49" value="2"/><Tag tag="50" value="1"/></FullEntity>
+    <FullEntity id="4"><Tag tag="49" value="3"/></FullEntity>`),
+    );
+    const history = collectTagHistory(replay.packets);
+    expect(history.get(4)?.get(GameTag.ZONE)).toEqual([
+      { packetIndex: 0, value: 2 },
+      { packetIndex: 1, value: 3 },
+    ]);
+    expect(history.get(4)?.get(GameTag.CONTROLLER)).toEqual([
+      { packetIndex: 0, value: 1 },
+      { packetIndex: 1, value: undefined },
+    ]);
+    expect(replay.entities.get(4)?.tags.get(GameTag.CONTROLLER)).toBeUndefined();
+  });
+});

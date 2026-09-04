@@ -24,6 +24,8 @@ export const DiagnosticCode = {
   UNRESOLVED_ENTITY_REF: 'UNRESOLVED_ENTITY_REF',
   /** A packet refers to an entity id that was never created; a placeholder entity was created. */
   UNKNOWN_ENTITY: 'UNKNOWN_ENTITY',
+  /** An element from an older HSReplay version that maps onto a current one (e.g. `Action` → `Block`). */
+  LEGACY_ELEMENT: 'LEGACY_ELEMENT',
   /** A FullEntity re-created an entity id that already exists; its tags were replaced. */
   ENTITY_RECREATED: 'ENTITY_RECREATED',
   /** The same tag appears twice in one entity definition; the last value wins. */
@@ -31,6 +33,26 @@ export const DiagnosticCode = {
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCode)[keyof typeof DiagnosticCode];
+
+/**
+ * Codes reported as warnings in lenient mode that strict mode turns into a
+ * thrown `ReplayValidationError`. Every other warning (for example
+ * `ENTITY_RECREATED`, a legitimate consequence of a GAME_RESET block) is
+ * informational in both modes; errors always throw in strict mode.
+ */
+export const STRICT_VIOLATION_CODES: ReadonlySet<DiagnosticCode> = new Set<DiagnosticCode>([
+  DiagnosticCode.UNKNOWN_NODE,
+  DiagnosticCode.UNEXPECTED_CHILD,
+  DiagnosticCode.UNEXPECTED_ROOT,
+  DiagnosticCode.MULTIPLE_GAMES,
+  DiagnosticCode.UNRESOLVED_ENTITY_REF,
+  DiagnosticCode.UNKNOWN_ENTITY,
+]);
+
+/** Whether a diagnostic would have thrown in strict mode. */
+export function isStrictViolation(diagnostic: ReplayDiagnostic): boolean {
+  return diagnostic.level === 'error' || STRICT_VIOLATION_CODES.has(diagnostic.code);
+}
 
 export interface ReplayDiagnostic {
   readonly level: DiagnosticLevel;
@@ -54,12 +76,31 @@ export interface DiagnosticContext {
 export class DiagnosticCollector {
   readonly items: ReplayDiagnostic[] = [];
   readonly strict: boolean;
+  private readonly seenKeys = new Set<string>();
 
   constructor(strict = false) {
     this.strict = strict;
   }
 
   info(code: DiagnosticCode, message: string, context: DiagnosticContext = {}): void {
+    this.push('info', code, message, context);
+  }
+
+  /**
+   * Records an info diagnostic only the first time `key` is seen for `code`.
+   * Used for facts that repeat thousands of times per file (annotation
+   * attributes, legacy elements) where one report per kind is what a reader
+   * needs; `analyzeUnknowns` provides the frequencies.
+   */
+  infoOnce(
+    code: DiagnosticCode,
+    key: string,
+    message: string,
+    context: DiagnosticContext = {},
+  ): void {
+    const fullKey = `${code}:${key}`;
+    if (this.seenKeys.has(fullKey)) return;
+    this.seenKeys.add(fullKey);
     this.push('info', code, message, context);
   }
 
@@ -78,6 +119,9 @@ export class DiagnosticCollector {
    * a warning by default, a thrown error in strict mode.
    */
   violation(code: DiagnosticCode, message: string, context: DiagnosticContext = {}): void {
+    if (!STRICT_VIOLATION_CODES.has(code)) {
+      throw new Error(`diagnostic code ${code} is not registered as a strict violation`);
+    }
     if (this.strict) {
       this.push('error', code, message, context);
       throw new ReplayValidationError(code, message, { context });

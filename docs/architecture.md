@@ -123,6 +123,18 @@ the facts known _at that moment_: card id, card type, controller, turn.
   when it closes, so the event still precedes its children in the output.
 - Nothing is guessed: an unknown mechanic yields raw zone changes and
   triggers, not a wrong `CARD_PLAYED`.
+- Every rule lives in `semantic/rules.ts` with its evidence level, the
+  packets it reads and its caveats; the extractor attaches
+  `evidence { level, rule, packetIndices }` to every event. See
+  `docs/reliability.md` for the meaning of `observed`, `derived` and
+  `heuristic`.
+
+## Telemetry
+
+`telemetry/unknowns.ts` (`analyzeUnknowns`) walks packets of many replays
+and reports unknown elements, attributes, children, GameTag ids and enum
+values with counts and first occurrences. It reads only what the parser
+preserved, so it works on any build without changes.
 
 The extractor is a pure function of the packets. It never feeds anything back
 into the state layer, and the state layer does not know it exists.
@@ -175,7 +187,8 @@ errors ← diagnostics ← parser/xml ← parser/packets ← parser/metadata ←
                                        └──── tags ──────┴──── state ─────────┘
                                                               │
                                              state/snapshot ← state/timeline, state/tag-history
-                                             semantic/extract ← (packets, state, tags)
+                                             semantic/rules ← semantic/extract ← (packets, state, tags)
+                                             telemetry/unknowns ← (packets, tags)
 ```
 
 Arrows point from dependency to dependant. There are no cycles; `tags` is a

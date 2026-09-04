@@ -3,3 +3,6 @@ node_modules
 pnpm-lock.yaml
 *.xml
 test/fixtures/*.json
+coverage
+.claude
+test/corpus/manifest.json

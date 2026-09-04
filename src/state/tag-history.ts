@@ -2,10 +2,15 @@ import { type ReplayPacket, ReplayPacketType, type TagPair } from '../parser/pac
 import { walkPackets } from '../parser/packets/walk.js';
 import { GameTag } from '../tags/game-tag.js';
 
-/** One observed value of a tag: set by the packet at `packetIndex`. */
+/**
+ * One observed value of a tag, set by the packet at `packetIndex`. `value` is
+ * `undefined` when a second definition of the entity (a FullEntity for an id
+ * that already exists, e.g. after GAME_RESET) cleared the tag, mirroring
+ * what the state engine does.
+ */
 export interface TagValueRecord {
   readonly packetIndex: number;
-  readonly value: number;
+  readonly value: number | undefined;
 }
 
 /** entity id → tag → chronological values. */
@@ -28,8 +33,15 @@ export function collectTagHistory(
   filter: TagHistoryFilter = {},
 ): TagHistory {
   const history = new Map<number, Map<number, TagValueRecord[]>>();
+  /** Tags currently set on each entity, to know what a re-definition clears. */
+  const live = new Map<number, Set<number>>();
 
-  const record = (entityId: number, tag: number, value: number, packetIndex: number): void => {
+  const record = (
+    entityId: number,
+    tag: number,
+    value: number | undefined,
+    packetIndex: number,
+  ): void => {
     if (filter.entities && !filter.entities.has(entityId)) return;
     if (filter.tags && !filter.tags.has(tag)) return;
     let byTag = history.get(entityId);
@@ -40,7 +52,23 @@ export function collectTagHistory(
   };
 
   const recordAll = (entityId: number, tags: readonly TagPair[], packetIndex: number): void => {
-    for (const { tag, value } of tags) record(entityId, tag, value, packetIndex);
+    let set = live.get(entityId);
+    if (!set) live.set(entityId, (set = new Set()));
+    for (const { tag, value } of tags) {
+      record(entityId, tag, value, packetIndex);
+      set.add(tag);
+    }
+  };
+
+  /** A definition of an entity that already exists replaces its tags: report the cleared ones. */
+  const redefine = (entityId: number, tags: readonly TagPair[], packetIndex: number): void => {
+    const previous = live.get(entityId);
+    if (previous) {
+      const kept = new Set(tags.map((pair) => pair.tag));
+      for (const tag of previous) if (!kept.has(tag)) record(entityId, tag, undefined, packetIndex);
+      previous.clear();
+    }
+    recordAll(entityId, tags, packetIndex);
   };
 
   for (const { packet } of walkPackets(packets)) {
@@ -48,19 +76,21 @@ export function collectTagHistory(
       case ReplayPacketType.GAME_ENTITY:
       case ReplayPacketType.PLAYER:
       case ReplayPacketType.FULL_ENTITY:
-        recordAll(packet.id, packet.tags, packet.index);
+        redefine(packet.id, packet.tags, packet.index);
         break;
       case ReplayPacketType.SHOW_ENTITY:
       case ReplayPacketType.CHANGE_ENTITY:
         if (packet.entity.kind === 'id') recordAll(packet.entity.id, packet.tags, packet.index);
         break;
       case ReplayPacketType.HIDE_ENTITY:
-        if (packet.entity.kind === 'id')
-          record(packet.entity.id, GameTag.ZONE, packet.zone, packet.index);
+        if (packet.entity.kind === 'id') {
+          recordAll(packet.entity.id, [{ tag: GameTag.ZONE, value: packet.zone }], packet.index);
+        }
         break;
       case ReplayPacketType.TAG_CHANGE:
-        if (packet.entity.kind === 'id')
-          record(packet.entity.id, packet.tag, packet.value, packet.index);
+        if (packet.entity.kind === 'id') {
+          recordAll(packet.entity.id, [{ tag: packet.tag, value: packet.value }], packet.index);
+        }
         break;
       case ReplayPacketType.BLOCK:
       case ReplayPacketType.SUB_SPELL:

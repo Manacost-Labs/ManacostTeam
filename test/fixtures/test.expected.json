@@ -181,6 +181,252 @@
     ]
   },
   "packetCount": 8535,
+  "eventCount": 771,
+  "eventTypeCounts": {
+    "ATTACK": 30,
+    "CARD_DRAWN": 35,
+    "CARD_PLAYED": 53,
+    "CHOICE_MADE": 12,
+    "CHOICE_OFFERED": 12,
+    "CONCEDED": 1,
+    "DAMAGE": 92,
+    "ENTITY_DIED": 47,
+    "GAME_ENDED": 1,
+    "GAME_STARTED": 1,
+    "HEALING": 10,
+    "HERO_POWER_USED": 2,
+    "OPTION_CHOSEN": 62,
+    "TRIGGERED": 48,
+    "TURN_STARTED": 24,
+    "ZONE_CHANGED": 341
+  },
+  "firstEvents": [
+    {
+      "type": "GAME_STARTED",
+      "packetIndex": 0,
+      "gameEntityId": 1,
+      "evidence": {
+        "level": "observed",
+        "rule": "GAME_STARTED",
+        "packetIndices": [
+          0
+        ]
+      },
+      "index": 0
+    },
+    {
+      "type": "TURN_STARTED",
+      "packetIndex": 82,
+      "blockIndex": 79,
+      "turn": 1,
+      "playerEntityId": 2,
+      "evidence": {
+        "level": "derived",
+        "rule": "TURN_STARTED",
+        "packetIndices": [
+          82
+        ]
+      },
+      "index": 1
+    },
+    {
+      "type": "ZONE_CHANGED",
+      "packetIndex": 85,
+      "blockIndex": 79,
+      "turn": 1,
+      "entity": 31,
+      "playerEntityId": 2,
+      "from": 2,
+      "to": 3,
+      "evidence": {
+        "level": "observed",
+        "rule": "ZONE_CHANGED",
+        "packetIndices": [
+          85
+        ]
+      },
+      "index": 2
+    },
+    {
+      "type": "ZONE_CHANGED",
+      "packetIndex": 91,
+      "blockIndex": 79,
+      "turn": 1,
+      "entity": 7,
+      "playerEntityId": 2,
+      "from": 2,
+      "to": 3,
+      "evidence": {
+        "level": "observed",
+        "rule": "ZONE_CHANGED",
+        "packetIndices": [
+          91
+        ]
+      },
+      "index": 3
+    },
+    {
+      "type": "ZONE_CHANGED",
+      "packetIndex": 97,
+      "blockIndex": 79,
+      "turn": 1,
+      "entity": 5,
+      "playerEntityId": 2,
+      "from": 2,
+      "to": 3,
+      "evidence": {
+        "level": "observed",
+        "rule": "ZONE_CHANGED",
+        "packetIndices": [
+          97
+        ]
+      },
+      "index": 4
+    },
+    {
+      "type": "ZONE_CHANGED",
+      "packetIndex": 105,
+      "blockIndex": 79,
+      "turn": 1,
+      "entity": 68,
+      "cardId": "FIR_959",
+      "cardType": 4,
+      "playerEntityId": 3,
+      "from": 2,
+      "to": 3,
+      "evidence": {
+        "level": "observed",
+        "rule": "ZONE_CHANGED",
+        "packetIndices": [
+          105
+        ]
+      },
+      "index": 5
+    },
+    {
+      "type": "ZONE_CHANGED",
+      "packetIndex": 112,
+      "blockIndex": 79,
+      "turn": 1,
+      "entity": 70,
+      "cardId": "JAIL_872",
+      "cardType": 4,
+      "playerEntityId": 3,
+      "from": 2,
+      "to": 3,
+      "evidence": {
+        "level": "observed",
+        "rule": "ZONE_CHANGED",
+        "packetIndices": [
+          112
+        ]
+      },
+      "index": 6
+    },
+    {
+      "type": "ZONE_CHANGED",
+      "packetIndex": 119,
+      "blockIndex": 79,
+      "turn": 1,
+      "entity": 56,
+      "cardId": "CORE_EX1_169",
+      "cardType": 5,
+      "playerEntityId": 3,
+      "from": 2,
+      "to": 3,
+      "evidence": {
+        "level": "observed",
+        "rule": "ZONE_CHANGED",
+        "packetIndices": [
+          119
+        ]
+      },
+      "index": 7
+    }
+  ],
+  "lastEvents": [
+    {
+      "type": "ZONE_CHANGED",
+      "packetIndex": 8504,
+      "blockIndex": 8501,
+      "turn": 24,
+      "entity": 40,
+      "cardId": "JAIL_872",
+      "cardType": 4,
+      "playerEntityId": 3,
+      "from": 2,
+      "to": 3,
+      "evidence": {
+        "level": "observed",
+        "rule": "ZONE_CHANGED",
+        "packetIndices": [
+          8504
+        ]
+      },
+      "index": 767
+    },
+    {
+      "type": "CARD_DRAWN",
+      "packetIndex": 8504,
+      "blockIndex": 8501,
+      "turn": 24,
+      "entity": 40,
+      "cardId": "JAIL_872",
+      "cardType": 4,
+      "playerEntityId": 3,
+      "evidence": {
+        "level": "derived",
+        "rule": "CARD_DRAWN",
+        "packetIndices": [
+          8504
+        ]
+      },
+      "index": 768
+    },
+    {
+      "type": "CONCEDED",
+      "packetIndex": 8518,
+      "turn": 24,
+      "playerEntityId": 3,
+      "evidence": {
+        "level": "observed",
+        "rule": "CONCEDED",
+        "packetIndices": [
+          8518
+        ]
+      },
+      "index": 769
+    },
+    {
+      "type": "GAME_ENDED",
+      "packetIndex": 8534,
+      "turn": 24,
+      "results": [
+        {
+          "playerEntityId": 2,
+          "playState": 4
+        },
+        {
+          "playerEntityId": 3,
+          "playState": 5
+        }
+      ],
+      "winners": [
+        2
+      ],
+      "losers": [
+        3
+      ],
+      "evidence": {
+        "level": "derived",
+        "rule": "GAME_ENDED",
+        "packetIndices": [
+          8534
+        ]
+      },
+      "index": 770
+    }
+  ],
   "topLevelPacketCount": 1130,
   "packetTypeCounts": {
     "GAME_ENTITY": 1,

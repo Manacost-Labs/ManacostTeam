@@ -3,6 +3,13 @@ export { parseReplayStream, streamReplay } from './parser/stream.js';
 export type { ReplayStreamChunk, ReplayStreamEvent, ReplayStreamSource } from './parser/stream.js';
 export type { DocumentHeader } from './parser/metadata.js';
 export * from './semantic/index.js';
+export { analyzeUnknowns } from './telemetry/unknowns.js';
+export type {
+  AnalyzeUnknownsOptions,
+  LabeledReplay,
+  UnknownOccurrence,
+  UnknownReport,
+} from './telemetry/unknowns.js';
 export type {
   GameMetadata,
   ParseReplayOptions,
@@ -15,7 +22,7 @@ export type {
 export { ReplayError, ReplayParseError, ReplayValidationError } from './errors.js';
 export type { ReplayErrorContext, ReplayErrorOptions } from './errors.js';
 
-export { DiagnosticCode } from './diagnostics.js';
+export { DiagnosticCode, STRICT_VIOLATION_CODES, isStrictViolation } from './diagnostics.js';
 export type { DiagnosticLevel, ReplayDiagnostic } from './diagnostics.js';
 
 export { ReplayPacketType, isContainerPacket } from './parser/packets/types.js';

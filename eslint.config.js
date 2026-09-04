@@ -36,8 +36,19 @@ export default tseslint.config(
     },
   },
   {
-    files: ['eslint.config.js', 'vitest.config.ts'],
+    files: ['eslint.config.js', 'vitest.config.ts', 'scripts/**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        performance: 'readonly',
+        URL: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+      },
+    },
   },
   {
     files: ['test/**/*.ts'],

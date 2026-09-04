@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+  extractEvents,
   flattenPackets,
   GameTag,
   type ReplayPacket,
@@ -85,9 +86,19 @@ async function summarize(): Promise<unknown> {
     };
   }
 
+  const eventTypeCounts: Record<string, number> = {};
+  const events = extractEvents(replay);
+  for (const event of events) eventTypeCounts[event.type] = (eventTypeCounts[event.type] ?? 0) + 1;
+
   return {
     metadata: replay.metadata,
     packetCount: replay.packetCount,
+    eventCount: events.length,
+    eventTypeCounts: Object.fromEntries(
+      Object.entries(eventTypeCounts).sort(([a], [b]) => a.localeCompare(b)),
+    ),
+    firstEvents: events.slice(0, 8),
+    lastEvents: events.slice(-4),
     topLevelPacketCount: replay.packets.length,
     packetTypeCounts: typeCounts,
     entityCount: replay.entities.size,

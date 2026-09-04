@@ -77,17 +77,12 @@ export function firstGame(document: ReplayDocument, options: ParseReplayOptions 
 
 function parseGame(game: XmlElement, header: DocumentHeader, strict: boolean): Replay {
   const diagnostics = new DiagnosticCollector(strict);
+  // Same order as the streaming parser: game attributes first, then packets, then state.
+  const metadata = readGameMetadata(game, diagnostics);
   const { packets, packetCount } = packetizeGame(game, diagnostics);
   const state = createGameState();
   applyPackets(state, packets, diagnostics);
-  return assembleReplay(
-    header,
-    readGameMetadata(game, diagnostics),
-    packets,
-    packetCount,
-    state,
-    diagnostics,
-  );
+  return assembleReplay(header, metadata, packets, packetCount, state, diagnostics);
 }
 
 export function assembleReplay(

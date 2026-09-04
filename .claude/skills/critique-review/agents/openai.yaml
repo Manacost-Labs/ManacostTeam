@@ -1,0 +1,4 @@
+interface:
+  display_name: "Critique Review"
+  short_description: "Disciplined AI code review workflow"
+  default_prompt: "Use $critique-review to review this pull request for correctness, security, tests, and maintainability."

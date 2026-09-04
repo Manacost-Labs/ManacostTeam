@@ -98,9 +98,11 @@ export class AttributeReader {
       result[key] = value;
     }
     if (result) {
-      this.diagnostics.info(
+      const names = Object.keys(result).join(', ');
+      this.diagnostics.infoOnce(
         DiagnosticCode.UNKNOWN_ATTRIBUTE,
-        `unknown attribute(s) on <${this.element.name}>: ${Object.keys(result).join(', ')}`,
+        `${this.element.name}:${names}`,
+        `unknown attribute(s) on <${this.element.name}>: ${names}`,
         this.context(),
       );
     }

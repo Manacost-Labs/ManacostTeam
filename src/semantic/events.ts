@@ -1,8 +1,10 @@
 import { type EntityRef } from '../parser/packets/entity-ref.js';
+import { type SemanticEvidence } from './rules.js';
 
 export const SemanticEventType = {
   GAME_STARTED: 'GAME_STARTED',
   GAME_ENDED: 'GAME_ENDED',
+  GAME_RESET: 'GAME_RESET',
   TURN_STARTED: 'TURN_STARTED',
   CHOICE_OFFERED: 'CHOICE_OFFERED',
   CHOICE_MADE: 'CHOICE_MADE',
@@ -42,7 +44,12 @@ export interface BaseSemanticEvent {
   readonly blockIndex?: number;
   /** Game turn at the moment of the event, when known. */
   readonly turn?: number;
+  /** How the event was inferred and from which packets. */
+  readonly evidence: SemanticEvidence;
 }
+
+/** Whether a block-level action came from the player's own command or from an effect that ran inside another block. */
+export type EventInitiator = 'player' | 'effect';
 
 export interface GameStartedEvent extends BaseSemanticEvent {
   readonly type: typeof SemanticEventType.GAME_STARTED;
@@ -60,6 +67,11 @@ export interface GameEndedEvent extends BaseSemanticEvent {
   readonly results: readonly PlayerResult[];
   readonly winners: readonly number[];
   readonly losers: readonly number[];
+}
+
+/** The game state was rewound by a GAME_RESET block (e.g. Toki, Time-Tinker); entities are re-created and the turn goes back. */
+export interface GameResetEvent extends BaseSemanticEvent, EntityFacts {
+  readonly type: typeof SemanticEventType.GAME_RESET;
 }
 
 export interface TurnStartedEvent extends BaseSemanticEvent {
@@ -104,15 +116,19 @@ export interface OptionChosenEvent extends BaseSemanticEvent {
 export interface CardPlayedEvent extends BaseSemanticEvent, EntityFacts {
   readonly type: typeof SemanticEventType.CARD_PLAYED;
   readonly target?: number;
+  /** `player` for a top-level PLAY block, `effect` when the block is nested inside another block. */
+  readonly initiator: EventInitiator;
 }
 
 export interface HeroPowerUsedEvent extends BaseSemanticEvent, EntityFacts {
   readonly type: typeof SemanticEventType.HERO_POWER_USED;
   readonly target?: number;
+  readonly initiator: EventInitiator;
 }
 
 export interface AttackEvent extends BaseSemanticEvent, EntityFacts {
   readonly type: typeof SemanticEventType.ATTACK;
+  readonly initiator: EventInitiator;
   /** Target named on the block, when present. */
   readonly target?: number;
   /** Entity whose DEFENDING tag was set during the block; differs from `target` when the attack was redirected. */
@@ -137,8 +153,10 @@ export interface DamageEvent extends BaseSemanticEvent {
   readonly type: typeof SemanticEventType.DAMAGE;
   readonly target: EntityRef;
   readonly amount: number;
-  /** Entity of the innermost enclosing block, usually the attacker or the effect's source. */
+  /** Entity recorded by the log as LAST_AFFECTED_BY on the target; absent when the log did not record it. */
   readonly source?: number;
+  /** Entity of the innermost enclosing block. Context, not attribution: it is the attacker or effect owner, not always the damage source. */
+  readonly blockEntity?: number;
 }
 
 export interface HealingEvent extends BaseSemanticEvent {
@@ -146,6 +164,7 @@ export interface HealingEvent extends BaseSemanticEvent {
   readonly target: EntityRef;
   readonly amount: number;
   readonly source?: number;
+  readonly blockEntity?: number;
 }
 
 export interface TriggeredEvent extends BaseSemanticEvent, EntityFacts {
@@ -166,6 +185,7 @@ export interface ConcededEvent extends BaseSemanticEvent {
 export type SemanticEvent =
   | GameStartedEvent
   | GameEndedEvent
+  | GameResetEvent
   | TurnStartedEvent
   | ChoiceOfferedEvent
   | ChoiceMadeEvent

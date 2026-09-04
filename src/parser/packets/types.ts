@@ -191,7 +191,8 @@ export interface SendChoicesPacket extends BaseReplayPacket {
 
 export interface OptionTarget {
   readonly index: number;
-  readonly entity: EntityRef;
+  /** Missing in some real logs for invalid targets that only carry an error code. */
+  readonly entity?: EntityRef;
   readonly error?: string;
   readonly errorParam?: number;
 }
