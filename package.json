@@ -1,0 +1,74 @@
+{
+  "name": "@manacost/hearthstone-replay",
+  "version": "0.3.0",
+  "description": "Lossless parser and state engine for Hearthstone HSReplay XML files",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Manacost-Labs/hearthstone-replay.git"
+  },
+  "homepage": "https://github.com/Manacost-Labs/hearthstone-replay#readme",
+  "bugs": {
+    "url": "https://github.com/Manacost-Labs/hearthstone-replay/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.0.0",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "pnpm exec tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "typecheck": "pnpm exec tsc -p tsconfig.json --noEmit",
+    "lint": "pnpm exec eslint . && pnpm exec prettier --check .",
+    "format": "pnpm exec prettier --write .",
+    "test": "pnpm exec vitest run",
+    "test:watch": "pnpm exec vitest",
+    "test:golden": "UPDATE_GOLDEN=1 pnpm exec vitest run test/integration/golden.test.ts",
+    "prepublishOnly": "pnpm run clean && pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build"
+  },
+  "keywords": [
+    "hearthstone",
+    "hsreplay",
+    "replay",
+    "parser",
+    "typescript"
+  ],
+  "dependencies": {
+    "saxes": "^6.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vitest": "^3.2.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

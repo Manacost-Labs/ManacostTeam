@@ -1,0 +1,2009 @@
+{
+  "metadata": {
+    "version": "1.7",
+    "build": 250339,
+    "game": {
+      "id": 13991,
+      "ts": "2026-09-04T02:42:09.655151-04:00",
+      "gameType": 7,
+      "format": 2,
+      "scenarioId": 2
+    },
+    "players": [
+      {
+        "entityId": 2,
+        "playerId": 1,
+        "name": "MrLean#11738",
+        "accountHi": "144115193835963207",
+        "accountLo": "124857041"
+      },
+      {
+        "entityId": 3,
+        "playerId": 2,
+        "name": "sunq#11510",
+        "accountHi": "144115193835963207",
+        "accountLo": "596909557",
+        "deck": {
+          "cards": [
+            {
+              "id": "TIME_702",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "TIME_702",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_202",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_202",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_872",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_872",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_200",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_200",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "END_007",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "END_007",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "FIR_907",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_875",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_436",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_436",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "END_011",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "END_011",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "CATA_139",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "MEND_046",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "EDR_846",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "CATA_131",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "CATA_131",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "CORE_EX1_169",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "CORE_EX1_169",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_201",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "JAIL_201",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "EDR_856",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "TIME_701",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "TIME_701",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "FIR_959",
+              "count": 1,
+              "premium": 0
+            },
+            {
+              "id": "EDR_844",
+              "count": 1,
+              "premium": 0
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "packetCount": 8535,
+  "topLevelPacketCount": 1130,
+  "packetTypeCounts": {
+    "GAME_ENTITY": 1,
+    "PLAYER": 2,
+    "FULL_ENTITY": 259,
+    "TAG_CHANGE": 6921,
+    "BLOCK": 520,
+    "SHOW_ENTITY": 118,
+    "CHOICES": 12,
+    "CHOSEN_ENTITIES": 12,
+    "SEND_CHOICES": 8,
+    "HIDE_ENTITY": 42,
+    "SHUFFLE_DECK": 2,
+    "META_DATA": 439,
+    "OPTIONS": 63,
+    "SEND_OPTION": 62,
+    "SUB_SPELL": 74
+  },
+  "entityCount": 262,
+  "diagnosticCount": 0,
+  "maxDepth": 5,
+  "firstPackets": [
+    {
+      "index": 0,
+      "type": "GAME_ENTITY",
+      "id": 1,
+      "tags": [
+        {
+          "tag": 202,
+          "value": 1
+        },
+        {
+          "tag": 49,
+          "value": 1
+        },
+        {
+          "tag": 53,
+          "value": 1
+        },
+        {
+          "tag": 937,
+          "value": 2
+        },
+        {
+          "tag": 1556,
+          "value": 1
+        },
+        {
+          "tag": 2042,
+          "value": 67080693
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "type": "PLAYER",
+      "id": 2,
+      "playerId": 1,
+      "name": "MrLean#11738",
+      "accountHi": "144115193835963207",
+      "accountLo": "124857041",
+      "tags": [
+        {
+          "tag": 50,
+          "value": 1
+        },
+        {
+          "tag": 202,
+          "value": 2
+        },
+        {
+          "tag": 30,
+          "value": 1
+        },
+        {
+          "tag": 27,
+          "value": 72
+        },
+        {
+          "tag": 28,
+          "value": 10
+        },
+        {
+          "tag": 29,
+          "value": 4
+        },
+        {
+          "tag": 31,
+          "value": 1
+        },
+        {
+          "tag": 49,
+          "value": 1
+        },
+        {
+          "tag": 53,
+          "value": 2
+        },
+        {
+          "tag": 176,
+          "value": 10
+        },
+        {
+          "tag": 1556,
+          "value": 1
+        },
+        {
+          "tag": 3326,
+          "value": 2
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "type": "PLAYER",
+      "id": 3,
+      "playerId": 2,
+      "name": "sunq#11510",
+      "accountHi": "144115193835963207",
+      "accountLo": "596909557",
+      "deck": {
+        "cards": [
+          {
+            "id": "TIME_702",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "TIME_702",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_202",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_202",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_872",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_872",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_200",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_200",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "END_007",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "END_007",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "FIR_907",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_875",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_436",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_436",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "END_011",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "END_011",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "CATA_139",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "MEND_046",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "EDR_846",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "CATA_131",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "CATA_131",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "CORE_EX1_169",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "CORE_EX1_169",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_201",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "JAIL_201",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "EDR_856",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "TIME_701",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "TIME_701",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "FIR_959",
+            "count": 1,
+            "premium": 0
+          },
+          {
+            "id": "EDR_844",
+            "count": 1,
+            "premium": 0
+          }
+        ]
+      },
+      "tags": [
+        {
+          "tag": 50,
+          "value": 2
+        },
+        {
+          "tag": 202,
+          "value": 2
+        },
+        {
+          "tag": 30,
+          "value": 2
+        },
+        {
+          "tag": 27,
+          "value": 74
+        },
+        {
+          "tag": 28,
+          "value": 10
+        },
+        {
+          "tag": 29,
+          "value": 4
+        },
+        {
+          "tag": 31,
+          "value": 2
+        },
+        {
+          "tag": 49,
+          "value": 1
+        },
+        {
+          "tag": 53,
+          "value": 3
+        },
+        {
+          "tag": 176,
+          "value": 10
+        },
+        {
+          "tag": 1556,
+          "value": 1
+        },
+        {
+          "tag": 3326,
+          "value": 2
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "type": "FULL_ENTITY",
+      "id": 4,
+      "tags": [
+        {
+          "tag": 49,
+          "value": 2
+        },
+        {
+          "tag": 50,
+          "value": 1
+        },
+        {
+          "tag": 53,
+          "value": 4
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "type": "FULL_ENTITY",
+      "id": 5,
+      "tags": [
+        {
+          "tag": 49,
+          "value": 2
+        },
+        {
+          "tag": 50,
+          "value": 1
+        },
+        {
+          "tag": 53,
+          "value": 5
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "type": "FULL_ENTITY",
+      "id": 6,
+      "tags": [
+        {
+          "tag": 49,
+          "value": 2
+        },
+        {
+          "tag": 50,
+          "value": 1
+        },
+        {
+          "tag": 53,
+          "value": 6
+        }
+      ]
+    }
+  ],
+  "lastPackets": [
+    {
+      "index": 8529,
+      "type": "TAG_CHANGE",
+      "entity": {
+        "kind": "id",
+        "id": 1
+      },
+      "tag": 198,
+      "value": 14
+    },
+    {
+      "index": 8530,
+      "type": "TAG_CHANGE",
+      "entity": {
+        "kind": "id",
+        "id": 1
+      },
+      "tag": 19,
+      "value": 14
+    },
+    {
+      "index": 8531,
+      "type": "BLOCK",
+      "entity": {
+        "kind": "id",
+        "id": 1
+      },
+      "blockType": 5,
+      "effectCardId": "System.Collections.Generic.List`1[System.String]",
+      "ts": "2026-09-04T02:53:59.040592-04:00",
+      "childCount": 1
+    },
+    {
+      "index": 8532,
+      "type": "TAG_CHANGE",
+      "entity": {
+        "kind": "id",
+        "id": 1
+      },
+      "tag": 198,
+      "value": 15
+    },
+    {
+      "index": 8533,
+      "type": "TAG_CHANGE",
+      "entity": {
+        "kind": "id",
+        "id": 1
+      },
+      "tag": 19,
+      "value": 15
+    },
+    {
+      "index": 8534,
+      "type": "TAG_CHANGE",
+      "entity": {
+        "kind": "id",
+        "id": 1
+      },
+      "tag": 204,
+      "value": 3
+    }
+  ],
+  "blockStructure": {
+    "index": 4938,
+    "type": "BLOCK",
+    "entity": {
+      "kind": "id",
+      "id": 216
+    },
+    "blockType": 7,
+    "children": [
+      {
+        "index": 4939,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4940,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4941,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4942,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4943,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4944,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4945,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4946,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4947,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4948,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4949,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4950,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4951,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4952,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4953,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4954,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4955,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 4956,
+        "type": "META_DATA"
+      },
+      {
+        "index": 4957,
+        "type": "BLOCK",
+        "entity": {
+          "kind": "id",
+          "id": 216
+        },
+        "blockType": 3,
+        "children": [
+          {
+            "index": 4958,
+            "type": "FULL_ENTITY"
+          },
+          {
+            "index": 4959,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 4960,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 4961,
+            "type": "META_DATA"
+          },
+          {
+            "index": 4962,
+            "type": "META_DATA"
+          },
+          {
+            "index": 4963,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 4964,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 4965,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 4966,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 4967,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 4968,
+            "type": "BLOCK",
+            "entity": {
+              "kind": "id",
+              "id": 219
+            },
+            "blockType": 3,
+            "children": [
+              {
+                "index": 4969,
+                "type": "SUB_SPELL",
+                "children": [
+                  {
+                    "index": 4970,
+                    "type": "META_DATA"
+                  },
+                  {
+                    "index": 4971,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4972,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4973,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4974,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4975,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4976,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4977,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4978,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4979,
+                    "type": "META_DATA"
+                  },
+                  {
+                    "index": 4980,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4981,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4982,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4983,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4984,
+                    "type": "BLOCK",
+                    "entity": {
+                      "kind": "id",
+                      "id": 219
+                    },
+                    "blockType": 5,
+                    "children": [
+                      {
+                        "index": 4985,
+                        "type": "META_DATA"
+                      },
+                      {
+                        "index": 4986,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 4987,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 4988,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 4989,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 4990,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 4991,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 4992,
+                        "type": "META_DATA"
+                      },
+                      {
+                        "index": 4993,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 4994,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 4995,
+                        "type": "TAG_CHANGE"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "index": 4996,
+                "type": "SUB_SPELL",
+                "children": [
+                  {
+                    "index": 4997,
+                    "type": "META_DATA"
+                  },
+                  {
+                    "index": 4998,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 4999,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5000,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5001,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5002,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5003,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5004,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5005,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5006,
+                    "type": "META_DATA"
+                  },
+                  {
+                    "index": 5007,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5008,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5009,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5010,
+                    "type": "TAG_CHANGE"
+                  },
+                  {
+                    "index": 5011,
+                    "type": "BLOCK",
+                    "entity": {
+                      "kind": "id",
+                      "id": 219
+                    },
+                    "blockType": 5,
+                    "children": [
+                      {
+                        "index": 5012,
+                        "type": "META_DATA"
+                      },
+                      {
+                        "index": 5013,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 5014,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 5015,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 5016,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 5017,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 5018,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 5019,
+                        "type": "META_DATA"
+                      },
+                      {
+                        "index": 5020,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 5021,
+                        "type": "TAG_CHANGE"
+                      },
+                      {
+                        "index": 5022,
+                        "type": "TAG_CHANGE"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "index": 5023,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5024,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5025,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5026,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5027,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5028,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5029,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5030,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5031,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5032,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5033,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5034,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5035,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5036,
+            "type": "TAG_CHANGE"
+          }
+        ]
+      },
+      {
+        "index": 5037,
+        "type": "BLOCK",
+        "entity": {
+          "kind": "id",
+          "id": 1
+        },
+        "blockType": 6,
+        "children": [
+          {
+            "index": 5038,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5039,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5040,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5041,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5042,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5043,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5044,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5045,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5046,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5047,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5048,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5049,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5050,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5051,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5052,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5053,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5054,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5055,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5056,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5057,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5058,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5059,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5060,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5061,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5062,
+            "type": "TAG_CHANGE"
+          }
+        ]
+      },
+      {
+        "index": 5063,
+        "type": "BLOCK",
+        "entity": {
+          "kind": "id",
+          "id": 206
+        },
+        "blockType": 5,
+        "children": [
+          {
+            "index": 5064,
+            "type": "META_DATA"
+          },
+          {
+            "index": 5065,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5066,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5067,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5068,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5069,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5070,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5071,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5072,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5073,
+            "type": "META_DATA"
+          },
+          {
+            "index": 5074,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5075,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5076,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5077,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5078,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5079,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5080,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5081,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5082,
+            "type": "TAG_CHANGE"
+          }
+        ]
+      },
+      {
+        "index": 5083,
+        "type": "META_DATA"
+      },
+      {
+        "index": 5084,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 5085,
+        "type": "BLOCK",
+        "entity": {
+          "kind": "id",
+          "id": 217
+        },
+        "blockType": 5,
+        "children": [
+          {
+            "index": 5086,
+            "type": "META_DATA"
+          },
+          {
+            "index": 5087,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5088,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5089,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5090,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5091,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5092,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5093,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5094,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5095,
+            "type": "META_DATA"
+          },
+          {
+            "index": 5096,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5097,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5098,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5099,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5100,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5101,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5102,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5103,
+            "type": "TAG_CHANGE"
+          },
+          {
+            "index": 5104,
+            "type": "TAG_CHANGE"
+          }
+        ]
+      },
+      {
+        "index": 5105,
+        "type": "META_DATA"
+      },
+      {
+        "index": 5106,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 5107,
+        "type": "TAG_CHANGE"
+      },
+      {
+        "index": 5108,
+        "type": "TAG_CHANGE"
+      }
+    ]
+  },
+  "entities": {
+    "1": {
+      "cardId": null,
+      "player": null,
+      "tags": {
+        "10": 85,
+        "19": 15,
+        "20": 24,
+        "37": 0,
+        "39": 0,
+        "49": 1,
+        "53": 1,
+        "198": 15,
+        "202": 1,
+        "204": 3,
+        "271": 24,
+        "369": 0,
+        "937": 2,
+        "1323": 83,
+        "1556": 1,
+        "1710": 0,
+        "1882": 23,
+        "2042": 67080693
+      }
+    },
+    "2": {
+      "cardId": null,
+      "player": {
+        "playerId": 1,
+        "name": "MrLean#11738"
+      },
+      "tags": {
+        "7": 75,
+        "17": 4,
+        "18": 4,
+        "20": 12,
+        "23": 0,
+        "24": 1,
+        "25": 9,
+        "26": 10,
+        "27": 72,
+        "28": 10,
+        "29": 4,
+        "30": 1,
+        "31": 1,
+        "49": 1,
+        "50": 1,
+        "53": 2,
+        "176": 10,
+        "202": 2,
+        "266": 0,
+        "269": 2,
+        "271": 24,
+        "272": 1,
+        "305": 4,
+        "317": 2,
+        "358": 2,
+        "368": 0,
+        "394": 1,
+        "398": 0,
+        "399": 0,
+        "406": 0,
+        "412": 19,
+        "417": 0,
+        "418": 70,
+        "430": 0,
+        "464": 0,
+        "467": 0,
+        "780": 8,
+        "821": 0,
+        "835": 0,
+        "958": 25,
+        "995": 15,
+        "1153": 4,
+        "1292": 0,
+        "1420": 0,
+        "1556": 1,
+        "1573": 6,
+        "1575": 0,
+        "1739": 0,
+        "1780": 15,
+        "1853": 26,
+        "1854": 5,
+        "2023": 0,
+        "2024": 0,
+        "2166": 22,
+        "2186": 19,
+        "2245": 70,
+        "2349": 0,
+        "3110": 1,
+        "3242": 0,
+        "3326": 2,
+        "3449": 0,
+        "3687": 1,
+        "4453": 0,
+        "4587": 0,
+        "4741": 1
+      }
+    },
+    "3": {
+      "cardId": null,
+      "player": {
+        "playerId": 2,
+        "name": "sunq#11510"
+      },
+      "tags": {
+        "7": 75,
+        "17": 5,
+        "18": 4,
+        "20": 12,
+        "23": 1,
+        "25": 0,
+        "26": 10,
+        "27": 74,
+        "28": 10,
+        "29": 4,
+        "30": 2,
+        "31": 2,
+        "49": 1,
+        "50": 2,
+        "53": 3,
+        "176": 10,
+        "202": 2,
+        "266": 0,
+        "269": 0,
+        "271": 24,
+        "272": 1,
+        "295": 0,
+        "296": 0,
+        "305": 4,
+        "317": 0,
+        "334": 0,
+        "358": 0,
+        "368": 0,
+        "393": 1,
+        "394": 1,
+        "398": 0,
+        "399": 1,
+        "406": 0,
+        "412": 27,
+        "417": 0,
+        "418": 71,
+        "427": 1,
+        "430": 0,
+        "464": 0,
+        "467": 0,
+        "780": 2,
+        "821": 0,
+        "835": 0,
+        "958": 10,
+        "995": 20,
+        "1292": 1,
+        "1420": 0,
+        "1556": 1,
+        "1573": 8,
+        "1575": 0,
+        "1739": 0,
+        "1780": 17,
+        "1828": 25,
+        "1853": 53,
+        "2024": 0,
+        "2166": 40,
+        "2186": 27,
+        "2245": 71,
+        "2335": 9,
+        "2349": 0,
+        "2786": 0,
+        "3110": 33,
+        "3143": 0,
+        "3242": 0,
+        "3326": 2,
+        "3479": 1,
+        "3687": 6,
+        "4453": 0,
+        "4587": 0,
+        "4741": 1
+      }
+    },
+    "4": {
+      "cardId": "CAP_805",
+      "player": null,
+      "tags": {
+        "12": 0,
+        "48": 4,
+        "49": 4,
+        "50": 1,
+        "53": 4,
+        "199": 6,
+        "202": 5,
+        "203": 4,
+        "261": 1,
+        "263": 0,
+        "273": 7,
+        "466": 4,
+        "478": 1,
+        "541": 0,
+        "1037": 0,
+        "1043": 1,
+        "1068": 0,
+        "1271": 0,
+        "1326": 0,
+        "1380": 0,
+        "1452": 127118,
+        "1556": 1,
+        "1570": 13,
+        "1635": 6,
+        "1824": 1,
+        "2485": 0,
+        "3085": 0,
+        "3557": 3,
+        "3669": 0,
+        "3908": 0,
+        "4472": 0,
+        "4904": 0
+      }
+    },
+    "31": {
+      "cardId": "TLC_817",
+      "player": null,
+      "tags": {
+        "43": 0,
+        "48": 1,
+        "49": 6,
+        "50": 1,
+        "53": 31,
+        "114": 1,
+        "199": 6,
+        "202": 5,
+        "203": 5,
+        "219": 0,
+        "261": 1,
+        "263": 0,
+        "273": 1,
+        "462": 1,
+        "466": 1,
+        "476": 0,
+        "478": 1,
+        "676": 1,
+        "839": 1,
+        "1037": 1,
+        "1043": 1,
+        "1068": 0,
+        "1089": 119879,
+        "1556": 1,
+        "2589": 1,
+        "2676": 0,
+        "3557": 1,
+        "3674": 1,
+        "3736": 1,
+        "4310": 1
+      }
+    },
+    "68": {
+      "cardId": "FIR_959",
+      "player": null,
+      "tags": {
+        "18": 328,
+        "36": 0,
+        "43": 0,
+        "44": 0,
+        "45": 7,
+        "47": 7,
+        "48": 10,
+        "49": 4,
+        "50": 2,
+        "53": 68,
+        "114": 1,
+        "199": 12,
+        "200": 24,
+        "201": 3,
+        "202": 4,
+        "203": 5,
+        "218": 1,
+        "261": 0,
+        "263": 0,
+        "271": 1,
+        "273": 13,
+        "318": 0,
+        "466": 10,
+        "478": 2,
+        "479": 7,
+        "1037": 1,
+        "1043": 1,
+        "1068": 0,
+        "1173": 0,
+        "1196": 0,
+        "1380": 1,
+        "1556": 1,
+        "1570": 10,
+        "1715": 22,
+        "1824": 1,
+        "1932": 1,
+        "2187": 0,
+        "2840": 1,
+        "3085": 7,
+        "3557": 1,
+        "4066": 0,
+        "4128": 1,
+        "4472": 7,
+        "4741": 3
+      }
+    },
+    "72": {
+      "cardId": "HERO_09aw",
+      "player": null,
+      "tags": {
+        "12": 1,
+        "18": 308,
+        "36": 0,
+        "44": 3,
+        "45": 30,
+        "49": 1,
+        "50": 1,
+        "53": 72,
+        "199": 6,
+        "201": 3,
+        "202": 3,
+        "203": 2,
+        "271": 24,
+        "318": 0,
+        "380": 66929,
+        "425": 0,
+        "1107": 1,
+        "1173": 0,
+        "1556": 1,
+        "1715": 74,
+        "2187": 0,
+        "2839": 34,
+        "2840": 1,
+        "2851": 9,
+        "3085": 30,
+        "4741": 17
+      }
+    },
+    "74": {
+      "cardId": "HERO_06ag",
+      "player": null,
+      "tags": {
+        "18": 39,
+        "36": 0,
+        "38": 0,
+        "43": 0,
+        "44": 21,
+        "45": 30,
+        "47": 1,
+        "49": 1,
+        "50": 2,
+        "53": 74,
+        "199": 2,
+        "201": 3,
+        "202": 3,
+        "203": 2,
+        "267": 72,
+        "271": 24,
+        "292": 3,
+        "297": 0,
+        "318": 0,
+        "338": 0,
+        "380": 66926,
+        "425": 0,
+        "479": 1,
+        "1107": 1,
+        "1173": 0,
+        "1556": 1,
+        "1715": 74,
+        "2187": 0,
+        "2839": 59,
+        "2840": 1,
+        "2851": 6,
+        "3085": 30,
+        "3883": 0,
+        "4163": 9,
+        "4741": 21
+      }
+    },
+    "209": {
+      "cardId": "MEND_046t",
+      "player": null,
+      "tags": {
+        "2": 208,
+        "45": 2,
+        "47": 2,
+        "48": 1,
+        "49": 6,
+        "50": 2,
+        "53": 209,
+        "199": 2,
+        "202": 4,
+        "218": 1,
+        "313": 48,
+        "385": 48,
+        "466": 1,
+        "479": 2,
+        "515": 111355,
+        "1037": 2,
+        "1078": 111355,
+        "1284": 123493,
+        "1304": 208,
+        "1556": 1,
+        "2831": 1,
+        "2840": 1,
+        "3085": 2,
+        "4901": 0
+      }
+    }
+  },
+  "tagTransitions": {
+    "1:19": [
+      4,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      12,
+      16,
+      13,
+      6,
+      17,
+      9,
+      10,
+      14,
+      15
+    ],
+    "1:20": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+    ],
+    "1:204": [
+      2,
+      3
+    ],
+    "2:17": [
+      1,
+      4
+    ],
+    "3:17": [
+      1,
+      8,
+      5
+    ],
+    "2:26": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "68:49": [
+      2,
+      1,
+      4
+    ]
+  }
+}
