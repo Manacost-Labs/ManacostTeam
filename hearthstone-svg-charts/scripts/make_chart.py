@@ -1294,7 +1294,62 @@ def r_notice(spec):
         y += ch
     return 800, y + 40, "\n".join(body), None
 
-RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "bump": r_bump, "notice": r_notice, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
+
+def r_poster(spec):
+    """Постер для соцсетей (квадрат): бейдж, крупный заголовок слева, веер карт справа,
+    чипы условий и плашка-кнопка. Возвращает 748 + полоса логотипа = 800×800."""
+    d = spec["data"]
+    body = []
+    # бейдж-кикер
+    kick = str(d.get("kicker", "")).upper()
+    if kick:
+        kw = text_w(kick, 13, serif=True) + 30
+        body.append(f'<rect x="46" y="44" width="{kw:.0f}" height="28" rx="14" fill="url(#goldEdge)" stroke="#5d3f12" stroke-width="1"/>'
+                    f'<text x="{46+kw/2:.0f}" y="63" text-anchor="middle" font-family="{SERIF}" font-size="13" letter-spacing="1.5" fill="#3a2408">{serif_text(kick)}</text>')
+    # веер карт справа (рисуем до текста, чтобы текст был поверх при наложении)
+    cards = d.get("cards", [])[:3]
+    if cards:
+        cx, cy = 590, 330
+        CW, CH = 168, 254
+        angles = {1: [0], 2: [-9, 9], 3: [-14, 0, 14]}[len(cards)]
+        offs = {1: [0], 2: [-40, 40], 3: [-78, 0, 78]}[len(cards)]
+        for img, ang, off in zip(cards, angles, offs):
+            uri = icon_uri(img)
+            body.append(f'<g transform="translate({cx+off} {cy+abs(off)*0.12:.0f}) rotate({ang})">'
+                        f'<rect x="{-CW/2+8}" y="{-CH/2+14}" width="{CW-16}" height="{CH-16}" rx="14" fill="#1a120b" opacity="0.35" filter="url(#soft)"/>'
+                        f'<image href="{uri}" x="{-CW/2}" y="{-CH/2}" width="{CW}" height="{CH}" preserveAspectRatio="xMidYMid meet"/></g>')
+    # заголовок
+    y = 128
+    h_lines = wrap(d.get("headline", ""), 34, 400, 4)
+    for i, ln in enumerate(h_lines):
+        body.append(f'<text x="46" y="{y+i*42}" font-family="{SERIF}" font-size="34" fill="{INK}" '
+                    f'stroke="#f7e8bf" stroke-width="5" paint-order="stroke" stroke-linejoin="round">{serif_text(ln)}</text>')
+    y += 42 * len(h_lines) + 14
+    lead_lines = wrap(d.get("lead", ""), 15.5, 380, 5)
+    for i, ln in enumerate(lead_lines):
+        body.append(f'<text x="46" y="{y+i*24}" font-family="{SANS}" font-size="15.5" fill="{INK}">{esc(ln)}</text>')
+    y += 24 * len(lead_lines) + 22
+    # чипы
+    x = 46
+    for chip in d.get("chips", [])[:4]:
+        w = text_w(chip, 13) + 26
+        if x + w > 440:
+            x = 46; y += 38
+        body.append(f'<rect x="{x:.0f}" y="{y}" width="{w:.0f}" height="30" rx="15" fill="#5d0d13" opacity="0.9"/>'
+                    f'<rect x="{x+0.5:.0f}" y="{y+0.5}" width="{w-1:.0f}" height="29" rx="14.5" fill="none" stroke="url(#goldEdge)" stroke-width="1"/>'
+                    f'<text x="{x+w/2:.0f}" y="{y+20}" text-anchor="middle" font-family="{SANS}" font-size="13" font-weight="700" fill="#efc96f">{esc(chip)}</text>')
+        x += w + 10
+    # плашка-кнопка внизу
+    cta = d.get("cta", {})
+    by = 640
+    body.append(f'<rect x="46" y="{by}" width="708" height="66" rx="14" fill="#8d171d"/>'
+                f'<rect x="46" y="{by}" width="708" height="66" rx="14" fill="url(#bevelTop)" opacity="0.55"/>'
+                f'<rect x="47" y="{by+1}" width="706" height="64" rx="13" fill="none" stroke="url(#goldEdge)" stroke-width="1.8"/>'
+                f'<text x="400" y="{by+28}" text-anchor="middle" font-family="{SERIF}" font-size="19" fill="{CREAM}">{serif_text(cta.get("text", "Откликнуться"))}</text>'
+                f'<text x="400" y="{by+52}" text-anchor="middle" font-family="{SANS}" font-size="17" font-weight="700" fill="#efc96f">{esc(cta.get("contact", ""))}</text>')
+    return 800, 748, "\n".join(body), None
+
+RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "bump": r_bump, "notice": r_notice, "poster": r_poster, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
              "beforeafter": r_beforeafter, "matchup": r_matchup, "badge": r_badge,
              "timeline": r_timeline, "digest": r_digest}
 
@@ -1380,7 +1435,7 @@ def build(spec):
         content = f'<g transform="translate(0 {pad/2:.0f})">{content}</g>'
         H = target
         logo = logo_tag(H) if logo else ""
-    tb, _ = ("", 96) if t in ("author", "quote") else title_block(spec)
+    tb, _ = ("", 96) if t in ("author", "quote", "poster") else title_block(spec)
     body = "\n".join([font_face_style(), frame(H, spec.get("frame", "vector"), finish),
                       tb, content, footer(spec, H, scale_note or ""), logo,
                       anim_style() if spec.get("animate") else ""])
