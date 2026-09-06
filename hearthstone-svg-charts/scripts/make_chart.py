@@ -1270,12 +1270,20 @@ def r_notice(spec):
                     f'fill="#8d171d">{serif_text(str(col.get("title", "")).upper())}</text>'
                     f'<rect x="{x}" y="{cy+8}" width="{colw}" height="2" fill="#5f371d" opacity="0.45"/>')
         cy += 34
-        for item in col.get("items", []):
-            lines = wrap(item, 14.5, colw - 26, 3)
-            body.append(f'<rect x="{x+2}" y="{cy-9}" width="9" height="9" rx="1.5" fill="url(#goldEdge)" '
-                        f'stroke="#5d3f12" stroke-width="0.8" transform="rotate(45 {x+6.5} {cy-4.5})"/>')
+        mana_bullets = d.get("bullets") == "mana"
+        tx_off = 34 if mana_bullets else 24
+        for k, item in enumerate(col.get("items", []), 1):
+            lines = wrap(item, 14.5, colw - tx_off - 4, 3)
+            if mana_bullets:
+                # пронумерованный кристалл маны вместо ромба — игровая деталь
+                body.append(img_ref("mana", x - 2, cy - 17, 24, 24) +
+                            f'<text x="{x+10}" y="{cy}" text-anchor="middle" font-family="{SERIF}" font-size="12" '
+                            f'fill="#ffffff" stroke="#0a2c50" stroke-width="2.2" paint-order="stroke">{serif_text(k)}</text>')
+            else:
+                body.append(f'<rect x="{x+2}" y="{cy-9}" width="9" height="9" rx="1.5" fill="url(#goldEdge)" '
+                            f'stroke="#5d3f12" stroke-width="0.8" transform="rotate(45 {x+6.5} {cy-4.5})"/>')
             for li, ln in enumerate(lines):
-                body.append(f'<text x="{x+24}" y="{cy+li*20}" font-family="{SANS}" font-size="14.5" '
+                body.append(f'<text x="{x+tx_off}" y="{cy+li*20}" font-family="{SANS}" font-size="14.5" '
                             f'fill="{INK}">{esc(ln)}</text>')
             cy += 20 * len(lines) + 10
         ymax = max(ymax, cy)
