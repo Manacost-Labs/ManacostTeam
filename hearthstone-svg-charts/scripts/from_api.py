@@ -172,8 +172,8 @@ def cmd_arena_donuts(args):
           "data": data, "footer": FOOT}, "arena-donut-picks", args)
     data, total = split([(i["class_ru"], i["num_drafts"] * i["pct_7_plus"] / 100) for i in items])
     emit({"type": "donut", "title": "Кто достигает 7+ побед",
-          "subtitle": f"доли классов среди походов с 7+ победами · {today_ru()}", "theme": "arena",
-          "center": {"big": f"≈{round(total)}", "small": "походов с 7+"},
+          "subtitle": f"доли классов среди забегов с 7+ победами · {today_ru()}", "theme": "arena",
+          "center": {"big": f"≈{round(total)}", "small": "забегов с 7+"},
           "data": data, "footer": f"Доля = драфты × процент 7+ побед · {FOOT}"}, "arena-donut-7plus", args)
 
 def _bg_heroes(mode):
