@@ -1171,9 +1171,10 @@ def r_cards(spec):
         body.append(f'<rect x="{x+6:.0f}" y="{y+10}" width="{CW-12}" height="{CH-12}" rx="12" fill="#1a120b" opacity="0.28" filter="url(#soft)"/>'
                     f'<image href="{uri}" x="{x:.0f}" y="{y}" width="{CW}" height="{CH}" preserveAspectRatio="xMidYMid meet"/>')
         rank = it.get("rank", i + 1)
-        # ранг — справа сверху: слева на карте кристалл маны, его нельзя закрывать
+        # ранг — справа сверху (слева на карте кристалл маны); по умолчанию выключен
         rx = x + CW - 14
-        body.append(f'<circle cx="{rx:.0f}" cy="{y+16}" r="15" fill="url(#goldEdge)" stroke="#5d3f12" stroke-width="1.4"/>'
+        if spec.get("ranks", False):
+          body.append(f'<circle cx="{rx:.0f}" cy="{y+16}" r="15" fill="url(#goldEdge)" stroke="#5d3f12" stroke-width="1.4"/>'
                     f'<text x="{rx:.0f}" y="{y+21.5}" text-anchor="middle" font-family="{SERIF}" font-size="15" fill="#3a2408">{serif_text(rank)}</text>')
         val = str(it["value"])
         mw = max(text_w(val, 16, serif=True) + 26, 74)
