@@ -1235,7 +1235,59 @@ def r_bump(spec):
     column(after, RX, pos_b, pos_a, right=True)
     return 800, H, "\n".join(body), "▲▼ — на сколько мест изменился ранг"
 
-RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "bump": r_bump, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
+
+def r_notice(spec):
+    """Объявление/вакансия: оффер, 1–2 колонки буллетов, плашка-призыв."""
+    d = spec["data"]
+    cols = d.get("columns", [])[:2]
+    y = 126
+    body = []
+    if d.get("headline"):
+        for i, ln in enumerate(wrap(d["headline"], 22, 660, 2)):
+            body.append(f'<text x="400" y="{y+i*30}" text-anchor="middle" font-family="{SERIF}" '
+                        f'font-size="22" fill="{INK}">{serif_text(ln)}</text>')
+        y += 30 * len(wrap(d["headline"], 22, 660, 2)) + 18
+    if d.get("lead"):
+        for i, ln in enumerate(wrap(d["lead"], 14.5, 640, 3)):
+            body.append(f'<text x="400" y="{y+i*21}" text-anchor="middle" font-family="{SANS}" '
+                        f'font-size="14.5" fill="{MUTED}">{esc(ln)}</text>')
+        y += 21 * len(wrap(d["lead"], 14.5, 640, 3)) + 16
+    # колонки
+    n = len(cols)
+    colw = 330 if n == 2 else 680
+    xs = [60, 410] if n == 2 else [60]
+    ymax = y
+    for ci, col in enumerate(cols):
+        x = xs[ci]
+        cy = y
+        body.append(f'<text x="{x}" y="{cy}" font-family="{SERIF}" font-size="14" letter-spacing="1.2" '
+                    f'fill="#8d171d">{serif_text(str(col.get("title", "")).upper())}</text>'
+                    f'<rect x="{x}" y="{cy+8}" width="{colw}" height="2" fill="#5f371d" opacity="0.45"/>')
+        cy += 34
+        for item in col.get("items", []):
+            lines = wrap(item, 14.5, colw - 26, 3)
+            body.append(f'<rect x="{x+2}" y="{cy-9}" width="9" height="9" rx="1.5" fill="url(#goldEdge)" '
+                        f'stroke="#5d3f12" stroke-width="0.8" transform="rotate(45 {x+6.5} {cy-4.5})"/>')
+            for li, ln in enumerate(lines):
+                body.append(f'<text x="{x+24}" y="{cy+li*20}" font-family="{SANS}" font-size="14.5" '
+                            f'fill="{INK}">{esc(ln)}</text>')
+            cy += 20 * len(lines) + 10
+        ymax = max(ymax, cy)
+    y = ymax + 16
+    cta = d.get("cta")
+    if cta:
+        txt = str(cta.get("text", ""))
+        contact = str(cta.get("contact", ""))
+        w = 700
+        body.append(f'<rect x="50" y="{y}" width="{w}" height="58" rx="12" fill="#5d0d13"/>'
+                    f'<rect x="50" y="{y}" width="{w}" height="58" rx="12" fill="url(#bevelTop)" opacity="0.5"/>'
+                    f'<rect x="51" y="{y+1}" width="{w-2}" height="56" rx="11" fill="none" stroke="url(#goldEdge)" stroke-width="1.6"/>'
+                    f'<text x="400" y="{y+25}" text-anchor="middle" font-family="{SERIF}" font-size="17" fill="{CREAM}">{serif_text(txt)}</text>'
+                    f'<text x="400" y="{y+46}" text-anchor="middle" font-family="{SANS}" font-size="14" font-weight="700" fill="#d9ab49">{esc(contact)}</text>')
+        y += 58
+    return 800, y + 40, "\n".join(body), None
+
+RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "bump": r_bump, "notice": r_notice, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
              "beforeafter": r_beforeafter, "matchup": r_matchup, "badge": r_badge,
              "timeline": r_timeline, "digest": r_digest}
 
@@ -1300,7 +1352,7 @@ def build(spec):
     t = spec.get("type")
     if t not in RENDERERS:
         die(f"неизвестный type '{t}'; доступны: {', '.join(RENDERERS)}")
-    finish = spec.get("finish", "quiet" if t in ("badge", "digest", "author", "quote", "facts") else "parade")
+    finish = spec.get("finish", "quiet" if t in ("badge", "digest", "author", "quote", "facts", "notice") else "parade")
     W, H, content, scale_note = RENDERERS[t](spec)
     if t == "badge":
         return doc(W, H, spec.get("title", "Бейдж"), font_face_style() + "\n" + content)
