@@ -1240,19 +1240,24 @@ def r_notice(spec):
     """Объявление/вакансия: оффер, 1–2 колонки буллетов, плашка-призыв."""
     d = spec["data"]
     cols = d.get("columns", [])[:2]
-    y = 144
+    # в квадрате/сторис без колонок текста мало — крупнее типографика, чтобы заполнить формат
+    big = spec.get("format") in ("square", "story") and not cols
+    hs, hl = (27, 36) if big else (22, 30)          # кегль/интерлиньяж оффера
+    ls, ll = (17.5, 27) if big else (15, 23)         # кегль/интерлиньяж лида
+    y = 160 if big else 144
     body = []
     if d.get("headline"):
-        for i, ln in enumerate(wrap(d["headline"], 22, 660, 2)):
-            body.append(f'<text x="400" y="{y+i*30}" text-anchor="middle" font-family="{SERIF}" '
-                        f'font-size="22" fill="{INK}">{serif_text(ln)}</text>')
-        y += 30 * len(wrap(d["headline"], 22, 660, 2)) + 18
+        h_lines = wrap(d["headline"], hs, 640, 3)
+        for i, ln in enumerate(h_lines):
+            body.append(f'<text x="400" y="{y+i*hl}" text-anchor="middle" font-family="{SERIF}" '
+                        f'font-size="{hs}" fill="{INK}">{serif_text(ln)}</text>')
+        y += hl * len(h_lines) + (26 if big else 18)
     if d.get("lead"):
-        lead_lines = wrap(d["lead"], 15, 620, 5)
+        lead_lines = wrap(d["lead"], ls, 600 if big else 620, 6)
         for i, ln in enumerate(lead_lines):
-            body.append(f'<text x="400" y="{y+i*23}" text-anchor="middle" font-family="{SANS}" '
-                        f'font-size="15" fill="{INK}">{esc(ln)}</text>')
-        y += 23 * len(lead_lines) + 22
+            body.append(f'<text x="400" y="{y+i*ll}" text-anchor="middle" font-family="{SANS}" '
+                        f'font-size="{ls}" fill="{INK}">{esc(ln)}</text>')
+        y += ll * len(lead_lines) + (34 if big else 22)
     # колонки
     n = len(cols)
     colw = 330 if n == 2 else 680
@@ -1280,12 +1285,13 @@ def r_notice(spec):
         txt = str(cta.get("text", ""))
         contact = str(cta.get("contact", ""))
         w = 700
-        body.append(f'<rect x="50" y="{y}" width="{w}" height="58" rx="12" fill="#5d0d13"/>'
-                    f'<rect x="50" y="{y}" width="{w}" height="58" rx="12" fill="url(#bevelTop)" opacity="0.5"/>'
-                    f'<rect x="51" y="{y+1}" width="{w-2}" height="56" rx="11" fill="none" stroke="url(#goldEdge)" stroke-width="1.6"/>'
-                    f'<text x="400" y="{y+25}" text-anchor="middle" font-family="{SERIF}" font-size="17" fill="{CREAM}">{serif_text(txt)}</text>'
-                    f'<text x="400" y="{y+46}" text-anchor="middle" font-family="{SANS}" font-size="14" font-weight="700" fill="#d9ab49">{esc(contact)}</text>')
-        y += 58
+        ch = 72 if big else 58
+        body.append(f'<rect x="50" y="{y}" width="{w}" height="{ch}" rx="12" fill="#5d0d13"/>'
+                    f'<rect x="50" y="{y}" width="{w}" height="{ch}" rx="12" fill="url(#bevelTop)" opacity="0.5"/>'
+                    f'<rect x="51" y="{y+1}" width="{w-2}" height="{ch-2}" rx="11" fill="none" stroke="url(#goldEdge)" stroke-width="1.6"/>'
+                    f'<text x="400" y="{y+(31 if big else 25)}" text-anchor="middle" font-family="{SERIF}" font-size="{20 if big else 17}" fill="{CREAM}">{serif_text(txt)}</text>'
+                    f'<text x="400" y="{y+(56 if big else 46)}" text-anchor="middle" font-family="{SANS}" font-size="{16 if big else 14}" font-weight="700" fill="#d9ab49">{esc(contact)}</text>')
+        y += ch
     return 800, y + 40, "\n".join(body), None
 
 RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "bump": r_bump, "notice": r_notice, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
