@@ -1248,10 +1248,11 @@ def r_notice(spec):
                         f'font-size="22" fill="{INK}">{serif_text(ln)}</text>')
         y += 30 * len(wrap(d["headline"], 22, 660, 2)) + 18
     if d.get("lead"):
-        for i, ln in enumerate(wrap(d["lead"], 14.5, 640, 3)):
-            body.append(f'<text x="400" y="{y+i*21}" text-anchor="middle" font-family="{SANS}" '
-                        f'font-size="14.5" fill="{MUTED}">{esc(ln)}</text>')
-        y += 21 * len(wrap(d["lead"], 14.5, 640, 3)) + 16
+        lead_lines = wrap(d["lead"], 15, 620, 5)
+        for i, ln in enumerate(lead_lines):
+            body.append(f'<text x="400" y="{y+i*23}" text-anchor="middle" font-family="{SANS}" '
+                        f'font-size="15" fill="{INK}">{esc(ln)}</text>')
+        y += 23 * len(lead_lines) + 22
     # колонки
     n = len(cols)
     colw = 330 if n == 2 else 680
