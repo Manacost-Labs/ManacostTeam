@@ -1309,8 +1309,8 @@ def r_poster(spec):
     # веер карт справа (рисуем до текста, чтобы текст был поверх при наложении)
     cards = d.get("cards", [])[:3]
     if cards:
-        cx, cy = 590, 330
-        CW, CH = 168, 254
+        cx, cy = 585, 372
+        CW, CH = 192, 290
         angles = {1: [0], 2: [-9, 9], 3: [-14, 0, 14]}[len(cards)]
         offs = {1: [0], 2: [-40, 40], 3: [-78, 0, 78]}[len(cards)]
         for img, ang, off in zip(cards, angles, offs):
@@ -1341,7 +1341,7 @@ def r_poster(spec):
         x += w + 10
     # плашка-кнопка внизу
     cta = d.get("cta", {})
-    by = 640
+    by = 604
     body.append(f'<rect x="46" y="{by}" width="708" height="66" rx="14" fill="#8d171d"/>'
                 f'<rect x="46" y="{by}" width="708" height="66" rx="14" fill="url(#bevelTop)" opacity="0.55"/>'
                 f'<rect x="47" y="{by+1}" width="706" height="64" rx="13" fill="none" stroke="url(#goldEdge)" stroke-width="1.8"/>'
