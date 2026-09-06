@@ -172,8 +172,8 @@ def cmd_arena_donuts(args):
           "data": data, "footer": FOOT}, "arena-donut-picks", args)
     data, total = split([(i["class_ru"], i["num_drafts"] * i["pct_7_plus"] / 100) for i in items])
     emit({"type": "donut", "title": "Кто достигает 7+ побед",
-          "subtitle": f"доли классов среди забегов 7+ · {today_ru()}", "theme": "arena",
-          "center": {"big": f"≈{round(total)}", "small": "забегов 7+"},
+          "subtitle": f"доли классов среди походов с 7+ победами · {today_ru()}", "theme": "arena",
+          "center": {"big": f"≈{round(total)}", "small": "походов с 7+"},
           "data": data, "footer": f"Доля = драфты × процент 7+ побед · {FOOT}"}, "arena-donut-7plus", args)
 
 def _bg_heroes(mode):
@@ -231,12 +231,15 @@ def cmd_arena_legendaries(args):
     for g in groups:
         try:
             wr = float(str(g["winrate"]).rstrip("%"))
+            score = float(g["score"])
         except (TypeError, ValueError):
             continue
         card = g["legendary_card"] or g["key_card"]
         cls = (g.get("class") or card.get("cardClass") or "").lower().replace(" ", "")
-        rows.append({"label": card["name"], "value": round(wr, 1), "card_id": card.get("card_id") or card.get("id"),
+        rows.append({"label": card["name"], "value": round(score, 1), "winrate": round(wr, 1),
+                     "card_id": card.get("card_id") or card.get("id"),
                      **({"icon": cls} if cls and cls != "neutral" else {"icon": "neutral"})})
+    # «сильные» легендарки — по очкам hearthpulse (score), а не по голому винрейту
     top = sorted(rows, key=lambda r: -r["value"])[: args.top]
     if getattr(args, "cards", False):
         # рендеры карт (ruRU) с hearthstonejson, ужатые pngquant
@@ -252,17 +255,18 @@ def cmd_arena_legendaries(args):
                 dest.write_bytes(urllib.request.urlopen(req, timeout=30).read())
                 subprocess.run(["pngquant", "--force", "--quality", "70-95", "--speed", "1",
                                 "--output", str(dest), str(dest)], check=False)
-            data.append({"image": str(dest), "value": f'{r["value"]}%', "label": r["label"]})
+            data.append({"image": str(dest), "value": f'{r["value"]:g}', "sub": f'винрейт {r["winrate"]}%', "label": r["label"]})
         spec = {"type": "cards", "title": f"Топ-{len(top)} легендарок Арены",
-                "subtitle": f"по винрейту · подземная Арена · за 4 дня · {today_ru()}", "theme": "arena",
+                "subtitle": f"по очкам hearthpulse · Подпольная Арена · за 4 дня · {today_ru()}", "theme": "arena",
                 "data": data,
-                "footer": f"винрейт колод, взявших карту · всего легендарок: {len(rows)} · источник: hearthpulse.net"}
+                "footer": f"очки — рейтинг легендарок hearthpulse.net; винрейт — колод, взявших карту · всего легендарок: {len(rows)}"}
         emit(spec, "arena-legendaries-cards", args)
         return
     spec = {"type": "bars", "title": f"Топ-{len(top)} легендарок Арены",
-            "subtitle": f"подземная Арена · за 4 дня · {today_ru()}", "theme": "arena",
-            "data": top,
-            "footer": f"винрейт колод, взявших карту · всего легендарок: {len(rows)} · источник: hearthpulse.net"}
+            "subtitle": f"по очкам hearthpulse · Подпольная Арена · за 4 дня · {today_ru()}", "theme": "arena",
+            "unit": "", "extra_header": "винрейт",
+            "data": [{**r, "extra": f'{r["winrate"]}%'} for r in top],
+            "footer": f"очки — рейтинг легендарок hearthpulse.net · всего легендарок: {len(rows)}"}
     emit(spec, "arena-legendaries", args)
 
 def cmd_versus(args):
