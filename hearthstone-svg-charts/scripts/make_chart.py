@@ -1222,15 +1222,15 @@ def r_bump(spec):
                         f'<text x="{x+22}" y="{y+20}" text-anchor="middle" font-family="{SERIF}" font-size="16" fill="{MUTED}">{serif_text(i+1)}</text>')
             if r.get("icon"):
                 body.append(icon_tag(r["icon"], x + 42, y + 1, 26))
-            body.append(f'<text x="{x+78}" y="{y+20}" font-family="{SERIF}" font-size="15" fill="{INK}">{serif_text(r["label"])}</text>')
+            # имя сверху, значение под ним — длинные названия не спорят со стрелкой
+            body.append(f'<text x="{x+78}" y="{y+15}" font-family="{SERIF}" font-size="14.5" fill="{INK}">{serif_text(r["label"])}</text>')
             val = str(r.get("value", ""))
+            if val:
+                body.append(f'<text x="{x+78}" y="{y+31}" font-family="{SANS}" font-size="12" fill="{MUTED}">{esc(val)}</text>')
             if right and moved is not None and delta:
                 arrow = "▲" if delta > 0 else "▼"
                 acol = POS if delta > 0 else NEG
-                body.append(f'<text x="{x+LW-12}" y="{y+20}" text-anchor="end" font-family="{SANS}" font-size="13" font-weight="700" fill="{acol}">{arrow}{abs(delta)}</text>')
-                body.append(f'<text x="{x+LW-44}" y="{y+20}" text-anchor="end" font-family="{SERIF}" font-size="14" fill="{INK}">{serif_text(val)}</text>')
-            else:
-                body.append(f'<text x="{x+LW-12}" y="{y+20}" text-anchor="end" font-family="{SERIF}" font-size="14" fill="{INK}">{serif_text(val)}</text>')
+                body.append(f'<text x="{x+LW-12}" y="{y+22}" text-anchor="end" font-family="{SANS}" font-size="14" font-weight="700" fill="{acol}">{arrow}{abs(delta)}</text>')
     column(before, LX, pos_a, pos_b)
     column(after, RX, pos_b, pos_a, right=True)
     return 800, H, "\n".join(body), "▲▼ — на сколько мест изменился ранг"
