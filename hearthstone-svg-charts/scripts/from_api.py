@@ -238,7 +238,7 @@ def cmd_arena_legendaries(args):
         cls = (g.get("class") or card.get("cardClass") or "").lower().replace(" ", "")
         rows.append({"label": card["name"], "value": round(score, 1), "winrate": round(wr, 1),
                      "card_id": card.get("card_id") or card.get("id"),
-                     **({"icon": cls} if cls and cls != "neutral" else {"icon": "neutral"})})
+                     **({"icon": cls} if cls and cls != "neutral" else {})})   # у нейтралок иконки класса нет
     # «сильные» легендарки — по очкам hearthpulse (score), а не по голому винрейту
     top = sorted(rows, key=lambda r: -r["value"])[: args.top]
     if getattr(args, "cards", False):
