@@ -235,9 +235,30 @@ def cmd_arena_legendaries(args):
             continue
         card = g["legendary_card"] or g["key_card"]
         cls = (g.get("class") or card.get("cardClass") or "").lower().replace(" ", "")
-        rows.append({"label": card["name"], "value": round(wr, 1),
+        rows.append({"label": card["name"], "value": round(wr, 1), "card_id": card.get("card_id") or card.get("id"),
                      **({"icon": cls} if cls and cls != "neutral" else {"icon": "neutral"})})
     top = sorted(rows, key=lambda r: -r["value"])[: args.top]
+    if getattr(args, "cards", False):
+        # рендеры карт (ruRU) с hearthstonejson, ужатые pngquant
+        cdir = pathlib.Path(args.out) / ".cards"
+        cdir.mkdir(parents=True, exist_ok=True)
+        data = []
+        for i, r in enumerate(top):
+            cid = r["card_id"]
+            dest = cdir / f"{cid}.png"
+            if not dest.exists():
+                url = f"https://art.hearthstonejson.com/v1/render/latest/ruRU/256x/{cid}.png"
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                dest.write_bytes(urllib.request.urlopen(req, timeout=30).read())
+                subprocess.run(["pngquant", "--force", "--quality", "70-95", "--speed", "1",
+                                "--output", str(dest), str(dest)], check=False)
+            data.append({"image": str(dest), "value": f'{r["value"]}%', "label": r["label"]})
+        spec = {"type": "cards", "title": f"Топ-{len(top)} легендарок Арены",
+                "subtitle": f"по винрейту · подземная Арена · за 4 дня · {today_ru()}", "theme": "arena",
+                "data": data,
+                "footer": f"винрейт колод, взявших карту · всего легендарок: {len(rows)} · источник: hearthpulse.net"}
+        emit(spec, "arena-legendaries-cards", args)
+        return
     spec = {"type": "bars", "title": f"Топ-{len(top)} легендарок Арены",
             "subtitle": f"подземная Арена · за 4 дня · {today_ru()}", "theme": "arena",
             "data": top,
@@ -330,7 +351,7 @@ def main():
     p = sub.add_parser("arena-donuts"); p.set_defaults(fn=cmd_arena_donuts)
     p = sub.add_parser("bg-tiers"); p.add_argument("--mode", default="solo", choices=["solo", "duos"]); p.add_argument("--top-a", type=int, default=5); p.set_defaults(fn=cmd_bg_tiers)
     p = sub.add_parser("bg-radar"); p.add_argument("--hero", required=True); p.add_argument("--mode", default="solo", choices=["solo", "duos"]); p.set_defaults(fn=cmd_bg_radar)
-    p = sub.add_parser("arena-legendaries"); p.add_argument("--top", type=int, default=10); p.set_defaults(fn=cmd_arena_legendaries)
+    p = sub.add_parser("arena-legendaries"); p.add_argument("--top", type=int, default=10); p.add_argument("--cards", action="store_true", help="рендеры карт вместо строк"); p.set_defaults(fn=cmd_arena_legendaries)
     p = sub.add_parser("versus"); p.add_argument("--left", required=True); p.add_argument("--right", required=True); p.add_argument("--fmt", default="standard", choices=["standard", "wild"]); p.set_defaults(fn=cmd_versus)
     p = sub.add_parser("digest"); p.add_argument("--days", type=int, default=7); p.add_argument("--limit", type=int, default=12); p.set_defaults(fn=cmd_digest)
 

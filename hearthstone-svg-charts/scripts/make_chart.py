@@ -136,6 +136,8 @@ def inline_image(path, max_kb=100, thumb_w=480, force_jpeg=False):
             ctype = path.read_bytes()[25]        # PNG colour type: 4/6 carry alpha
             fmt = "png" if ctype in (4, 6) else "jpeg"
         tmp = pathlib.Path(tempfile.mkstemp(suffix="." + ("png" if fmt == "png" else "jpg"))[1])
+        if ext == ".png":
+            thumb_w = min(thumb_w, png_size(path)[0])   # не растягивать маленькие PNG
         cmd = ["sips", "-s", "format", fmt, "--resampleWidth", str(thumb_w)]
         if fmt == "jpeg":
             cmd += ["-s", "formatOptions", "65"]
@@ -1148,7 +1150,41 @@ def r_facts(spec):
                         f'font-size="14" fill="{INK}">{esc(ln)}</text>')
     return 800, H, "\n".join(body), None
 
-RENDERERS = {"bars": r_bars, "facts": r_facts, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
+
+def r_cards(spec):
+    """Галерея рендеров карт: до 10 карт в 2 ряда, ранг-гемма и медальон со значением."""
+    items = spec["data"][:10]
+    n = len(items)
+    cols = min(5, n)
+    CW, CH = 120, 182
+    gap = (720 - cols * CW) / (cols - 1) if cols > 1 else 0
+    PITCH = CH + 58
+    rows = (n + cols - 1) // cols
+    y0 = 118
+    H = y0 + rows * PITCH + 30
+    body = []
+    for i, it in enumerate(items):
+        r, c = divmod(i, cols)
+        x = 40 + c * (CW + gap)
+        y = y0 + r * PITCH
+        uri = icon_uri(it["image"])
+        body.append(f'<rect x="{x+6:.0f}" y="{y+10}" width="{CW-12}" height="{CH-12}" rx="12" fill="#1a120b" opacity="0.28" filter="url(#soft)"/>'
+                    f'<image href="{uri}" x="{x:.0f}" y="{y}" width="{CW}" height="{CH}" preserveAspectRatio="xMidYMid meet"/>')
+        rank = it.get("rank", i + 1)
+        body.append(f'<circle cx="{x+16:.0f}" cy="{y+18}" r="15" fill="url(#goldEdge)" stroke="#5d3f12" stroke-width="1.4"/>'
+                    f'<text x="{x+16:.0f}" y="{y+23.5}" text-anchor="middle" font-family="{SERIF}" font-size="15" fill="#3a2408">{serif_text(rank)}</text>')
+        val = str(it["value"])
+        mw = max(text_w(val, 16, serif=True) + 26, 74)
+        mx = x + CW / 2 - mw / 2
+        my = y + CH + 8
+        body.append(f'<rect x="{mx:.0f}" y="{my}" width="{mw:.0f}" height="30" rx="15" fill="#5d0d13" stroke="url(#goldEdge)" stroke-width="1.4"/>'
+                    f'<rect x="{mx:.0f}" y="{my}" width="{mw:.0f}" height="12" rx="6" fill="#ffffff" opacity="0.14"/>'
+                    f'<text x="{x+CW/2:.0f}" y="{my+21}" text-anchor="middle" font-family="{SERIF}" font-size="16" fill="{CREAM}">{serif_text(val)}</text>')
+        if it.get("sub"):
+            body.append(f'<text x="{x+CW/2:.0f}" y="{my+46}" text-anchor="middle" font-family="{SANS}" font-size="11.5" fill="{MUTED}">{esc(it["sub"])}</text>')
+    return 800, H, "\n".join(body), None
+
+RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
              "beforeafter": r_beforeafter, "matchup": r_matchup, "badge": r_badge,
              "timeline": r_timeline, "digest": r_digest}
 
