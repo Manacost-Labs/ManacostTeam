@@ -1240,7 +1240,7 @@ def r_notice(spec):
     """Объявление/вакансия: оффер, 1–2 колонки буллетов, плашка-призыв."""
     d = spec["data"]
     cols = d.get("columns", [])[:2]
-    y = 126
+    y = 144
     body = []
     if d.get("headline"):
         for i, ln in enumerate(wrap(d["headline"], 22, 660, 2)):
