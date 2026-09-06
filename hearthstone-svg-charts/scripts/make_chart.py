@@ -1187,7 +1187,55 @@ def r_cards(spec):
             body.append(f'<text x="{x+CW/2:.0f}" y="{my+46}" text-anchor="middle" font-family="{SANS}" font-size="11.5" fill="{MUTED}">{esc(it["sub"])}</text>')
     return 800, H, "\n".join(body), None
 
-RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
+
+def r_bump(spec):
+    """Смена рейтинга: две колонки рангов (было/стало), линии соединяют один объект."""
+    d = spec["data"]
+    before, after = d["before"], d["after"]     # списки {label, value, icon?} в порядке рангов
+    hb, ha = d.get("labels", ["было", "стало"])
+    n = max(len(before), len(after))
+    y0, STEP = 150, 44
+    H = y0 + n * STEP + 40
+    LX, RX = 46, 468          # левые края колонок
+    LW = 290                  # ширина колонки
+    body = [f'<text x="{LX+LW/2:.0f}" y="{y0-26}" text-anchor="middle" font-family="{SERIF}" font-size="15" letter-spacing="1" fill="{MUTED}">{serif_text(str(hb).upper())}</text>',
+            f'<text x="{RX+LW/2:.0f}" y="{y0-26}" text-anchor="middle" font-family="{SERIF}" font-size="15" letter-spacing="1" fill="{MUTED}">{serif_text(str(ha).upper())}</text>']
+    pos_b = {r["label"]: i for i, r in enumerate(before)}
+    pos_a = {r["label"]: i for i, r in enumerate(after)}
+    # линии — под строками
+    for lab, ib in pos_b.items():
+        if lab not in pos_a:
+            continue
+        ia = pos_a[lab]
+        y1, y2 = y0 + ib * STEP + 14, y0 + ia * STEP + 14
+        col = POS if ia < ib else NEG if ia > ib else MUTED
+        x1, x2 = LX + LW + 6, RX - 6
+        mx = (x1 + x2) / 2
+        body.append(f'<path d="M {x1} {y1} C {mx} {y1} {mx} {y2} {x2} {y2}" fill="none" stroke="{col}" '
+                    f'stroke-width="{3 if ia != ib else 1.5}" opacity="{0.75 if ia != ib else 0.35}" stroke-linecap="round"/>')
+    def column(rows, x, other_pos, mine_pos, right=False):
+        for i, r in enumerate(rows):
+            y = y0 + i * STEP
+            moved = other_pos.get(r["label"])
+            delta = (moved - i) if moved is not None else 0      # >0 поднялся (в правой колонке)
+            body.append(f'<rect x="{x}" y="{y-6}" width="{LW}" height="{STEP-4}" rx="8" fill="{INK}" opacity="0.045"/>'
+                        f'<text x="{x+22}" y="{y+20}" text-anchor="middle" font-family="{SERIF}" font-size="16" fill="{MUTED}">{serif_text(i+1)}</text>')
+            if r.get("icon"):
+                body.append(icon_tag(r["icon"], x + 42, y + 1, 26))
+            body.append(f'<text x="{x+78}" y="{y+20}" font-family="{SERIF}" font-size="15" fill="{INK}">{serif_text(r["label"])}</text>')
+            val = str(r.get("value", ""))
+            if right and moved is not None and delta:
+                arrow = "▲" if delta > 0 else "▼"
+                acol = POS if delta > 0 else NEG
+                body.append(f'<text x="{x+LW-12}" y="{y+20}" text-anchor="end" font-family="{SANS}" font-size="13" font-weight="700" fill="{acol}">{arrow}{abs(delta)}</text>')
+                body.append(f'<text x="{x+LW-44}" y="{y+20}" text-anchor="end" font-family="{SERIF}" font-size="14" fill="{INK}">{serif_text(val)}</text>')
+            else:
+                body.append(f'<text x="{x+LW-12}" y="{y+20}" text-anchor="end" font-family="{SERIF}" font-size="14" fill="{INK}">{serif_text(val)}</text>')
+    column(before, LX, pos_a, pos_b)
+    column(after, RX, pos_b, pos_a, right=True)
+    return 800, H, "\n".join(body), "▲▼ — на сколько мест изменился ранг"
+
+RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "bump": r_bump, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
              "beforeafter": r_beforeafter, "matchup": r_matchup, "badge": r_badge,
              "timeline": r_timeline, "digest": r_digest}
 
