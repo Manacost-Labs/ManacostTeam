@@ -8,7 +8,7 @@
 
 ## Шаблоны
 
-21 тип, каждый генерируется из JSON-спека одной командой. Все спеки лежат в [`hearthstone-svg-charts/examples/specs/`](hearthstone-svg-charts/examples/specs/), готовые SVG — в [`examples/`](hearthstone-svg-charts/examples/).
+22 типа, каждый генерируется из JSON-спека одной командой. Все спеки лежат в [`hearthstone-svg-charts/examples/specs/`](hearthstone-svg-charts/examples/specs/), готовые SVG — в [`examples/`](hearthstone-svg-charts/examples/).
 
 | | |
 |---|---|
@@ -22,7 +22,7 @@
 | **`quote`** — цитата с золотыми кавычками и подписью автора ![quote](docs/previews/quote.png) | **`mulligan`** — мулиган-гайд: карты × оппоненты, вердикты ✓/?/✗ ![mulligan](docs/previews/mulligan.png) |
 | **`cards`** — галерея рендеров карт с медальонами значений (топ легендарок) ![cards](docs/previews/cards.png) | **`bump`** — смена рейтинга: две колонки рангов, линии и ▲▼ на сколько мест ![bump](docs/previews/bump.png) |
 | **`facts`** — 2–4 медальона с точечными цифрами из текста ![facts](docs/previews/facts.png) | **`notice`** — объявление/вакансия: оффер, лид, две колонки, кнопка-плашка ![notice](docs/previews/notice.png) |
-| **`poster`** — соцсетевой квадрат: бейдж, крупный заголовок, веер карт, чипы, кнопка ![poster](docs/previews/poster.png) | |
+| **`poster`** — соцсетевой квадрат: бейдж, крупный заголовок, веер карт, чипы, кнопка ![poster](docs/previews/poster.png) | **`character`** — бейдж персонажа: арт слева, параметры лора справа ![character](docs/previews/character.png) |
 
 ## Что внутри дизайна
 
@@ -99,7 +99,7 @@ hearthstone-svg-charts/
 ├── SKILL.md                 # workflow скилла для Claude
 ├── references/              # дизайн-токены, рамки, шаблоны, спеки генератора
 ├── scripts/
-│   ├── make_chart.py        # JSON → SVG, все 21 тип
+│   ├── make_chart.py        # JSON → SVG, все 22 типа
 │   ├── fetch_assets.py      # загрузка игровых ассетов (+ --bg-hero "Имя")
 │   ├── export_png.py        # SVG → PNG через resvg
 │   ├── validate.py          # проверки прозрачности/масштаба/ссылок
