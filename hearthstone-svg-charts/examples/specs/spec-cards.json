@@ -1,0 +1,69 @@
+{
+ "type": "cards",
+ "title": "Топ-10 легендарок Арены",
+ "subtitle": "по очкам hearthpulse · Подпольная Арена · за 4 дня · 6 сен 2026",
+ "theme": "arena",
+ "data": [
+  {
+   "image": "examples/cards/CAP_106.png",
+   "value": "54",
+   "sub": "винрейт 62.5%",
+   "label": "Капитан Краули"
+  },
+  {
+   "image": "examples/cards/CATA_155.png",
+   "value": "54",
+   "sub": "винрейт 58.6%",
+   "label": "Оживленная Ониксия"
+  },
+  {
+   "image": "examples/cards/CATA_140.png",
+   "value": "54",
+   "sub": "винрейт 56.4%",
+   "label": "Меритра из Сна"
+  },
+  {
+   "image": "examples/cards/MEND_505.png",
+   "value": "54",
+   "sub": "винрейт 52.6%",
+   "label": "Чаромикон"
+  },
+  {
+   "image": "examples/cards/EDR_258.png",
+   "value": "54",
+   "sub": "винрейт 45.3%",
+   "label": "Торет Несокрушимый"
+  },
+  {
+   "image": "examples/cards/CATA_154.png",
+   "value": "53",
+   "sub": "винрейт 55.6%",
+   "label": "Синестра"
+  },
+  {
+   "image": "examples/cards/JAIL_721.png",
+   "value": "53",
+   "sub": "винрейт 58.0%",
+   "label": "Трас'тат, паразит душ"
+  },
+  {
+   "image": "examples/cards/TIME_009.png",
+   "value": "53",
+   "sub": "винрейт 46.3%",
+   "label": "Гелбин из будущего"
+  },
+  {
+   "image": "examples/cards/CATA_190h.png",
+   "value": "52",
+   "sub": "винрейт 55.6%",
+   "label": "Смертокрыл Разрушитель миров"
+  },
+  {
+   "image": "examples/cards/JAIL_446.png",
+   "value": "52",
+   "sub": "винрейт 61.1%",
+   "label": "Лекарь крови Тал'ена"
+  }
+ ],
+ "footer": "очки — рейтинг легендарок hearthpulse.net; винрейт — колод, взявших карту · всего легендарок: 146"
+}

@@ -8,7 +8,7 @@
 
 ## Шаблоны
 
-16 типов, каждый генерируется из JSON-спека одной командой. Все спеки лежат в [`hearthstone-svg-charts/examples/specs/`](hearthstone-svg-charts/examples/specs/), готовые SVG — в [`examples/`](hearthstone-svg-charts/examples/).
+21 тип, каждый генерируется из JSON-спека одной командой. Все спеки лежат в [`hearthstone-svg-charts/examples/specs/`](hearthstone-svg-charts/examples/specs/), готовые SVG — в [`examples/`](hearthstone-svg-charts/examples/).
 
 | | |
 |---|---|
@@ -20,6 +20,9 @@
 | **`stackbars`** — 100%-стек с лентами перетекания (мини-санкей), для исследований и опросов ![stackbars](docs/previews/stackbars.png) | **`versus`** — афиша «кто кого»: портреты, VS-медальон, встречные бары, победитель — золотом ![versus](docs/previews/versus.png) |
 | **`badge`** — стат-врезка для лида статьи или соцсетей ![badge](docs/previews/badge.png) | **`author`** — карточка автора: аватар в золотом кольце, роль, стат-пилюли ![author](docs/previews/author.png) |
 | **`quote`** — цитата с золотыми кавычками и подписью автора ![quote](docs/previews/quote.png) | **`mulligan`** — мулиган-гайд: карты × оппоненты, вердикты ✓/?/✗ ![mulligan](docs/previews/mulligan.png) |
+| **`cards`** — галерея рендеров карт с медальонами значений (топ легендарок) ![cards](docs/previews/cards.png) | **`bump`** — смена рейтинга: две колонки рангов, линии и ▲▼ на сколько мест ![bump](docs/previews/bump.png) |
+| **`facts`** — 2–4 медальона с точечными цифрами из текста ![facts](docs/previews/facts.png) | **`notice`** — объявление/вакансия: оффер, лид, две колонки, кнопка-плашка ![notice](docs/previews/notice.png) |
+| **`poster`** — соцсетевой квадрат: бейдж, крупный заголовок, веер карт, чипы, кнопка ![poster](docs/previews/poster.png) | |
 
 ## Что внутри дизайна
 
