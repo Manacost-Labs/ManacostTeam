@@ -16,8 +16,9 @@
    echo '{"type":"bars","title":"...","data":[...]}' | \
      python3 hearthstone-svg-charts/scripts/make_chart.py - -o chart.svg
    ```
-   16 типов: bars, line, donut, tierlist, beforeafter, matchup, badge, timeline,
-   digest, scatter, radar, stackbars, author, versus, quote, mulligan.
+   21 тип: bars, line, donut, tierlist, beforeafter, matchup, badge, timeline,
+   digest, scatter, radar, stackbars, author, versus, quote, mulligan,
+   facts, cards, bump, notice, poster.
    Полный справочник спеков: `hearthstone-svg-charts/references/generator.md`.
    Эталоны каждого типа со спеками: `hearthstone-svg-charts/examples/`.
 3. **Проверь**: `python3 hearthstone-svg-charts/scripts/validate.py chart.svg` — ERRORs чини обязательно.

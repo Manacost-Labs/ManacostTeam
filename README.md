@@ -99,7 +99,7 @@ hearthstone-svg-charts/
 ├── SKILL.md                 # workflow скилла для Claude
 ├── references/              # дизайн-токены, рамки, шаблоны, спеки генератора
 ├── scripts/
-│   ├── make_chart.py        # JSON → SVG, все 9 типов
+│   ├── make_chart.py        # JSON → SVG, все 21 тип
 │   ├── fetch_assets.py      # загрузка игровых ассетов (+ --bg-hero "Имя")
 │   ├── export_png.py        # SVG → PNG через resvg
 │   ├── validate.py          # проверки прозрачности/масштаба/ссылок
