@@ -1357,7 +1357,48 @@ def r_poster(spec):
                 f'<text x="400" y="{by+52}" text-anchor="middle" font-family="{SANS}" font-size="17" font-weight="700" fill="#efc96f">{esc(cta.get("contact", ""))}</text>')
     return 800, 748, "\n".join(body), None
 
-RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "bump": r_bump, "notice": r_notice, "poster": r_poster, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
+
+def r_character(spec):
+    """Бейдж персонажа: арт слева в золотой рамке, справа таблица «параметр — значение»."""
+    d = spec["data"]
+    rows = d.get("rows", [])
+    # правая колонка: считаем высоту по строкам (значения до 2 строк)
+    RX, RW = 372, 384                 # колонка справа
+    VX = RX + 128                     # значения начинаются здесь
+    VW = RX + RW - VX
+    y0 = 128
+    layout, y = [], y0
+    for r in rows:
+        lines = wrap(r["value"], 14, VW, 3)
+        layout.append((r, lines, y))
+        y += 18 * len(lines) + 20
+    table_h = y - y0
+    H = max(y0 + table_h + 40, 470)
+    # арт слева: во всю высоту контента
+    ax, ay, aw, ah = 46, y0 - 14, 300, H - (y0 - 14) - 30
+    body = []
+    if d.get("art"):
+        uri = icon_uri(d["art"], photo=True)
+        body.append(f'<defs><clipPath id="artclip"><rect x="{ax}" y="{ay}" width="{aw}" height="{ah}" rx="12"/></clipPath></defs>'
+                    f'<rect x="{ax+6}" y="{ay+10}" width="{aw}" height="{ah}" rx="12" fill="#1a120b" opacity="0.35" filter="url(#soft)"/>'
+                    f'<image href="{uri}" x="{ax}" y="{ay}" width="{aw}" height="{ah}" preserveAspectRatio="xMidYMid slice" clip-path="url(#artclip)"/>'
+                    f'<rect x="{ax}" y="{ay}" width="{aw}" height="{ah}" rx="12" fill="none" stroke="#5d3f12" stroke-width="3"/>'
+                    f'<rect x="{ax+1.5}" y="{ay+1.5}" width="{aw-3}" height="{ah-3}" rx="11" fill="none" stroke="url(#goldEdge)" stroke-width="2"/>')
+        if d.get("caption"):
+            cw = text_w(d["caption"], 12) + 24
+            body.append(f'<rect x="{ax+aw/2-cw/2:.0f}" y="{ay+ah-30}" width="{cw:.0f}" height="22" rx="11" fill="#1a120b" opacity="0.72"/>'
+                        f'<text x="{ax+aw/2:.0f}" y="{ay+ah-15}" text-anchor="middle" font-family="{SANS}" font-size="12" fill="{CREAM}">{esc(d["caption"])}</text>')
+    # таблица
+    for i, (r, lines, ry) in enumerate(layout):
+        body.append(f'<text x="{RX}" y="{ry+14}" font-family="{SERIF}" font-size="13" letter-spacing="0.6" fill="#8d171d">{serif_text(str(r["label"]).upper())}</text>')
+        for li, ln in enumerate(lines):
+            body.append(f'<text x="{VX}" y="{ry+14+li*18}" font-family="{SANS}" font-size="14" fill="{INK}">{esc(ln)}</text>')
+        if i != len(layout) - 1:
+            sep_y = ry + 18 * len(lines) + 8
+            body.append(f'<line x1="{RX}" y1="{sep_y}" x2="{RX+RW}" y2="{sep_y}" stroke="#5f371d" stroke-width="1" opacity="0.25"/>')
+    return 800, H, "\n".join(body), None
+
+RENDERERS = {"bars": r_bars, "facts": r_facts, "cards": r_cards, "bump": r_bump, "notice": r_notice, "poster": r_poster, "character": r_character, "scatter": r_scatter, "radar": r_radar, "stackbars": r_stackbars, "author": r_author, "versus": r_versus, "quote": r_quote, "mulligan": r_mulligan, "line": r_line, "donut": r_donut, "tierlist": r_tierlist,
              "beforeafter": r_beforeafter, "matchup": r_matchup, "badge": r_badge,
              "timeline": r_timeline, "digest": r_digest}
 
