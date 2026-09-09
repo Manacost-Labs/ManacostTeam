@@ -359,10 +359,12 @@ def r_bars(spec):
                     f'stroke="{MUTED}" stroke-width="1" stroke-dasharray="4 3"/>'
                     f'<text x="{ax:.1f}" y="{y0+len(rows)*38+8}" text-anchor="middle" '
                     f'font-family="{SANS}" font-size="12" fill="{MUTED}">среднее {avg:.1f}{unit}</text>')
-    for i, r in enumerate(sorted(rows, key=lambda r: -r["value"])):
+    ordered = rows if spec.get("sort", True) is False else sorted(rows, key=lambda r: -r["value"])
+    lead_i = max(range(len(ordered)), key=lambda k: ordered[k]["value"]) if ordered else -1
+    for i, r in enumerate(ordered):
         y = y0 + i * 38
         w = TRACK * (r["value"] - vmin) / (vmax - vmin)
-        leader = r.get("leader", i == 0 and spec.get("highlight_leader", True))
+        leader = r.get("leader", i == lead_i and spec.get("highlight_leader", True))
         stroke = f'stroke="{GOLD}" stroke-width="1.5"' if leader else 'stroke="#5d0d13" stroke-width="1"'
         color = r.get("color", "#8d171d" if spec.get("theme", "arena") == "arena" else "#8f536d")
         raw = str(r["label"])
