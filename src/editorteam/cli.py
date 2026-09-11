@@ -19,6 +19,7 @@ from editorteam import rules
 from editorteam.bg_import import import_directory, import_guides_directory
 from editorteam.corpus_learning import CorpusError, CorpusStore
 from editorteam.finding import Finding, Report, exit_code
+from editorteam.wordpress import ExportError, export_html_file, load_catalog
 
 ROOT = Path(__file__).resolve().parents[2]
 CORPUS_COLLECTIONS = ["main", "bg", "archive"]
@@ -789,6 +790,23 @@ def profiles_cmd(args) -> int:
     return 0
 
 
+def wordpress_cmd(args) -> int:
+    """Собрать HTML-файл для вставки в WordPress."""
+    try:
+        catalog = load_catalog(Path(args.catalog)) if args.catalog else ()
+        output = export_html_file(
+            Path(args.file),
+            Path(args.output) if args.output else None,
+            catalog=catalog,
+            format_override=args.hs_format,
+        )
+    except (ExportError, OSError) as exc:
+        print(f"wordpress: {exc}", file=sys.stderr)
+        return 2
+    print(output)
+    return 0
+
+
 def _emit(report: Report, args) -> None:
     if args.format == "json":
         print(report.to_json())
@@ -857,6 +875,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="автор явно попросил показать evidence в тексте",
     )
     a.set_defaults(func=audit)
+
+    wp = sub.add_parser(
+        "wordpress", help="собрать WordPress-готовый HTML-фрагмент", parents=[common]
+    )
+    wp.add_argument("file", help="исходный Markdown или TXT")
+    wp.add_argument("--output", help="путь результата; по умолчанию рядом с исходником")
+    wp.add_argument(
+        "--hs-format",
+        choices=["standard", "wild", "arena", "battlegrounds"],
+        help="формат Hearthstone; перекрывает начальную директиву «Формат: ...»",
+    )
+    wp.add_argument(
+        "--catalog",
+        help="JSON-каталог карточек: name, id и formats; нужен для «Подсветка карт»",
+    )
+    wp.set_defaults(func=wordpress_cmd)
 
     ve = sub.add_parser("validate-edit", help="затвор смысла и confidence", parents=[common])
     ve.add_argument("before")
