@@ -1,0 +1,3 @@
+id: repo/skill-package-manager
+namespace: repo
+entrypoint: SKILL.md

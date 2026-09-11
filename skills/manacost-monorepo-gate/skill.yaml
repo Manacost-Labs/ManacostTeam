@@ -1,0 +1,3 @@
+id: repo/manacost-monorepo-gate
+namespace: repo
+entrypoint: SKILL.md

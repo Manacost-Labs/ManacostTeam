@@ -6,6 +6,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- Добавлен каталог общих skills: monorepo gate, packaging, research-to-publication, SVG regression, freshness audit и release/migration.
+- В редакторский workflow добавлен обязательный вопрос о WordPress-шорткодах до редактуры, если пользователь не выбрал режим сам.
+
 ### Planned
 
 - Отдельно разобрать и исправить базовую синтаксическую ошибку в `svg`.

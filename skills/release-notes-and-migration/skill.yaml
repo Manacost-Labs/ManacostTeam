@@ -1,0 +1,3 @@
+id: repo/release-notes-and-migration
+namespace: repo
+entrypoint: SKILL.md

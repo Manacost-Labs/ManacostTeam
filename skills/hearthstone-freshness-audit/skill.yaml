@@ -1,0 +1,3 @@
+id: hearthstone/hearthstone-freshness-audit
+namespace: hearthstone
+entrypoint: SKILL.md

@@ -1,0 +1,3 @@
+id: svg/svg-regression-suite
+namespace: svg
+entrypoint: SKILL.md

@@ -1,0 +1,3 @@
+id: workflow/research-to-publication
+namespace: workflow
+entrypoint: SKILL.md

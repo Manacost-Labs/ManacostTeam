@@ -79,6 +79,20 @@ def apply() -> int:
         return f"<!-- shared: {bid} -->\n{want[bid]}<!-- /shared -->"
 
     new = BLOCK.sub(swap, text)
+    have = blocks(text)
+    missing = [(bid, body) for bid, body in want.items() if bid not in have]
+    if missing:
+        rendered = "\n\n".join(
+            f"<!-- shared: {bid} -->\n{body}<!-- /shared -->" for bid, body in missing
+        )
+        first_shared = new.find("<!-- shared:")
+        insertion = f"{rendered}\n\n"
+        new = (
+            f"{new[:first_shared]}{insertion}{new[first_shared:]}"
+            if first_shared >= 0
+            else f"{new.rstrip()}\n\n{rendered}\n"
+        )
+        changed += len(missing)
     if new != text:
         TARGET.write_text(new, encoding="utf-8")
     return changed
