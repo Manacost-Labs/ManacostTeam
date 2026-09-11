@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["No public decision-level timing dataset was found.","The scenario rule is community-supported, not a measured optimum."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": ["Add rank-segmented telemetry before claiming an optimal first-use turn."],
+  "audited_at":"2026-08-28T09:11:00Z",
+  "delivery_status":"ready_with_warnings"
+}

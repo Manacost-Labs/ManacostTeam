@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.1",
+  "research_id": "RES-20260828T090235Z-9CB179A1",
+  "main_question": "Assess current player complaints about Mythic+ difficulty without claiming what all players believe.",
+  "created_at": "2026-08-28T09:02:35Z",
+  "updated_at": "2026-08-28T09:24:00Z",
+  "as_of": "2026-08-28",
+  "depth": "deep",
+  "output_profile": "research-report",
+  "modifiers": [
+    "community-heavy"
+  ],
+  "domain_adapters": [
+    "world-of-warcraft"
+  ],
+  "status": "complete",
+  "current_context": {"benchmark_case":"BENCH-016","search_tool":"ChatGPT built-in Search/Web","source_opened":"2026-08-28","game_version":"Retail Midnight 12.1 Season 2","community_window":"2026-08-18 through 2026-08-28"},
+  "prior_research_ids": [],
+  "provenance": {
+    "fingerprint_policy": "required",
+    "snapshot_policy": "local-only",
+    "hash_algorithm": "sha256"
+  }
+}

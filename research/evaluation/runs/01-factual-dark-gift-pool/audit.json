@@ -1,0 +1,15 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": [
+    "Shared-copy depletion is supported only by current community discussion, not an inspected authoritative source.",
+    "Exact gift windows must always be overlaid with the newest patch notes."
+  ],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [
+    "Seek an explicit Blizzard statement or a reproducible controlled test before upgrading CLM-0004."
+  ],
+  "audited_at": "2026-08-28T06:51:35Z",
+  "delivery_status": "ready_with_warnings"
+}

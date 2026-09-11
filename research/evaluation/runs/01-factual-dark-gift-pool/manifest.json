@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "research_id": "RES-20260828T064851Z-715C7D4F",
+  "main_question": "What exactly determines the Dark Gift pool in current Hearthstone Battlegrounds?",
+  "created_at": "2026-08-28T06:48:51Z",
+  "updated_at": "2026-08-28T06:51:35Z",
+  "as_of": "2026-08-28",
+  "depth": "deep",
+  "modifiers": [
+    "fact-check",
+    "current-patch-only"
+  ],
+  "domain_adapters": [
+    "gaming",
+    "hearthstone"
+  ],
+  "status": "complete",
+  "current_context": {
+    "season": "Battlegrounds Season 14",
+    "latest_patch_checked": "36.4",
+    "last_rules_patch_checked": "36.2.2",
+    "terminology_split": {
+      "offer_eligibility_pool": "Which minion and Dark Gift combinations may appear",
+      "shared_copy_pool": "Whether a discovered minion consumes a finite Tavern copy"
+    },
+    "search_tool": "ChatGPT built-in Search/Web"
+  },
+  "prior_research_ids": []
+}

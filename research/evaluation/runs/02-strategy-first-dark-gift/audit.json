@@ -1,0 +1,16 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": [
+    "The statistics-heavy modifier could not be satisfied with public decision-level data.",
+    "Several community threads predate patch 36.2.2 and are used only for durable decision patterns, not exact gift values."
+  ],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [
+    "Obtain current rank-segmented telemetry before claiming a statistically optimal first-use turn.",
+    "Add a primary expert source if a named-player recommendation is required."
+  ],
+  "audited_at": "2026-08-28T06:51:35Z",
+  "delivery_status": "ready_with_warnings"
+}

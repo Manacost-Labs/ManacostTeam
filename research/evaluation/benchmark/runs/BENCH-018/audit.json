@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["No controlled current 2 TB end-to-end restore was performed.","Backblaze failure reports are relevant but not a prevalence estimate.","Arq plus storage cost depends on backend and egress.","A second local/offline copy remains required; sync is not backup."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": ["Run a staged 50-100 GB restore, then a full restore drill before relying on either service."],
+  "audited_at":"2026-08-28T09:34:00Z",
+  "delivery_status":"ready_with_warnings"
+}

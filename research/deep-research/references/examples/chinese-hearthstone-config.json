@@ -1,0 +1,26 @@
+{
+  "fetch": {
+    "timeout_seconds": 60,
+    "max_attempts_per_level": 1,
+    "requests_per_minute": 30,
+    "max_rate_wait_seconds": 30,
+    "cache_enabled": true,
+    "cache_directory": null,
+    "cache_ttl_seconds": null
+  },
+  "score_weights": {
+    "originality": 0.3,
+    "performance": 0.25,
+    "evidence": 0.2,
+    "freshness": 0.15,
+    "guide": 0.1
+  },
+  "sources": {
+    "iyingdi": {"enabled": true, "poll_minutes": 180},
+    "taptap": {"enabled": true, "poll_minutes": 120},
+    "nga": {"enabled": true, "poll_minutes": 120},
+    "bilibili": {"enabled": true, "poll_minutes": 60},
+    "gamersky": {"enabled": true, "poll_minutes": 720},
+    "17173": {"enabled": true, "poll_minutes": 720}
+  }
+}

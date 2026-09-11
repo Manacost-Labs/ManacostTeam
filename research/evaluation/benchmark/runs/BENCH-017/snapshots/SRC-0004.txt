@@ -1,0 +1,2 @@
+Creative Bloq current tested comparison excerpt accessed 2026-08-28 through ChatGPT built-in Search/Web.
+Air and Pro are close in short CPU/GPU tests, but the Air delivered 52% of the Pro's score in sustained raw-video Adobe Premiere work.

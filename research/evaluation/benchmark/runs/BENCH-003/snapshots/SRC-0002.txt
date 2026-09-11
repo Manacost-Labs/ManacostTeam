@@ -1,0 +1,5 @@
+Source: Associated Press report on Portsmouth project
+URL: https://apnews.com/article/ai-data-center-ohio-uranium-enrichment-4667fa1442ec1c652228337ab4eb68ee
+Accessed: 2026-08-28T07:55:00Z via ChatGPT built-in Search/Web
+
+AP reported that the Portsmouth campus is expected to include a 10-gigawatt data center and up to 10 gigawatts of new power generation. DOE said construction was expected to begin in 2026. These are expected project figures, not evidence of current operation.

@@ -1,0 +1,5 @@
+Source: Reddit r/BobsTavern question regarding Dark Gifts
+URL: https://www.reddit.com/r/BobsTavern/comments/1vzzd0m/question_regarding_dark_gifts/
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+Sampled replies assert that a Dark Gift minion comes from the normal shared pool. No reply inspected provides an official citation or a controlled test protocol.

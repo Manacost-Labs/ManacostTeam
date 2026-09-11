@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["Community threads are self-selected and cannot support a population prevalence estimate.","Reddit and Blizzard Forums are reported separately; engagement is not consensus.","Role, key level, premade versus PUG, and prior-season skill are major segmentation gaps."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [],
+  "audited_at":"2026-08-28T09:24:00Z",
+  "delivery_status":"ready_with_warnings"
+}

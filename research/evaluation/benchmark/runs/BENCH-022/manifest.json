@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.1",
+  "research_id": "RES-20260828T072304Z-3162F123",
+  "main_question": "Evaluate a claim supported by three pages that all reproduce the same upstream report.",
+  "created_at": "2026-08-28T07:23:04Z",
+  "updated_at": "2026-08-28T07:26:00Z",
+  "as_of": "2026-08-28",
+  "depth": "deep",
+  "output_profile": "research-report",
+  "modifiers": [
+    "fact-check",
+    "contradiction-heavy"
+  ],
+  "domain_adapters": [
+    "general"
+  ],
+  "status": "incomplete",
+  "current_context": {"benchmark_case":"BENCH-022","fixture":"duplicate-lineage.html","distinct_urls":3,"independent_lineages":1},
+  "prior_research_ids": [],
+  "provenance": {
+    "fingerprint_policy": "when-permitted",
+    "snapshot_policy": "local-only",
+    "hash_algorithm": "sha256"
+  }
+}

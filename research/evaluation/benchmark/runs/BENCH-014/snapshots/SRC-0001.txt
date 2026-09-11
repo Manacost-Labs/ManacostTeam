@@ -1,0 +1,2 @@
+Dataset snapshot accessed 2026-08-28 through ChatGPT built-in Search/Web.
+Midnight Season 2, timed keys only, data pulled 2026-08-27 00:11 UTC from Raider.IO. 960 runs analysed. High-key sample is within three key levels of the highest timed key in each dungeon. DPS representation: Arms Warrior about 28.0%, Arcane Mage about 28.0%, Elemental Shaman about 24.8% in the displayed all-regions segment.

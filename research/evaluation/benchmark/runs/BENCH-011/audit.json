@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["The candidate table was not reconciled row by row.","Statistics, primary expert coverage, controlled tests, and visual QA remain missing."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": ["Complete the 43-row evidence matrix and compatibility matrix.","Add statistics and primary expert evidence if available.","Run controlled edge-case and in-client visual tests."],
+  "audited_at":"2026-08-28T09:19:00Z",
+  "delivery_status":"not_ready"
+}

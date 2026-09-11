@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["No codec, timeline complexity, memory requirement or budget was supplied.","Apple list prices are not guaranteed retailer transaction prices.","Short transcodes and sustained Premiere scores are different workloads."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [],
+  "audited_at":"2026-08-28T09:31:00Z",
+  "delivery_status":"ready_with_warnings"
+}

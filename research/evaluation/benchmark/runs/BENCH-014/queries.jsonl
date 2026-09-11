@@ -1,0 +1,3 @@
+{"query_id":"QRY-0001","pass":"statistics","family":"high-key dataset","query":"Raider.IO Midnight Season 2 high key timed runs spec data August 27 2026","executed_at":"2026-08-28T09:07:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"official-context","family":"tuning window","query":"site:us.forums.blizzard.com Season 2 Class Tuning Plans August 2026","executed_at":"2026-08-28T09:08:00Z","status":"completed","result_source_ids":["SRC-0002","SRC-0003"]}
+{"query_id":"QRY-0003","pass":"expert-interpretation","family":"expert tier list","query":"Method Midnight Season 2 Mythic Plus spec tier list","executed_at":"2026-08-28T09:09:00Z","status":"completed","result_source_ids":["SRC-0004"]}

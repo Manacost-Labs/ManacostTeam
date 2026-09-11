@@ -1,0 +1,2 @@
+{"query_id":"QRY-0001","pass":"primary-source","family":"official migration guidance","query":"site:platform.openai.com/docs/guides/migrate-to-responses Responses Chat Completions","executed_at":"2026-08-28T07:24:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"constraint-verification","family":"official data controls","query":"site:platform.openai.com/docs data controls Responses Chat Completions retention","executed_at":"2026-08-28T07:25:00Z","status":"completed","result_source_ids":["SRC-0002"]}

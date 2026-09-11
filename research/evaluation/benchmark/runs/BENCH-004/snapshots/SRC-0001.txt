@@ -1,0 +1,5 @@
+Source: European Commission EU approach to age verification
+URL: https://digital-strategy.ec.europa.eu/en/policies/eu-age-verification
+Accessed: 2026-08-28T07:55:00Z via ChatGPT built-in Search/Web
+
+The EU approach presents age verification as one part of child protection. Its feature-ready solution lets a user prove they are over 18 without sharing other personal information and can be adapted to other age ranges. The recommendation calls for anonymous proof, privacy and data protection, cybersecurity standards, and third-party scrutiny.

@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["Exact affix and reward breakpoints rely on current secondary databases because the inspected official launch posts do not provide complete tables.","Recheck after regional reset or hotfix changes."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [],
+  "audited_at": "2026-08-28T09:12:00Z",
+  "delivery_status": "ready_with_warnings"
+}

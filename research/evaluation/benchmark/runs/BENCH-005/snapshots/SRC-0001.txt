@@ -1,0 +1,8 @@
+Source: Python Source Releases
+Requested/final URL: https://www.python.org/getit/source/
+Accessed: 2026-08-28T07:31:00Z via ChatGPT built-in Search/Web
+
+# Python Source Releases
+Latest Python 3 Release - Python 3.14.7
+Stable Releases
+Python 3.14.7 - Aug. 5, 2026

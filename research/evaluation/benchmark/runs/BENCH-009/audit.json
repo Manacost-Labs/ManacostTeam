@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["The term pool does not by itself resolve shared-copy depletion."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [],
+  "audited_at":"2026-08-28T09:01:00Z",
+  "delivery_status":"ready_with_warnings"
+}

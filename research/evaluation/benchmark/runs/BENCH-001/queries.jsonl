@@ -1,0 +1,2 @@
+{"query_id":"QRY-0001","pass":"primary-source","family":"Polish law","query":"site:eli.gov.pl 2022 539 czas letni 2026","executed_at":"2026-08-28T07:51:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"corroboration","family":"EU schedule","query":"site:eur-lex.europa.eu summer-time 2026 29 March 25 October","executed_at":"2026-08-28T07:51:00Z","status":"completed","result_source_ids":["SRC-0002"]}

@@ -1,0 +1,2 @@
+Dell official XPS 14 DA14260 display specification excerpt accessed 2026-08-28 through ChatGPT built-in Search/Web.
+The display can drop to 1 Hz under certain static-content conditions and supports variable refresh rate up to 120 Hz.

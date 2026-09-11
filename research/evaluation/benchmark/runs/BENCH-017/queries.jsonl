@@ -1,0 +1,2 @@
+{"query_id":"QRY-0001","pass":"official-specs","family":"current Apple lineup and price","query":"site:apple.com/pl MacBook Air M5 MacBook Pro M5 specs price","executed_at":"2026-08-28T09:17:00Z","status":"completed","result_source_ids":["SRC-0001","SRC-0002"]}
+{"query_id":"QRY-0002","pass":"independent-test","family":"sustained editing and thermals","query":"M5 MacBook Air versus Pro sustained video editing benchmark","executed_at":"2026-08-28T09:18:00Z","status":"completed","result_source_ids":["SRC-0003","SRC-0004"]}

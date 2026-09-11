@@ -1,0 +1,11 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["The underlying event remains unverified after lineage deduplication."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": ["Locate the named upstream source and at least one independent confirmation."],
+  "audited_at":"2026-08-28T07:26:00Z",
+  "delivery_status":"not_ready",
+  "web_safety_violations":0
+}

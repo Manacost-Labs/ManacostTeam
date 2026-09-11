@@ -1,0 +1,13 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": [
+    "Compatibility is a release-level recommendation; no concrete application lockfile or peer dependency graph was tested.",
+    "The opened upgrade guide is from the mutable canary branch."
+  ],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [],
+  "audited_at": "2026-08-28T07:44:00Z",
+  "delivery_status": "ready_with_warnings"
+}

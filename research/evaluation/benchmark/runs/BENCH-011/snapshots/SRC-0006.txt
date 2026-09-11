@@ -1,0 +1,5 @@
+Source: Hearthstone Battlegrounds Card Database
+URL: https://hsbg.cards/
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+The database supports current card-pool and recent-change checks. The run did not complete a gift-to-every-eligible-minion compatibility matrix or visual in-client validation.

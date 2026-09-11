@@ -1,0 +1,3 @@
+{"query_id":"QRY-0001","pass":"primary-source","family":"developer mechanics","query":"site:us.forums.blizzard.com Battlegrounds Developer Insight Dark Gifts","executed_at":"2026-08-28T06:36:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"freshness-verification","family":"current patch overlay","query":"site:hearthstone.blizzard.com 36.2.2 Dark Gift Changes","executed_at":"2026-08-28T06:38:00Z","status":"completed","result_source_ids":["SRC-0002"]}
+{"query_id":"QRY-0003","pass":"freshness-verification","family":"later patch check","query":"site:hearthstone.blizzard.com 36.4 Patch Notes Battlegrounds Dark Gift","executed_at":"2026-08-28T06:39:00Z","status":"completed","result_source_ids":["SRC-0003"]}

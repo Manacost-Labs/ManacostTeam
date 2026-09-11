@@ -1,0 +1,2 @@
+{"query_id":"QRY-0001","pass":"primary-source","family":"official mechanics scope","query":"site:us.forums.blizzard.com Dark Gifts shared Tavern pool copies","executed_at":"2026-08-28T06:36:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"community","family":"current player assertion","query":"site:reddit.com/r/BobsTavern Dark Gifts shared pool copies","executed_at":"2026-08-28T06:42:00Z","status":"completed","result_source_ids":["SRC-0002"]}

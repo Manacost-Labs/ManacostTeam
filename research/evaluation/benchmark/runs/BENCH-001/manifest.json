@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.1",
+  "research_id": "RES-20260828T073255Z-CE9BFDDA",
+  "main_question": "What dates and official rules govern daylight-saving time changes in Poland in 2026?",
+  "created_at": "2026-08-28T07:32:55Z",
+  "updated_at": "2026-08-28T07:57:00Z",
+  "as_of": "2026-08-28",
+  "depth": "quick",
+  "output_profile": "research-report",
+  "modifiers": [
+    "current"
+  ],
+  "domain_adapters": [
+    "general"
+  ],
+  "status": "complete",
+  "current_context": {"benchmark_case":"BENCH-001","search_tool":"ChatGPT built-in Search/Web","source_opened":"2026-08-28","jurisdiction":"Poland"},
+  "prior_research_ids": [],
+  "provenance": {
+    "fingerprint_policy": "required",
+    "snapshot_policy": "local-only",
+    "hash_algorithm": "sha256"
+  }
+}

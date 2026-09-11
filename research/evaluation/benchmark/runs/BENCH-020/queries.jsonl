@@ -1,0 +1,4 @@
+{"query_id":"QRY-0001","pass":"measurement","family":"extreme Wi-Fi result","query":"Notebookcheck Dell XPS 14 2026 43 hours WiFi battery test","executed_at":"2026-08-28T09:25:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"cross-lab","family":"controlled web test","query":"Tom's Guide longest battery laptops 2026 150 nits MacBook Pro M5","executed_at":"2026-08-28T09:26:00Z","status":"completed","result_source_ids":["SRC-0002"]}
+{"query_id":"QRY-0003","pass":"official-spec","family":"display power mechanism","query":"Dell XPS 14 2026 official specs 1Hz VRR battery","executed_at":"2026-08-28T09:27:00Z","status":"completed","result_source_ids":["SRC-0003"]}
+{"query_id":"QRY-0004","pass":"contradiction","family":"mixed workload result","query":"Dell XPS 14 2026 mixed workload battery review","executed_at":"2026-08-28T09:28:00Z","status":"completed","result_source_ids":["SRC-0004"]}

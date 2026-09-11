@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Refuse tracked secrets
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' ; then
+            echo "a .env file is tracked" >&2; exit 1
+          fi
+          if git grep -nE '(REDDITAPIS_KEY|GETXAPI_KEY|TRANSCRIPTAPI_TOKEN|SCRAPE_DO_API_TOKEN|KHS_API_TOKEN|OPENAI_API_KEY|SOURCE_GATEWAY_TOKEN)=[A-Za-z0-9]' -- ':!*.md' ; then
+            echo "a credential value appears in the tree" >&2; exit 1
+          fi
+      - name: Unit tests
+        run: python3 -m unittest discover -s deep-research/tests -p 'test_*.py'
+      - name: Skill audit
+        run: python3 deep-research/scripts/audit_skill.py
+      - name: Release benchmark
+        run: python3 deep-research/scripts/validate_benchmark.py evaluation/benchmark --stage release
+      - name: Semantic gold
+        run: python3 deep-research/scripts/score_semantic_gold.py evaluation/gold/semantic-cases.jsonl evaluation/gold/semantic-predictions.jsonl
+      - name: Recall benchmark definitions
+        run: python3 deep-research/scripts/validate_recall.py evaluation/recall --stage plan
+      - name: Search coverage smoke
+        run: |
+          python3 deep-research/scripts/search_coverage.py evaluation/provenance-demo
+          python3 deep-research/scripts/search_coverage.py evaluation/benchmark/runs/BENCH-004 --json > /dev/null

@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["The 43-hour and 12:19 results are not directly comparable workloads.","Panel type and VRR/1 Hz behavior materially affect the outcome.","Manufacturer claims are not used as real-world measurements.","Local availability and exact configuration were not verified."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [],
+  "audited_at":"2026-08-28T09:42:00Z",
+  "delivery_status":"ready_with_warnings"
+}

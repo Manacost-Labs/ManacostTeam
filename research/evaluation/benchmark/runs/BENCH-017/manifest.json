@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.1",
+  "research_id": "RES-20260828T091313Z-D099FD24",
+  "main_question": "Compare the current MacBook Air and MacBook Pro for sustained professional video editing, including price, performance, ports, display, and thermal tradeoffs.",
+  "created_at": "2026-08-28T09:13:13Z",
+  "updated_at": "2026-08-28T09:31:00Z",
+  "as_of": "2026-08-28",
+  "depth": "deep",
+  "output_profile": "research-report",
+  "modifiers": [
+    "statistics-heavy"
+  ],
+  "domain_adapters": [
+    "consumer"
+  ],
+  "status": "complete",
+  "current_context": {"benchmark_case":"BENCH-017","search_tool":"ChatGPT built-in Search/Web","source_opened":"2026-08-28","market":"Poland","current_models":"MacBook Air M5 and MacBook Pro M5/M5 Pro/M5 Max"},
+  "prior_research_ids": [],
+  "provenance": {
+    "fingerprint_policy": "required",
+    "snapshot_policy": "local-only",
+    "hash_algorithm": "sha256"
+  }
+}

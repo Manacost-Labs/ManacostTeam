@@ -1,0 +1,2 @@
+Backblaze current security/retention excerpt accessed 2026-08-28 through ChatGPT built-in Search/Web.
+Encryption is built in; optional private encryption key. Standard 30-day version history with one-year option. Large restores may use mailed media.

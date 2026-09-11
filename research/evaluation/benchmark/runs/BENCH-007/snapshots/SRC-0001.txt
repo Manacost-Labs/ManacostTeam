@@ -1,0 +1,7 @@
+Source: React Versions
+URL: https://react.dev/versions
+Accessed: 2026-08-28T07:27:00Z via ChatGPT built-in Search/Web
+
+React docs provide documentation for the latest version.
+Latest version: 19.2
+Releases listed include v19.2.7 (June 2026), v19.2.6 (May 2026), and earlier 19.2 patches.

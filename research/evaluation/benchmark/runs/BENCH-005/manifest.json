@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.1",
+  "research_id": "RES-20260828T072709Z-C3333881",
+  "main_question": "What is the current stable Python feature release and which branches are officially supported?",
+  "created_at": "2026-08-28T07:27:09Z",
+  "updated_at": "2026-08-28T07:34:00Z",
+  "as_of": "2026-08-28",
+  "depth": "quick",
+  "output_profile": "research-report",
+  "modifiers": [
+    "current"
+  ],
+  "domain_adapters": [
+    "software"
+  ],
+  "status": "complete",
+  "current_context": {
+    "benchmark_case": "BENCH-005",
+    "search_tool": "ChatGPT built-in Search/Web",
+    "source_opened": "2026-08-28"
+  },
+  "prior_research_ids": [],
+  "provenance": {
+    "fingerprint_policy": "required",
+    "snapshot_policy": "local-only",
+    "hash_algorithm": "sha256"
+  }
+}

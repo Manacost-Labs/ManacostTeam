@@ -1,0 +1,5 @@
+Source: Blizzard Battlegrounds Developer Insight - Dark Gifts
+URL: https://us.forums.blizzard.com/en/hearthstone/t/battlegrounds-developer-insight-dark-gifts/163606
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+The explainer defines Tavern Tier offer bands by turn, exclusions for specific mechanics and minions, and a turn-6 guarantee that one offer matches the player's most common minion type. Gift selection uses min/max turn windows, compatibility with the offered minion, lobby and prior-use conditions, and a special Tras'tath subset.

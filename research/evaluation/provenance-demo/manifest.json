@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.1",
+  "research_id": "RES-20260828T071613Z-D65C8767",
+  "main_question": "Can a mutable official web source be preserved and verified reproducibly?",
+  "created_at": "2026-08-28T07:16:13Z",
+  "updated_at": "2026-08-28T07:22:00Z",
+  "as_of": "2026-08-28",
+  "depth": "quick",
+  "output_profile": "research-report",
+  "modifiers": [
+    "fact-check"
+  ],
+  "domain_adapters": [
+    "software"
+  ],
+  "status": "complete",
+  "current_context": {
+    "search_tool": "ChatGPT built-in Search/Web",
+    "source_opened": "2026-08-28"
+  },
+  "prior_research_ids": [],
+  "provenance": {
+    "fingerprint_policy": "required",
+    "snapshot_policy": "local-only",
+    "hash_algorithm": "sha256"
+  }
+}

@@ -1,0 +1,2 @@
+{"query_id":"QRY-0001","pass":"primary-source","family":"official release","query":"site:python.org current latest Python source release","executed_at":"2026-08-28T07:13:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"freshness-verification","family":"official lifecycle","query":"site:devguide.python.org/versions supported Python versions","executed_at":"2026-08-28T07:31:00Z","status":"completed","result_source_ids":["SRC-0002"]}

@@ -1,0 +1,7 @@
+Source: Data controls in the OpenAI platform
+Requested URL: https://platform.openai.com/docs/models/default-usage-policies-by-endpoint
+Final URL: https://developers.openai.com/api/docs/guides/your-data
+Accessed: 2026-08-28T07:25:00Z via ChatGPT built-in Search/Web
+
+The Responses API has a 30-day Application State retention period by default, or when store is true; response data is then stored for at least 30 days.
+When Zero Data Retention is enabled for an approved organization, store is always treated as false for Responses and Chat Completions even if a request sends true. Some endpoint capabilities may still have separate eligibility limits.

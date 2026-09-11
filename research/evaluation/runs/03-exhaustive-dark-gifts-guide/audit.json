@@ -1,0 +1,21 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": [
+    "The official launch explainer is stale unless both 36.2.1 and 36.2.2 overlays are applied.",
+    "Current reference tables were not reconciled row-by-row against every official delta.",
+    "Statistics-heavy and expert-source requirements remain unmet.",
+    "Shared-copy behavior is not authoritatively confirmed."
+  ],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [
+    "Complete a 43-row gift audit with effect, min/max turn, compatibility, source, and patch provenance.",
+    "Build or obtain an eligible-minion compatibility matrix.",
+    "Add current rank-segmented decision data if it becomes accessible.",
+    "Validate expert guidance from primary VODs or transcripts.",
+    "Run controlled in-client tests for unresolved edge cases and visually QA the final guide."
+  ],
+  "audited_at": "2026-08-28T06:51:35Z",
+  "delivery_status": "not_ready"
+}

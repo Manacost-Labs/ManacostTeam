@@ -1,0 +1,5 @@
+Source: Hacker News discussion 48679608
+URL: https://news.ycombinator.com/item?id=48679608
+Accessed: 2026-08-28T07:58:00Z via ChatGPT built-in Search/Web
+
+Sampled comments debate anonymous credentials and zero-knowledge proofs as ways to disclose only an age threshold. Counterarguments say anonymous tokens may be copied or proxied, while enforcement pressure can make credentials traceable. The technical discussion is contested and not population evidence.

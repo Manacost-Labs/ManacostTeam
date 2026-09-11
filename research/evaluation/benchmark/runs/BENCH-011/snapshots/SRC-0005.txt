@@ -1,0 +1,5 @@
+Source: wiki.gg Battlegrounds Dark Gift table
+URL: https://hearthstone.wiki.gg/wiki/Battlegrounds/Dark_Gift
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+The current community reference presents a row-based list of Dark Gift names, text, turn windows, and conditions. This run did not reconcile every row against all official patch layers.

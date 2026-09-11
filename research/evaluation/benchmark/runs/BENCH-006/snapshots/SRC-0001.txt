@@ -1,0 +1,9 @@
+Source: Migrate to the Responses API
+Requested URL: https://platform.openai.com/docs/guides/migrate-to-responses
+Final URL: https://developers.openai.com/api/docs/guides/migrate-to-responses
+Accessed: 2026-08-28T07:25:00Z via ChatGPT built-in Search/Web
+
+Responses is OpenAI's newer API primitive and is recommended for all new projects. Chat Completions remains supported.
+Responses provides built-in tools, multi-turn state options, multimodal input, typed output Items, and only one generation rather than Chat Completions' n choices.
+Migration changes /v1/chat/completions to /v1/responses, message/choices output to typed output Items, and requires a state strategy.
+Structured Outputs move from response_format to text.format. Function-call request and response shapes differ. Streaming consumers must handle typed events. Chat Completions can be migrated one user flow at a time.

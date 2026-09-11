@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.1",
+  "research_id": "RES-20260828T072709Z-47EFB0A1",
+  "main_question": "For a new OpenAI API integration, compare Responses API with Chat Completions and identify migration constraints.",
+  "created_at": "2026-08-28T07:27:09Z",
+  "updated_at": "2026-08-28T07:38:00Z",
+  "as_of": "2026-08-28",
+  "depth": "deep",
+  "output_profile": "research-report",
+  "modifiers": [
+    "primary-sources-only"
+  ],
+  "domain_adapters": [
+    "software"
+  ],
+  "status": "complete",
+  "current_context": {
+    "benchmark_case": "BENCH-006",
+    "search_tool": "ChatGPT built-in Search/Web",
+    "source_opened": "2026-08-28",
+    "source_policy": "official OpenAI documentation only"
+  },
+  "prior_research_ids": [],
+  "provenance": {
+    "fingerprint_policy": "required",
+    "snapshot_policy": "local-only",
+    "hash_algorithm": "sha256"
+  }
+}

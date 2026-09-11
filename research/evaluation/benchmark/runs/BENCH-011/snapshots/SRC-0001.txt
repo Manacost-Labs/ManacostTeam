@@ -1,0 +1,5 @@
+Source: Blizzard Developer Insight - Dark Gifts
+URL: https://us.forums.blizzard.com/en/hearthstone/t/battlegrounds-developer-insight-dark-gifts/163606
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+The document supplies button use rules, turn-to-tier offers, exclusions, tribe matching, original 43-gift windows, compatibility restrictions, and special hero pool behavior.

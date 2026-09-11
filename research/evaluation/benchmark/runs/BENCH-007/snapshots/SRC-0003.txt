@@ -1,0 +1,9 @@
+Source: How to upgrade to Next.js version 16
+URL: https://github.com/vercel/next.js/blob/canary/docs/01-app/02-guides/upgrading/version-16.mdx
+Accessed: 2026-08-28T07:41:00Z via ChatGPT built-in Search/Web
+
+Manual install directs users to install next@latest, react@latest, and react-dom@latest.
+Minimums: Node.js 20.9.0 LTS; TypeScript 5.1.0; Chrome/Edge/Firefox 111+, Safari 16.4+.
+Turbopack is stable and the default for next dev and next build in Next.js 16.
+Synchronous access to params, searchParams, cookies(), headers(), and draftMode() is removed; async access is required.
+The App Router in Next.js 16 includes React 19.2 features.

@@ -1,0 +1,86 @@
+{
+  "timeline_version": "1.0",
+  "game": "hearthstone",
+  "updated_at": "2026-09-02",
+  "_comment": "Machine-readable patch chronology used by freshness_check.py. Every entry cites the official page it was taken from. `modes` lists the client modes the patch shipped for; `balance_modes` lists the modes whose rules, pools, or numbers actually changed (defaults to `modes`). A source is judged against the latest balance entry for its mode, so a Battlegrounds source can stay CURRENT across a constructed-only patch. Add a new entry the day a patch or hotfix ships.",
+  "patches": [
+    {
+      "version": "30.2",
+      "released": "2024-08-15",
+      "kind": "patch",
+      "modes": [
+        "constructed",
+        "battlegrounds"
+      ],
+      "source_url": "https://hearthstone.blizzard.com/en-us/news/24122902",
+      "notes": "Historical reference used by earlier bundles."
+    },
+    {
+      "version": "30.2.2",
+      "released": "2024-08-27",
+      "kind": "balance",
+      "modes": [
+        "constructed",
+        "battlegrounds"
+      ],
+      "source_url": "https://hearthstone.blizzard.com/en-us/news/24134638/30-2-2-patch-notes",
+      "notes": "Historical reference used by earlier bundles."
+    },
+    {
+      "version": "31.2",
+      "released": "2024-12-02",
+      "kind": "patch",
+      "modes": [
+        "battlegrounds"
+      ],
+      "source_url": "https://hearthstone.blizzard.com/en-us/news/24163459/312-patch-notes",
+      "notes": "Battlegrounds damage cap update."
+    },
+    {
+      "version": "36.2",
+      "released": "2026-08-03",
+      "kind": "patch",
+      "modes": [
+        "constructed",
+        "battlegrounds"
+      ],
+      "source_url": "https://hearthstone.blizzard.com/en-us/news/24290432/36-2-patch-notes",
+      "notes": "Battlegrounds Season 14 (Dark Gifts of Dalaran) begins 2026-08-04."
+    },
+    {
+      "version": "36.2.1",
+      "released": "2026-08-07",
+      "kind": "hotfix",
+      "modes": [
+        "battlegrounds"
+      ],
+      "source_url": "https://us.forums.blizzard.com/en/hearthstone/t/3621-hotfix-patch/164300",
+      "notes": "Dark Gift offer-tier and window fixes."
+    },
+    {
+      "version": "36.2.2",
+      "released": "2026-08-18",
+      "kind": "balance",
+      "modes": [
+        "constructed",
+        "battlegrounds"
+      ],
+      "source_url": "https://hearthstone.blizzard.com/en-us/news/24293284",
+      "notes": "Balance updates for constructed and Battlegrounds."
+    },
+    {
+      "version": "36.4",
+      "released": "2026-08-24",
+      "kind": "patch",
+      "modes": [
+        "constructed",
+        "battlegrounds"
+      ],
+      "source_url": "https://hearthstone.blizzard.com/en-us/news/24293283/364-patch-notes",
+      "notes": "Azeroth's Most Wanted class sets for Priest, Rogue, Warlock, and Warrior; prior bundles recorded no Battlegrounds balance changes, so Battlegrounds freshness still keys on 36.2.2.",
+      "balance_modes": [
+        "constructed"
+      ]
+    }
+  ]
+}

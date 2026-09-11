@@ -1,0 +1,7 @@
+Source: TechEmpower Framework Benchmarks repository
+URL: https://github.com/TechEmpower/FrameworkBenchmarks
+Accessed: 2026-08-28T07:24:00Z via ChatGPT built-in Search/Web
+
+The project provides representative performance measures across web frameworks and includes languages such as Go and Rust.
+Tests exercise distinct workloads: plaintext, JSON serialization, database reads and writes, ORM, collections, sorting, templates, and XSS countermeasures.
+The repository contains implementations and a documented command to run and verify tests, enabling reproduction rather than relying on a ranking alone.

@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["Budget and locale are missing, so no final product ranking is issued.","Comfort is subjective and requires a return-safe fit trial.","Codec advantages only apply when the playback/call device supports them."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": ["Obtain maximum spend and purchase country, then verify same-day prices and exact retailer hygiene/return exclusions."],
+  "audited_at":"2026-08-28T09:39:00Z",
+  "delivery_status":"ready_with_warnings"
+}

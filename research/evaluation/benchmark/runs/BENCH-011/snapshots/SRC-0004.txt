@@ -1,0 +1,5 @@
+Source: Blizzard 36.4 Patch Notes
+URL: https://hearthstone.blizzard.com/en-us/news/24293283/364-patch-notes
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+The inspected later patch contains no additional Dark Gift rules or balance delta.

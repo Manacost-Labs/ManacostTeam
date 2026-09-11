@@ -1,0 +1,2 @@
+Current r/backblaze failure report accessed 2026-08-28 through ChatGPT built-in Search/Web.
+Mac Mini M1, macOS Sequoia 15.7.9, 2 TB restore: Restore app crashed after hours and later immediately after authentication. Related posts mention sleep/network transitions and a workaround. Self-selected report, not incidence data.

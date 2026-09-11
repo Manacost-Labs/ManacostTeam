@@ -1,0 +1,3 @@
+{"query_id":"QRY-0001","pass":"primary-source","family":"operator/government announcement","query":"world largest AI data center Portsmouth Ohio 10 GW official","executed_at":"2026-08-28T07:51:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"independent-verification","family":"construction and availability status","query":"AP Ohio 10 gigawatt AI data center construction operation date","executed_at":"2026-08-28T07:55:00Z","status":"completed","result_source_ids":["SRC-0002"]}
+{"query_id":"QRY-0003","pass":"contradiction-search","family":"operational versus announced","query":"largest operational AI data center 2026 power compute independent","executed_at":"2026-08-28T07:56:00Z","status":"completed","result_source_ids":[]}

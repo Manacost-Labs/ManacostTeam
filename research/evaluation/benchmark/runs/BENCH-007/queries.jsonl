@@ -1,0 +1,3 @@
+{"query_id":"QRY-0001","pass":"primary-source","family":"React release channel","query":"site:react.dev/versions latest React version","executed_at":"2026-08-28T07:27:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"freshness-verification","family":"Next.js current release and security","query":"site:nextjs.org/blog latest Next.js active LTS security release","executed_at":"2026-08-28T07:27:00Z","status":"completed","result_source_ids":["SRC-0002"]}
+{"query_id":"QRY-0003","pass":"constraint-verification","family":"Next.js 16 official upgrade guide","query":"site:github.com/vercel/next.js version-16.mdx upgrade guide","executed_at":"2026-08-28T07:40:00Z","status":"completed","result_source_ids":["SRC-0003"]}

@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.1",
+  "research_id": "RES-20260828T073255Z-738A8EE7",
+  "main_question": "Who received the 2025 Nobel Prize in Chemistry and what was the official motivation?",
+  "created_at": "2026-08-28T07:32:55Z",
+  "updated_at": "2026-08-28T08:00:00Z",
+  "as_of": "2026-08-28",
+  "depth": "quick",
+  "output_profile": "research-report",
+  "modifiers": [
+    "fact-check"
+  ],
+  "domain_adapters": [
+    "general"
+  ],
+  "status": "complete",
+  "current_context": {"benchmark_case":"BENCH-002","search_tool":"ChatGPT built-in Search/Web","source_opened":"2026-08-28"},
+  "prior_research_ids": [],
+  "provenance": {
+    "fingerprint_policy": "required",
+    "snapshot_policy": "local-only",
+    "hash_algorithm": "sha256"
+  }
+}

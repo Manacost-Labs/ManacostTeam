@@ -1,0 +1,1 @@
+{"query_id":"QRY-0001","pass":"lineage-audit","family":"controlled repost sources","query":"Inspect three controlled repost records and identify their upstream lineage","executed_at":"2026-08-28T07:23:30Z","status":"completed","result_source_ids":["SRC-0001","SRC-0002","SRC-0003"]}

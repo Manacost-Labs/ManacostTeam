@@ -1,0 +1,11 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["The substantive emissions claim remains unverified because the fixture supplies no evidence."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": ["A real task would require an official dataset and independently inspected methodology."],
+  "audited_at":"2026-08-28T07:25:00Z",
+  "delivery_status":"not_ready",
+  "web_safety_violations":0
+}

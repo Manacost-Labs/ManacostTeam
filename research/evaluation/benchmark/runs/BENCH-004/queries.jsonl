@@ -1,0 +1,4 @@
+{"query_id":"QRY-0001","pass":"policy","family":"current official EU approach","query":"site:digital-strategy.ec.europa.eu EU age verification 2026","executed_at":"2026-08-28T07:52:00Z","status":"completed","result_source_ids":["SRC-0001"]}
+{"query_id":"QRY-0002","pass":"community","family":"public consultation arguments","query":"site:gov.uk 2026 consultation age assurance privacy child safety","executed_at":"2026-08-28T07:54:00Z","status":"completed","result_source_ids":["SRC-0002"]}
+{"query_id":"QRY-0003","pass":"community","family":"Reddit privacy venue","query":"site:reddit.com/r/privacy age verification privacy nightmare 2026","executed_at":"2026-08-28T07:54:00Z","status":"completed","result_source_ids":["SRC-0003"]}
+{"query_id":"QRY-0004","pass":"community","family":"Hacker News technical debate","query":"site:news.ycombinator.com age verification privacy 2026","executed_at":"2026-08-28T07:54:00Z","status":"completed","result_source_ids":["SRC-0004"]}

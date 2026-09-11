@@ -1,0 +1,5 @@
+Source: Reddit r/BobsTavern first Dark Gift discussion
+URL: https://www.reddit.com/r/BobsTavern/comments/1vsudnu/how_do_i_know_when_to_discover_my_first_dark_gift/
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+Sampled replies repeatedly frame the first Gift as an alternative to a weak 3-Gold shop action. Turn suggestions cluster around 4-6 but vary with health, curve, hero, tribes, and current shop quality. The thread contains no outcome telemetry.

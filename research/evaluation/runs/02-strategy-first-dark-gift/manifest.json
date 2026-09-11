@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "research_id": "RES-20260828T064851Z-F62677EB",
+  "main_question": "When should the first Dark Gift be used in current Hearthstone Battlegrounds?",
+  "created_at": "2026-08-28T06:48:51Z",
+  "updated_at": "2026-08-28T06:51:35Z",
+  "as_of": "2026-08-28",
+  "depth": "deep",
+  "modifiers": [
+    "statistics-heavy",
+    "community-heavy",
+    "contradiction-heavy",
+    "current-patch-only"
+  ],
+  "domain_adapters": [
+    "gaming",
+    "hearthstone"
+  ],
+  "status": "complete",
+  "current_context": {
+    "season": "Battlegrounds Season 14",
+    "latest_patch_checked": "36.4",
+    "last_dark_gift_rules_patch": "36.2.2",
+    "public_decision_level_statistics_found": false,
+    "recommendation_type": "conditional heuristic, not measured optimum",
+    "search_tool": "ChatGPT built-in Search/Web"
+  },
+  "prior_research_ids": []
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Evidence-First Deep Research"
+  short_description: "Проверенное исследование простым языком"
+  default_prompt: "Используй $deep-research для доказательного исследования через встроенный ChatGPT Search/Web, выбери профиль выдачи по запросу и дай понятный результат с проверенными ссылками."

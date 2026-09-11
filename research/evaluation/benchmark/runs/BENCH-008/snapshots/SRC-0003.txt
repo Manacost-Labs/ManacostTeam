@@ -1,0 +1,8 @@
+Source: Go Performance Monitoring
+URL: https://go.dev/wiki/PerformanceMonitoring
+Accessed: 2026-08-28T07:31:00Z via ChatGPT built-in Search/Web
+
+The Go project runs both end-to-end and microbenchmark suites.
+Its benchmark set is curated and may change because a fixed set can optimize the wrong thing.
+Performance numbers are not reported in isolation: every experiment is compared with a baseline.
+Measurements separated in time can contain substantial machine or VM noise.

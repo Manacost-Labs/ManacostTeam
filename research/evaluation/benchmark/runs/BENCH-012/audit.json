@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["A yes/no mechanics answer is not supported by the inspected evidence."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": ["Obtain explicit Blizzard confirmation or a reproducible current-patch controlled test."],
+  "audited_at":"2026-08-28T09:05:00Z",
+  "delivery_status":"not_ready"
+}

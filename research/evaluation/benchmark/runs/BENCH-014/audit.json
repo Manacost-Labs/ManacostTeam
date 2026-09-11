@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass_with_warnings",
+  "critical_issues": [],
+  "warnings": ["Representation is not damage output or causal strength.","The sample is top-end timed runs and does not generalize to average keys.","Re-run after the next tuning pass."],
+  "claims_to_rewrite": [],
+  "claims_to_remove": [],
+  "additional_search_required": [],
+  "audited_at":"2026-08-28T09:16:00Z",
+  "delivery_status":"ready_with_warnings"
+}

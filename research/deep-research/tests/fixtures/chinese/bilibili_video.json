@@ -1,0 +1,14 @@
+{
+  "data": {
+    "bvid": "BV1ResearchTeam",
+    "title": "炉石国服卡组攻略",
+    "desc": "卡组代码 AAECAQcAD+gH6QfqB+sH7AftB+4H7wfwB/EH8gfzB/QH9Qf2BwAA",
+    "pubdate": 1788120000,
+    "owner": {"name": "测试作者"},
+    "subtitle": [
+      {"from": 12.5, "to": 21.0, "content": "起手留牌优先保留低费随从。"},
+      {"from": 44.0, "to": 55.2, "content": "这个对局是劣势，不要为了节奏交掉全部资源。"},
+      {"from": 80.0, "to": 91.5, "content": "这里只是动画展示，没有策略结论。"}
+    ]
+  }
+}

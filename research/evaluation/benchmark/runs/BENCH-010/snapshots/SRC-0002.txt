@@ -1,0 +1,5 @@
+Source: Blizzard Developer Insight - Dark Gifts
+URL: https://us.forums.blizzard.com/en/hearthstone/t/battlegrounds-developer-insight-dark-gifts/163606
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+The offered Tavern Tier bands rise by turn. Starting on turn 6, one offer is guaranteed to match the player's most common minion type. The rules create value in waiting but do not prescribe one optimal first-use turn.

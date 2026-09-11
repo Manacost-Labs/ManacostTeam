@@ -1,0 +1,7 @@
+Source: Profile-guided optimization - The Go Programming Language
+URL: https://go.dev/doc/pgo
+Accessed: 2026-08-28T07:31:00Z via ChatGPT built-in Search/Web
+
+Go 1.20+ supports profile-guided optimization. As of Go 1.22, a representative program set showed around 2-14% performance improvement with PGO.
+Profiles should represent actual production behavior. Unrepresentative profiles may yield little or no production improvement.
+Constructing and maintaining representative benchmarks is difficult. Microbenchmarks are usually bad PGO candidates because they exercise only a small part of the application.

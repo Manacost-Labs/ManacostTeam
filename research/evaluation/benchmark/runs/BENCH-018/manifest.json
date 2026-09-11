@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.1",
+  "research_id": "RES-20260828T091313Z-0BB5566B",
+  "main_question": "Recommend a current cloud backup service for a Mac user with 2 TB of data, prioritizing restore reliability, encryption, price, and exit options.",
+  "created_at": "2026-08-28T09:13:13Z",
+  "updated_at": "2026-08-28T09:34:00Z",
+  "as_of": "2026-08-28",
+  "depth": "deep",
+  "output_profile": "research-report",
+  "modifiers": [
+    "contradiction-heavy"
+  ],
+  "domain_adapters": [
+    "consumer"
+  ],
+  "status": "complete",
+  "current_context": {"benchmark_case":"BENCH-018","search_tool":"ChatGPT built-in Search/Web","source_opened":"2026-08-28","platform":"macOS","data_size":"2 TB","comparison":"Backblaze Computer Backup versus Arq with user-controlled storage"},
+  "prior_research_ids": [],
+  "provenance": {
+    "fingerprint_policy": "required",
+    "snapshot_policy": "local-only",
+    "hash_algorithm": "sha256"
+  }
+}

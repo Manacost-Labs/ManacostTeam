@@ -1,0 +1,5 @@
+Source: Blizzard 36.2.2 Patch Notes
+URL: https://hearthstone.blizzard.com/en-us/news/24293284
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+Patch 36.2.2 again changed Dark Gift effects, timing windows, restrictions, named-minion behavior, and the special Tras'tath subset.

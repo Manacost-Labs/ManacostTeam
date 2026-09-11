@@ -1,0 +1,15 @@
+Canonical inspected excerpt
+Source title: Python Source Releases
+Requested URL: https://www.python.org/getit/source/
+Final URL: https://www.python.org/getit/source/
+Accessed via: built-in ChatGPT Search/Web open-page access
+Accessed at: 2026-08-28T07:15:00Z
+Access integrity: partial; interactive scripts did not run
+
+Observed page content:
+- Heading: Python Source Releases
+- Latest Python 3 Release: Python 3.14.7
+- Listed release: Python 3.14.7 — Aug. 5, 2026
+- The page linked gzip and XZ source archives for the release.
+
+This snapshot preserves only the inspected claim-sized content and access context.

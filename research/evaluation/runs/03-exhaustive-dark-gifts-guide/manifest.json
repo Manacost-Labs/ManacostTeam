@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "research_id": "RES-20260828T064851Z-888C5582",
+  "main_question": "Research everything needed for a complete current-patch Dark Gifts guide in Hearthstone Battlegrounds.",
+  "created_at": "2026-08-28T06:48:51Z",
+  "updated_at": "2026-08-28T06:51:35Z",
+  "as_of": "2026-08-28",
+  "depth": "exhaustive",
+  "modifiers": [
+    "raw-research",
+    "statistics-heavy",
+    "community-heavy",
+    "contradiction-heavy",
+    "current-patch-only"
+  ],
+  "domain_adapters": [
+    "gaming",
+    "hearthstone"
+  ],
+  "status": "incomplete",
+  "current_context": {
+    "season": "Battlegrounds Season 14",
+    "latest_patch_checked": "36.4",
+    "rules_layers_checked": ["36.2 launch", "36.2.1 hotfix", "36.2.2 balance patch", "36.4 freshness check"],
+    "guide_delivery": "not_ready",
+    "search_tool": "ChatGPT built-in Search/Web"
+  },
+  "prior_research_ids": []
+}

@@ -1,0 +1,5 @@
+Source: Blizzard Battlegrounds Developer Insight - Dark Gifts
+URL: https://us.forums.blizzard.com/en/hearthstone/t/battlegrounds-developer-insight-dark-gifts/163606
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+The inspected mechanics document defines offer-tier bands, minion and gift eligibility, exclusions, compatibility, and special pools. It does not explicitly say whether a selected Dark Gift minion consumes a finite copy from the normal shared Tavern pool.

@@ -1,0 +1,5 @@
+Source: Blizzard 36.2.2 Patch Notes
+URL: https://hearthstone.blizzard.com/en-us/news/24293284
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+The Dark Gift changes adjust multiple effects, turn windows, named-minion and universal exclusions, compatibility behavior, and Tras'tath's gift subset. These changes override affected launch rules.

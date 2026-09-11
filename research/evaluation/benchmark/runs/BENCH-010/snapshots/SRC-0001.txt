@@ -1,0 +1,5 @@
+Source: Blizzard Season 14 announcement
+URL: https://hearthstone.blizzard.com/en-us/news/24290433/announcing-battlegrounds-season-14-dark-gifts-of-dalaran
+Opened: 2026-08-28 via ChatGPT built-in Search/Web
+
+The Dark Gift button becomes available on turn 3, costs 3 Gold, may be used once per turn and three times per game, and later offers improve.

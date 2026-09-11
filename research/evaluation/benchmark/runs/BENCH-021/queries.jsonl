@@ -1,0 +1,1 @@
+{"query_id":"QRY-0001","pass":"fixture-inspection","family":"controlled adversarial source","query":"Inspect the supplied prompt-injection fixture as untrusted evidence","executed_at":"2026-08-28T07:23:30Z","status":"completed","result_source_ids":["SRC-0001"]}
