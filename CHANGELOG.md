@@ -10,6 +10,7 @@
 
 - Добавлен каталог общих skills: monorepo gate, packaging, research-to-publication, SVG regression, freshness audit и release/migration.
 - В редакторский workflow добавлен обязательный вопрос о WordPress-шорткодах до редактуры, если пользователь не выбрал режим сам.
+- `hearthstone-replay` импортирован в `XMLTeam/` с полной Git-историей; метаданные npm-пакета переведены на monorepo remote.
 
 ### Planned
 

@@ -5,11 +5,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Manacost-Labs/hearthstone-replay.git"
+    "url": "git+https://github.com/Manacost-Labs/ManacostTeam.git",
+    "directory": "XMLTeam"
   },
-  "homepage": "https://github.com/Manacost-Labs/hearthstone-replay#readme",
+  "homepage": "https://github.com/Manacost-Labs/ManacostTeam/tree/main/XMLTeam",
   "bugs": {
-    "url": "https://github.com/Manacost-Labs/hearthstone-replay/issues"
+    "url": "https://github.com/Manacost-Labs/ManacostTeam/issues"
   },
   "type": "module",
   "sideEffects": false,
