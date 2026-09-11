@@ -1,0 +1,213 @@
+// Corpus quality report: what the corpus contains, which semantic rules it
+// exercises and what the library does not know. Writes docs/generated/corpus-report.{json,md}.
+// Run after `pnpm build`:  pnpm corpus:report
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+import {
+  analyzeUnknowns,
+  extractEvents,
+  parseReplayDocument,
+  SEMANTIC_RULES,
+} from '../../dist/index.js';
+import { loadManifest, MANIFEST_URL } from './lib.mjs';
+
+const manifest = loadManifest();
+const outJson = fileURLToPath(new URL('../../docs/generated/corpus-report.json', import.meta.url));
+const outMd = fileURLToPath(new URL('../../docs/generated/corpus-report.md', import.meta.url));
+
+const report = {
+  generatedAt: new Date().toISOString().slice(0, 10),
+  totals: { files: 0, bytes: 0, games: 0, packets: 0, events: 0 },
+  hsreplayVersions: {},
+  builds: {},
+  gameModes: {},
+  formats: {},
+  gameTypes: {},
+  licenses: {},
+  sources: {},
+  oldestBuild: null,
+  newestBuild: null,
+  rules: {},
+  eventTypes: {},
+  features: {},
+  knownAnomalies: {},
+  unknowns: null,
+};
+
+const count = (bucket, key) => {
+  const k = key === null || key === undefined ? 'unknown' : String(key);
+  bucket[k] = (bucket[k] ?? 0) + 1;
+};
+const labeled = [];
+
+for (const entry of manifest.entries) {
+  const path = fileURLToPath(new URL(entry.file, MANIFEST_URL));
+  const xml = readFileSync(path, 'utf8');
+  const document = parseReplayDocument(xml);
+  report.totals.files++;
+  report.totals.bytes += entry.sizeBytes;
+  report.totals.games += document.games.length;
+  count(report.hsreplayVersions, entry.hsreplayVersion);
+  count(report.builds, entry.build);
+  count(report.gameModes, entry.gameMode);
+  count(report.formats, entry.formatType);
+  count(report.gameTypes, entry.gameType);
+  count(report.licenses, entry.license);
+  count(report.sources, entry.sourceRepository ?? entry.source);
+  for (const feature of entry.features ?? []) count(report.features, feature);
+  for (const anomaly of entry.knownAnomalies) count(report.knownAnomalies, anomaly);
+  if (entry.build !== null) {
+    report.oldestBuild =
+      report.oldestBuild === null ? entry.build : Math.min(report.oldestBuild, entry.build);
+    report.newestBuild =
+      report.newestBuild === null ? entry.build : Math.max(report.newestBuild, entry.build);
+  }
+  const rulesInFile = new Set();
+  for (const game of document.games) {
+    report.totals.packets += game.packetCount;
+    labeled.push({
+      label: entry.file,
+      packets: game.packets,
+      ...(entry.build === null ? {} : { build: entry.build }),
+    });
+    for (const event of extractEvents(game)) {
+      report.totals.events++;
+      count(report.eventTypes, event.type);
+      const rule = event.evidence.rule;
+      report.rules[rule] ??= { level: SEMANTIC_RULES[rule].level, files: 0, events: 0 };
+      report.rules[rule].events++;
+      rulesInFile.add(rule);
+    }
+  }
+  for (const rule of rulesInFile) report.rules[rule].files++;
+}
+for (const rule of Object.keys(SEMANTIC_RULES)) {
+  report.rules[rule] ??= { level: SEMANTIC_RULES[rule].level, files: 0, events: 0 };
+}
+report.rules = Object.fromEntries(
+  Object.entries(report.rules).sort(([a], [b]) => a.localeCompare(b)),
+);
+report.unknowns = analyzeUnknowns(labeled);
+for (const bucket of ['nodes', 'attributes', 'children', 'tags', 'enumValues']) {
+  report.unknowns = {
+    ...report.unknowns,
+    [bucket]: Object.fromEntries(
+      Object.entries(report.unknowns[bucket]).map(([key, value]) => [
+        key,
+        { ...value, files: undefined },
+      ]),
+    ),
+  };
+}
+
+writeFileSync(outJson, `${JSON.stringify(report, null, 2)}\n`);
+writeFileSync(outMd, renderMarkdown(report));
+console.log(
+  `${report.totals.files} files, ${(report.totals.bytes / 1_048_576).toFixed(1)} MB, ${report.totals.packets} packets, ${report.totals.events} events`,
+);
+console.log(`written ${outJson} and ${outMd}`);
+
+function table(bucket, keyHeader = 'value') {
+  const rows = Object.entries(bucket).sort(
+    ([a], [b]) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b),
+  );
+  return [
+    `| ${keyHeader} | files |`,
+    '| --- | ---: |',
+    ...rows.map(([k, v]) => `| ${k} | ${v} |`),
+  ].join('\n');
+}
+
+function unknownTable(bucket, header) {
+  const rows = Object.entries(bucket);
+  if (rows.length === 0) return `_none_`;
+  return [
+    `| ${header} | count | files | first build | last build | first file | packet |`,
+    '| --- | ---: | ---: | ---: | ---: | --- | ---: |',
+    ...rows.map(
+      ([k, v]) =>
+        `| ${k} | ${v.count} | ${v.fileCount} | ${v.firstBuild ?? 'null'} | ${v.lastBuild ?? 'null'} | ${v.firstFile} | ${v.samplePacketIndex ?? '-'} |`,
+    ),
+  ].join('\n');
+}
+
+function renderMarkdown(r) {
+  const ruleRows = Object.entries(r.rules).map(
+    ([id, v]) => `| ${id} | ${v.level} | ${v.files} | ${v.events} |`,
+  );
+  return `# Corpus report
+
+_Generated by \`pnpm corpus:report\` on ${r.generatedAt}. Do not edit by hand._
+
+## Totals
+
+| files | size | games | packets | semantic events |
+| ---: | ---: | ---: | ---: | ---: |
+| ${r.totals.files} | ${(r.totals.bytes / 1_048_576).toFixed(1)} MB | ${r.totals.games} | ${r.totals.packets} | ${r.totals.events} |
+
+Oldest build: ${r.oldestBuild ?? 'unknown'} · newest build: ${r.newestBuild ?? 'unknown'}
+
+## HSReplay versions
+
+${table(r.hsreplayVersions, 'version')}
+
+## Client builds
+
+${table(r.builds, 'build')}
+
+## Game modes (from the Game element)
+
+${table(r.gameModes, 'mode')}
+
+## Formats and game types
+
+${table(r.formats, 'FormatType')}
+
+${table(r.gameTypes, 'GameType')}
+
+## Sources and licenses
+
+${table(r.sources, 'source')}
+
+${table(r.licenses, 'license')}
+
+## Semantic rule coverage
+
+| rule | level | files | events |
+| --- | --- | ---: | ---: |
+${ruleRows.join('\n')}
+
+Rules with zero events are not validated by the corpus.
+
+## Confirmed features
+
+${table(r.features, 'feature')}
+
+## Known anomalies
+
+${table(r.knownAnomalies, 'anomaly')}
+
+## Unknowns
+
+### Nodes
+
+${unknownTable(r.unknowns.nodes, 'element')}
+
+### Attributes (excluding hsreplaynet annotation attributes is not done: they are listed as-is)
+
+${unknownTable(r.unknowns.attributes, 'attribute')}
+
+### Unexpected children
+
+${unknownTable(r.unknowns.children, 'child')}
+
+### GameTags without a name
+
+${unknownTable(r.unknowns.tags, 'tag')}
+
+### Enum values without a name
+
+${unknownTable(r.unknowns.enumValues, 'value')}
+`;
+}

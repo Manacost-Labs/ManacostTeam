@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+*.tsbuildinfo
+.DS_Store
+
+# local duplicate of test.xml
+пример.xml

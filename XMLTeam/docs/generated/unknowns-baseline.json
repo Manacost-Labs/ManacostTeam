@@ -1,0 +1,5970 @@
+{
+  "replayCount": 107,
+  "nodes": {},
+  "attributes": {
+    "TagChange.EntityCardID": {
+      "count": 294167,
+      "files": 81,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 75
+    },
+    "TagChange.EntityCardName": {
+      "count": 294167,
+      "files": 81,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 75
+    },
+    "TagChange.GameTagName": {
+      "count": 251268,
+      "files": 81,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 75
+    },
+    "Block.block_sequence_num": {
+      "count": 34391,
+      "files": 81,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 78
+    },
+    "Block.BlockTypeName": {
+      "count": 34391,
+      "files": 81,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 78
+    },
+    "Block.EntityCardID": {
+      "count": 34291,
+      "files": 81,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 78
+    },
+    "Block.EntityCardName": {
+      "count": 34291,
+      "files": 81,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 78
+    },
+    "TagChange.StepName": {
+      "count": 27686,
+      "files": 81,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 160
+    },
+    "TagChange.ZoneName": {
+      "count": 15694,
+      "files": 80,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 109
+    },
+    "MetaData.MetaName": {
+      "count": 12759,
+      "files": 75,
+      "firstBuild": 14830,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 221
+    },
+    "TagChange.ValueReferenceCardID": {
+      "count": 12143,
+      "files": 79,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 486
+    },
+    "TagChange.ValueReferenceCardName": {
+      "count": 11685,
+      "files": 75,
+      "firstBuild": 14830,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 486
+    },
+    "FullEntity.EntityName": {
+      "count": 10314,
+      "files": 80,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 15
+    },
+    "ShowEntity.EntityName": {
+      "count": 5507,
+      "files": 79,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 79
+    },
+    "Block.TargetName": {
+      "count": 3911,
+      "files": 76,
+      "firstBuild": 13921,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 734
+    },
+    "Block.TriggerKeywordName": {
+      "count": 1226,
+      "files": 43,
+      "firstBuild": 23966,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 219
+    },
+    "TagChange.MulliganStateName": {
+      "count": 463,
+      "files": 65,
+      "firstBuild": 13921,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 32
+    },
+    "TagChange.ValueCardName": {
+      "count": 458,
+      "files": 4,
+      "firstBuild": 13921,
+      "lastBuild": 15590,
+      "firstFile": "legacy/annotated.friendly_zerus.hsreplay.xml",
+      "samplePacketIndex": 195
+    },
+    "TagChange.PlayStateName": {
+      "count": 431,
+      "files": 77,
+      "firstBuild": 14830,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 76
+    },
+    "MetaData.block_info_sequence_num": {
+      "count": 424,
+      "files": 4,
+      "firstBuild": 14830,
+      "lastBuild": 15590,
+      "firstFile": "legacy/annotated.dirty_rat.xml",
+      "samplePacketIndex": 273
+    },
+    "TagChange.StateName": {
+      "count": 150,
+      "files": 77,
+      "firstBuild": 14830,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 75
+    },
+    "Choices.SourceCardID": {
+      "count": 109,
+      "files": 26,
+      "firstBuild": 36393,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 165
+    },
+    "Choices.SourceName": {
+      "count": 109,
+      "files": 26,
+      "firstBuild": 36393,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 165
+    },
+    "Choices.EntityCardID": {
+      "count": 104,
+      "files": 25,
+      "firstBuild": 36393,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 165
+    },
+    "Choices.EntityName": {
+      "count": 104,
+      "files": 25,
+      "firstBuild": 36393,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 165
+    },
+    "Block.TriggerKeywordGameTagName": {
+      "count": 50,
+      "files": 1,
+      "firstBuild": 23966,
+      "lastBuild": 23966,
+      "firstFile": "wild/annotated.start_of_game.xml",
+      "samplePacketIndex": 161
+    },
+    "TagChange.MulliganName": {
+      "count": 46,
+      "files": 6,
+      "firstBuild": 175913,
+      "lastBuild": 248348,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 164
+    },
+    "TagChange.FactionName": {
+      "count": 4,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_against_ai.annotated.xml",
+      "samplePacketIndex": 1991
+    },
+    "TagChange.RoleName": {
+      "count": 4,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_against_ai.annotated.xml",
+      "samplePacketIndex": 1994
+    },
+    "TagChange.CardClassName": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 248348,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 382
+    }
+  },
+  "children": {},
+  "tags": {
+    "0": {
+      "count": 107,
+      "files": 19,
+      "firstBuild": 23966,
+      "lastBuild": 195635,
+      "firstFile": "converted/toki.xml",
+      "samplePacketIndex": 859
+    },
+    "2": {
+      "count": 1460,
+      "files": 77,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 163
+    },
+    "3": {
+      "count": 570,
+      "files": 55,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1985
+    },
+    "4": {
+      "count": 149,
+      "files": 27,
+      "firstBuild": 19632,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4780
+    },
+    "5": {
+      "count": 96,
+      "files": 20,
+      "firstBuild": 25252,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 673
+    },
+    "6": {
+      "count": 1664,
+      "files": 30,
+      "firstBuild": 23966,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 255
+    },
+    "7": {
+      "count": 385,
+      "files": 91,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 135
+    },
+    "10": {
+      "count": 85,
+      "files": 83,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 137
+    },
+    "11": {
+      "count": 6,
+      "files": 2,
+      "firstBuild": 19632,
+      "lastBuild": 39954,
+      "firstFile": "legacy/evolve_shaman_5.annotated.xml",
+      "samplePacketIndex": 2804
+    },
+    "13": {
+      "count": 123,
+      "files": 71,
+      "firstBuild": 10956,
+      "lastBuild": 45310,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 2953
+    },
+    "176": {
+      "count": 253,
+      "files": 104,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1
+    },
+    "227": {
+      "count": 2217,
+      "files": 19,
+      "firstBuild": 19632,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 266
+    },
+    "231": {
+      "count": 76,
+      "files": 5,
+      "firstBuild": 10956,
+      "lastBuild": 23966,
+      "firstFile": "edge/annotated.toki_game_reset.23966.xml",
+      "samplePacketIndex": 1234
+    },
+    "232": {
+      "count": 34,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "240": {
+      "count": 50,
+      "files": 13,
+      "firstBuild": 15590,
+      "lastBuild": 131660,
+      "firstFile": "classic/LMprcdi2miCfYroVsWMgw3.xml",
+      "samplePacketIndex": 7120
+    },
+    "245": {
+      "count": 50,
+      "files": 10,
+      "firstBuild": 14406,
+      "lastBuild": 20457,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 836
+    },
+    "246": {
+      "count": 19,
+      "files": 2,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 7
+    },
+    "247": {
+      "count": 24,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 5
+    },
+    "260": {
+      "count": 3736,
+      "files": 69,
+      "firstBuild": 13921,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 12292
+    },
+    "261": {
+      "count": 5152,
+      "files": 89,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 228
+    },
+    "262": {
+      "count": 826,
+      "files": 68,
+      "firstBuild": 14406,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1044
+    },
+    "264": {
+      "count": 13,
+      "files": 2,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_unrevealed.annotated.xml",
+      "samplePacketIndex": 252
+    },
+    "266": {
+      "count": 3260,
+      "files": 87,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 245
+    },
+    "267": {
+      "count": 1816,
+      "files": 96,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 351
+    },
+    "269": {
+      "count": 4738,
+      "files": 87,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 215
+    },
+    "270": {
+      "count": 31,
+      "files": 8,
+      "firstBuild": 14406,
+      "lastBuild": 20457,
+      "firstFile": "legacy/adapt.annotated.replay.xml",
+      "samplePacketIndex": 837
+    },
+    "271": {
+      "count": 22721,
+      "files": 102,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 183
+    },
+    "272": {
+      "count": 1798,
+      "files": 104,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 102
+    },
+    "291": {
+      "count": 144,
+      "files": 30,
+      "firstBuild": 13921,
+      "lastBuild": 131660,
+      "firstFile": "classic/5mwGboM4N9hmVay2nicZCi.xml",
+      "samplePacketIndex": 780
+    },
+    "292": {
+      "count": 730,
+      "files": 44,
+      "firstBuild": 14406,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2042
+    },
+    "295": {
+      "count": 245,
+      "files": 65,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1138
+    },
+    "296": {
+      "count": 188,
+      "files": 23,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 7613
+    },
+    "297": {
+      "count": 7889,
+      "files": 90,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 360
+    },
+    "311": {
+      "count": 20,
+      "files": 7,
+      "firstBuild": 19632,
+      "lastBuild": 39954,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 5260
+    },
+    "312": {
+      "count": 10,
+      "files": 4,
+      "firstBuild": 13921,
+      "lastBuild": 27641,
+      "firstFile": "edge/annotated.missing_turns.27641.xml",
+      "samplePacketIndex": 2628
+    },
+    "313": {
+      "count": 12352,
+      "files": 104,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 72
+    },
+    "314": {
+      "count": 62,
+      "files": 15,
+      "firstBuild": 19632,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 1669
+    },
+    "316": {
+      "count": 226,
+      "files": 24,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 999
+    },
+    "317": {
+      "count": 3133,
+      "files": 87,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 317
+    },
+    "318": {
+      "count": 17908,
+      "files": 97,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 364
+    },
+    "323": {
+      "count": 352,
+      "files": 49,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 339
+    },
+    "324": {
+      "count": 352,
+      "files": 49,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 340
+    },
+    "326": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 15590,
+      "lastBuild": 15590,
+      "firstFile": "legacy/annotated.kazakus_error.hsreplay.xml",
+      "samplePacketIndex": 3226
+    },
+    "332": {
+      "count": 20,
+      "files": 7,
+      "firstBuild": 19632,
+      "lastBuild": 39954,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 5261
+    },
+    "333": {
+      "count": 53,
+      "files": 16,
+      "firstBuild": 14830,
+      "lastBuild": 175913,
+      "firstFile": "legacy/annotated.brann_kazakus.hsreplay.xml",
+      "samplePacketIndex": 339
+    },
+    "334": {
+      "count": 185,
+      "files": 51,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1165
+    },
+    "339": {
+      "count": 8,
+      "files": 7,
+      "firstBuild": 10956,
+      "lastBuild": 27358,
+      "firstFile": "converted/zayle.xml",
+      "samplePacketIndex": 2591
+    },
+    "341": {
+      "count": 312,
+      "files": 47,
+      "firstBuild": 14830,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4340
+    },
+    "349": {
+      "count": 62,
+      "files": 15,
+      "firstBuild": 14406,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 810
+    },
+    "350": {
+      "count": 128,
+      "files": 26,
+      "firstBuild": 15590,
+      "lastBuild": 131660,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 477
+    },
+    "352": {
+      "count": 3156,
+      "files": 48,
+      "firstBuild": 15590,
+      "lastBuild": 27641,
+      "firstFile": "converted/friendly_player_id_is_1.xml",
+      "samplePacketIndex": 86
+    },
+    "356": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 27641,
+      "lastBuild": 27641,
+      "firstFile": "edge/annotated.missing_turns.27641.xml",
+      "samplePacketIndex": 3499
+    },
+    "357": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 27641,
+      "lastBuild": 27641,
+      "firstFile": "edge/annotated.missing_turns.27641.xml",
+      "samplePacketIndex": 3500
+    },
+    "358": {
+      "count": 8142,
+      "files": 88,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 247
+    },
+    "359": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 10956,
+      "lastBuild": 10956,
+      "firstFile": "edge/hslog.xml",
+      "samplePacketIndex": 179
+    },
+    "360": {
+      "count": 3655,
+      "files": 71,
+      "firstBuild": 14830,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5239
+    },
+    "361": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 14830,
+      "lastBuild": 14830,
+      "firstFile": "legacy/annotated.noble_sacrifice.xml",
+      "samplePacketIndex": 1243
+    },
+    "362": {
+      "count": 376,
+      "files": 63,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 126
+    },
+    "363": {
+      "count": 2740,
+      "files": 47,
+      "firstBuild": 18336,
+      "lastBuild": 195635,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 2388
+    },
+    "366": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 27641,
+      "lastBuild": 27641,
+      "firstFile": "edge/annotated.missing_turns.27641.xml",
+      "samplePacketIndex": 3501
+    },
+    "368": {
+      "count": 4055,
+      "files": 97,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 915
+    },
+    "369": {
+      "count": 3646,
+      "files": 97,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 916
+    },
+    "370": {
+      "count": 55,
+      "files": 25,
+      "firstBuild": 13921,
+      "lastBuild": 195635,
+      "firstFile": "classic/5mwGboM4N9hmVay2nicZCi.xml",
+      "samplePacketIndex": 2722
+    },
+    "371": {
+      "count": 8,
+      "files": 3,
+      "firstBuild": 23966,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 15060
+    },
+    "372": {
+      "count": 758,
+      "files": 24,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2376
+    },
+    "373": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "wild/transformed_on_board.annotated.xml",
+      "samplePacketIndex": 6260
+    },
+    "375": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 27358,
+      "lastBuild": 27358,
+      "firstFile": "friendly/annotated.symmetric_card_swap_a.27358.hsreplay.xml",
+      "samplePacketIndex": 4025
+    },
+    "376": {
+      "count": 3229,
+      "files": 59,
+      "firstBuild": 15590,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "377": {
+      "count": 124,
+      "files": 5,
+      "firstBuild": 23966,
+      "lastBuild": 88998,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 125
+    },
+    "378": {
+      "count": 24,
+      "files": 7,
+      "firstBuild": 22611,
+      "lastBuild": 131660,
+      "firstFile": "classic/LMprcdi2miCfYroVsWMgw3.xml",
+      "samplePacketIndex": 1613
+    },
+    "380": {
+      "count": 751,
+      "files": 92,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 71
+    },
+    "382": {
+      "count": 87,
+      "files": 19,
+      "firstBuild": 15590,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "385": {
+      "count": 1175,
+      "files": 71,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1277
+    },
+    "386": {
+      "count": 447,
+      "files": 58,
+      "firstBuild": 14406,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1689
+    },
+    "389": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 27358,
+      "lastBuild": 27358,
+      "firstFile": "friendly/annotated.symmetric_card_swap_b.27358.hsreplay.xml",
+      "samplePacketIndex": 10519
+    },
+    "392": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 25252,
+      "lastBuild": 25252,
+      "firstFile": "tavern_brawl/annotated.multi_hero_brawl.25252.hsreplay.xml",
+      "samplePacketIndex": 5977
+    },
+    "393": {
+      "count": 88,
+      "files": 20,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 8459
+    },
+    "394": {
+      "count": 671,
+      "files": 80,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 3874
+    },
+    "397": {
+      "count": 2516,
+      "files": 68,
+      "firstBuild": 10956,
+      "lastBuild": 45310,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 223
+    },
+    "398": {
+      "count": 4052,
+      "files": 97,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 922
+    },
+    "399": {
+      "count": 4321,
+      "files": 73,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 204
+    },
+    "400": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 15590,
+      "lastBuild": 15590,
+      "firstFile": "legacy/annotated.friendly_zerus.hsreplay.xml",
+      "samplePacketIndex": 1276
+    },
+    "402": {
+      "count": 125,
+      "files": 34,
+      "firstBuild": 23966,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 6
+    },
+    "403": {
+      "count": 14,
+      "files": 7,
+      "firstBuild": 14406,
+      "lastBuild": 27358,
+      "firstFile": "converted/friendly_player_id_is_1.xml",
+      "samplePacketIndex": 6502
+    },
+    "404": {
+      "count": 4,
+      "files": 3,
+      "firstBuild": 13921,
+      "lastBuild": 15590,
+      "firstFile": "legacy/annotated.brann_kazakus.hsreplay.xml",
+      "samplePacketIndex": 4049
+    },
+    "406": {
+      "count": 1281,
+      "files": 80,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 3872
+    },
+    "410": {
+      "count": 1086,
+      "files": 84,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2621
+    },
+    "411": {
+      "count": 33,
+      "files": 13,
+      "firstBuild": 14830,
+      "lastBuild": 195635,
+      "firstFile": "battlegrounds/battlegrounds_combatrounds6-10_have_8_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1591
+    },
+    "412": {
+      "count": 2660,
+      "files": 95,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 923
+    },
+    "415": {
+      "count": 88,
+      "files": 19,
+      "firstBuild": 27358,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 577
+    },
+    "417": {
+      "count": 3225,
+      "files": 91,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 682
+    },
+    "418": {
+      "count": 3716,
+      "files": 88,
+      "firstBuild": 10956,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 214
+    },
+    "419": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 19632,
+      "lastBuild": 19632,
+      "firstFile": "legacy/annotated.barnabus_menagerie.hsreplay.xml",
+      "samplePacketIndex": 2348
+    },
+    "421": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 15590,
+      "lastBuild": 15590,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 3336
+    },
+    "422": {
+      "count": 19,
+      "files": 2,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 7
+    },
+    "424": {
+      "count": 9,
+      "files": 9,
+      "firstBuild": 13921,
+      "lastBuild": 20457,
+      "firstFile": "converted/friendly_player_id_is_1.xml",
+      "samplePacketIndex": 1420
+    },
+    "425": {
+      "count": 1442,
+      "files": 60,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 487
+    },
+    "426": {
+      "count": 18,
+      "files": 2,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 7
+    },
+    "427": {
+      "count": 64,
+      "files": 21,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 7614
+    },
+    "430": {
+      "count": 1865,
+      "files": 80,
+      "firstBuild": 13921,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 216
+    },
+    "433": {
+      "count": 4,
+      "files": 2,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_pvp.xml",
+      "samplePacketIndex": 1977
+    },
+    "434": {
+      "count": 6,
+      "files": 6,
+      "firstBuild": 15590,
+      "lastBuild": 20457,
+      "firstFile": "edge/annotated.bounce.hsreplay.xml",
+      "samplePacketIndex": 1428
+    },
+    "435": {
+      "count": 32,
+      "files": 13,
+      "firstBuild": 13921,
+      "lastBuild": 195635,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 684
+    },
+    "437": {
+      "count": 12,
+      "files": 4,
+      "firstBuild": 14830,
+      "lastBuild": 27358,
+      "firstFile": "friendly/annotated.symmetric_card_swap_a.27358.hsreplay.xml",
+      "samplePacketIndex": 7120
+    },
+    "438": {
+      "count": 8,
+      "files": 4,
+      "firstBuild": 13921,
+      "lastBuild": 15590,
+      "firstFile": "converted/friendly_player_id_is_1.xml",
+      "samplePacketIndex": 3175
+    },
+    "441": {
+      "count": 84,
+      "files": 18,
+      "firstBuild": 15590,
+      "lastBuild": 27358,
+      "firstFile": "friendly/annotated.symmetric_card_swap_a.27358.hsreplay.xml",
+      "samplePacketIndex": 10974
+    },
+    "443": {
+      "count": 97,
+      "files": 25,
+      "firstBuild": 14406,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 998
+    },
+    "444": {
+      "count": 3199,
+      "files": 65,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 8034
+    },
+    "448": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 126
+    },
+    "451": {
+      "count": 55,
+      "files": 4,
+      "firstBuild": 25252,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 126
+    },
+    "453": {
+      "count": 47,
+      "files": 2,
+      "firstBuild": 25252,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 1926
+    },
+    "455": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 25252,
+      "lastBuild": 25252,
+      "firstFile": "tavern_brawl/annotated.multi_hero_brawl.25252.hsreplay.xml",
+      "samplePacketIndex": 2439
+    },
+    "458": {
+      "count": 53,
+      "files": 3,
+      "firstBuild": 23966,
+      "lastBuild": 195635,
+      "firstFile": "edge/annotated.toki_game_reset.23966.xml",
+      "samplePacketIndex": 467
+    },
+    "462": {
+      "count": 43,
+      "files": 13,
+      "firstBuild": 18336,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 228
+    },
+    "463": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 23966,
+      "lastBuild": 23966,
+      "firstFile": "wild/annotated.start_of_game.xml",
+      "samplePacketIndex": 2435
+    },
+    "464": {
+      "count": 1972,
+      "files": 68,
+      "firstBuild": 18336,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 376
+    },
+    "467": {
+      "count": 4880,
+      "files": 68,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 84
+    },
+    "471": {
+      "count": 50,
+      "files": 13,
+      "firstBuild": 15590,
+      "lastBuild": 195635,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 6346
+    },
+    "472": {
+      "count": 43,
+      "files": 12,
+      "firstBuild": 15590,
+      "lastBuild": 195635,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 6346
+    },
+    "476": {
+      "count": 21,
+      "files": 8,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 224
+    },
+    "478": {
+      "count": 2266,
+      "files": 56,
+      "firstBuild": 18336,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 105
+    },
+    "479": {
+      "count": 11026,
+      "files": 94,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 105
+    },
+    "480": {
+      "count": 77,
+      "files": 29,
+      "firstBuild": 15590,
+      "lastBuild": 195635,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 229
+    },
+    "481": {
+      "count": 17,
+      "files": 1,
+      "firstBuild": 175913,
+      "lastBuild": 175913,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 1512
+    },
+    "483": {
+      "count": 25,
+      "files": 15,
+      "firstBuild": 15590,
+      "lastBuild": 27358,
+      "firstFile": "friendly/annotated.symmetric_card_swap_a.27358.hsreplay.xml",
+      "samplePacketIndex": 10974
+    },
+    "484": {
+      "count": 22,
+      "files": 12,
+      "firstBuild": 15590,
+      "lastBuild": 20457,
+      "firstFile": "converted/friendly_player_id_is_1.xml",
+      "samplePacketIndex": 2394
+    },
+    "515": {
+      "count": 30,
+      "files": 11,
+      "firstBuild": 15590,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4756
+    },
+    "516": {
+      "count": 12,
+      "files": 8,
+      "firstBuild": 15590,
+      "lastBuild": 20457,
+      "firstFile": "legacy/annotated.brann_kazakus.hsreplay.xml",
+      "samplePacketIndex": 3526
+    },
+    "532": {
+      "count": 80,
+      "files": 9,
+      "firstBuild": 18792,
+      "lastBuild": 248348,
+      "firstFile": "converted/toki.xml",
+      "samplePacketIndex": 1478
+    },
+    "534": {
+      "count": 157,
+      "files": 20,
+      "firstBuild": 18336,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 503
+    },
+    "535": {
+      "count": 82,
+      "files": 20,
+      "firstBuild": 18336,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 238
+    },
+    "541": {
+      "count": 123,
+      "files": 12,
+      "firstBuild": 18336,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 480
+    },
+    "547": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 18336,
+      "lastBuild": 23966,
+      "firstFile": "edge/annotated.toki_game_reset.23966.xml",
+      "samplePacketIndex": 6804
+    },
+    "548": {
+      "count": 4,
+      "files": 2,
+      "firstBuild": 18336,
+      "lastBuild": 23966,
+      "firstFile": "edge/annotated.toki_game_reset.23966.xml",
+      "samplePacketIndex": 6802
+    },
+    "549": {
+      "count": 8,
+      "files": 4,
+      "firstBuild": 23966,
+      "lastBuild": 25770,
+      "firstFile": "friendly/annotated.hero_change.25770.hsreplay.xml",
+      "samplePacketIndex": 690
+    },
+    "648": {
+      "count": 11,
+      "files": 7,
+      "firstBuild": 88998,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "676": {
+      "count": 40,
+      "files": 19,
+      "firstBuild": 18336,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 228
+    },
+    "682": {
+      "count": 31,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 6
+    },
+    "684": {
+      "count": 561,
+      "files": 37,
+      "firstBuild": 25252,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5503
+    },
+    "685": {
+      "count": 1966,
+      "files": 31,
+      "firstBuild": 20457,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 810
+    },
+    "723": {
+      "count": 20,
+      "files": 3,
+      "firstBuild": 18336,
+      "lastBuild": 19632,
+      "firstFile": "legacy/annotated.crystal_core.hsreplay.xml",
+      "samplePacketIndex": 1669
+    },
+    "740": {
+      "count": 43,
+      "files": 22,
+      "firstBuild": 27358,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "741": {
+      "count": 34,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "742": {
+      "count": 34,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "743": {
+      "count": 36,
+      "files": 18,
+      "firstBuild": 20022,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "744": {
+      "count": 34,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "745": {
+      "count": 34,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "755": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "standard/whizbang_opposing.annotated.xml",
+      "samplePacketIndex": 2580
+    },
+    "758": {
+      "count": 20,
+      "files": 2,
+      "firstBuild": 19632,
+      "lastBuild": 19632,
+      "firstFile": "legacy/annotated.friendly_crystal_core_2.hsreplay.xml",
+      "samplePacketIndex": 1621
+    },
+    "764": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/toki.xml",
+      "samplePacketIndex": 3641
+    },
+    "765": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/toki.xml",
+      "samplePacketIndex": 3642
+    },
+    "766": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/toki.xml",
+      "samplePacketIndex": 3643
+    },
+    "777": {
+      "count": 12,
+      "files": 2,
+      "firstBuild": 22611,
+      "lastBuild": 24769,
+      "firstFile": "legacy/annotated.master_oakheart.hsreplay.xml",
+      "samplePacketIndex": 3010
+    },
+    "779": {
+      "count": 28,
+      "files": 4,
+      "firstBuild": 25770,
+      "lastBuild": 195635,
+      "firstFile": "friendly/annotated.symmetric_card_swap_a.27358.hsreplay.xml",
+      "samplePacketIndex": 1166
+    },
+    "780": {
+      "count": 310,
+      "files": 34,
+      "firstBuild": 22611,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 834
+    },
+    "781": {
+      "count": 23,
+      "files": 2,
+      "firstBuild": 39954,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 1682
+    },
+    "782": {
+      "count": 23,
+      "files": 2,
+      "firstBuild": 39954,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 1684
+    },
+    "783": {
+      "count": 24,
+      "files": 2,
+      "firstBuild": 23966,
+      "lastBuild": 23966,
+      "firstFile": "converted/toki.xml",
+      "samplePacketIndex": 29
+    },
+    "785": {
+      "count": 180,
+      "files": 24,
+      "firstBuild": 23966,
+      "lastBuild": 195635,
+      "firstFile": "converted/toki.xml",
+      "samplePacketIndex": 859
+    },
+    "791": {
+      "count": 1815,
+      "files": 30,
+      "firstBuild": 23966,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2907
+    },
+    "793": {
+      "count": 27,
+      "files": 2,
+      "firstBuild": 23966,
+      "lastBuild": 23966,
+      "firstFile": "converted/toki.xml",
+      "samplePacketIndex": 15
+    },
+    "813": {
+      "count": 6,
+      "files": 2,
+      "firstBuild": 20457,
+      "lastBuild": 88998,
+      "firstFile": "legacy/annotated.fatespinner.hsreplay.xml",
+      "samplePacketIndex": 4025
+    },
+    "818": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 20457,
+      "lastBuild": 20457,
+      "firstFile": "legacy/annotated.fatespinner.hsreplay.xml",
+      "samplePacketIndex": 355
+    },
+    "821": {
+      "count": 407,
+      "files": 27,
+      "firstBuild": 20457,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 840
+    },
+    "823": {
+      "count": 16,
+      "files": 1,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "wild/transformed_on_board.annotated.xml",
+      "samplePacketIndex": 2980
+    },
+    "835": {
+      "count": 437,
+      "files": 33,
+      "firstBuild": 23966,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 835
+    },
+    "839": {
+      "count": 12,
+      "files": 7,
+      "firstBuild": 39954,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 228
+    },
+    "843": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/toki.xml",
+      "samplePacketIndex": 33
+    },
+    "846": {
+      "count": 29,
+      "files": 5,
+      "firstBuild": 27358,
+      "lastBuild": 248348,
+      "firstFile": "edge/annotated.truncated.27641.xml",
+      "samplePacketIndex": 1277
+    },
+    "849": {
+      "count": 1143,
+      "files": 21,
+      "firstBuild": 25770,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 191
+    },
+    "851": {
+      "count": 234,
+      "files": 13,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 13924
+    },
+    "853": {
+      "count": 21,
+      "files": 5,
+      "firstBuild": 36393,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 2565
+    },
+    "858": {
+      "count": 272,
+      "files": 18,
+      "firstBuild": 23966,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 119
+    },
+    "859": {
+      "count": 48,
+      "files": 17,
+      "firstBuild": 23966,
+      "lastBuild": 195635,
+      "firstFile": "edge/annotated.missing_turns.27641.xml",
+      "samplePacketIndex": 859
+    },
+    "860": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/annotated.friendly_game.27641.hsreplay.xml",
+      "samplePacketIndex": 1073
+    },
+    "871": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "standard/whizbang_friendly.annotated.xml",
+      "samplePacketIndex": 1066
+    },
+    "881": {
+      "count": 7,
+      "files": 2,
+      "firstBuild": 24769,
+      "lastBuild": 25770,
+      "firstFile": "standard/annotated.choose_one_transform.hsreplay.xml",
+      "samplePacketIndex": 3669
+    },
+    "884": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 22611,
+      "lastBuild": 22611,
+      "firstFile": "legacy/annotated.master_oakheart.hsreplay.xml",
+      "samplePacketIndex": 467
+    },
+    "886": {
+      "count": 14,
+      "files": 6,
+      "firstBuild": 22611,
+      "lastBuild": 131660,
+      "firstFile": "classic/LMprcdi2miCfYroVsWMgw3.xml",
+      "samplePacketIndex": 1550
+    },
+    "887": {
+      "count": 4,
+      "files": 1,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "wild/transformed_on_board.annotated.xml",
+      "samplePacketIndex": 2799
+    },
+    "890": {
+      "count": 6,
+      "files": 4,
+      "firstBuild": 22611,
+      "lastBuild": 25770,
+      "firstFile": "legacy/annotated.master_oakheart.hsreplay.xml",
+      "samplePacketIndex": 3020
+    },
+    "921": {
+      "count": 7,
+      "files": 2,
+      "firstBuild": 23966,
+      "lastBuild": 27358,
+      "firstFile": "friendly/annotated.symmetric_card_swap_a.27358.hsreplay.xml",
+      "samplePacketIndex": 6833
+    },
+    "923": {
+      "count": 32,
+      "files": 2,
+      "firstBuild": 36393,
+      "lastBuild": 36393,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 12569
+    },
+    "930": {
+      "count": 912,
+      "files": 37,
+      "firstBuild": 23966,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 810
+    },
+    "937": {
+      "count": 65,
+      "files": 61,
+      "firstBuild": 25770,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 0
+    },
+    "955": {
+      "count": 98,
+      "files": 11,
+      "firstBuild": 210640,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5419
+    },
+    "956": {
+      "count": 8,
+      "files": 5,
+      "firstBuild": 25252,
+      "lastBuild": 45310,
+      "firstFile": "friendly/annotated.symmetric_card_swap_a.27358.hsreplay.xml",
+      "samplePacketIndex": 170
+    },
+    "957": {
+      "count": 7,
+      "files": 2,
+      "firstBuild": 23966,
+      "lastBuild": 45310,
+      "firstFile": "wild/45310_mulligan_choices.annotated.xml",
+      "samplePacketIndex": 156
+    },
+    "958": {
+      "count": 126,
+      "files": 20,
+      "firstBuild": 39954,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 836
+    },
+    "960": {
+      "count": 7,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 27358,
+      "firstFile": "friendly/annotated.symmetric_card_swap_a.27358.hsreplay.xml",
+      "samplePacketIndex": 10510
+    },
+    "968": {
+      "count": 35,
+      "files": 10,
+      "firstBuild": 23966,
+      "lastBuild": 248348,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 79
+    },
+    "970": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 23966,
+      "lastBuild": 23966,
+      "firstFile": "wild/annotated.start_of_game.xml",
+      "samplePacketIndex": 1311
+    },
+    "974": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 23966,
+      "lastBuild": 23966,
+      "firstFile": "wild/annotated.start_of_game.xml",
+      "samplePacketIndex": 572
+    },
+    "976": {
+      "count": 170,
+      "files": 23,
+      "firstBuild": 27641,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 3563
+    },
+    "979": {
+      "count": 19,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 11
+    },
+    "980": {
+      "count": 19,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 11
+    },
+    "981": {
+      "count": 19,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 11
+    },
+    "982": {
+      "count": 19,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 11
+    },
+    "984": {
+      "count": 8,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/puzzlelab.xml",
+      "samplePacketIndex": 265
+    },
+    "985": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 0
+    },
+    "990": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 0
+    },
+    "994": {
+      "count": 5,
+      "files": 3,
+      "firstBuild": 39954,
+      "lastBuild": 45310,
+      "firstFile": "converted/zayle.xml",
+      "samplePacketIndex": 979
+    },
+    "995": {
+      "count": 1202,
+      "files": 33,
+      "firstBuild": 24769,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 205
+    },
+    "997": {
+      "count": 5,
+      "files": 5,
+      "firstBuild": 25770,
+      "lastBuild": 175913,
+      "firstFile": "converted/zayle.xml",
+      "samplePacketIndex": 186
+    },
+    "998": {
+      "count": 7,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 27358,
+      "firstFile": "friendly/annotated.symmetric_card_swap_a.27358.hsreplay.xml",
+      "samplePacketIndex": 10510
+    },
+    "1000": {
+      "count": 34,
+      "files": 31,
+      "firstBuild": 25770,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1018": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 0
+    },
+    "1019": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 0
+    },
+    "1020": {
+      "count": 30,
+      "files": 11,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1855
+    },
+    "1025": {
+      "count": 40,
+      "files": 8,
+      "firstBuild": 36393,
+      "lastBuild": 248348,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 594
+    },
+    "1026": {
+      "count": 10,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 0
+    },
+    "1027": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 0
+    },
+    "1037": {
+      "count": 11163,
+      "files": 60,
+      "firstBuild": 25770,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 72
+    },
+    "1042": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/puzzlelab.xml",
+      "samplePacketIndex": 441
+    },
+    "1043": {
+      "count": 1431,
+      "files": 30,
+      "firstBuild": 25770,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 105
+    },
+    "1048": {
+      "count": 4,
+      "files": 2,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "standard/whizbang_friendly.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1050": {
+      "count": 5,
+      "files": 4,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 0
+    },
+    "1055": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 0
+    },
+    "1058": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/puzzlelab.xml",
+      "samplePacketIndex": 1452
+    },
+    "1066": {
+      "count": 18,
+      "files": 5,
+      "firstBuild": 39954,
+      "lastBuild": 131660,
+      "firstFile": "classic/LMprcdi2miCfYroVsWMgw3.xml",
+      "samplePacketIndex": 1754
+    },
+    "1067": {
+      "count": 291,
+      "files": 22,
+      "firstBuild": 36393,
+      "lastBuild": 131660,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 7198
+    },
+    "1068": {
+      "count": 16524,
+      "files": 46,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 105
+    },
+    "1069": {
+      "count": 79,
+      "files": 8,
+      "firstBuild": 39954,
+      "lastBuild": 195635,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 684
+    },
+    "1071": {
+      "count": 9,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/puzzlelab.xml",
+      "samplePacketIndex": 153
+    },
+    "1073": {
+      "count": 5,
+      "files": 3,
+      "firstBuild": 25770,
+      "lastBuild": 25770,
+      "firstFile": "converted/puzzle_player.xml",
+      "samplePacketIndex": 0
+    },
+    "1077": {
+      "count": 8,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 454
+    },
+    "1078": {
+      "count": 25,
+      "files": 3,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1490
+    },
+    "1085": {
+      "count": 195,
+      "files": 13,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1907
+    },
+    "1086": {
+      "count": 53,
+      "files": 24,
+      "firstBuild": 27358,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 72
+    },
+    "1089": {
+      "count": 41,
+      "files": 8,
+      "firstBuild": 39954,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 228
+    },
+    "1093": {
+      "count": 67,
+      "files": 11,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "1094": {
+      "count": 67,
+      "files": 11,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "1095": {
+      "count": 67,
+      "files": 11,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "1097": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/annotated.friendly_game.27641.hsreplay.xml",
+      "samplePacketIndex": 1562
+    },
+    "1107": {
+      "count": 956,
+      "files": 31,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 71
+    },
+    "1114": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "wild/transformed_on_board.annotated.xml",
+      "samplePacketIndex": 5252
+    },
+    "1115": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2913
+    },
+    "1116": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2913
+    },
+    "1118": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 968
+    },
+    "1153": {
+      "count": 18,
+      "files": 4,
+      "firstBuild": 37060,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2380
+    },
+    "1173": {
+      "count": 4913,
+      "files": 40,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 365
+    },
+    "1186": {
+      "count": 10,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 128
+    },
+    "1190": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "wild/transformed_on_board.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1192": {
+      "count": 13,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 207
+    },
+    "1196": {
+      "count": 4172,
+      "files": 44,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 329
+    },
+    "1199": {
+      "count": 17,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1200": {
+      "count": 21,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 218
+    },
+    "1211": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 39954,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 3599
+    },
+    "1234": {
+      "count": 1333,
+      "files": 40,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 425
+    },
+    "1254": {
+      "count": 3480,
+      "files": 40,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2368
+    },
+    "1263": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "wild/transformed_on_board.annotated.xml",
+      "samplePacketIndex": 765
+    },
+    "1270": {
+      "count": 232,
+      "files": 15,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 246
+    },
+    "1271": {
+      "count": 273,
+      "files": 32,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 480
+    },
+    "1284": {
+      "count": 7941,
+      "files": 45,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 72
+    },
+    "1292": {
+      "count": 1067,
+      "files": 31,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 261
+    },
+    "1304": {
+      "count": 20,
+      "files": 3,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4762
+    },
+    "1323": {
+      "count": 1154,
+      "files": 18,
+      "firstBuild": 45310,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 246
+    },
+    "1326": {
+      "count": 258,
+      "files": 33,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 480
+    },
+    "1333": {
+      "count": 15,
+      "files": 3,
+      "firstBuild": 45310,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 3025
+    },
+    "1336": {
+      "count": 37,
+      "files": 6,
+      "firstBuild": 37060,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2376
+    },
+    "1342": {
+      "count": 109,
+      "files": 24,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 577
+    },
+    "1347": {
+      "count": 140,
+      "files": 13,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 684
+    },
+    "1349": {
+      "count": 17,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 2
+    },
+    "1355": {
+      "count": 17,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1356": {
+      "count": 80,
+      "files": 28,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 22
+    },
+    "1359": {
+      "count": 5,
+      "files": 2,
+      "firstBuild": 39954,
+      "lastBuild": 45310,
+      "firstFile": "wild/45310_mulligan_choices.annotated.xml",
+      "samplePacketIndex": 90
+    },
+    "1360": {
+      "count": 124,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1361": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "wild/transformed_on_board.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1365": {
+      "count": 5,
+      "files": 1,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "wild/transformed_on_board.annotated.xml",
+      "samplePacketIndex": 16
+    },
+    "1366": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 39954,
+      "lastBuild": 39954,
+      "firstFile": "wild/transformed_on_board.annotated.xml",
+      "samplePacketIndex": 776
+    },
+    "1373": {
+      "count": 734,
+      "files": 16,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 80
+    },
+    "1377": {
+      "count": 583,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1380": {
+      "count": 216,
+      "files": 18,
+      "firstBuild": 39954,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 480
+    },
+    "1386": {
+      "count": 5,
+      "files": 1,
+      "firstBuild": 45310,
+      "lastBuild": 45310,
+      "firstFile": "wild/45310_mulligan_choices.annotated.xml",
+      "samplePacketIndex": 410
+    },
+    "1398": {
+      "count": 51,
+      "files": 7,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 5823
+    },
+    "1402": {
+      "count": 31,
+      "files": 28,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 26
+    },
+    "1413": {
+      "count": 256,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 810
+    },
+    "1415": {
+      "count": 9,
+      "files": 3,
+      "firstBuild": 37060,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_no_opponent_is_KelThuzad.annotated.xml",
+      "samplePacketIndex": 11365
+    },
+    "1420": {
+      "count": 134,
+      "files": 19,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2375
+    },
+    "1421": {
+      "count": 124,
+      "files": 10,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 5871
+    },
+    "1422": {
+      "count": 52,
+      "files": 9,
+      "firstBuild": 36393,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 426
+    },
+    "1423": {
+      "count": 24,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 5
+    },
+    "1424": {
+      "count": 211,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 27
+    },
+    "1427": {
+      "count": 22,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 134
+    },
+    "1429": {
+      "count": 3430,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 257
+    },
+    "1436": {
+      "count": 4,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 67
+    },
+    "1437": {
+      "count": 1306,
+      "files": 15,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 443
+    },
+    "1438": {
+      "count": 658,
+      "files": 13,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 590
+    },
+    "1440": {
+      "count": 3628,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 195635,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 4136
+    },
+    "1442": {
+      "count": 17,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1447": {
+      "count": 96,
+      "files": 12,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 4483
+    },
+    "1448": {
+      "count": 31,
+      "files": 28,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1449": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "1452": {
+      "count": 83,
+      "files": 10,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 3466
+    },
+    "1453": {
+      "count": 748,
+      "files": 12,
+      "firstBuild": 36393,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 147
+    },
+    "1456": {
+      "count": 3985,
+      "files": 16,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 274
+    },
+    "1458": {
+      "count": 1091,
+      "files": 19,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1460": {
+      "count": 18,
+      "files": 9,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 5738
+    },
+    "1462": {
+      "count": 10,
+      "files": 10,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1463": {
+      "count": 8,
+      "files": 8,
+      "firstBuild": 36393,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1464": {
+      "count": 620,
+      "files": 14,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 444
+    },
+    "1466": {
+      "count": 141,
+      "files": 12,
+      "firstBuild": 36393,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 148
+    },
+    "1467": {
+      "count": 167,
+      "files": 15,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 256
+    },
+    "1469": {
+      "count": 81,
+      "files": 12,
+      "firstBuild": 36393,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 475
+    },
+    "1471": {
+      "count": 106,
+      "files": 10,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 5871
+    },
+    "1473": {
+      "count": 31,
+      "files": 28,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1474": {
+      "count": 5,
+      "files": 2,
+      "firstBuild": 37060,
+      "lastBuild": 37060,
+      "firstFile": "battlegrounds/battlegrounds_no_opponent_is_KelThuzad.annotated.xml",
+      "samplePacketIndex": 1492
+    },
+    "1475": {
+      "count": 100,
+      "files": 10,
+      "firstBuild": 36393,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 7236
+    },
+    "1481": {
+      "count": 430,
+      "files": 11,
+      "firstBuild": 36393,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 448
+    },
+    "1484": {
+      "count": 39,
+      "files": 9,
+      "firstBuild": 36393,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_a.f.kay.annotated.xml",
+      "samplePacketIndex": 461
+    },
+    "1485": {
+      "count": 12,
+      "files": 12,
+      "firstBuild": 36393,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 136
+    },
+    "1486": {
+      "count": 7,
+      "files": 3,
+      "firstBuild": 37060,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 376
+    },
+    "1487": {
+      "count": 63,
+      "files": 11,
+      "firstBuild": 36393,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1970
+    },
+    "1488": {
+      "count": 146,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1489": {
+      "count": 23,
+      "files": 7,
+      "firstBuild": 36393,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 3518
+    },
+    "1491": {
+      "count": 383,
+      "files": 17,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 36
+    },
+    "1492": {
+      "count": 13,
+      "files": 13,
+      "firstBuild": 36393,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1493": {
+      "count": 361,
+      "files": 13,
+      "firstBuild": 36393,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 784
+    },
+    "1494": {
+      "count": 34,
+      "files": 16,
+      "firstBuild": 37060,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1500": {
+      "count": 43,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 991
+    },
+    "1506": {
+      "count": 8,
+      "files": 4,
+      "firstBuild": 37060,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_combatrounds6-10_have_8_friendly_minions.annotated.xml",
+      "samplePacketIndex": 2708
+    },
+    "1508": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1608
+    },
+    "1513": {
+      "count": 8,
+      "files": 1,
+      "firstBuild": 175913,
+      "lastBuild": 175913,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 1597
+    },
+    "1514": {
+      "count": 4,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1517": {
+      "count": 6,
+      "files": 2,
+      "firstBuild": 131660,
+      "lastBuild": 131660,
+      "firstFile": "classic/5mwGboM4N9hmVay2nicZCi.xml",
+      "samplePacketIndex": 415
+    },
+    "1521": {
+      "count": 4,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 2
+    },
+    "1522": {
+      "count": 110,
+      "files": 11,
+      "firstBuild": 37060,
+      "lastBuild": 38034,
+      "firstFile": "battlegrounds/battlegrounds_7_rounds_no_friendly_minions.annotated.xml",
+      "samplePacketIndex": 217
+    },
+    "1524": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 26
+    },
+    "1526": {
+      "count": 21,
+      "files": 18,
+      "firstBuild": 38034,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1529": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/battlegrounds_reconnect.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1530": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/battlegrounds_reconnect.annotated.xml",
+      "samplePacketIndex": 11730
+    },
+    "1531": {
+      "count": 80,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 991
+    },
+    "1543": {
+      "count": 6,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 0
+    },
+    "1544": {
+      "count": 4,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5491
+    },
+    "1551": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 17
+    },
+    "1553": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 1
+    },
+    "1554": {
+      "count": 11,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 30
+    },
+    "1555": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 1164
+    },
+    "1556": {
+      "count": 7104,
+      "files": 32,
+      "firstBuild": 45310,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 0
+    },
+    "1557": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 5823
+    },
+    "1561": {
+      "count": 14,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 0
+    },
+    "1565": {
+      "count": 1627,
+      "files": 22,
+      "firstBuild": 45310,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1042
+    },
+    "1567": {
+      "count": 5,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 2708
+    },
+    "1570": {
+      "count": 518,
+      "files": 19,
+      "firstBuild": 45310,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 304
+    },
+    "1573": {
+      "count": 124,
+      "files": 14,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 842
+    },
+    "1575": {
+      "count": 360,
+      "files": 16,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 380
+    },
+    "1576": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 131660,
+      "lastBuild": 131660,
+      "firstFile": "classic/LMprcdi2miCfYroVsWMgw3.xml",
+      "samplePacketIndex": 2601
+    },
+    "1584": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 2917
+    },
+    "1587": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 4381
+    },
+    "1591": {
+      "count": 116,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 663
+    },
+    "1592": {
+      "count": 39,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 166
+    },
+    "1593": {
+      "count": 22,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 96
+    },
+    "1595": {
+      "count": 41,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 1819
+    },
+    "1596": {
+      "count": 100,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 257
+    },
+    "1609": {
+      "count": 12,
+      "files": 7,
+      "firstBuild": 88998,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "1611": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/friendly_maestra.88998.annotated.xml",
+      "samplePacketIndex": 4020
+    },
+    "1613": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 25
+    },
+    "1614": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 24
+    },
+    "1620": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 4549
+    },
+    "1623": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/friendly_maestra.88998.annotated.xml",
+      "samplePacketIndex": 2208
+    },
+    "1627": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "1628": {
+      "count": 21,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 80
+    },
+    "1633": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/friendly_maestra.88998.annotated.xml",
+      "samplePacketIndex": 2147
+    },
+    "1634": {
+      "count": 12,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/friendly_maestra.88998.annotated.xml",
+      "samplePacketIndex": 2095
+    },
+    "1635": {
+      "count": 565,
+      "files": 25,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 119
+    },
+    "1637": {
+      "count": 9,
+      "files": 5,
+      "firstBuild": 88998,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 13936
+    },
+    "1643": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "1646": {
+      "count": 43,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 80
+    },
+    "1650": {
+      "count": 5,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/opposing_maestra.88998.annotated.xml",
+      "samplePacketIndex": 530
+    },
+    "1652": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 3040
+    },
+    "1653": {
+      "count": 994,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 4
+    },
+    "1654": {
+      "count": 641,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 5
+    },
+    "1657": {
+      "count": 174,
+      "files": 9,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 235
+    },
+    "1665": {
+      "count": 195,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 4
+    },
+    "1666": {
+      "count": 756,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 4
+    },
+    "1668": {
+      "count": 401,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 264
+    },
+    "1669": {
+      "count": 198,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 6
+    },
+    "1670": {
+      "count": 315,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 187
+    },
+    "1671": {
+      "count": 20,
+      "files": 8,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 13
+    },
+    "1673": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 218
+    },
+    "1676": {
+      "count": 8,
+      "files": 5,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 9
+    },
+    "1678": {
+      "count": 5,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/friendly_maestra.88998.annotated.xml",
+      "samplePacketIndex": 1051
+    },
+    "1679": {
+      "count": 191,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 5
+    },
+    "1688": {
+      "count": 93,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 212
+    },
+    "1697": {
+      "count": 242,
+      "files": 9,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 234
+    },
+    "1698": {
+      "count": 448,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 227
+    },
+    "1700": {
+      "count": 63,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 54
+    },
+    "1702": {
+      "count": 318,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 62
+    },
+    "1703": {
+      "count": 295,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 63
+    },
+    "1704": {
+      "count": 28,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 2
+    },
+    "1705": {
+      "count": 82,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 53
+    },
+    "1708": {
+      "count": 28,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 2
+    },
+    "1709": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 2723
+    },
+    "1710": {
+      "count": 1378,
+      "files": 23,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 381
+    },
+    "1711": {
+      "count": 20,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5502
+    },
+    "1715": {
+      "count": 911,
+      "files": 27,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 353
+    },
+    "1716": {
+      "count": 15,
+      "files": 5,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1855
+    },
+    "1719": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 26
+    },
+    "1720": {
+      "count": 16,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 195635,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 4928
+    },
+    "1721": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 131660,
+      "lastBuild": 131660,
+      "firstFile": "classic/LMprcdi2miCfYroVsWMgw3.xml",
+      "samplePacketIndex": 7125
+    },
+    "1723": {
+      "count": 14,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 30
+    },
+    "1724": {
+      "count": 283,
+      "files": 16,
+      "firstBuild": 195635,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1225
+    },
+    "1725": {
+      "count": 32,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 201
+    },
+    "1726": {
+      "count": 21,
+      "files": 5,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 226
+    },
+    "1739": {
+      "count": 175,
+      "files": 16,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 3873
+    },
+    "1743": {
+      "count": 43,
+      "files": 7,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1855
+    },
+    "1745": {
+      "count": 56,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2785
+    },
+    "1746": {
+      "count": 10,
+      "files": 7,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 0
+    },
+    "1749": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/tradeable.annotated.xml",
+      "samplePacketIndex": 79
+    },
+    "1775": {
+      "count": 347,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 281
+    },
+    "1780": {
+      "count": 259,
+      "files": 18,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 231
+    },
+    "1781": {
+      "count": 5,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 131660,
+      "firstFile": "classic/5mwGboM4N9hmVay2nicZCi.xml",
+      "samplePacketIndex": 1947
+    },
+    "1804": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 5443
+    },
+    "1807": {
+      "count": 163,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 510
+    },
+    "1808": {
+      "count": 9,
+      "files": 6,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 0
+    },
+    "1814": {
+      "count": 401,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 301
+    },
+    "1816": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 7
+    },
+    "1824": {
+      "count": 123,
+      "files": 12,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 105
+    },
+    "1825": {
+      "count": 98,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 262
+    },
+    "1826": {
+      "count": 89,
+      "files": 9,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 452
+    },
+    "1827": {
+      "count": 31,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 275
+    },
+    "1828": {
+      "count": 84,
+      "files": 9,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2043
+    },
+    "1834": {
+      "count": 513,
+      "files": 7,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 199
+    },
+    "1845": {
+      "count": 114,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 258
+    },
+    "1850": {
+      "count": 124,
+      "files": 7,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 878
+    },
+    "1851": {
+      "count": 4,
+      "files": 3,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_against_ai.annotated.xml",
+      "samplePacketIndex": 49
+    },
+    "1852": {
+      "count": 151,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 4
+    },
+    "1853": {
+      "count": 225,
+      "files": 12,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 377
+    },
+    "1854": {
+      "count": 90,
+      "files": 12,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 515
+    },
+    "1855": {
+      "count": 68,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_pvp.xml",
+      "samplePacketIndex": 11
+    },
+    "1856": {
+      "count": 76,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_pvp.xml",
+      "samplePacketIndex": 7
+    },
+    "1882": {
+      "count": 362,
+      "files": 27,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 273
+    },
+    "1899": {
+      "count": 14,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 0
+    },
+    "1920": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 1269
+    },
+    "1924": {
+      "count": 24,
+      "files": 6,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 355
+    },
+    "1930": {
+      "count": 5,
+      "files": 3,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pve_friendly_summon.annotated.xml",
+      "samplePacketIndex": 2271
+    },
+    "1932": {
+      "count": 36,
+      "files": 10,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 105
+    },
+    "1936": {
+      "count": 4,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "mercenaries/mercenaries_pvp.annotated.xml",
+      "samplePacketIndex": 2642
+    },
+    "1937": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_resumed.annotated.xml",
+      "samplePacketIndex": 221
+    },
+    "1939": {
+      "count": 9,
+      "files": 2,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_against_ai.annotated.xml",
+      "samplePacketIndex": 562
+    },
+    "1940": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pve_friendly_summon.annotated.xml",
+      "samplePacketIndex": 2962
+    },
+    "1945": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "mercenaries/mercenaries_pvp.annotated.xml",
+      "samplePacketIndex": 2637
+    },
+    "1946": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_resumed.annotated.xml",
+      "samplePacketIndex": 14
+    },
+    "1948": {
+      "count": 26,
+      "files": 2,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_against_ai.annotated.xml",
+      "samplePacketIndex": 41
+    },
+    "1949": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pve_friendly_summon.annotated.xml",
+      "samplePacketIndex": 18
+    },
+    "1951": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pve_boss_win.annotated.xml",
+      "samplePacketIndex": 10
+    },
+    "1960": {
+      "count": 14,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 0
+    },
+    "1962": {
+      "count": 9,
+      "files": 6,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 0
+    },
+    "1965": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 195635,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 2174
+    },
+    "1967": {
+      "count": 237,
+      "files": 9,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 236
+    },
+    "1976": {
+      "count": 14,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 0
+    },
+    "1985": {
+      "count": 36,
+      "files": 4,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 37
+    },
+    "1990": {
+      "count": 14,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 0
+    },
+    "1992": {
+      "count": 9,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 201
+    },
+    "1993": {
+      "count": 22,
+      "files": 4,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 201
+    },
+    "1994": {
+      "count": 5,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/tradeable.annotated.xml",
+      "samplePacketIndex": 989
+    },
+    "1995": {
+      "count": 5,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/tradeable.annotated.xml",
+      "samplePacketIndex": 1834
+    },
+    "1996": {
+      "count": 5,
+      "files": 1,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "standard/tradeable.annotated.xml",
+      "samplePacketIndex": 384
+    },
+    "2002": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 17
+    },
+    "2003": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/88998_missing_player_hash.xml",
+      "samplePacketIndex": 608
+    },
+    "2015": {
+      "count": 232,
+      "files": 10,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 265
+    },
+    "2017": {
+      "count": 16,
+      "files": 12,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 4012
+    },
+    "2023": {
+      "count": 35,
+      "files": 12,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 7215
+    },
+    "2024": {
+      "count": 135,
+      "files": 8,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 837
+    },
+    "2027": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_against_ai.annotated.xml",
+      "samplePacketIndex": 2692
+    },
+    "2032": {
+      "count": 186,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 86
+    },
+    "2038": {
+      "count": 18,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 37
+    },
+    "2039": {
+      "count": 22,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 6
+    },
+    "2042": {
+      "count": 28,
+      "files": 25,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 0
+    },
+    "2045": {
+      "count": 13,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 88998,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 2595
+    },
+    "2049": {
+      "count": 4,
+      "files": 2,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 6
+    },
+    "2053": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": 88998,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_cosmetic.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "2054": {
+      "count": 17,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 3165
+    },
+    "2072": {
+      "count": 151,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 4
+    },
+    "2088": {
+      "count": 19,
+      "files": 13,
+      "firstBuild": 88998,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 133
+    },
+    "2089": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 31
+    },
+    "2106": {
+      "count": 6,
+      "files": 3,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_against_ai.annotated.xml",
+      "samplePacketIndex": 45
+    },
+    "2120": {
+      "count": 9,
+      "files": 6,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 0
+    },
+    "2129": {
+      "count": 30,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 8306
+    },
+    "2130": {
+      "count": 43,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 36
+    },
+    "2131": {
+      "count": 13,
+      "files": 4,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 840
+    },
+    "2132": {
+      "count": 21,
+      "files": 5,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 226
+    },
+    "2155": {
+      "count": 4,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 10827
+    },
+    "2156": {
+      "count": 24,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 12191
+    },
+    "2166": {
+      "count": 459,
+      "files": 12,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 83
+    },
+    "2168": {
+      "count": 5,
+      "files": 4,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 31
+    },
+    "2169": {
+      "count": 29,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 78
+    },
+    "2170": {
+      "count": 19,
+      "files": 6,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 13
+    },
+    "2180": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_against_ai.annotated.xml",
+      "samplePacketIndex": 2693
+    },
+    "2185": {
+      "count": 40,
+      "files": 7,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 20
+    },
+    "2186": {
+      "count": 280,
+      "files": 10,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 924
+    },
+    "2187": {
+      "count": 2017,
+      "files": 17,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 363
+    },
+    "2196": {
+      "count": 66,
+      "files": 3,
+      "firstBuild": 175913,
+      "lastBuild": 195635,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 2019
+    },
+    "2197": {
+      "count": 12,
+      "files": 3,
+      "firstBuild": 175913,
+      "lastBuild": 195635,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 2018
+    },
+    "2198": {
+      "count": 11,
+      "files": 4,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2907
+    },
+    "2210": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 654
+    },
+    "2217": {
+      "count": 7,
+      "files": 2,
+      "firstBuild": 175913,
+      "lastBuild": 195635,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 2681
+    },
+    "2224": {
+      "count": 63,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 75
+    },
+    "2228": {
+      "count": 63,
+      "files": 11,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "converted/93227_mercenaries_solo_bounty.xml",
+      "samplePacketIndex": 61
+    },
+    "2234": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pve_boss_win.annotated.xml",
+      "samplePacketIndex": 445
+    },
+    "2241": {
+      "count": 3,
+      "files": 3,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pve_boss_win.annotated.xml",
+      "samplePacketIndex": 32
+    },
+    "2245": {
+      "count": 650,
+      "files": 13,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 212
+    },
+    "2247": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5491
+    },
+    "2263": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 1341
+    },
+    "2264": {
+      "count": 24,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 768
+    },
+    "2272": {
+      "count": 98,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 112
+    },
+    "2311": {
+      "count": 17,
+      "files": 5,
+      "firstBuild": 195635,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1225
+    },
+    "2321": {
+      "count": 23,
+      "files": 5,
+      "firstBuild": 175913,
+      "lastBuild": 195635,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 684
+    },
+    "2323": {
+      "count": 6,
+      "files": 3,
+      "firstBuild": 131660,
+      "lastBuild": 131660,
+      "firstFile": "classic/5mwGboM4N9hmVay2nicZCi.xml",
+      "samplePacketIndex": 74
+    },
+    "2324": {
+      "count": 6,
+      "files": 3,
+      "firstBuild": 131660,
+      "lastBuild": 131660,
+      "firstFile": "classic/5mwGboM4N9hmVay2nicZCi.xml",
+      "samplePacketIndex": 1
+    },
+    "2326": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 4187
+    },
+    "2330": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 4549
+    },
+    "2332": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 1423
+    },
+    "2335": {
+      "count": 50,
+      "files": 10,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 369
+    },
+    "2336": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 724
+    },
+    "2340": {
+      "count": 4,
+      "files": 4,
+      "firstBuild": 131660,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 1
+    },
+    "2348": {
+      "count": 47,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 42
+    },
+    "2349": {
+      "count": 361,
+      "files": 12,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 379
+    },
+    "2353": {
+      "count": 18,
+      "files": 3,
+      "firstBuild": 175913,
+      "lastBuild": 195635,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 4862
+    },
+    "2355": {
+      "count": 18,
+      "files": 4,
+      "firstBuild": 131660,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2662
+    },
+    "2357": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/mercenaries_pvp_unrevealed.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "2359": {
+      "count": 115,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 795
+    },
+    "2376": {
+      "count": 56,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 78
+    },
+    "2423": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 1004
+    },
+    "2433": {
+      "count": 10,
+      "files": 2,
+      "firstBuild": 175913,
+      "lastBuild": 175913,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 1127
+    },
+    "2436": {
+      "count": 21,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 6703
+    },
+    "2452": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 1
+    },
+    "2458": {
+      "count": 14,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 264
+    },
+    "2459": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 3133
+    },
+    "2460": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 3133
+    },
+    "2466": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2444
+    },
+    "2467": {
+      "count": 8,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2447
+    },
+    "2468": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 0
+    },
+    "2474": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 86
+    },
+    "2483": {
+      "count": 35,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 791
+    },
+    "2485": {
+      "count": 107,
+      "files": 10,
+      "firstBuild": 150659,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 480
+    },
+    "2496": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2444
+    },
+    "2498": {
+      "count": 11,
+      "files": 4,
+      "firstBuild": 175913,
+      "lastBuild": 175913,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 449
+    },
+    "2509": {
+      "count": 117,
+      "files": 8,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1240
+    },
+    "2519": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 238
+    },
+    "2523": {
+      "count": 4,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 3452
+    },
+    "2534": {
+      "count": 10,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 121
+    },
+    "2537": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2628
+    },
+    "2539": {
+      "count": 4,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 248348,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 441
+    },
+    "2542": {
+      "count": 9,
+      "files": 5,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2907
+    },
+    "2557": {
+      "count": 12,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 1008
+    },
+    "2564": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2781
+    },
+    "2580": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 4875
+    },
+    "2589": {
+      "count": 69,
+      "files": 7,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 112
+    },
+    "2594": {
+      "count": 71,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 1055
+    },
+    "2611": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 195635,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 3931
+    },
+    "2633": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 4683
+    },
+    "2636": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 150659,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 28
+    },
+    "2639": {
+      "count": 33,
+      "files": 3,
+      "firstBuild": 175913,
+      "lastBuild": 195635,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 2680
+    },
+    "2641": {
+      "count": 8,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2447
+    },
+    "2643": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2827
+    },
+    "2644": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2827
+    },
+    "2646": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2827
+    },
+    "2647": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2447
+    },
+    "2649": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 20465
+    },
+    "2673": {
+      "count": 4,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2452
+    },
+    "2676": {
+      "count": 4,
+      "files": 4,
+      "firstBuild": 195635,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 227
+    },
+    "2677": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2452
+    },
+    "2711": {
+      "count": 5,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 3663
+    },
+    "2713": {
+      "count": 8,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2464
+    },
+    "2715": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 4684
+    },
+    "2727": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2447
+    },
+    "2732": {
+      "count": 12,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 207
+    },
+    "2747": {
+      "count": 194,
+      "files": 9,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1675
+    },
+    "2748": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 150659,
+      "lastBuild": 150659,
+      "firstFile": "battlegrounds/battlegrounds_quests.hsreplay.xml",
+      "samplePacketIndex": 2472
+    },
+    "2772": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 3931
+    },
+    "2785": {
+      "count": 19,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 304
+    },
+    "2786": {
+      "count": 80,
+      "files": 4,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2044
+    },
+    "2787": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 191
+    },
+    "2798": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1855
+    },
+    "2820": {
+      "count": 4,
+      "files": 3,
+      "firstBuild": 175913,
+      "lastBuild": 195635,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 2989
+    },
+    "2821": {
+      "count": 12,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "legacy/opponent_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 237
+    },
+    "2822": {
+      "count": 19,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 2149
+    },
+    "2823": {
+      "count": 23,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 2151
+    },
+    "2831": {
+      "count": 14,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4754
+    },
+    "2837": {
+      "count": 5,
+      "files": 2,
+      "firstBuild": 175913,
+      "lastBuild": 195635,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 2669
+    },
+    "2839": {
+      "count": 17,
+      "files": 9,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 71
+    },
+    "2840": {
+      "count": 713,
+      "files": 10,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 71
+    },
+    "2851": {
+      "count": 18,
+      "files": 9,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 71
+    },
+    "2860": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 205
+    },
+    "2867": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 33
+    },
+    "2868": {
+      "count": 20,
+      "files": 1,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 2038
+    },
+    "2869": {
+      "count": 17,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 684
+    },
+    "2872": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5543
+    },
+    "2873": {
+      "count": 30,
+      "files": 4,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "legacy/friendly_sideboard.176014.hsreplay.xml",
+      "samplePacketIndex": 7014
+    },
+    "2882": {
+      "count": 9,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 7
+    },
+    "2889": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5477
+    },
+    "2895": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 88
+    },
+    "2919": {
+      "count": 4,
+      "files": 3,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5474
+    },
+    "2920": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5476
+    },
+    "2921": {
+      "count": 15,
+      "files": 3,
+      "firstBuild": 210640,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5478
+    },
+    "2931": {
+      "count": 7,
+      "files": 5,
+      "firstBuild": 175913,
+      "lastBuild": 248348,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 79
+    },
+    "2935": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 29
+    },
+    "2936": {
+      "count": 12,
+      "files": 6,
+      "firstBuild": 175913,
+      "lastBuild": 248348,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 79
+    },
+    "2949": {
+      "count": 16,
+      "files": 1,
+      "firstBuild": 175913,
+      "lastBuild": 175913,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 1595
+    },
+    "2954": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 80
+    },
+    "2955": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "2956": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "2989": {
+      "count": 8,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 697
+    },
+    "3011": {
+      "count": 12,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 684
+    },
+    "3032": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "3033": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "3046": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 663
+    },
+    "3047": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 345
+    },
+    "3048": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 655
+    },
+    "3070": {
+      "count": 31,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 431
+    },
+    "3074": {
+      "count": 19,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 304
+    },
+    "3081": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 260
+    },
+    "3084": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "3085": {
+      "count": 609,
+      "files": 8,
+      "firstBuild": 175913,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 71
+    },
+    "3088": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 1396
+    },
+    "3090": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 507
+    },
+    "3110": {
+      "count": 19,
+      "files": 4,
+      "firstBuild": 195635,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2188
+    },
+    "3111": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 23
+    },
+    "3114": {
+      "count": 27,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 2125
+    },
+    "3115": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 175913,
+      "lastBuild": 175913,
+      "firstFile": "legacy/double_etc.175913.annotated.xml",
+      "samplePacketIndex": 114
+    },
+    "3143": {
+      "count": 82,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2181
+    },
+    "3165": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "3167": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 36
+    },
+    "3169": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "3170": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "3182": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 89
+    },
+    "3183": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": null,
+      "lastBuild": null,
+      "firstFile": "edge/anomalies.185749.annotated.xml",
+      "samplePacketIndex": 92
+    },
+    "3190": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 88
+    },
+    "3196": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 30
+    },
+    "3206": {
+      "count": 13,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 36
+    },
+    "3224": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 666
+    },
+    "3234": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 3
+    },
+    "3242": {
+      "count": 118,
+      "files": 6,
+      "firstBuild": 195635,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 203
+    },
+    "3249": {
+      "count": 19,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 2150
+    },
+    "3258": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 4011
+    },
+    "3318": {
+      "count": 10,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 128
+    },
+    "3319": {
+      "count": 7,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 2597
+    },
+    "3320": {
+      "count": 14,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 1698
+    },
+    "3323": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 36
+    },
+    "3326": {
+      "count": 12,
+      "files": 6,
+      "firstBuild": 195635,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1
+    },
+    "3374": {
+      "count": 6,
+      "files": 3,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 2966
+    },
+    "3376": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 6346
+    },
+    "3377": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 6346
+    },
+    "3382": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 129
+    },
+    "3403": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 32
+    },
+    "3427": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 248348,
+      "firstFile": "standard/friendly_etc_played_twice.195635.hsreplay.xml",
+      "samplePacketIndex": 79
+    },
+    "3429": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1225
+    },
+    "3433": {
+      "count": 11,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 726
+    },
+    "3444": {
+      "count": 8,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 4025
+    },
+    "3449": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 237
+    },
+    "3458": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 792
+    },
+    "3470": {
+      "count": 4,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 6346
+    },
+    "3471": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 6346
+    },
+    "3472": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 195635,
+      "lastBuild": 195635,
+      "firstFile": "standard/zilliax_deluxe_3000_friendly.195635.hsreplay.xml",
+      "samplePacketIndex": 6346
+    },
+    "3476": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 79
+    },
+    "3479": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 8519
+    },
+    "3494": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "3557": {
+      "count": 66,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 228
+    },
+    "3565": {
+      "count": 10,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 252
+    },
+    "3567": {
+      "count": 10,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5503
+    },
+    "3568": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 1107
+    },
+    "3614": {
+      "count": 18,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1683
+    },
+    "3616": {
+      "count": 4,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2910
+    },
+    "3617": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4340
+    },
+    "3618": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 813
+    },
+    "3619": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4340
+    },
+    "3620": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4340
+    },
+    "3621": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1911
+    },
+    "3622": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4340
+    },
+    "3639": {
+      "count": 10,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 252
+    },
+    "3669": {
+      "count": 69,
+      "files": 3,
+      "firstBuild": 210640,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 480
+    },
+    "3674": {
+      "count": 2,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 228
+    },
+    "3676": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4340
+    },
+    "3684": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 1107
+    },
+    "3685": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 1396
+    },
+    "3687": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2189
+    },
+    "3705": {
+      "count": 10,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 252
+    },
+    "3736": {
+      "count": 7,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 229
+    },
+    "3738": {
+      "count": 14,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 252
+    },
+    "3740": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 0
+    },
+    "3850": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 210640,
+      "lastBuild": 210640,
+      "firstFile": "battlegrounds/battlegrounds_sir_finley.annotated.xml",
+      "samplePacketIndex": 813
+    },
+    "3880": {
+      "count": 3,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5551
+    },
+    "3883": {
+      "count": 16,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2040
+    },
+    "3908": {
+      "count": 21,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 480
+    },
+    "3934": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2663
+    },
+    "4028": {
+      "count": 3,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2464
+    },
+    "4050": {
+      "count": 8,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1052
+    },
+    "4058": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2907
+    },
+    "4065": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 2913
+    },
+    "4066": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 7409
+    },
+    "4128": {
+      "count": 4,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 105
+    },
+    "4137": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5545
+    },
+    "4163": {
+      "count": 38,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 361
+    },
+    "4235": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4340
+    },
+    "4236": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 4340
+    },
+    "4297": {
+      "count": 5,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 243
+    },
+    "4310": {
+      "count": 1,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 228
+    },
+    "4354": {
+      "count": 10,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1416
+    },
+    "4450": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1855
+    },
+    "4453": {
+      "count": 50,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 378
+    },
+    "4459": {
+      "count": 8,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1405
+    },
+    "4472": {
+      "count": 59,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 105
+    },
+    "4587": {
+      "count": 42,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 829
+    },
+    "4688": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 79
+    },
+    "4726": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1855
+    },
+    "4727": {
+      "count": 4,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1855
+    },
+    "4741": {
+      "count": 244,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 337
+    },
+    "4761": {
+      "count": 6,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 231
+    },
+    "4802": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 79
+    },
+    "4818": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 248348,
+      "lastBuild": 248348,
+      "firstFile": "wild/annotated.beatrix_sideboard.hsreplay.xml",
+      "samplePacketIndex": 79
+    },
+    "4843": {
+      "count": 2,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 1855
+    },
+    "4865": {
+      "count": 7,
+      "files": 1,
+      "firstBuild": 250339,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 5506
+    },
+    "4901": {
+      "count": 315,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 133
+    },
+    "4904": {
+      "count": 22,
+      "files": 2,
+      "firstBuild": 248348,
+      "lastBuild": 250339,
+      "firstFile": "../../test.xml",
+      "samplePacketIndex": 480
+    }
+  },
+  "enumValues": {}
+}

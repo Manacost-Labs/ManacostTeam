@@ -1,0 +1,6 @@
+# Reference implementations pinned for reproducible differential runs.
+hsreplay==1.16.2
+hslog==1.20.0
+hearthstone==9.20.12
+# hsreplay 1.16 still imports pkg_resources, which setuptools 80 removed.
+setuptools<80
