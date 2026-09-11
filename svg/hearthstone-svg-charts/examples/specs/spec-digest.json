@@ -1,0 +1,12 @@
+{
+  "type": "digest",
+  "title": "Вышло за неделю",
+  "subtitle": "hs-manacost.ru · 24–30 августа · демо-данные",
+  "theme": "arena",
+  "data": [
+    {"image": "bg-hero-Alexstrasza", "title": "Гайд на Алекстразу: билды драконов после патча 33.4", "category": "Поля сражений", "theme": "bg", "date": "29 авг"},
+    {"image": "bg-hero-Deathwing", "title": "Смертокрыл вернулся в пул героев — что это меняет", "category": "Поля сражений", "theme": "bg", "date": "27 авг"},
+    {"title": "Мета-отчёт Арены: маг снова тир-S", "category": "Арена", "date": "26 авг"},
+    {"image": "bg-hero-Bru'kan", "title": "Топ-5 ошибок на Бру'кане в дуэтах", "category": "Поля сражений", "theme": "bg", "date": "24 авг"}
+  ]
+}

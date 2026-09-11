@@ -1,0 +1,51 @@
+{
+ "type": "versus",
+ "title": "Пират Воин против Друида на атаке",
+ "subtitle": "Стандарт · патч 36.2.2 · за сутки · 30 августа 2026",
+ "theme": "arena",
+ "data": {
+  "left": {
+   "name": "Пират Воин",
+   "sub": "Воин",
+   "avatar": "warrior",
+   "color": "#8c3a2a"
+  },
+  "right": {
+   "name": "Друид на атаке",
+   "sub": "Друид",
+   "avatar": "druid",
+   "color": "#a05a10"
+  },
+  "metrics": [
+   {
+    "label": "винрейт",
+    "left": 61.1,
+    "right": 59.3,
+    "unit": "%"
+   },
+   {
+    "label": "популярность",
+    "left": 9.1,
+    "right": 11.0,
+    "unit": "%"
+   },
+   {
+    "label": "игр за сутки",
+    "left": 24396,
+    "right": 29405
+   },
+   {
+    "label": "скорость набора звёзд, в час",
+    "left": 2.21,
+    "right": 1.25
+   },
+   {
+    "label": "средняя длина игры, минут",
+    "left": 6.0,
+    "right": 9.0,
+    "better": "lower"
+   }
+  ]
+ },
+ "footer": "источник: hearthpulse.net"
+}

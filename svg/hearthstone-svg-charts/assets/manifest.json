@@ -1,0 +1,230 @@
+{
+  "deck-border.png": {
+    "file": "assets/deck-border.png",
+    "datauri_file": "assets/datauri/deck-border.png.txt",
+    "bytes": 2853,
+    "mime": "image/png"
+  },
+  "main-page-rail-border.png": {
+    "file": "assets/main-page-rail-border.png",
+    "datauri_file": "assets/datauri/main-page-rail-border.png.txt",
+    "bytes": 24429,
+    "mime": "image/png"
+  },
+  "arena-parchment.jpg": {
+    "file": "assets/arena-parchment.jpg",
+    "datauri_file": "assets/datauri/arena-parchment.jpg.txt",
+    "bytes": 79094,
+    "mime": "image/jpeg"
+  },
+  "mana.png": {
+    "file": "assets/mana.png",
+    "datauri_file": "assets/datauri/mana.png.txt",
+    "bytes": 16306,
+    "mime": "image/png"
+  },
+  "rarity-common.png": {
+    "file": "assets/rarity-common.png",
+    "datauri_file": "assets/datauri/rarity-common.png.txt",
+    "bytes": 5127,
+    "mime": "image/png"
+  },
+  "rarity-rare.png": {
+    "file": "assets/rarity-rare.png",
+    "datauri_file": "assets/datauri/rarity-rare.png.txt",
+    "bytes": 4850,
+    "mime": "image/png"
+  },
+  "rarity-epic.png": {
+    "file": "assets/rarity-epic.png",
+    "datauri_file": "assets/datauri/rarity-epic.png.txt",
+    "bytes": 5061,
+    "mime": "image/png"
+  },
+  "rarity-legendary.png": {
+    "file": "assets/rarity-legendary.png",
+    "datauri_file": "assets/datauri/rarity-legendary.png.txt",
+    "bytes": 4877,
+    "mime": "image/png"
+  },
+  "class-deathknight.webp": {
+    "file": "assets/class-deathknight.webp",
+    "datauri_file": "assets/datauri/class-deathknight.webp.txt",
+    "bytes": 2656,
+    "mime": "image/webp"
+  },
+  "class-demonhunter.webp": {
+    "file": "assets/class-demonhunter.webp",
+    "datauri_file": "assets/datauri/class-demonhunter.webp.txt",
+    "bytes": 2446,
+    "mime": "image/webp"
+  },
+  "class-druid.webp": {
+    "file": "assets/class-druid.webp",
+    "datauri_file": "assets/datauri/class-druid.webp.txt",
+    "bytes": 2600,
+    "mime": "image/webp"
+  },
+  "class-hunter.webp": {
+    "file": "assets/class-hunter.webp",
+    "datauri_file": "assets/datauri/class-hunter.webp.txt",
+    "bytes": 2278,
+    "mime": "image/webp"
+  },
+  "class-mage.webp": {
+    "file": "assets/class-mage.webp",
+    "datauri_file": "assets/datauri/class-mage.webp.txt",
+    "bytes": 2912,
+    "mime": "image/webp"
+  },
+  "class-paladin.webp": {
+    "file": "assets/class-paladin.webp",
+    "datauri_file": "assets/datauri/class-paladin.webp.txt",
+    "bytes": 2706,
+    "mime": "image/webp"
+  },
+  "class-priest.webp": {
+    "file": "assets/class-priest.webp",
+    "datauri_file": "assets/datauri/class-priest.webp.txt",
+    "bytes": 2756,
+    "mime": "image/webp"
+  },
+  "class-rogue.webp": {
+    "file": "assets/class-rogue.webp",
+    "datauri_file": "assets/datauri/class-rogue.webp.txt",
+    "bytes": 2474,
+    "mime": "image/webp"
+  },
+  "class-shaman.webp": {
+    "file": "assets/class-shaman.webp",
+    "datauri_file": "assets/datauri/class-shaman.webp.txt",
+    "bytes": 2904,
+    "mime": "image/webp"
+  },
+  "class-warlock.webp": {
+    "file": "assets/class-warlock.webp",
+    "datauri_file": "assets/datauri/class-warlock.webp.txt",
+    "bytes": 2592,
+    "mime": "image/webp"
+  },
+  "class-warrior.webp": {
+    "file": "assets/class-warrior.webp",
+    "datauri_file": "assets/datauri/class-warrior.webp.txt",
+    "bytes": 2328,
+    "mime": "image/webp"
+  },
+  "bg-tier1.png": {
+    "file": "assets/bg-tier1.png",
+    "datauri_file": "assets/datauri/bg-tier1.png.txt",
+    "bytes": 23018,
+    "mime": "image/png"
+  },
+  "bg-tier2.png": {
+    "file": "assets/bg-tier2.png",
+    "datauri_file": "assets/datauri/bg-tier2.png.txt",
+    "bytes": 24588,
+    "mime": "image/png"
+  },
+  "bg-tier3.png": {
+    "file": "assets/bg-tier3.png",
+    "datauri_file": "assets/datauri/bg-tier3.png.txt",
+    "bytes": 26111,
+    "mime": "image/png"
+  },
+  "bg-tier4.png": {
+    "file": "assets/bg-tier4.png",
+    "datauri_file": "assets/datauri/bg-tier4.png.txt",
+    "bytes": 26628,
+    "mime": "image/png"
+  },
+  "bg-tier5.png": {
+    "file": "assets/bg-tier5.png",
+    "datauri_file": "assets/datauri/bg-tier5.png.txt",
+    "bytes": 26812,
+    "mime": "image/png"
+  },
+  "bg-tier6.png": {
+    "file": "assets/bg-tier6.png",
+    "datauri_file": "assets/datauri/bg-tier6.png.txt",
+    "bytes": 27243,
+    "mime": "image/png"
+  },
+  "bg-tier7.png": {
+    "file": "assets/bg-tier7.png",
+    "datauri_file": "assets/datauri/bg-tier7.png.txt",
+    "bytes": 28525,
+    "mime": "image/png"
+  },
+  "tribe-demons.webp": {
+    "file": "assets/tribe-demons.webp",
+    "datauri_file": "assets/datauri/tribe-demons.webp.txt",
+    "bytes": 12846,
+    "mime": "image/webp"
+  },
+  "tribe-dragons.webp": {
+    "file": "assets/tribe-dragons.webp",
+    "datauri_file": "assets/datauri/tribe-dragons.webp.txt",
+    "bytes": 12206,
+    "mime": "image/webp"
+  },
+  "tribe-duo.webp": {
+    "file": "assets/tribe-duo.webp",
+    "datauri_file": "assets/datauri/tribe-duo.webp.txt",
+    "bytes": 13640,
+    "mime": "image/webp"
+  },
+  "tribe-beasts.webp": {
+    "file": "assets/tribe-beasts.webp",
+    "datauri_file": "assets/datauri/tribe-beasts.webp.txt",
+    "bytes": 12600,
+    "mime": "image/webp"
+  },
+  "tribe-mechs.webp": {
+    "file": "assets/tribe-mechs.webp",
+    "datauri_file": "assets/datauri/tribe-mechs.webp.txt",
+    "bytes": 12680,
+    "mime": "image/webp"
+  },
+  "tribe-murlocs.webp": {
+    "file": "assets/tribe-murlocs.webp",
+    "datauri_file": "assets/datauri/tribe-murlocs.webp.txt",
+    "bytes": 14008,
+    "mime": "image/webp"
+  },
+  "tribe-nagas.webp": {
+    "file": "assets/tribe-nagas.webp",
+    "datauri_file": "assets/datauri/tribe-nagas.webp.txt",
+    "bytes": 14672,
+    "mime": "image/webp"
+  },
+  "tribe-undead.webp": {
+    "file": "assets/tribe-undead.webp",
+    "datauri_file": "assets/datauri/tribe-undead.webp.txt",
+    "bytes": 15080,
+    "mime": "image/webp"
+  },
+  "tribe-all.webp": {
+    "file": "assets/tribe-all.webp",
+    "datauri_file": "assets/datauri/tribe-all.webp.txt",
+    "bytes": 10330,
+    "mime": "image/webp"
+  },
+  "tribe-pirates.webp": {
+    "file": "assets/tribe-pirates.webp",
+    "datauri_file": "assets/datauri/tribe-pirates.webp.txt",
+    "bytes": 11054,
+    "mime": "image/webp"
+  },
+  "tribe-quilboar.webp": {
+    "file": "assets/tribe-quilboar.webp",
+    "datauri_file": "assets/datauri/tribe-quilboar.webp.txt",
+    "bytes": 14716,
+    "mime": "image/webp"
+  },
+  "tribe-elementals.webp": {
+    "file": "assets/tribe-elementals.webp",
+    "datauri_file": "assets/datauri/tribe-elementals.webp.txt",
+    "bytes": 14144,
+    "mime": "image/webp"
+  }
+}

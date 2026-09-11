@@ -1,0 +1,7 @@
+{"type":"tierlist","title":"Тирлист классов Арены","subtitle":"по данным за 14 дней · демо-данные","theme":"arena",
+ "colheaders":["винрейт","выбор"],
+ "data":[{"tier":"S","rows":[{"label":"Маг","icon":"mage","cols":["58.2%","12.4%"]}]},
+  {"tier":"A","rows":[{"label":"Паладин","icon":"paladin","cols":["56.7%","10.8%"]},{"label":"Разбойник","icon":"rogue","cols":["55.1%","9.6%"]},{"label":"Охотник","icon":"hunter","cols":["54.0%","11.2%"]}]},
+  {"tier":"B","rows":[{"label":"Воин","icon":"warrior","cols":["53.2%","8.1%"]},{"label":"Рыцарь смерти","icon":"deathknight","cols":["52.4%","9.0%"]},{"label":"Шаман","icon":"shaman","cols":["51.8%","7.7%"]},{"label":"Друид","icon":"druid","cols":["50.9%","8.9%"]}]},
+  {"tier":"C","rows":[{"label":"Охотник на демонов","icon":"demonhunter","cols":["49.7%","7.4%"]},{"label":"Жрец","icon":"priest","cols":["48.5%","8.3%"]},{"label":"Чернокнижник","icon":"warlock","cols":["46.9%","6.6%"]}]}],
+ "footer":"Тир = винрейт с поправкой на популярность · demo"}

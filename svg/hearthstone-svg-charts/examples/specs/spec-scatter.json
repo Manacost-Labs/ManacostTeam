@@ -1,0 +1,170 @@
+{
+ "type": "scatter",
+ "title": "Карта меты: сила против популярности",
+ "subtitle": "Стандарт · патч 36.2.2 · 30 авг 2026",
+ "theme": "arena",
+ "data": [
+  {
+   "label": "Нечестивый РС",
+   "x": 61.2,
+   "y": 1.0,
+   "games": 2760,
+   "class": "deathknight"
+  },
+  {
+   "label": "Пират Воин",
+   "x": 61.1,
+   "y": 9.1,
+   "games": 24396,
+   "class": "warrior"
+  },
+  {
+   "label": "Пират Воин (драконы)",
+   "x": 60.3,
+   "y": 4.4,
+   "games": 11678,
+   "class": "warrior"
+  },
+  {
+   "label": "Pure Paladin",
+   "x": 59.5,
+   "y": 2.2,
+   "games": 5849,
+   "class": "paladin"
+  },
+  {
+   "label": "Друид на атаке",
+   "x": 59.3,
+   "y": 11.0,
+   "games": 29405,
+   "class": "druid"
+  },
+  {
+   "label": "Dragon Warrior",
+   "x": 58.6,
+   "y": 1.4,
+   "games": 3849,
+   "class": "warrior"
+  },
+  {
+   "label": "Зи Шаман",
+   "x": 58.2,
+   "y": 3.0,
+   "games": 8087,
+   "class": "shaman"
+  },
+  {
+   "label": "Квест Охотник",
+   "x": 57.9,
+   "y": 2.3,
+   "games": 6056,
+   "class": "hunter"
+  },
+  {
+   "label": "Two-Bit Rogue",
+   "x": 57.4,
+   "y": 0.8,
+   "games": 2124,
+   "class": "rogue"
+  },
+  {
+   "label": "Burn Mage",
+   "x": 56.2,
+   "y": 0.8,
+   "games": 2253,
+   "class": "mage"
+  },
+  {
+   "label": "Void Soul DH",
+   "x": 56.1,
+   "y": 1.1,
+   "games": 2912,
+   "class": "demonhunter"
+  },
+  {
+   "label": "Квест Маг",
+   "x": 56.0,
+   "y": 4.2,
+   "games": 11302,
+   "class": "mage"
+  },
+  {
+   "label": "Чернокнижник на возвещении",
+   "x": 55.3,
+   "y": 3.4,
+   "games": 9106,
+   "class": "warlock"
+  },
+  {
+   "label": "Egg DK",
+   "x": 55.2,
+   "y": 0.9,
+   "games": 2484,
+   "class": "deathknight"
+  },
+  {
+   "label": "Квест Жрец",
+   "x": 55.0,
+   "y": 14.0,
+   "games": 37298,
+   "class": "priest"
+  },
+  {
+   "label": "Рафаам Чернокнижник",
+   "x": 54.4,
+   "y": 9.7,
+   "games": 25870,
+   "class": "warlock"
+  },
+  {
+   "label": "Разбойник на возвещении",
+   "x": 54.0,
+   "y": 5.0,
+   "games": 13450,
+   "class": "rogue"
+  },
+  {
+   "label": "Жрец на воровстве",
+   "x": 53.3,
+   "y": 4.6,
+   "games": 12358,
+   "class": "priest"
+  },
+  {
+   "label": "Скрытный разбойник",
+   "x": 53.2,
+   "y": 4.1,
+   "games": 10824,
+   "class": "rogue"
+  },
+  {
+   "label": "Leyline Mage",
+   "x": 52.4,
+   "y": 1.1,
+   "games": 2909,
+   "class": "mage"
+  },
+  {
+   "label": "Контроль Жрец",
+   "x": 52.3,
+   "y": 3.9,
+   "games": 10471,
+   "class": "priest"
+  },
+  {
+   "label": "Harold DK",
+   "x": 49.8,
+   "y": 1.3,
+   "games": 3410,
+   "class": "deathknight"
+  },
+  {
+   "label": "AYAYA Rogue",
+   "x": 49.6,
+   "y": 1.7,
+   "games": 4469,
+   "class": "rogue"
+  }
+ ],
+ "footer": "архетипы с ≥2000 игр · источник: hearthpulse.net"
+}

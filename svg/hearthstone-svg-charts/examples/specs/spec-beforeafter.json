@@ -1,0 +1,5 @@
+{"type":"beforeafter","title":"Что изменил патч 33.4","subtitle":"винрейты архетипов до и после · демо-данные","theme":"arena","vmin":40,"vmax":60,
+ "data":[{"label":"Мех-паладин","before":52.1,"after":56.3},{"label":"Агро-ДХ","before":55.8,"after":52.7},
+ {"label":"Контроль-жрец","before":48.9,"after":51.2},{"label":"Разбойник темпа","before":53.4,"after":53.1},
+ {"label":"Чернокнижник зоо","before":47.2,"after":49.8}],
+ "footer":"demo · hs-manacost.ru"}

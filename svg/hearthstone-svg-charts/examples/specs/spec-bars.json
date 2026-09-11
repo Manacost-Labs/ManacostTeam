@@ -1,0 +1,8 @@
+{"type":"bars","title":"Винрейт классов на Арене","subtitle":"патч 33.4 · демо-данные","theme":"arena","vmin":45,"vmax":60,
+ "data":[{"label":"Маг","icon":"mage","value":58.2},{"label":"Паладин","icon":"paladin","value":56.7},
+ {"label":"Разбойник","icon":"rogue","value":55.1},{"label":"Охотник","icon":"hunter","value":54.0},
+ {"label":"Воин","icon":"warrior","value":53.2},{"label":"Рыцарь смерти","icon":"deathknight","value":52.4},
+ {"label":"Шаман","icon":"shaman","value":51.8},{"label":"Друид","icon":"druid","value":50.9},
+ {"label":"Охотник на демонов","icon":"demonhunter","value":49.7},{"label":"Жрец","icon":"priest","value":48.5},
+ {"label":"Чернокнижник","icon":"warlock","value":46.9}],
+ "footer":"demo · hs-manacost.ru"}

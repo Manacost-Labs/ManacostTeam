@@ -1,0 +1,150 @@
+{
+ "type": "mulligan",
+ "title": "Пират Воин: мулиган-гайд",
+ "subtitle": "Стандарт · колода hsguru 57.2% (6 964 игры) · 30 августа 2026",
+ "theme": "arena",
+ "data": {
+  "opponents": [
+   "priest",
+   "druid",
+   "warrior",
+   "mage",
+   "rogue"
+  ],
+  "rows": [
+   {
+    "card": "Вечная каторга",
+    "cost": 1,
+    "verdicts": [
+     "keep",
+     "keep",
+     "keep",
+     "keep",
+     "keep"
+    ],
+    "count": 2
+   },
+   {
+    "card": "Воздушный налетчик",
+    "cost": 1,
+    "verdicts": [
+     "keep",
+     "keep",
+     "keep",
+     "keep",
+     "keep"
+    ],
+    "count": 2
+   },
+   {
+    "card": "Главный канонир",
+    "cost": 1,
+    "verdicts": [
+     "keep",
+     "keep",
+     "if",
+     "keep",
+     "keep"
+    ],
+    "count": 2
+   },
+   {
+    "card": "За фитилем",
+    "cost": 1,
+    "verdicts": [
+     "if",
+     "keep",
+     "keep",
+     "if",
+     "keep"
+    ],
+    "count": 1
+   },
+   {
+    "card": "Кровавые катакомбы",
+    "cost": 1,
+    "verdicts": [
+     "keep",
+     "keep",
+     "if",
+     "keep",
+     "if"
+    ],
+    "count": 2
+   },
+   {
+    "card": "Факел",
+    "cost": 1,
+    "verdicts": [
+     "keep",
+     "if",
+     "keep",
+     "keep",
+     "keep"
+    ],
+    "count": 2
+   },
+   {
+    "card": "Инженер-подрывник",
+    "cost": 2,
+    "verdicts": [
+     "keep",
+     "keep",
+     "keep",
+     "if",
+     "keep"
+    ],
+    "count": 2
+   },
+   {
+    "card": "Насыщение пламенем Тьмы",
+    "cost": 2,
+    "verdicts": [
+     "if",
+     "if",
+     "keep",
+     "if",
+     "toss"
+    ],
+    "count": 2
+   },
+   {
+    "card": "Опаляющая расщелина",
+    "cost": 2,
+    "verdicts": [
+     "toss",
+     "if",
+     "if",
+     "keep",
+     "keep"
+    ],
+    "count": 2
+   },
+   {
+    "card": "Притягивающий крюк",
+    "cost": 2,
+    "verdicts": [
+     "if",
+     "keep",
+     "toss",
+     "if",
+     "if"
+    ],
+    "count": 2
+   },
+   {
+    "card": "Извергающийся вулкан",
+    "cost": 3,
+    "verdicts": [
+     "toss",
+     "toss",
+     "if",
+     "toss",
+     "keep"
+    ],
+    "count": 2
+   }
+  ]
+ },
+ "footer": "вердикты — демонстрационная разметка; колода: hsguru.com/deck/41737762"
+}

@@ -1,0 +1,5 @@
+{"type":"donut","title":"Мета Стандарта: архетипы","subtitle":"патч 33.4 · демо-данные","theme":"arena",
+ "center":{"big":"12 480","small":"игр в выборке"},
+ "data":[{"label":"Мех-паладин","value":28},{"label":"Агро-ДХ","value":22},{"label":"Контроль-жрец","value":18},
+         {"label":"Мид-охотник","value":14},{"label":"Прочее","value":18}],
+ "footer":"demo · hs-manacost.ru"}

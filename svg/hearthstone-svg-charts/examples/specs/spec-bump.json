@@ -1,0 +1,127 @@
+{
+ "type": "bump",
+ "title": "Классы Арены: как сместился рейтинг",
+ "subtitle": "по винрейту · 30 августа → 6 сентября 2026",
+ "theme": "arena",
+ "data": {
+  "labels": [
+   "30 августа",
+   "6 сентября"
+  ],
+  "before": [
+   {
+    "label": "Воин",
+    "icon": "warrior",
+    "value": "59.9%"
+   },
+   {
+    "label": "Рыцарь смерти",
+    "icon": "deathknight",
+    "value": "53.3%"
+   },
+   {
+    "label": "Охотник на демонов",
+    "icon": "demonhunter",
+    "value": "48.9%"
+   },
+   {
+    "label": "Разбойник",
+    "icon": "rogue",
+    "value": "45.7%"
+   },
+   {
+    "label": "Друид",
+    "icon": "druid",
+    "value": "42.1%"
+   },
+   {
+    "label": "Жрец",
+    "icon": "priest",
+    "value": "39.8%"
+   },
+   {
+    "label": "Маг",
+    "icon": "mage",
+    "value": "38.9%"
+   },
+   {
+    "label": "Паладин",
+    "icon": "paladin",
+    "value": "37.2%"
+   },
+   {
+    "label": "Шаман",
+    "icon": "shaman",
+    "value": "36.9%"
+   },
+   {
+    "label": "Чернокнижник",
+    "icon": "warlock",
+    "value": "33.5%"
+   },
+   {
+    "label": "Охотник",
+    "icon": "hunter",
+    "value": "31.4%"
+   }
+  ],
+  "after": [
+   {
+    "label": "Рыцарь смерти",
+    "icon": "deathknight",
+    "value": "55.5%"
+   },
+   {
+    "label": "Охотник на демонов",
+    "icon": "demonhunter",
+    "value": "52.0%"
+   },
+   {
+    "label": "Жрец",
+    "icon": "priest",
+    "value": "51.5%"
+   },
+   {
+    "label": "Разбойник",
+    "icon": "rogue",
+    "value": "49.8%"
+   },
+   {
+    "label": "Воин",
+    "icon": "warrior",
+    "value": "49.7%"
+   },
+   {
+    "label": "Друид",
+    "icon": "druid",
+    "value": "47.9%"
+   },
+   {
+    "label": "Маг",
+    "icon": "mage",
+    "value": "42.3%"
+   },
+   {
+    "label": "Охотник",
+    "icon": "hunter",
+    "value": "41.5%"
+   },
+   {
+    "label": "Паладин",
+    "icon": "paladin",
+    "value": "39.8%"
+   },
+   {
+    "label": "Шаман",
+    "icon": "shaman",
+    "value": "38.5%"
+   },
+   {
+    "label": "Чернокнижник",
+    "icon": "warlock",
+    "value": "32.4%"
+   }
+  ]
+ },
+ "footer": "источник: hearthpulse.net"
+}

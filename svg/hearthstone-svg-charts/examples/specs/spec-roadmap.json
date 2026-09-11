@@ -1,0 +1,14 @@
+{
+  "type": "timeline",
+  "title": "Дорожная карта сезона",
+  "subtitle": "32-й сезон Полей сражений · демо-данные",
+  "theme": "bg",
+  "data": [
+    {"date": "5 авг", "label": "Патч 33.2", "status": "done"},
+    {"date": "19 авг", "label": "Мини-набор", "status": "done"},
+    {"date": "30 авг", "label": "Патч 33.4", "status": "now"},
+    {"date": "12 сен", "label": "Ротация героев", "status": "planned"},
+    {"date": "26 сен", "label": "Новый аддон", "status": "major"},
+    {"date": "10 окт", "label": "Конец сезона", "status": "planned"}
+  ]
+}

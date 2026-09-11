@@ -1,0 +1,4 @@
+.DS_Store
+*.skill
+demo-*.png
+__pycache__/
