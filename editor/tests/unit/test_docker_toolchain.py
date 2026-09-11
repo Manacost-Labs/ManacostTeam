@@ -1,0 +1,79 @@
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_gateway_dockerfile_pins_dictionary_and_vale_for_both_architectures() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "RU_DICT_VERSION=1.0.8" in dockerfile
+    assert "b3a4672933b957258be74c6c46e016c83e8e9c796259a08c00f8fd52ebed2d97" in dockerfile
+    assert "VALE_VERSION=3.17.0" in dockerfile
+    assert "a903f1f60c3293fac643e0137f599a462881cc691ee19d6120dcfc786f1be86d" in dockerfile
+    assert "c7da52f10d25fb97e14370b2f77ac5ebdbd23cf0abc156659463cfa785282692" in dockerfile
+    assert '"amd64"' in dockerfile
+    assert '"arm64"' in dockerfile
+    assert "sha256sum -c" in dockerfile
+    assert "apk add --no-cache ca-certificates curl gcompat libstdc++ tar unzip" in dockerfile
+    assert "apk add --no-cache ca-certificates gcompat libstdc++ nodejs npm hunspell" in dockerfile
+
+
+def test_gateway_compose_uses_installed_dictionary_and_vale_config() -> None:
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    assert "RU_DICT_PATH: ${RU_DICT_PATH:-/usr/share/hunspell/ru_RU.dic}" in compose
+    assert "VALE_CONFIG: ${VALE_CONFIG:-/app/.vale.ini}" in compose
+    assert "langtool_languageModel" not in compose
+    assert "curl --fail --silent --show-error --data" in compose
+    assert "start_period: 30s" in compose
+    assert "erikvl87/languagetool:6.8@sha256:ef8fa12c" in compose
+    assert "language=ru-RU" in compose
+
+
+def test_nlp_container_allows_natasha_models_to_initialize() -> None:
+    dockerfile = (ROOT / "sidecars/nlp/Dockerfile").read_text(encoding="utf-8")
+    requirements = (ROOT / "sidecars/nlp/requirements.txt").read_text(encoding="utf-8")
+    lock = (ROOT / "sidecars/nlp/requirements.lock").read_text(encoding="utf-8")
+    assert "--timeout=30s --start-period=60s --retries=12" in dockerfile
+    assert "Segmenter" in dockerfile
+    assert "NewsNERTagger" in dockerfile
+    assert "--require-hashes -r requirements.lock" in dockerfile
+    assert "natasha==1.6.0" in requirements
+    assert "razdel==0.5.0" in requirements
+    assert "setuptools==80.10.2" in requirements
+    assert "natasha==1.6.0" in lock
+    assert "--hash=sha256:" in lock
+
+
+def test_ci_runs_the_standard_compose_health_path() -> None:
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "docker buildx build --platform linux/amd64,linux/arm64 --target gateway ." in workflow
+    for command in (
+        "docker compose config",
+        "docker compose build",
+        "docker compose up -d --wait",
+        "curl --fail http://127.0.0.1:8740/health",
+        "python tests/integration/nlp_sidecar_http.py",
+        "python tests/integration/pipeline_e2e.py",
+        "docker compose logs --no-color --tail=200",
+        "docker compose down",
+    ):
+        assert command in workflow
+
+
+def test_runtime_smoke_checks_vale_rule_in_both_directions() -> None:
+    script = (ROOT / "tests/integration/docker_toolchain.sh").read_text(encoding="utf-8")
+    assert "/tmp/test.news.md" in script
+    assert "/tmp/test.guide.md" in script
+    assert 'grep -F "EditorTeam.Overcertainty"' in script
+    assert "guide profile must not flag Overcertainty" in script
+    assert "hunspell -a -d" in script
+
+
+def test_vale_style_rules_are_soft_and_profile_aware() -> None:
+    ini = (ROOT / ".vale.ini").read_text(encoding="utf-8")
+    assert "BlockIgnores = (?m)^>" in ini
+    assert "(«[^»]+»)" in ini
+    for profile in ("guide", "news", "analysis", "meta-report"):
+        assert f"[*.{profile}.md]" in ini
+    assert "EditorTeam.Overcertainty = NO" in ini
+    for rule in (ROOT / ".vale/styles/EditorTeam").glob("*.yml"):
+        assert "level: suggestion" in rule.read_text(encoding="utf-8"), rule.name

@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: "EditorTeam: full /v2/edit baseline/candidate pipeline evaluation"
+prompts:
+  - id: file://prompts/baseline.txt
+    label: baseline
+  - id: file://prompts/candidate.txt
+    label: candidate
+providers:
+  - id: file://providers/pipeline-e2e.js
+    label: pipeline-e2e
+tests: file://cases/cases.json
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions/deterministic.js
+      metric: deterministic-guardrails

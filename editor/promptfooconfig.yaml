@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# Точка входа для `npx promptfoo eval` из корня; она повторяет
+# обязательный deterministic gate из evals/promptfooconfig.yaml.
+description: "EditorTeam: deterministic baseline/candidate evaluation"
+prompts:
+  - id: file://evals/prompts/baseline.txt
+    label: baseline
+  - id: file://evals/prompts/candidate.txt
+    label: candidate
+providers:
+  - id: file://evals/providers/prompt-direct.js
+    label: prompt-direct
+tests: file://evals/cases/cases.json
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://evals/assertions/deterministic.js
+      metric: deterministic-guardrails

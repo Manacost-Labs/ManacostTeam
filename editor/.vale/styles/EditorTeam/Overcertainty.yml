@@ -1,0 +1,12 @@
+# "всегда", "никогда", "гарантированно" are flagged only next to a verdict verb,
+# so imperative game instructions ("всегда оставляйте монету") stay untouched.
+# Guides disable the rule entirely in .vale.ini; other profiles keep it as a
+# suggestion. Headings, quotes, blockquotes and code are excluded.
+extends: existence
+message: "Сверьте категоричность с источником и оставьте осторожное условие, если оно есть."
+level: suggestion
+ignorecase: true
+scope: ~heading
+tokens:
+  - "\\b(гарантированно|безусловно|очевидно)\\s+(побеждает|лучше|решает|работает|спасает)\\b"
+  - "\\b(всегда|никогда)\\s+(не\\s+)?(побеждает|проигрывает|ошибается|работает|ломается)\\b"

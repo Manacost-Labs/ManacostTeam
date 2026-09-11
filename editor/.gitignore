@@ -1,0 +1,32 @@
+# виртуальное окружение с pymorphy3 — ставится локально
+.venv/
+
+# local provider and deployment credentials
+.env
+.env.*
+!.env.example
+
+# Проектные инженерные скиллы хранятся в репозитории. Локальная копия
+# better-writing по-прежнему ставится отдельно и не коммитится.
+.agents/*
+!.agents/README.md
+!.agents/profile.yaml
+!.agents/skills/
+!.agents/skills/**
+.agents/skills/better-writing/
+.claude/skills/better-writing
+
+__pycache__/
+*.pyc
+
+.DS_Store
+
+# сборка пакета
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# сборка скилла
+build/

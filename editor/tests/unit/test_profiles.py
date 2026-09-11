@@ -1,0 +1,197 @@
+"""Профили жанров: BG-материал не мерится требованиями гайда по колоде."""
+
+import pytest
+
+from editorteam import profiles
+
+BG = (
+    "Идея стратегии\nСобираем мурлоков в тавернах и держим темп.\n"
+    "Ключевые существа\nБрановый мурлок и Мурлок-налетчик.\n"
+    "План по ходам\nНа четвертом ходу ищем тройку существ.\n"
+    "Герой таверны выбирается под аксессуары в лобби.\n"
+)
+
+CONSTRUCTED = (
+    "Сборки архетипа\nМуллиган\nСтратегия игры\nМатч-апы\n"
+    "Вопросы декбилдинга\nКолода играет через размен и добор.\n"
+)
+
+ANTI_GUIDE = (
+    "Title: 3 колоды против Терран Шамана\n"
+    "Categories: Анти-гайды, Шаман\n\n"
+    "Терран Шаман захватил ладдер, но его можно победить. "
+    "Первая контрколода давит его до Жажды крови. "
+    "Вторая отвечает зачистками, хотя хуже играет с другими архетипами.\n"
+)
+
+ARTICLE = (
+    "Поля сражений меняются. Почему новые эффекты ускоряют игру и что это значит для игрока? "
+    "Сильный старт оставляет меньше времени на ответ."
+)
+
+ANALYTICS = (
+    "Обзор патча 32.0.3: что изменилось и почему это важно. "
+    "Нерф замедлит колоду, но не уберет ее из меты."
+)
+
+
+def test_all_profiles_load():
+    for name in profiles.available():
+        p = profiles.load(name)
+        assert p.id == name
+
+
+def test_battlegrounds_does_not_require_deck_sections():
+    bg = profiles.load("battlegrounds-guide")
+    ids = {s.id for s in bg.required_sections}
+    assert "mulligan" not in ids
+    assert "deckbuilding" not in ids
+    assert "matchups" not in ids
+    assert bg.require_classes is False
+
+
+def test_battlegrounds_requires_its_own_sections():
+    bg = profiles.load("battlegrounds-guide")
+    ids = {s.id for s in bg.required_sections}
+    assert {"idea", "minions", "curve"} <= ids
+
+
+def test_constructed_requires_eleven_classes():
+    p = profiles.load("constructed-guide")
+    assert p.require_classes is True
+    assert len(p.required_sections) == 5
+
+
+def test_anti_guide_does_not_require_constructed_sections():
+    profile = profiles.load("anti-guide")
+    assert profile.required_sections == []
+    assert profile.require_classes is False
+    assert profile.enabled("cards") is True
+    assert profile.min_words == 180
+
+
+def test_news_disables_noisy_analyzers():
+    p = profiles.load("news")
+    assert p.enabled("rhythm") is False
+    assert p.enabled("soul") is False
+    assert p.enabled("cards") is True
+
+
+def test_unknown_profile_raises():
+    with pytest.raises(profiles.ProfileError):
+        profiles.load("нет-такого")
+
+
+def test_detect_battlegrounds():
+    name, conf = profiles.detect(BG)
+    assert name == "battlegrounds-guide"
+    assert conf > 0.3
+
+
+def test_detect_battlegrounds_article_without_practical_sections():
+    name, conf = profiles.detect(ARTICLE)
+    assert name == "battlegrounds-article"
+    assert conf > 0.3
+
+
+def test_analytics_article_profile_is_available():
+    article = profiles.load("analytics-article")
+    assert article.enabled("clarity") is True
+    assert article.required_sections == []
+    assert article.min_words == 400
+
+
+def test_detect_analytics_article():
+    name, confidence = profiles.detect(ANALYTICS)
+    assert name == "analytics-article"
+    assert confidence > 0.3
+
+
+def test_detect_constructed():
+    name, _ = profiles.detect(CONSTRUCTED)
+    assert name == "constructed-guide"
+
+
+def test_detect_anti_guide_over_generic_deck_vocabulary():
+    name, confidence = profiles.detect(ANTI_GUIDE)
+    assert name == "anti-guide"
+    assert confidence > 0.6
+
+
+def test_detect_reports_zero_confidence_on_empty():
+    name, conf = profiles.detect("Просто текст ни о чём.")
+    assert conf == 0.0
+    assert name == profiles.DEFAULT
+
+
+def test_weights_sum_to_one():
+    for name in profiles.available():
+        p = profiles.load(name)
+        assert abs(sum(p.weights.values()) - 1.0) < 1e-6, name
+
+
+def test_constructed_sections_carry_purpose_and_min_words():
+    p = profiles.load("constructed-guide")
+    for section in p.required_sections:
+        assert section.purpose, section.id
+        assert section.min_words == 60
+    assert p.opening["requires"] == ["archetype", "expansion"]
+    assert p.closing["signature"] == "Спасибо за внимание"
+
+
+def test_every_section_of_every_profile_states_its_purpose():
+    """Промпт переплавки показывает разделы с назначением; пустой purpose —
+    это раздел, который модель заполнит по своему разумению."""
+    for name in profiles.available():
+        p = profiles.load(name)
+        for section in p.sections:
+            assert section.purpose, f"{name}: {section.id}"
+        for section in p.required_sections:
+            assert section.min_words, f"{name}: {section.id} без min_words"
+
+
+def test_skeleton_keeps_profile_order_and_fields():
+    skeleton = profiles.load("constructed-guide").skeleton()
+    assert [s["id"] for s in skeleton] == [
+        "builds",
+        "deckbuilding",
+        "mulligan",
+        "strategy",
+        "matchups",
+        "conclusion",
+    ]
+    assert skeleton[0]["required"] is True
+    assert skeleton[-1]["required"] is False
+    assert set(skeleton[0]) == {"id", "title", "variants", "required", "purpose", "min_words"}
+
+
+def test_profiles_without_opening_load_empty_dicts():
+    news = profiles.load("news")
+    assert news.opening == {}
+    assert news.closing == {}
+    assert news.skeleton() == []
+
+
+def test_meta_report_is_a_guide_skeleton_not_a_report_toc():
+    p = profiles.load("meta-report")
+    assert [s.id for s in p.required_sections] == [
+        "changes",
+        "summary",
+        "choice",
+        "builds",
+        "others",
+    ]
+    assert all(s.purpose for s in p.required_sections)
+    assert p.form["tables_max"] == 1
+    assert p.form["codes_max"] == 4
+    assert p.form["grade_labels"] == "forbidden"
+    assert p.opening["requires"] == ["expansion"]
+    assert profiles.load("constructed-guide").form == {}
+
+
+def test_article_profiles_declare_provisional_norms():
+    for name in ("analytics-article", "battlegrounds-article"):
+        p = profiles.load(name)
+        assert p.norms.get("provisional") is True, name
+        assert "статей" in p.norms.get("source", "")
+    assert profiles.load("constructed-guide").norms == {}

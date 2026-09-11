@@ -1,0 +1,30 @@
+{
+  "name": "editor-team",
+  "version": "1.6.0",
+  "description": "Evidence-hidden Hearthstone editing with player-facing clarity checks, semantic guards and approved style memory.",
+  "author": {
+    "name": "Manacost Labs"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "EditorTeam",
+    "shortDescription": "Hearthstone guide editing without evidence narration",
+    "longDescription": "Edits Russian Hearthstone guides by comparing keep, local repair and recast candidates while preserving claims, confidence, numbers and author voice; separates current game evidence from versioned style memory.",
+    "developerName": "Manacost Labs",
+    "category": "Productivity",
+    "capabilities": [
+      "Guide editing",
+      "Comparative edit decisions",
+      "Semantic validation",
+      "Card names",
+      "Style corpus",
+      "Battlegrounds TXT import",
+      "Deduplicated guide archive import",
+      "Anti-guide profile",
+      "Battlegrounds player-article profile",
+      "Analytics article profile",
+      "Game-term role checks"
+    ],
+    "defaultPrompt": "Edit this Hearthstone guide in GUIDE mode, preserve the claim contract and keep research evidence backstage."
+  }
+}

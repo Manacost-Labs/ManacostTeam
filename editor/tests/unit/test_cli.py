@@ -1,0 +1,311 @@
+"""CLI: профили меняют вердикт, JSON стабилен, exit code управляем."""
+
+import json
+import subprocess
+import sys
+
+import pytest
+
+from editorteam.cli import _corpus_store, build_parser, main
+
+BG = (
+    "Идея стратегии\nСобираем мурлоков в тавернах и держим темп.\n"
+    "Ключевые существа\nБрановый мурлок закрывает ранние ходы.\n"
+    "План по ходам\nНа четвертом ходу ищем тройку существ.\n"
+)
+
+ANTI = (
+    "Title: Как победить Терран Шамана: 3 контрколоды\n"
+    "Categories: Анти-гайды, Шаман\n\n"
+    "Терран Шаман захватил ладдер. Первая колода против него играет от темпа.\n"
+)
+
+
+@pytest.fixture
+def bg_file(tmp_path):
+    p = tmp_path / "bg.md"
+    p.write_text(BG, encoding="utf-8")
+    return p
+
+
+@pytest.fixture
+def anti_file(tmp_path):
+    path = tmp_path / "anti.md"
+    path.write_text(ANTI, encoding="utf-8")
+    return path
+
+
+def run_json(capsys, *argv):
+    code = main(list(argv))
+    return code, json.loads(capsys.readouterr().out)
+
+
+def test_battlegrounds_profile_does_not_demand_deck_sections(capsys, bg_file):
+    _, data = run_json(
+        capsys, "--format", "json", "audit", str(bg_file), "--profile", "battlegrounds-guide"
+    )
+    missing = [f for f in data["findings"] if f["id"].startswith("structure.missing")]
+    assert missing == [], "BG-гайд не должен требовать разделы конструированного"
+
+
+def test_constructed_profile_demands_them(capsys, bg_file):
+    _, data = run_json(
+        capsys, "--format", "json", "audit", str(bg_file), "--profile", "constructed-guide"
+    )
+    missing = {f["id"] for f in data["findings"] if f["id"].startswith("structure.missing")}
+    assert "structure.missing.mulligan" in missing
+
+
+def test_anti_profile_does_not_demand_constructed_sections(capsys, anti_file):
+    _, data = run_json(
+        capsys, "--format", "json", "audit", str(anti_file), "--profile", "anti-guide"
+    )
+    missing = [
+        finding for finding in data["findings"] if finding["id"].startswith("structure.missing")
+    ]
+    assert missing == []
+
+
+def test_autodetect_anti_guide(capsys, anti_file):
+    _, data = run_json(capsys, "--format", "json", "audit", str(anti_file))
+    assert data["profile"] == "anti-guide"
+
+
+def test_json_has_stable_top_level_keys(capsys, bg_file):
+    _, data = run_json(capsys, "--format", "json", "audit", str(bg_file))
+    assert set(data) == {
+        "schema_version",
+        "document",
+        "profile",
+        "summary",
+        "metrics",
+        "findings",
+        "analyzers_skipped",
+        "notes",
+    }
+
+
+def test_autodetect_reports_profile_and_confidence(capsys, bg_file):
+    _, data = run_json(capsys, "--format", "json", "audit", str(bg_file))
+    assert data["profile"] == "battlegrounds-guide"
+    assert any("уверенность" in n for n in data["notes"])
+
+
+def test_config_validate_passes(capsys):
+    code, data = run_json(capsys, "--format", "json", "config", "validate")
+    assert code == 0
+    assert data["summary"]["error"] == 0
+
+
+def test_console_script_installed():
+    r = subprocess.run(
+        [sys.executable, "-m", "editorteam.cli", "profiles"], capture_output=True, text=True
+    )
+    assert r.returncode == 0
+    assert "battlegrounds-guide" in r.stdout
+
+
+def test_flag_works_before_and_after_subcommand(capsys, bg_file):
+    """Подпарсер не должен затирать флаг, заданный до подкоманды."""
+    for argv in (
+        ["--format", "json", "audit", str(bg_file)],
+        ["audit", str(bg_file), "--format", "json"],
+    ):
+        main(argv)
+        out = capsys.readouterr().out
+        assert json.loads(out)["schema_version"] == "1.0"
+
+
+def test_fail_on_changes_exit_code(capsys, bg_file):
+    code_default = main(
+        ["audit", str(bg_file), "--profile", "constructed-guide", "--format", "json"]
+    )
+    capsys.readouterr()
+    code_strict = main(
+        [
+            "audit",
+            str(bg_file),
+            "--profile",
+            "constructed-guide",
+            "--format",
+            "json",
+            "--fail-on",
+            "likely",
+        ]
+    )
+    capsys.readouterr()
+    assert code_default == 0  # структурные пропуски — не error
+    assert code_strict == 1
+
+
+def test_archive_collection_and_import_guides_are_available():
+    args = build_parser().parse_args(["corpus", "import-guides", "/tmp/source", "--format", "json"])
+
+    assert args.corpus_cmd == "import-guides"
+    assert _corpus_store("archive").relative_dir == "corpus-archive"
+
+
+def test_validate_edit_rewrite_depth_json(capsys, tmp_path):
+    before = tmp_path / "before.md"
+    after = tmp_path / "after.md"
+    before.write_text(
+        "Стоит отметить, что Мастер брони является ключевой картой. Подведём итог.",
+        encoding="utf-8",
+    )
+    after.write_text(
+        "Сборки\nМастер брони держит стол.\nМуллиган\nИщите Мастера брони.\n", encoding="utf-8"
+    )
+    code = main(
+        [
+            "validate-edit",
+            str(before),
+            str(after),
+            "--depth",
+            "переплавка",
+            "--declared-missing",
+            "deckbuilding,strategy,matchups",
+            "--format",
+            "json",
+        ]
+    )
+    data = json.loads(capsys.readouterr().out)
+    assert data["edit_depth"] == "переплавка"
+    assert data["declared_missing"] == ["deckbuilding", "strategy", "matchups"]
+    assert "structure_missing" not in {v["kind"] for v in data["violations"]}
+    assert code == 0, data["violations"]
+
+
+def test_claims_and_outline_commands(capsys, tmp_path):
+    source = tmp_path / "source.md"
+    source.write_text(
+        "Сборки\nДве сборки колоды.\nМуллиган\nОставляйте Мастера брони против агро.\n",
+        encoding="utf-8",
+    )
+    code, data = run_json(capsys, "claims", str(source), "--format", "json")
+    assert code == 0
+    assert {c["name"] for c in data["cards"]} == {"Мастер брони"}
+
+    outline = tmp_path / "outline.json"
+    outline.write_text(
+        json.dumps(
+            {
+                "sections": [
+                    {"id": "builds", "title": "Сборки", "claims": ["две сборки"]},
+                    {"id": "mulligan", "title": "Муллиган", "claims": ["оставлять Мастера брони"]},
+                ],
+                "missing_sections": ["deckbuilding", "strategy", "matchups"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    code, data = run_json(
+        capsys,
+        "outline",
+        "validate",
+        str(outline),
+        "--source",
+        str(source),
+        "--profile",
+        "constructed-guide",
+        "--format",
+        "json",
+    )
+    assert code == 0, data
+    assert data["ok"] is True
+
+    invented = tmp_path / "invented.json"
+    invented.write_text(
+        json.dumps(
+            {
+                "sections": [
+                    {"id": "builds", "title": "Сборки", "claims": ["Громмаш Адский Крик даёт 55%"]}
+                ],
+                "missing_sections": ["deckbuilding", "mulligan", "strategy", "matchups"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    code, data = run_json(
+        capsys, "outline", "validate", str(invented), "--source", str(source), "--format", "json"
+    )
+    assert code == 1
+    assert {v["kind"] for v in data["violations"]} == {"OUTLINE_INVENTED"}
+
+
+def test_audit_deep_adds_structure_and_elegance_metrics(capsys, bg_file):
+    _, data = run_json(
+        capsys,
+        "--format",
+        "json",
+        "audit",
+        str(bg_file),
+        "--profile",
+        "constructed-guide",
+        "--deep",
+    )
+    assert "structure_order_ok" in data["metrics"]
+    assert "elegance_nominalization_per_100w" in data["metrics"]
+
+
+def test_check_command_gives_one_verdict(capsys, tmp_path):
+    source = tmp_path / "source.md"
+    source.write_text(
+        "Стоит отметить, что Мастер брони является ключевой картой. Подведём итог.",
+        encoding="utf-8",
+    )
+    after = tmp_path / "after.md"
+    after.write_text(
+        "Сборки\nМастер брони держит стол.\nМуллиган\nИщите Мастера брони.\n", encoding="utf-8"
+    )
+    code, data = run_json(
+        capsys,
+        "check",
+        str(after),
+        "--source",
+        str(source),
+        "--declared-missing",
+        "deckbuilding,strategy,matchups",
+        "--format",
+        "json",
+    )
+    assert code == 0, data["violations"]
+    assert data["accepted"] is True and data["edit_depth"] == "переплавка"
+    code, data = run_json(
+        capsys, "check", str(after), "--profile", "constructed-guide", "--format", "json"
+    )
+    assert set(data) >= {"accepted", "violations", "warnings", "metrics"}
+    main(
+        [
+            "check",
+            str(after),
+            "--source",
+            str(source),
+            "--declared-missing",
+            "deckbuilding,strategy,matchups",
+        ]
+    )
+    out = capsys.readouterr().out
+    assert out.startswith("PASS")
+    assert "ИЗМЕРЕНО" in out
+
+
+def test_learn_diff_and_add(capsys, tmp_path, monkeypatch):
+    monkeypatch.setenv("EDITOR_CORRECTIONS", str(tmp_path / "corrections.yaml"))
+    before = tmp_path / "b.md"
+    after = tmp_path / "a.md"
+    before.write_text("На Бриллианте колода карает провайдеров.", encoding="utf-8")
+    after.write_text("На Алмазе колода карает источники.", encoding="utf-8")
+    code, data = run_json(capsys, "learn", "diff", str(before), str(after), "--format", "json")
+    assert code == 0
+    assert {(d["was"], d["became"]) for d in data["proposals"]} >= {("Бриллианте", "Алмазе")}
+    assert data["written"] == len(data["proposals"])
+    code = main(
+        ["learn", "add", "трекер", "запись партий", "--kind", "term", "--reason", "нет в корпусе"]
+    )
+    assert code == 0
+    capsys.readouterr()
+    code, data = run_json(capsys, "learn", "list", "--format", "json")
+    assert any(d["was"] == "трекер" for d in data)
+    assert any(d["was"] == "Бриллианте" for d in data)
