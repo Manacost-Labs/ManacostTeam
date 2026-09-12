@@ -11,7 +11,7 @@
 - Добавлен каталог общих skills: monorepo gate, packaging, research-to-publication, SVG regression, freshness audit и release/migration.
 - В редакторский workflow добавлен обязательный вопрос о WordPress-шорткодах до редактуры, если пользователь не выбрал режим сам.
 - `hearthstone-replay` импортирован в `XMLTeam/` с полной Git-историей; метаданные npm-пакета переведены на monorepo remote.
-- Добавлен `xml-replay-analysis`: chat-workflow для русскоязычного разбора `.hsreplay.xml`, муллигана, ключевых решений и вероятных архетипов.
+- Добавлен `xml-replay-analysis`: chat-workflow для извлечения из `.hsreplay.xml` анонимизированных фактов для гайдов — муллигана, ключевых эпизодов и вероятных архетипов.
 
 ### Planned
 
