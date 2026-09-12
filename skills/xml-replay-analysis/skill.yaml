@@ -1,0 +1,3 @@
+id: hearthstone/xml-replay-analysis
+namespace: hearthstone
+entrypoint: SKILL.md

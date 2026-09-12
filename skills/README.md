@@ -9,6 +9,7 @@
 | `research-to-publication` | Контракт `research → editor → svg`. |
 | `svg-regression-suite` | Регрессия генератора SVG и эталонных спеков. |
 | `hearthstone-freshness-audit` | Аудит свежести патча, меты, названий и визуализаций. |
+| `xml-replay-analysis` | Разбор XML-реплеев: русские карты, муллиган, решения, матчап и архетип. |
 | `release-notes-and-migration` | Межмодульные release notes и безопасные миграции. |
 
 Локальные runtime-skills модулей остаются в `editor/`, `research/` и `svg/`. Общие skills не копируют их правила, а маршрутизируют к ним.

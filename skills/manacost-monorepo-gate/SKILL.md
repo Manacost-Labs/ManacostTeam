@@ -12,6 +12,7 @@ description: "Маршрутизирует задачи и проверки в M
 | `editor/` | редакционный контур | локальные тесты/валидаторы из `editor/AGENTS.md` |
 | `research/` | research bundles и валидаторы | соответствующий validator или unit-тест |
 | `svg/` | генератор и визуальные артефакты | Python-синтаксис, `scripts/validate.py`, затронутый spec |
+| `XMLTeam/` | парсер и анализ XML-реплеев Hearthstone | `pnpm run typecheck` и затронутые `pnpm run test` |
 | `job/`, `skills/` | chat-skills и их пакеты | frontmatter, ссылки, упаковка без секретов |
 | корневые файлы | общая навигация | ссылки, diff, changelog при пользовательском изменении |
 

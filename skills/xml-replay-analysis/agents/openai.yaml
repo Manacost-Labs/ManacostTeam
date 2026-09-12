@@ -1,0 +1,6 @@
+interface:
+  display_name: "Анализ XML-реплеев"
+  short_description: "Русский разбор муллигана, решений и матчапа"
+  default_prompt: "Используй $xml-replay-analysis для разбора прикреплённого XML-реплея Hearthstone."
+policy:
+  allow_implicit_invocation: true
