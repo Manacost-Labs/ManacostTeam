@@ -1,0 +1,13 @@
+services:
+  preparer:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      DATA_DIR: /app/data
+      ALLOWED_DOMAINS: ${ALLOWED_DOMAINS:-}
+      MAX_SOURCE_CHARS: ${MAX_SOURCE_CHARS:-120000}
+    ports:
+      - "127.0.0.1:8787:8000"
+    volumes:
+      - ./data:/app/data

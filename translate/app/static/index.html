@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TranslateTeam — пакет для Codex</title>
+  <style>
+    body { max-width: 1180px; margin: 2rem auto; padding: 0 1rem; background: #10151f; color: #e8edf5; font: 16px/1.5 system-ui, sans-serif; }
+    textarea, input, select { box-sizing: border-box; width: 100%; background: #192231; color: inherit; border: 1px solid #3e5068; border-radius: 6px; padding: .7rem; }
+    textarea { min-height: 190px; resize: vertical; } label { display: block; margin: .85rem 0 .3rem; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; } button { margin: .8rem .4rem .8rem 0; padding: .7rem 1rem; color: #08111d; background: #69b8ff; border: 0; border-radius: 6px; cursor: pointer; font-weight: 700; }
+    button.secondary { background: #b5c9df; } pre { white-space: pre-wrap; word-break: break-word; background: #192231; border-radius: 6px; padding: 1rem; min-height: 120px; }
+    #status, .note { color: #aab9ca; font-size: .9rem; } .hidden { display: none; } @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Пакет игрового перевода для Codex</h1>
+  <p class="note">Здесь нет LLM. Сервис готовит текст, контекст, термины, сегменты и QA; перевод выполняется в чате Codex.</p>
+  <label for="url">URL статьи</label>
+  <input id="url" type="url" placeholder="https://www.wowhead.com/...">
+  <label for="text">Или вставьте исходный текст / Markdown</label>
+  <textarea id="text" placeholder="Английский материал…"></textarea>
+  <label for="previous">Предыдущая версия исходника (необязательно: для diff)</label>
+  <textarea id="previous" placeholder="Предыдущая английская версия материала…"></textarea>
+  <div class="grid">
+    <div><label for="game">Игра</label><select id="game"><option value="wow">World of Warcraft</option><option value="hearthstone">Hearthstone</option></select></div>
+    <div><label for="patch">Патч / версия</label><input id="patch" placeholder="Midnight / 12.0"></div>
+    <div><label for="style">Стиль</label><select id="style"><option value="manacost">Manacost</option><option value="technical">Технический гайд</option><option value="literal">Точный</option><option value="summary">Краткий</option></select></div>
+    <div><label for="className">Класс</label><input id="className" placeholder="Priest"></div>
+    <div><label for="spec">Специализация</label><input id="spec" placeholder="Shadow"></div>
+    <div><label for="title">Заголовок</label><input id="title" placeholder="Необязательно"></div>
+  </div>
+  <button id="prepare">Подготовить пакет</button><button id="copyPackage" class="secondary">Скопировать пакет для Codex</button>
+  <span id="status"></span>
+  <h2>Пакет</h2><pre id="package">Здесь появится подготовленный пакет.</pre>
+  <section id="qaSection" class="hidden">
+    <h2>Второй проход: QA готового перевода</h2>
+    <label for="translated">Вставьте перевод, полученный от Codex</label>
+    <textarea id="translated" placeholder="Русский перевод…"></textarea>
+    <button id="qa">Проверить</button>
+    <pre id="qaOutput">QA-отчёт появится здесь.</pre>
+    <h3>Утвердить сегмент в памяти переводов</h3>
+    <p class="note">Сохраняйте только проверенный человеком сегмент, а не весь материал.</p>
+    <label for="memorySource">Оригинал сегмента</label><textarea id="memorySource"></textarea>
+    <label for="memoryTarget">Утверждённый перевод сегмента</label><textarea id="memoryTarget"></textarea>
+    <button id="approve" class="secondary">Утвердить в память</button>
+  </section>
+  <script>
+    let current = null;
+    const get = id => document.getElementById(id);
+    const status = get('status');
+    const packageBox = get('package');
+    function requestBody() {
+      const text = get('text').value.trim();
+      const url = get('url').value.trim();
+      if ((text && url) || (!text && !url)) throw new Error('Укажите только URL или только текст.');
+      return {
+        ...(text ? { text } : { url }),
+        title: get('title').value.trim() || null,
+        game: get('game').value, patch: get('patch').value.trim() || null,
+        class_name: get('className').value.trim() || null, spec: get('spec').value.trim() || null,
+        style: get('style').value, previous_source: get('previous').value.trim() || null
+      };
+    }
+    function renderPackage(data) {
+      const termLines = Object.entries(data.terms).map(([marker, russian]) => marker + ' = ' + russian).join('\n');
+      const memory = data.segments.filter(x => x.memory_match).map(x => x.id + ': ' + x.memory_match).join('\n');
+      return data.instruction_for_codex + '\n\nКонтекст:\n' + JSON.stringify(data.context, null, 2) +
+        '\n\nТермины:\n' + termLines + '\n\nПамять переводов:\n' + memory +
+        '\n\nКандидаты на проверку:\n' + data.review_candidates.join(', ') +
+        '\n\nМатериал:\n' + data.protected_markdown;
+    }
+    get('prepare').addEventListener('click', async () => {
+      try {
+        status.textContent = 'Извлекаю материал и собираю контекст…';
+        const response = await fetch('/prepare', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(requestBody()) });
+        current = await response.json();
+        if (!response.ok) throw new Error(current.detail || 'Ошибка подготовки');
+        packageBox.textContent = renderPackage(current);
+        get('qaSection').classList.remove('hidden');
+        status.textContent = 'Готово: сегментов ' + current.segments.length + ', терминов ' + Object.keys(current.terms).length + '.';
+      } catch (error) { status.textContent = error.message; }
+    });
+    get('copyPackage').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(packageBox.textContent); status.textContent = 'Пакет скопирован для Codex.'; }
+      catch (_) { status.textContent = 'Не удалось получить доступ к буферу обмена.'; }
+    });
+    get('qa').addEventListener('click', async () => {
+      if (!current) return;
+      const response = await fetch('/qa', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({
+        protected_source: current.protected_markdown, translated_markdown: get('translated').value, terms: current.terms
+      })});
+      const data = await response.json();
+      get('qaOutput').textContent = JSON.stringify(data, null, 2);
+    });
+    get('approve').addEventListener('click', async () => {
+      const response = await fetch('/memory/approve', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({
+        source_en: get('memorySource').value, target_ru: get('memoryTarget').value,
+        context: get('game').value + '; ' + get('patch').value
+      })});
+      const data = await response.json();
+      status.textContent = response.ok ? 'Сегмент утверждён. Пар в памяти: ' + data.memory_pairs + '.' : data.detail;
+    });
+  </script>
+</body>
+</html>

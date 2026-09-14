@@ -1,0 +1,3 @@
+id: translation/wow-hearthstone-translator
+namespace: translation
+entrypoint: SKILL.md

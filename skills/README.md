@@ -10,6 +10,7 @@
 | `svg-regression-suite` | Регрессия генератора SVG и эталонных спеков. |
 | `hearthstone-freshness-audit` | Аудит свежести патча, меты, названий и визуализаций. |
 | `xml-replay-analysis` | Факты из XML-реплеев для гайдов: русские карты, муллиган, эпизоды, матчап и архетип. |
+| `wow-hearthstone-translator` | Двухпроходный перевод WoW/Hearthstone: подтверждённые имена, стиль, QA и спорные термины. |
 | `release-notes-and-migration` | Межмодульные release notes и безопасные миграции. |
 
 Локальные runtime-skills модулей остаются в `editor/`, `research/` и `svg/`. Общие skills не копируют их правила, а маршрутизируют к ним.
