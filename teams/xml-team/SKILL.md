@@ -2,7 +2,7 @@
 name: xml-team
 description: "Факты из XML-реплея Hearthstone для гайдов с packet evidence и ограничениями наблюдения."
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # XMLTeam

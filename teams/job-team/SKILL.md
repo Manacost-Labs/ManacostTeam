@@ -2,7 +2,7 @@
 name: job-team
 description: "Отбор игровых авторов, оценка их работ и разбор вакансий/офферов для соискателя."
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # JobTeam

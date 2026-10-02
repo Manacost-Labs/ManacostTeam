@@ -67,6 +67,36 @@ class TeamPackageTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "collision"):
                 builder.copy_resource(source, target)
 
+    def test_extensionless_metadata_is_normalized_and_binary_bytes_stay_exact(self):
+        import build_team_skills as builder
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            metadata, binary = root / "METADATA", root / "image.png"
+            metadata.write_bytes(b"Package: example\r\nLicense: MIT\r\n")
+            binary.write_bytes(b"\x89PNG\r\n\x00binary\r\n")
+            self.assertEqual(
+                builder.portable_bytes(metadata), b"Package: example\nLicense: MIT\n"
+            )
+            self.assertEqual(builder.portable_bytes(binary), binary.read_bytes())
+
+    def test_archive_member_order_uses_case_sensitive_portable_names(self):
+        import build_team_skills as builder
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            skill = root / "source"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                '---\nname: example\ndescription: "Example."\n---\n', encoding="utf-8"
+            )
+            (skill / "a.txt").write_text("a", encoding="utf-8")
+            (skill / "Z.txt").write_text("Z", encoding="utf-8")
+            archive = root / "example.zip"
+            builder.write_zip(skill, archive, "example")
+            with zipfile.ZipFile(archive) as bundle:
+                self.assertEqual(bundle.namelist(), sorted(bundle.namelist()))
+
 
 class PortableRuntimeTests(unittest.TestCase):
     @classmethod

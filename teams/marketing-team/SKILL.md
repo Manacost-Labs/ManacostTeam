@@ -2,7 +2,7 @@
 name: marketing-team
 description: "Рекламные материалы продуктов Hearthstone/Warcraft: аудитория, оффер, тексты и визуальные концепты."
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # MarketingTeam

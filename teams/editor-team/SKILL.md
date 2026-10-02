@@ -2,7 +2,7 @@
 name: editor-team
 description: "Редактура материалов Hearthstone с сохранением фактов и авторского голоса."
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # EditorTeam

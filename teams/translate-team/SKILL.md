@@ -2,7 +2,7 @@
 name: translate-team
 description: "Перевод Hearthstone/WoW с подтверждёнными именами, сохранением смысла и QA."
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # TranslateTeam

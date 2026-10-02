@@ -1,4 +1,4 @@
-# Проверка Team standard 1.0.0
+# Проверка Team standard 1.0.1
 
 Локальная проверка Windows, Python 3.13, 2026-10-03:
 
@@ -12,7 +12,7 @@
 | TranslateTeam | 4/4 tests OK; portable QA подтверждён |
 | XMLTeam | 1125 tests passed; typecheck/build/lint/package smoke PASS |
 | XML source kit | ZIP → чистая temp-папка → frozen install → build → parse raw packet PASS |
-| Общие пакеты | 12 tests OK: реальные ZIP, manifests, SHA, relative links, runtime helpers |
+| Общие пакеты | 14 tests OK: реальные ZIP, manifests, SHA, relative links, runtime helpers |
 | Формат skills/plugin | 8 entrypoints valid; Claude Code strict plugin validation PASS |
 | Сборка | Повторная сборка `--check` воспроизводима |
 | Статические проверки | Ruff затронутых runtime/tests, actionlint и staged diff check PASS |

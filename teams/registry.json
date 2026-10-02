@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -70,7 +70,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "teams/research-team",
       "resources": [
         {
@@ -91,7 +91,7 @@
       "name": "svg-team",
       "team": "SVGTeam",
       "module": "svg",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "teams/svg-team",
       "resources": [
         {
@@ -120,7 +120,7 @@
       "name": "translate-team",
       "team": "TranslateTeam",
       "module": "translate",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "teams/translate-team",
       "resources": [
         {
@@ -141,7 +141,7 @@
       "name": "xml-team",
       "team": "XMLTeam",
       "module": "XMLTeam",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "teams/xml-team",
       "resources": [
         {
@@ -182,7 +182,7 @@
       "name": "job-team",
       "team": "JobTeam",
       "module": "job",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "teams/job-team",
       "resources": [
         {
@@ -199,7 +199,7 @@
       "name": "marketing-team",
       "team": "MarketingTeam",
       "module": "marketing",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "teams/marketing-team",
       "resources": [
         {
@@ -228,7 +228,7 @@
       "name": "card-shortcodes",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "teams/card-shortcodes",
       "resources": [
         {
@@ -246,5 +246,5 @@
       ]
     }
   ],
-  "release_version": "1.0.0"
+  "release_version": "1.0.1"
 }

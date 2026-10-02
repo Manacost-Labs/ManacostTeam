@@ -18,20 +18,20 @@ python tools/build_team_skills.py --check
 python -m unittest discover -s tests -p test_team_packages.py
 ```
 
-Результат — release/team-skills/1.0.0: отдельные ZIP и их идентичные `.skill` aliases, combined plugin, index.json и SHA256SUMS. ZIP содержит одну верхнюю папку и ровно один SKILL.md. Архивы воспроизводимы, проверяются на внутренние ограничения проекта: до 500 файлов, 25 MiB на файл, 100 MiB после распаковки и 50 MiB на архив и исключают credentials, кэши и окружения. Опубликованный архив не перезаписывается: измените версию для нового выпуска. `build/` — локальная staging-папка и не входит в Git.
+Результат — release/team-skills/1.0.1: отдельные ZIP и их идентичные `.skill` aliases, combined plugin, index.json и SHA256SUMS. ZIP содержит одну верхнюю папку и ровно один SKILL.md. Архивы воспроизводимы, проверяются на внутренние ограничения проекта: до 500 файлов, 25 MiB на файл, 100 MiB после распаковки и 50 MiB на архив и исключают credentials, кэши и окружения. Опубликованный архив не перезаписывается: измените версию для нового выпуска. `build/` — локальная staging-папка и не входит в Git.
 
 ## Импорт и вызов
 
 | Team | ZIP/skill | Прямой вызов Claude Code |
 | --- | --- | --- |
-| EditorTeam | editor-team-1.0.0 | /editor-team |
-| ResearchTeam | research-team-1.0.0 | /research-team |
-| SVGTeam | svg-team-1.0.0 | /svg-team |
-| TranslateTeam | translate-team-1.0.0 | /translate-team |
-| XMLTeam | xml-team-1.0.0 | /xml-team |
-| JobTeam | job-team-1.0.0 | /job-team |
-| MarketingTeam | marketing-team-1.0.0 | /marketing-team |
-| Подсветка карт | card-shortcodes-1.0.0 | /card-shortcodes |
+| EditorTeam | editor-team-1.0.1 | /editor-team |
+| ResearchTeam | research-team-1.0.1 | /research-team |
+| SVGTeam | svg-team-1.0.1 | /svg-team |
+| TranslateTeam | translate-team-1.0.1 | /translate-team |
+| XMLTeam | xml-team-1.0.1 | /xml-team |
+| JobTeam | job-team-1.0.1 | /job-team |
+| MarketingTeam | marketing-team-1.0.1 | /marketing-team |
+| Подсветка карт | card-shortcodes-1.0.1 | /card-shortcodes |
 
 **Claude web:** загрузите отдельный ZIP в Customize → Skills при включённом Code execution. Доступность меню зависит от настроек аккаунта/организации. [Официальная инструкция](https://support.claude.com/en/articles/12512180-use-skills-in-claude).
 

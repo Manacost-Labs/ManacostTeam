@@ -24,20 +24,34 @@ IGNORED = {
     ".pytest_cache",
     ".ruff_cache",
 }
-TEXT = {
-    ".md",
-    ".py",
-    ".json",
-    ".jsonl",
-    ".yaml",
-    ".yml",
-    ".ts",
-    ".js",
-    ".mjs",
-    ".txt",
-    ".tsv",
-    ".toml",
+BINARY = {
+    ".zip",
+    ".skill",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".woff",
+    ".woff2",
+    ".otf",
+    ".ttf",
+    ".pdf",
+    ".gz",
+    ".tgz",
 }
+
+
+def portable_bytes(file: Path) -> bytes:
+    """Normalize UTF-8 text, including extensionless LICENSE/METADATA files."""
+    payload = file.read_bytes()
+    if file.suffix.lower() in BINARY or b"\0" in payload:
+        return payload
+    try:
+        payload.decode("utf-8")
+    except UnicodeDecodeError:
+        return payload
+    return payload.replace(b"\r\n", b"\n")
 
 
 def load_registry(root: Path) -> list[dict]:
@@ -63,7 +77,11 @@ def confined(root: Path, relative: str) -> Path:
 def copy_resource(source: Path, destination: Path) -> dict[Path, Path]:
     if not source.exists():
         raise ValueError(f"missing package resource: {source}")
-    files = sorted(source.rglob("*")) if source.is_dir() else [source]
+    files = (
+        sorted(source.rglob("*"), key=lambda path: path.relative_to(source).as_posix())
+        if source.is_dir()
+        else [source]
+    )
     mapping = {}
     for file in files:
         relative = file.relative_to(source) if source.is_dir() else Path(file.name)
@@ -80,9 +98,7 @@ def copy_resource(source: Path, destination: Path) -> dict[Path, Path]:
         if target.name.lower() == "skill.md":
             target = target.with_name("WORKFLOW.md")
         target.parent.mkdir(parents=True, exist_ok=True)
-        payload = file.read_bytes()
-        if file.suffix.lower() in TEXT:
-            payload = payload.replace(b"\r\n", b"\n")
+        payload = portable_bytes(file)
         if target.exists() and target.read_bytes() != payload:
             raise ValueError(f"resource destination collision: {target}")
         target.write_bytes(payload)
@@ -195,7 +211,10 @@ def write_zip(
         validate_bundle(directory)
     archive.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as bundle:
-        for file in sorted(path for path in directory.rglob("*") if path.is_file()):
+        for file in sorted(
+            (path for path in directory.rglob("*") if path.is_file()),
+            key=lambda path: path.relative_to(directory).as_posix(),
+        ):
             info = zipfile.ZipInfo(f"{prefix}/{file.relative_to(directory).as_posix()}")
             info.date_time = (1980, 1, 1, 0, 0, 0)
             info.create_system = 3
@@ -212,17 +231,16 @@ def assemble(root: Path, entry: dict, destination: Path) -> None:
     destination.mkdir(parents=True)
     mapping = {}
     # This is the sole actual skill entrypoint; auxiliary skills become workflows.
-    for file in sorted(source.rglob("*")):
+    for file in sorted(
+        source.rglob("*"), key=lambda path: path.relative_to(source).as_posix()
+    ):
         if not file.is_file() or any(
             part in IGNORED for part in file.relative_to(source).parts
         ):
             continue
         target = destination / file.relative_to(source)
         target.parent.mkdir(parents=True, exist_ok=True)
-        payload = file.read_bytes()
-        if file.suffix.lower() in TEXT:
-            payload = payload.replace(b"\r\n", b"\n")
-        target.write_bytes(payload)
+        target.write_bytes(portable_bytes(file))
         mapping[file.resolve()] = target
     for resource in entry.get("resources", []):
         mapping.update(
@@ -242,7 +260,10 @@ def assemble(root: Path, entry: dict, destination: Path) -> None:
         path.relative_to(destination).as_posix(): hashlib.sha256(
             path.read_bytes()
         ).hexdigest()
-        for path in sorted(destination.rglob("*"))
+        for path in sorted(
+            destination.rglob("*"),
+            key=lambda path: path.relative_to(destination).as_posix(),
+        )
         if path.is_file()
     }
     manifest = {
