@@ -13,6 +13,8 @@ For Chinese Hearthstone questions, load [Chinese Hearthstone intelligence](refer
 
 ## Route the request
 
+For deep/exhaustive work, use [broad platform search](references/broad-platform-search.md): separate section-level X, Reddit, YouTube and general-web passes, EN/RU variants, creator searches, practical examples and contrary evidence. Plan queries with scripts/plan_queries.py and audit actual access with scripts/platform_coverage.py. Do not equate query generation with executed searches or platform coverage with independent corroboration.
+
 Before searching, record four choices in the research plan. For a guide, article, or other structured deliverable, also define its provisional section outline and source emphasis before generating queries.
 
 1. Research type: fact-check, explanatory, comparative, statistical, strategic, technical, landscape, or community intelligence. Select more than one when needed.

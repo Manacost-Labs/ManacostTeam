@@ -1,0 +1,4 @@
+name: marketing-team
+version: "1.0.0"
+team: MarketingTeam
+entrypoint: SKILL.md

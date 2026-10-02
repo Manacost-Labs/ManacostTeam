@@ -153,6 +153,11 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def snapshot_sha256(path: Path) -> str:
+    """Hash text snapshots independently of the checkout's line endings."""
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def validated_file_sha256(
     path: Path, label: str, errors: list[str]
 ) -> str | None:
@@ -975,21 +980,24 @@ def main() -> int:
                     )
                 snapshot_value = record.get("snapshot_path")
                 if isinstance(snapshot_value, str) and snapshot_value:
-                    try:
-                        snapshot = (root / snapshot_value).resolve()
-                        if not snapshot.is_relative_to(root):
-                            errors.append(f"{label}: snapshot_path escapes bundle")
-                        elif not snapshot.is_file():
-                            errors.append(f"{label}: snapshot_path does not exist")
-                        else:
-                            actual = hashlib.sha256(snapshot.read_bytes()).hexdigest()
-                            if digest and actual != digest:
-                                errors.append(
-                                    f"{label}: snapshot hash does not match "
-                                    "content_sha256"
-                                )
-                    except (OSError, RuntimeError, ValueError) as exc:
-                        errors.append(f"{label}: invalid snapshot_path: {exc}")
+                    if "\x00" in snapshot_value:
+                        errors.append(f"{label}: invalid snapshot_path: NUL byte")
+                    else:
+                        try:
+                            snapshot = (root / snapshot_value).resolve()
+                            if not snapshot.is_relative_to(root):
+                                errors.append(f"{label}: snapshot_path escapes bundle")
+                            elif not snapshot.is_file():
+                                errors.append(f"{label}: snapshot_path does not exist")
+                            else:
+                                actual = snapshot_sha256(snapshot)
+                                if digest and actual != digest:
+                                    errors.append(
+                                        f"{label}: snapshot hash does not match "
+                                        "content_sha256"
+                                    )
+                        except (OSError, RuntimeError, ValueError) as exc:
+                            errors.append(f"{label}: invalid snapshot_path: {exc}")
             elif string_in(status, {"unavailable", "exempt"}):
                 require_fields(record, ("fingerprint_reason",), label, errors)
 
@@ -1003,6 +1011,7 @@ def main() -> int:
                 and isinstance(source_id, str)
                 and isinstance(snapshot_value, str)
                 and snapshot_value
+                and "\x00" not in snapshot_value
             ):
                 try:
                     candidate = (root / snapshot_value).resolve()

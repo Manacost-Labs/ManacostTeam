@@ -33,7 +33,8 @@ export function loadManifest() {
 }
 
 export function sha256(buffer) {
-  return createHash('sha256').update(buffer).digest('hex');
+  const canonicalBytes = Buffer.from(buffer.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+  return createHash('sha256').update(canonicalBytes).digest('hex');
 }
 
 const GAME_TYPE_MODES = {

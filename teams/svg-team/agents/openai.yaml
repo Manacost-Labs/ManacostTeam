@@ -1,0 +1,4 @@
+interface:
+  display_name: "svg-team"
+  short_description: "Графики и инфографика по проверенным данным"
+  default_prompt: "Use $svg-team to complete this task."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ads"
+  short_description: "Marketing guidance for Ads"
+  default_prompt: "Use $ads to help with this marketing task."

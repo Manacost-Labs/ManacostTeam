@@ -1,0 +1,4 @@
+interface:
+  display_name: "Launch"
+  short_description: "Marketing guidance for Launch"
+  default_prompt: "Use $launch to help with this marketing task."

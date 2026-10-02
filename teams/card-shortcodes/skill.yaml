@@ -1,0 +1,4 @@
+name: card-shortcodes
+version: "1.0.0"
+team: EditorTeam
+entrypoint: SKILL.md

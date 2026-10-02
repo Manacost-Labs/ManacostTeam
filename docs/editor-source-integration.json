@@ -1,0 +1,23 @@
+{
+  "source": "../ManacostTeam/EditorTeam",
+  "base_commit": "ff89675",
+  "paths": [
+    ".claude/skills/hs-edit/assets/markers.json",
+    ".claude/skills/hs-edit/references/ai-markers.md",
+    ".claude/skills/hs-edit/references/rewrite-protocol.md",
+    ".claude/skills/hs-edit/scripts/claims.py",
+    ".claude/skills/hs-edit/scripts/common.py",
+    ".claude/skills/hs-edit/scripts/lexicon.py",
+    ".claude/skills/hs-edit/scripts/markers.py",
+    ".claude/skills/hs-edit/scripts/rewrite_gate.py",
+    ".claude/skills/hs-edit/scripts/semantic_diff.py",
+    "config/profiles/battlegrounds-article.yaml",
+    "config/profiles/battlegrounds-guide.yaml",
+    "src/editorteam/cli.py",
+    "config/dictionaries/battlegrounds.txt",
+    "tests/unit/test_lexicon_profile.py",
+    "tests/unit/test_markers_document_scope.py",
+    "tests/unit/test_negation_types.py"
+  ],
+  "excluded": "local article/report documents and user data"
+}

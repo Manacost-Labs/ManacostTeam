@@ -84,7 +84,8 @@ def main() -> int:
             missing.append(str(source.get("source_id", "unknown")))
             continue
         payload = snapshot.read_bytes()
-        digest = hashlib.sha256(payload).hexdigest()
+        canonical_payload = payload.replace(b"\r\n", b"\n")
+        digest = hashlib.sha256(canonical_payload).hexdigest()
         verified += 1
         if args.apply:
             source["content_sha256"] = digest

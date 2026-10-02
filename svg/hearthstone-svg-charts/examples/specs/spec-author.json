@@ -4,7 +4,7 @@
   "data": {
     "name": "Zulut",
     "role": "автор и редактор hs-manacost.ru",
-    "avatar": "/Users/zulut/Documents/svg-skill/hearthstone-svg-charts/assets/manacost-avatar.jpeg",
+    "avatar": "assets/manacost-avatar.jpeg",
     "tagline": "Пишу про Арену и Поля сражений: меты, тир-листы и гайды по колодам.",
     "stats": [
       {"value": "480+", "label": "статей"},

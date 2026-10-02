@@ -1,0 +1,4 @@
+name: xml-team
+version: "1.0.0"
+team: XMLTeam
+entrypoint: SKILL.md

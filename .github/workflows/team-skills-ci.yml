@@ -1,0 +1,67 @@
+name: Portable Team skills
+
+on:
+  push:
+    paths:
+      - 'teams/**'
+      - 'tools/**'
+      - 'tests/**'
+      - 'release/team-skills/**'
+      - 'editor/**'
+      - 'research/deep-research/**'
+      - 'svg/hearthstone-svg-charts/**'
+      - 'job/sources/**'
+      - 'marketing/**'
+      - 'translate/**'
+      - 'XMLTeam/**'
+      - '.gitattributes'
+      - '.github/workflows/team-skills-ci.yml'
+  pull_request:
+    paths:
+      - 'teams/**'
+      - 'tools/**'
+      - 'tests/**'
+      - 'release/team-skills/**'
+      - 'editor/**'
+      - 'research/deep-research/**'
+      - 'svg/**'
+      - 'job/**'
+      - 'marketing/**'
+      - 'translate/**'
+      - 'XMLTeam/**'
+      - '.gitattributes'
+
+permissions:
+  contents: read
+
+jobs:
+  reproducible-packages:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m unittest discover -s tests -p test_team_packages.py
+      - run: python tools/build_team_skills.py --check
+
+  xml-source-kit:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python tools/smoke_xml_skill.py

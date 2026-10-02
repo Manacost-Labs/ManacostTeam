@@ -1,0 +1,4 @@
+name: editor-team
+version: "1.0.0"
+team: EditorTeam
+entrypoint: SKILL.md

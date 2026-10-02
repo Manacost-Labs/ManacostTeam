@@ -1,0 +1,4 @@
+interface:
+  display_name: "GPT Image Ad Creative"
+  short_description: "Визуальные рекламные креативы для товаров"
+  default_prompt: "Use $gpt-image-ad-creative to generate an original product-ad visual."

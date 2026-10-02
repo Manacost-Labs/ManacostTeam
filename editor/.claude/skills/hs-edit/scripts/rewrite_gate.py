@@ -473,10 +473,10 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
     })
     # лексика автора: доля лемм, которых нет в корпусе (leave-one-out у автора 2–3%)
     lexicon = C.sibling("lexicon")
-    lx = lexicon.measure(after)
+    lx = lexicon.measure(after, profile=profile)
     if lx:
         metrics["lexicon"] = {"ratio": lx["ratio"], "missing": lx["missing"][:40]}
-        for f in lexicon.findings(after, lx):
+        for f in lexicon.findings(after, lx, profile=profile):
             item = _item("lexicon_gap", f["message"], f["severity"], suggestion=f["suggestion"])
             (violations if f["severity"] == "error" else warnings).append(item)
 

@@ -109,7 +109,11 @@ def load_catalog(path: Path) -> tuple[Card, ...]:
         if not isinstance(entry, dict):
             raise ExportError(f"запись каталога #{index} должна быть объектом")
         name, card_id, formats = entry.get("name"), entry.get("id"), entry.get("formats")
-        if not isinstance(name, str) or not isinstance(card_id, str) or not isinstance(formats, list):
+        if (
+            not isinstance(name, str)
+            or not isinstance(card_id, str)
+            or not isinstance(formats, list)
+        ):
             raise ExportError(f"в записи каталога #{index} нужны name, id и formats")
         catalog.append(Card(name, card_id, frozenset(parse_format(item) for item in formats)))
     return _validated_catalog(catalog)
@@ -172,7 +176,11 @@ def _render_inline(text: str, catalog: Iterable[Card], game_format: HearthstoneF
     parts: list[str] = []
     cursor = 0
     for shortcode in SHORTCODE.finditer(text):
-        parts.append(_highlight_cards(html.escape(text[cursor : shortcode.start()], quote=False), catalog, game_format))
+        parts.append(
+            _highlight_cards(
+                html.escape(text[cursor : shortcode.start()], quote=False), catalog, game_format
+            )
+        )
         parts.append(shortcode.group(0))
         cursor = shortcode.end()
     parts.append(_highlight_cards(html.escape(text[cursor:], quote=False), catalog, game_format))
@@ -214,7 +222,9 @@ def render_wordpress_html(
         if heading:
             flush_paragraph()
             level = len(heading.group("level"))
-            output.append(f"<h{level}>{_render_inline(heading.group('text'), cards, game_format)}</h{level}>")
+            output.append(
+                f"<h{level}>{_render_inline(heading.group('text'), cards, game_format)}</h{level}>"
+            )
             continue
         paragraph.append(line.strip())
     flush_paragraph()

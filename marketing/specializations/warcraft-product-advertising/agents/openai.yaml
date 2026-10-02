@@ -1,0 +1,4 @@
+interface:
+  display_name: "Warcraft Product Ads"
+  short_description: "Реклама товаров для Hearthstone и Warcraft"
+  default_prompt: "Use $warcraft-product-advertising to prepare an evidence-led ad package for a Hearthstone or Warcraft product."

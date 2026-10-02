@@ -37,6 +37,25 @@ def _find_root():
     return SKILL
 
 
+def ensure_utf8_stdio():
+    """Вывод в UTF-8 независимо от кодировки консоли.
+
+    На Windows при выводе в трубу или файл stdout получает cp1251, и первая же
+    стрелка «→» или тире в сообщении роняет скрипт с UnicodeEncodeError.
+    Все проверки печатают русский текст со спецсимволами, поэтому кодировка
+    принудительная, а не зависит от PYTHONUTF8 в окружении пользователя.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (OSError, ValueError):
+                pass
+
+
+ensure_utf8_stdio()
+
 ROOT = _find_root()
 CORPUS = ROOT / "гайды"
 MANAGED_CORPUS = ROOT / "corpus" / "guides"

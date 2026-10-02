@@ -10,7 +10,9 @@ const modes = {};
 const builds = new Set();
 for (const entry of manifest.entries) {
   const path = fileURLToPath(new URL(entry.file, manifestUrl));
-  const sha = createHash('sha256').update(readFileSync(path)).digest('hex');
+  const bytes = readFileSync(path);
+  const canonicalBytes = Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+  const sha = createHash('sha256').update(canonicalBytes).digest('hex');
   if (sha !== entry.sha256) {
     bad++;
     console.log(`MISMATCH ${entry.file}`);

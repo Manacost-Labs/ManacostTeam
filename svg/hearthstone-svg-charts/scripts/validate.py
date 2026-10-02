@@ -89,6 +89,12 @@ def check(path: str) -> list[str]:
 
 
 def main() -> None:
+    # Windows terminals may default to a legacy code page that cannot render
+    # the symbols used by valid chart labels (★, →, ×). Keep CLI output stable.
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
     fail = False
     for path in sys.argv[1:]:
         problems = check(path)

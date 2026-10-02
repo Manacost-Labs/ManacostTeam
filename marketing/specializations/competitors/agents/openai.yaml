@@ -1,0 +1,4 @@
+interface:
+  display_name: "Competitors"
+  short_description: "Marketing guidance for Competitors"
+  default_prompt: "Use $competitors to help with this marketing task."

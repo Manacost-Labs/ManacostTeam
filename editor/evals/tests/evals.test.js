@@ -328,7 +328,7 @@ test('LLM judge config is supplemental: eight named zero-weight rubrics behind t
   assert.match(judge, /file:\/\/assertions\/deterministic\.js/);
   const metrics = ['clarity', 'naturalness', 'structure', 'usefulness', 'voice', 'ai-slop', 'bureaucracy', 'false-positives'];
   for (const metric of metrics) {
-    assert.match(judge, new RegExp(`metric: judge-${metric}\\n\\s+weight: 0`), `judge-${metric} must be a zero-weight metric`);
+    assert.match(judge, new RegExp(`metric: judge-${metric}\\r?\\n\\s+weight: 0`), `judge-${metric} must be a zero-weight metric`);
     const rubric = fs.readFileSync(path.join(evalsRoot, 'assertions/judge', `${metric}.txt`), 'utf8');
     assert.ok(rubric.includes('{{text}}'), `${metric} rubric must compare against the source text`);
   }
@@ -399,7 +399,7 @@ test('retrieval comparison config runs candidate with and without retrieval on t
   assert.match(config, /providers\/pipeline-e2e\.js/);
   assert.match(config, /file:\/\/assertions\/deterministic\.js/);
   for (const metric of ['voice', 'naturalness', 'clarity', 'usefulness', 'facts', 'example-copying']) {
-    assert.match(config, new RegExp(`metric: judge-${metric}\\n\\s+weight: 0`));
+    assert.match(config, new RegExp(`metric: judge-${metric}\\r?\\n\\s+weight: 0`));
     assert.ok(fs.readFileSync(path.join(evalsRoot, 'assertions/judge', `${metric}.txt`), 'utf8').includes('{{text}}'));
   }
   const cases = JSON.parse(fs.readFileSync(path.join(evalsRoot, 'cases/cases.json'), 'utf8'));

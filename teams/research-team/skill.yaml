@@ -1,0 +1,4 @@
+name: research-team
+version: "1.0.0"
+team: ResearchTeam
+entrypoint: SKILL.md

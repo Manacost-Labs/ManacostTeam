@@ -1,0 +1,39 @@
+name: SVG CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "svg/**"
+      - ".github/workflows/svg-ci.yml"
+  pull_request:
+    paths:
+      - "svg/**"
+      - ".github/workflows/svg-ci.yml"
+
+defaults:
+  run:
+    working-directory: svg/hearthstone-svg-charts
+
+jobs:
+  validate:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.13"]
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m compileall -q scripts
+      - name: Validate example SVGs
+        run: python -c "import glob, subprocess, sys; raise SystemExit(subprocess.call([sys.executable, 'scripts/validate.py', *glob.glob('examples/*.svg')]))"
+      - name: Generate and validate representative chart
+        run: |
+          python scripts/make_chart.py examples/specs/spec-bars.json -o generated-ci.svg
+          python scripts/validate.py generated-ci.svg

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Marketing"
+  short_description: "Marketing guidance for Product Marketing"
+  default_prompt: "Use $product-marketing to help with this marketing task."

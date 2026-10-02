@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social"
+  short_description: "Marketing guidance for Social"
+  default_prompt: "Use $social to help with this marketing task."

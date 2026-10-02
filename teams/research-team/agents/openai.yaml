@@ -1,0 +1,4 @@
+interface:
+  display_name: "research-team"
+  short_description: "Исследования X, Reddit, YouTube и веб-источников"
+  default_prompt: "Use $research-team to complete this task."

@@ -14,12 +14,19 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const work = mkdtempSync(join(tmpdir(), 'hsreplay-pack-'));
 const run = (command, args, cwd) =>
   execFileSync(command, args, { cwd, stdio: ['ignore', 'pipe', 'inherit'] }).toString();
+const pnpmEntrypoint = process.env.npm_execpath;
+const runPnpm = (args, cwd) => {
+  if (!pnpmEntrypoint) {
+    throw new Error('pnpm entrypoint is unavailable; run this smoke test through pnpm');
+  }
+  return run(process.execPath, [pnpmEntrypoint, ...args], cwd);
+};
 const FORBIDDEN_IN_TARBALL = [
   /^package\/\.claude\//,
   /^package\/test\//,
@@ -30,7 +37,7 @@ const FORBIDDEN_IN_TARBALL = [
 ];
 
 try {
-  run('pnpm', ['pack', '--pack-destination', work], root);
+  runPnpm(['pack', '--pack-destination', work], root);
   const tarball = readdirSync(work).find((name) => name.endsWith('.tgz'));
   if (!tarball) throw new Error('pnpm pack produced no tarball');
   const listing = run('tar', ['-tzf', join(work, tarball)])
@@ -52,7 +59,7 @@ try {
     JSON.stringify({ name: 'consumer', private: true, type: 'module' }),
   );
   cpSync(join(root, 'test.xml'), join(project, 'test.xml'));
-  run('npm', ['install', '--no-audit', '--no-fund', '--silent', join(work, tarball)], project);
+  runPnpm(['add', '--silent', join(work, tarball)], project);
 
   // 1. Node import of both entry points.
   writeFileSync(
@@ -109,12 +116,9 @@ export async function summarise(path: string): Promise<{ packets: number; events
   const typesNodeVersion = JSON.parse(
     readFileSync(join(root, 'node_modules', '@types', 'node', 'package.json'), 'utf8'),
   ).version;
-  run(
-    'npm',
+  runPnpm(
     [
-      'install',
-      '--no-audit',
-      '--no-fund',
+      'add',
       '--silent',
       '--save-dev',
       `typescript@${typescriptVersion}`,
@@ -130,7 +134,9 @@ export async function summarise(path: string): Promise<{ packets: number; events
   console.log('typescript compile ok');
 
   // 3. Browser bundle of the core entry: no node: imports may remain.
-  const esbuild = await import(join(root, 'node_modules', 'esbuild', 'lib', 'main.js'));
+  const esbuild = await import(
+    pathToFileURL(join(root, 'node_modules', 'esbuild', 'lib', 'main.js')).href
+  );
   const result = await esbuild.build({
     stdin: {
       contents: `import { parseReplay, extractEvents } from '@manacost/hearthstone-replay'; console.log(extractEvents(parseReplay('<HSReplay version="1.7"><Game id="1"/></HSReplay>')).length);`,

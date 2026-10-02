@@ -20,12 +20,12 @@ def env():
 def test_new_card_is_reported_and_known_cards_are_not(env):
     idx, common, proper = env
     text = (
-        "Разбойник получил Главного канонира и Притягивающий крюк, а Чернокнижник "
-        "разогнался за счет Крестного отца Казакуса. Оставляйте Мастера брони против агро."
+        "Разбойник получил Главного канонира и Квантовый крюкомёт, а Чернокнижник "
+        "разогнался за счет Лунного отца Кадгара. Оставляйте Мастера брони против агро."
     )
     found = cards.unknown_names(text, idx, common, proper)
-    assert "Притягивающий крюк" in found
-    assert "Крестного отца Казакуса" in found
+    assert "Квантовый крюкомёт" in found
+    assert "Лунного отца Кадгара" in found
     assert not any("канонира" in k or "брони" in k for k in found)
 
 
@@ -40,14 +40,14 @@ def test_sentence_starts_classes_ranks_and_archetypes_are_not_cards(env):
 
 def test_claims_extract_keeps_unknown_cards_as_review_claims(env):
     src = claims.extract(
-        "Муллиган\nОставляйте Притягивающий крюк против агро и Мастера брони тоже."
+        "Муллиган\nОставляйте Квантовый крюкомёт против агро и Мастера брони тоже."
     )
     by_name = {c["name"]: c for c in src["cards"]}
-    assert by_name["Притягивающий крюк"]["source"] == "unknown"
+    assert by_name["Квантовый крюкомёт"]["source"] == "unknown"
     assert by_name["Мастер брони"]["source"] == "db"
     violations, warnings, _ = claims.coverage(
         src, "Муллиган\nОставляйте Мастера брони против агро."
     )
     assert not [v for v in violations if v["field"] == "card"]
-    lost = [w for w in warnings if w["field"] == "card" and w["claim"] == "Притягивающий крюк"]
+    lost = [w for w in warnings if w["field"] == "card" and w["claim"] == "Квантовый крюкомёт"]
     assert lost and "нет в справочнике" in lost[0]["message"]

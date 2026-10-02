@@ -12,6 +12,8 @@
   * многословные названия карт (однословные совпадают со случайными словами);
   * советы «оставлять / сбрасывать» по картам — из consistency.py;
   * отрицания с якорем: карта, класс или число в одном предложении с «не»;
+    обязательны только фактические, риторические и контрастные («X, а не Y»)
+    в переплавку не тянутся: см. semantic_diff.negation_type;
   * числа с контекстом, коды колод, упомянутые классы, заголовки.
 
 Покрытие: карта пропала — отказ; совет перевёрнут — отказ; отрицание снято
@@ -254,8 +256,10 @@ def extract(text, *, profile="constructed-guide"):
         if not anchors:
             continue
         verbs = _verb_lemmas(s)
+        nature = C.sibling("semantic_diff").negation_type(s)
         for kind, anchor in anchors:
             negations.append({"anchor": anchor, "anchor_kind": kind, "verb_lemmas": verbs,
+                              "type": nature,
                               "sentence": " ".join(s.split())[:200], "line": line,
                               "section": _section_at(line, spans)})
 
@@ -371,9 +375,14 @@ def coverage(source, after, *, declared_missing=None):
             })
 
     # отрицания с якорем
-    kept_negations, total_negations = 0, 0
+    kept_negations, total_negations, optional_negations = 0, 0, 0
     seen_neg = set()
     for neg in source.get("negations", []):
+        # риторика и контраст исходника не обязаны пережить переплавку;
+        # старые выгрузки без поля type считаются фактическими
+        if neg.get("type", "fact") != "fact":
+            optional_negations += 1
+            continue
         key = (neg["anchor_kind"], neg["anchor"], tuple(neg["verb_lemmas"]))
         if key in seen_neg:
             continue
@@ -425,6 +434,7 @@ def coverage(source, after, *, declared_missing=None):
         "cards_total": cards_total, "cards_covered": covered_cards,
         "stances_total": len(src_by_card), "stances_kept": kept_stances,
         "negations_total": total_negations, "negations_kept": kept_negations,
+        "negations_optional": optional_negations,
         "classes_total": len(source.get("classes", [])),
         "classes_kept": len(source.get("classes", [])) - len(lost_classes),
         "numbers_total": sum(src_numbers.values()), "numbers_kept": numbers_kept,
@@ -475,7 +485,7 @@ def main():
         for c in source["cards"]:
             print(f"  карта   {c['name']} ×{c['mentions']}  стр.{c['line']}")
         for n in source["negations"]:
-            print(f"  «не»    [{n['anchor_kind']}] {n['anchor']}: {n['sentence'][:90]}")
+            print(f"  «не»    [{n['anchor_kind']}/{n.get('type', 'fact')}] {n['anchor']}: {n['sentence'][:90]}")
         return 0
     ap_path = Path(args.after)
     if not ap_path.exists():
@@ -495,7 +505,8 @@ def main():
         print(f"  [REVIEW:{item['field']}] {item['message']}")
     print(f"\n  покрытие {metrics['coverage_pct']}%: карты {metrics['cards_covered']}/{metrics['cards_total']}, "
           f"советы {metrics['stances_kept']}/{metrics['stances_total']}, "
-          f"отрицания {metrics['negations_kept']}/{metrics['negations_total']}, "
+          f"отрицания {metrics['negations_kept']}/{metrics['negations_total']} "
+          f"(ещё {metrics['negations_optional']} риторических и контрастных не требуются), "
           f"классы {metrics['classes_kept']}/{metrics['classes_total']}")
     return 1 if violations else 0
 

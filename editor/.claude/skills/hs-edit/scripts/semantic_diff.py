@@ -26,6 +26,44 @@ CONTRACT_FIELDS = (
 )
 
 
+# Оговорки автора исходника про сам исходник, его доказательства и подготовку
+# материала: «не претендует», «получить не удалось», «не забыть», «нельзя
+# подтвержденно объявить», «для статьи». Читателю статьи они ничего не дают.
+_META_NEGATION = re.compile(
+    r"""
+    \bне\s+(?:претендует|удалось|забыть|забывайте|забудьте|заявля\w+|
+             включен\w*|подтвержден\w*|измерен\w*)\b
+  | \bнельзя\s+(?:\w+\s+){0,2}?(?:подтвержд\w+|объявл\w+|считать|утверждать|
+                            выдавать|приписывать|приводить)\b
+  | \b(?:для|в)\s+(?:статьи|статью|мета-?отч[её]та|отч[её]та|абзаца|материала)\b
+  | \bпроверить,\s+не\b
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+# «не просто X, а Y» и «X, а не Y»: отрицание только в противопоставлении
+_CONTRAST = re.compile(r",\s*а\s+не\s|\bне\s+(?:просто|только)\s[^.!?;]{0,80}?,\s*а\s", re.IGNORECASE)
+
+
+def negation_type(sentence: str) -> str:
+    """Что за отрицание в предложении исходника: fact, contrast или rhetorical.
+
+    fact — отрицание несёт факт игры или совет («Бранн не удваивает Беглеца»,
+    «не оставляйте Мастера брони»). Его потеря — потеря смысла.
+    contrast — отрицание стоит только в противопоставлении «X, а не Y». Смысл
+    держит положительная половина, её покрывают проверки карт и чисел.
+    rhetorical — оговорка автора исходника о самом исходнике и доказательствах.
+
+    Требовать сохранить два последних вида нельзя: тогда переплавка тащит в
+    текст риторику источника, а именно её и надо вычищать.
+    """
+    if _META_NEGATION.search(sentence):
+        return "rhetorical"
+    leftover = _CONTRAST.sub(" ", sentence)
+    if NEGATION.search(sentence) and not NEGATION.search(leftover):
+        return "contrast"
+    return "fact"
+
+
 def _sentences(text: str) -> list[str]:
     return [item.strip() for item in re.split(r"(?<=[.!?…])\s+|\n+", text) if item.strip()]
 
@@ -46,7 +84,7 @@ def negation_flips(before: str, after: str) -> list[dict]:
     issues = []
     after_sentences = _sentences(after)
     for source in _sentences(before):
-        if not NEGATION.search(source):
+        if not NEGATION.search(source) or negation_type(source) != "fact":
             continue
         best = max(after_sentences, key=lambda item: _similarity(source, item), default="")
         similarity = _similarity(source, best)

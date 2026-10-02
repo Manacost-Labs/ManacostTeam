@@ -1,0 +1,4 @@
+interface:
+  display_name: "card-shortcodes"
+  short_description: "Контекстная подсветка карт без правки текста"
+  default_prompt: "Use $card-shortcodes to complete this task."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "xml-team"
+  short_description: "Наблюдаемые факты из XML-реплеев"
+  default_prompt: "Use $xml-team to complete this task."

@@ -1,0 +1,4 @@
+name: job-team
+version: "1.0.0"
+team: JobTeam
+entrypoint: SKILL.md

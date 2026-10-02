@@ -5,7 +5,7 @@ Usage:
     python3 scripts/export_png.py chart.svg            # chart.png, 2x
     python3 scripts/export_png.py chart.svg -z 3       # 3x for retina/print
 
-Needs resvg (brew install resvg). Renders with system fonts: Cinzel falls back
+Needs resvg on PATH (install for your operating system). Renders with system fonts: Cinzel falls back
 to Georgia — check the PNG before publishing.
 """
 import argparse
@@ -35,7 +35,7 @@ def main():
     ap.add_argument("--no-quant", action="store_true", help="не сжимать pngquant")
     a = ap.parse_args()
     if not shutil.which("resvg"):
-        sys.exit("resvg не найден: brew install resvg")
+        sys.exit("resvg не найден: установите resvg для вашей ОС и добавьте его в PATH")
     for s in a.svg:
         src = pathlib.Path(s)
         out = src.with_suffix(".png")

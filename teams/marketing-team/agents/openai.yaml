@@ -1,0 +1,4 @@
+interface:
+  display_name: "marketing-team"
+  short_description: "Реклама продуктов Hearthstone и Warcraft"
+  default_prompt: "Use $marketing-team to complete this task."

@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "teams": 7,
+  "skills": 8,
+  "archives": {
+    "editor-team-1.0.0.zip": "60df0955e25073b0c30c4bbe3d148c49b36825318ae7042a7cc49737807d9112",
+    "editor-team-1.0.0.skill": "60df0955e25073b0c30c4bbe3d148c49b36825318ae7042a7cc49737807d9112",
+    "research-team-1.0.0.zip": "f33f3a829e604f65ab0cf0b7fd9c30039465591fd327118e04d5e89a7ebcd949",
+    "research-team-1.0.0.skill": "f33f3a829e604f65ab0cf0b7fd9c30039465591fd327118e04d5e89a7ebcd949",
+    "svg-team-1.0.0.zip": "41bd2d7c06e8322e68f752a39c8e8ff8bf0f09d7b6877364459b5904164d91a3",
+    "svg-team-1.0.0.skill": "41bd2d7c06e8322e68f752a39c8e8ff8bf0f09d7b6877364459b5904164d91a3",
+    "translate-team-1.0.0.zip": "81af96fd9558eee42c46e63f8b7a3efa17213c47ad02b55d4e2c13906edcd930",
+    "translate-team-1.0.0.skill": "81af96fd9558eee42c46e63f8b7a3efa17213c47ad02b55d4e2c13906edcd930",
+    "xml-team-1.0.0.zip": "c6d9b367edd9bee12231888d9e6f7d361ca9bc618b4432f8a04c81a255c5a063",
+    "xml-team-1.0.0.skill": "c6d9b367edd9bee12231888d9e6f7d361ca9bc618b4432f8a04c81a255c5a063",
+    "job-team-1.0.0.zip": "ba0bf4d97211d071ce1dab3d19c1865fbcf36098f953ce6dadf1169f131af0a3",
+    "job-team-1.0.0.skill": "ba0bf4d97211d071ce1dab3d19c1865fbcf36098f953ce6dadf1169f131af0a3",
+    "marketing-team-1.0.0.zip": "4f0496ba24d904403150f51de29f463ef2be5e84278a7829ac591b6009cb2b41",
+    "marketing-team-1.0.0.skill": "4f0496ba24d904403150f51de29f463ef2be5e84278a7829ac591b6009cb2b41",
+    "card-shortcodes-1.0.0.zip": "fb67230203c81b6187639e869ad59852ae85a14f56763e8e1fd0c9f83a2df594",
+    "card-shortcodes-1.0.0.skill": "fb67230203c81b6187639e869ad59852ae85a14f56763e8e1fd0c9f83a2df594",
+    "manacost-team-1.0.0-plugin.zip": "d559107cd0f0a568aab3dafe2c3a1d2f5786c22a440186753924b133aef1f4fd"
+  }
+}

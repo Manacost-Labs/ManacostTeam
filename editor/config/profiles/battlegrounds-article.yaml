@@ -26,3 +26,15 @@ matchups: {require_classes: false}
 analyzers: {markers: true, rhythm: true, soul: true, cards: true, structure: true, consistency: true, clarity: true}
 weights: {живое: 0.25, ритм: 0.20, чистота: 0.15, названия: 0.10, согласованность: 0.10, понятность: 0.20}
 note: "Публичный аналитический материал, а не исследовательский отчёт и не пошаговый гайд"
+# лексика: у Полей сражений свои термины, которых нет в гайдах по колодам.
+# extra_corpora и glossary расширяют «слова автора», skip_unknown_cards не считает
+# чужими слова из названий существ, которых нет в справочнике карт Constructed.
+# Пороги: каждая из 37 статей corpus-bg против только более ранних (у новой статьи
+# всегда есть слова нового сезона): медиана 2,6%, p90 4,6%, максимум 8,8%.
+# warn_pct — p90, fail_pct — максимум. Пересчитать при обновлении corpus-bg.
+lexicon:
+  extra_corpora: [corpus-bg]
+  glossary: [battlegrounds]
+  skip_unknown_cards: true
+  warn_pct: 4.6
+  fail_pct: 8.8

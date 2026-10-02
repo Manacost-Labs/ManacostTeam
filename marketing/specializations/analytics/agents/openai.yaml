@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analytics"
+  short_description: "Marketing guidance for Analytics"
+  default_prompt: "Use $analytics to help with this marketing task."

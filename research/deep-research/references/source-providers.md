@@ -8,6 +8,8 @@ All adapters are read-only. This package intentionally exposes no login, cookie,
 
 ## Routing
 
+For section-level discovery, follow [broad platform search](broad-platform-search.md). Use public indexed searches before treating an unconfigured specialist adapter as a blocker. Report actual inspected coverage with scripts/platform_coverage.py; missing access remains partial rather than being silently replaced by another platform.
+
 | Need | Preferred route | Fallback and limitation |
 |---|---|---|
 | General web discovery and normal pages | ChatGPT Search/Web | TinyFish Search/Fetch when installed and useful for access or clean extraction |

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Customer Research"
+  short_description: "Marketing guidance for Customer Research"
+  default_prompt: "Use $customer-research to help with this marketing task."

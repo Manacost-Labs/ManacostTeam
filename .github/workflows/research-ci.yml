@@ -1,0 +1,48 @@
+name: Research CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research/**"
+      - ".github/workflows/research-ci.yml"
+  pull_request:
+    paths:
+      - "research/**"
+      - ".github/workflows/research-ci.yml"
+
+defaults:
+  run:
+    working-directory: research
+
+jobs:
+  checks:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.12", "3.13"]
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Refuse tracked secrets
+        shell: bash
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)'; then
+            echo "a .env file is tracked" >&2; exit 1
+          fi
+          if git grep -nE '(REDDITAPIS_KEY|GETXAPI_KEY|TRANSCRIPTAPI_TOKEN|SCRAPE_DO_API_TOKEN|KHS_API_TOKEN|OPENAI_API_KEY|SOURCE_GATEWAY_TOKEN)=[A-Za-z0-9]' -- ':!*.md'; then
+            echo "a credential value appears in the tree" >&2; exit 1
+          fi
+      - run: python -m unittest discover -s deep-research/tests -p "test_*.py"
+      - run: python deep-research/scripts/audit_skill.py
+      - run: python deep-research/scripts/validate_benchmark.py evaluation/benchmark --stage release
+      - run: python deep-research/scripts/score_semantic_gold.py evaluation/gold/semantic-cases.jsonl evaluation/gold/semantic-predictions.jsonl
+      - run: python deep-research/scripts/validate_recall.py evaluation/recall --stage plan
+      - run: python deep-research/scripts/search_coverage.py evaluation/provenance-demo
+      - run: python deep-research/scripts/search_coverage.py evaluation/benchmark/runs/BENCH-004 --json

@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "name": "editor-team",
+      "team": "EditorTeam",
+      "module": "editor",
+      "version": "1.0.0",
+      "source": "teams/editor-team",
+      "resources": [
+        {
+          "source": "editor/tools/SKILL.md",
+          "destination": "references/editor-workflow.md"
+        },
+        {
+          "source": "editor/.claude/skills/hs-edit/scripts",
+          "destination": "scripts"
+        },
+        {
+          "source": "editor/.claude/skills/hs-edit/assets",
+          "destination": "assets"
+        },
+        {
+          "source": "editor/.claude/skills/hs-edit/references",
+          "destination": "references"
+        },
+        {
+          "source": "editor/config",
+          "destination": "config"
+        },
+        {
+          "source": "editor/src/editorteam",
+          "destination": "python/editorteam"
+        },
+        {
+          "source": "editor/гайды",
+          "destination": "гайды"
+        },
+        {
+          "source": "editor/corpus",
+          "destination": "corpus"
+        },
+        {
+          "source": "editor/ГОЛОС.md",
+          "destination": "ГОЛОС.md"
+        },
+        {
+          "source": "editor/СТИЛЬ.md",
+          "destination": "СТИЛЬ.md"
+        },
+        {
+          "source": "editor/release/editor-team/skills/hearthstone-editor/vendor",
+          "destination": "vendor"
+        },
+        {
+          "source": "editor/release/editor-team/skills/hearthstone-editor/scripts/editor_team.py",
+          "destination": "scripts/editor_team.py"
+        },
+        {
+          "source": "editor/release/editor-team/skills/hearthstone-editor/scripts/sitecustomize.py",
+          "destination": "scripts/sitecustomize.py"
+        },
+        {
+          "source": "editor/third_party/licenses",
+          "destination": "licenses"
+        }
+      ]
+    },
+    {
+      "name": "research-team",
+      "team": "ResearchTeam",
+      "module": "research",
+      "version": "1.0.0",
+      "source": "teams/research-team",
+      "resources": [
+        {
+          "source": "research/deep-research/SKILL.md",
+          "destination": "references/research-workflow.md"
+        },
+        {
+          "source": "research/deep-research/scripts",
+          "destination": "scripts"
+        },
+        {
+          "source": "research/deep-research/references",
+          "destination": "references"
+        }
+      ]
+    },
+    {
+      "name": "svg-team",
+      "team": "SVGTeam",
+      "module": "svg",
+      "version": "1.0.0",
+      "source": "teams/svg-team",
+      "resources": [
+        {
+          "source": "svg/hearthstone-svg-charts/SKILL.md",
+          "destination": "references/svg-workflow.md"
+        },
+        {
+          "source": "svg/hearthstone-svg-charts/scripts",
+          "destination": "scripts"
+        },
+        {
+          "source": "svg/hearthstone-svg-charts/references",
+          "destination": "references"
+        },
+        {
+          "source": "svg/hearthstone-svg-charts/assets",
+          "destination": "assets"
+        },
+        {
+          "source": "svg/hearthstone-svg-charts/examples",
+          "destination": "examples"
+        }
+      ]
+    },
+    {
+      "name": "translate-team",
+      "team": "TranslateTeam",
+      "module": "translate",
+      "version": "1.0.0",
+      "source": "teams/translate-team",
+      "resources": [
+        {
+          "source": "skills/wow-hearthstone-translator/SKILL.md",
+          "destination": "references/translation-workflow.md"
+        },
+        {
+          "source": "translate/app/core.py",
+          "destination": "scripts/translation_core.py"
+        },
+        {
+          "source": "translate/tools",
+          "destination": "tools"
+        }
+      ]
+    },
+    {
+      "name": "xml-team",
+      "team": "XMLTeam",
+      "module": "XMLTeam",
+      "version": "1.0.0",
+      "source": "teams/xml-team",
+      "resources": [
+        {
+          "source": "skills/xml-replay-analysis/SKILL.md",
+          "destination": "references/replay-workflow.md"
+        },
+        {
+          "source": "XMLTeam/docs/reliability.md",
+          "destination": "references/reliability.md"
+        },
+        {
+          "source": "XMLTeam/src",
+          "destination": "runtime/src"
+        },
+        {
+          "source": "XMLTeam/package.json",
+          "destination": "runtime/package.json"
+        },
+        {
+          "source": "XMLTeam/tsconfig.json",
+          "destination": "runtime/tsconfig.json"
+        },
+        {
+          "source": "XMLTeam/tsconfig.build.json",
+          "destination": "runtime/tsconfig.build.json"
+        },
+        {
+          "source": "XMLTeam/pnpm-lock.yaml",
+          "destination": "runtime/pnpm-lock.yaml"
+        },
+        {
+          "source": "XMLTeam/LICENSE",
+          "destination": "runtime/LICENSE"
+        }
+      ]
+    },
+    {
+      "name": "job-team",
+      "team": "JobTeam",
+      "module": "job",
+      "version": "1.0.0",
+      "source": "teams/job-team",
+      "resources": [
+        {
+          "source": "job/sources/author-screening",
+          "destination": "references/author"
+        },
+        {
+          "source": "job/sources/vacancy-evaluator",
+          "destination": "references/vacancy"
+        }
+      ]
+    },
+    {
+      "name": "marketing-team",
+      "team": "MarketingTeam",
+      "module": "marketing",
+      "version": "1.0.0",
+      "source": "teams/marketing-team",
+      "resources": [
+        {
+          "source": "marketing/specializations",
+          "destination": "references/specializations"
+        },
+        {
+          "source": "marketing/brand-context.md",
+          "destination": "references/brand-context.md"
+        },
+        {
+          "source": "marketing/THIRD_PARTY_NOTICES.md",
+          "destination": "THIRD_PARTY_NOTICES.md"
+        },
+        {
+          "source": "marketing/LICENSES",
+          "destination": "licenses"
+        },
+        {
+          "source": "marketing/tools",
+          "destination": "references/tools"
+        }
+      ]
+    },
+    {
+      "name": "card-shortcodes",
+      "team": "EditorTeam",
+      "module": "editor",
+      "version": "1.0.0",
+      "source": "teams/card-shortcodes",
+      "resources": [
+        {
+          "source": "editor/src/editorteam/wordpress.py",
+          "destination": "python/editorteam/wordpress.py"
+        },
+        {
+          "source": "editor/src/editorteam/card_shortcodes.py",
+          "destination": "python/editorteam/card_shortcodes.py"
+        },
+        {
+          "source": "editor/src/editorteam/__init__.py",
+          "destination": "python/editorteam/__init__.py"
+        }
+      ]
+    }
+  ],
+  "release_version": "1.0.0"
+}

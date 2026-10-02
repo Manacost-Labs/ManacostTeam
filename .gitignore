@@ -2,3 +2,10 @@
 .env
 .env.*
 !.env.example
+
+# Shared packaging/test scratch state; source and versioned releases stay tracked.
+/build/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/

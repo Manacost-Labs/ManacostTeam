@@ -1,0 +1,4 @@
+interface:
+  display_name: "Video"
+  short_description: "Marketing guidance for Video"
+  default_prompt: "Use $video to help with this marketing task."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ad Visual Review"
+  short_description: "Проверка качества рекламных визуалов"
+  default_prompt: "Use $ad-visual-review to review this ad creative before launch."

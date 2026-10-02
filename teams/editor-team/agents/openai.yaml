@@ -1,0 +1,4 @@
+interface:
+  display_name: "editor-team"
+  short_description: "Редактура с сохранением фактов и голоса"
+  default_prompt: "Use $editor-team to complete this task."

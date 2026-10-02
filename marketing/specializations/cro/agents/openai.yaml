@@ -1,0 +1,4 @@
+interface:
+  display_name: "CRO"
+  short_description: "Marketing guidance for CRO"
+  default_prompt: "Use $cro to help with this marketing task."

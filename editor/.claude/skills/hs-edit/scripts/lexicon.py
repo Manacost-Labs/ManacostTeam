@@ -12,7 +12,14 @@
 исследовательского PDF дала 10%.
 
 Не считаются: названия карт из справочника, классы, слова с заглавной
-внутри предложения (имена, архетипы), таблицы и коды. Список «не твоих
+внутри предложения (имена, архетипы), таблицы и коды.
+
+Профиль может расширить словарь блоком `lexicon:` в config/profiles/<id>.yaml:
+extra_corpora — каталоги корпусов, чьи слова тоже «свои» (corpus-bg для Полей
+сражений), glossary — файлы config/dictionaries/<имя>.txt с терминами режима,
+skip_unknown_cards — не считать чужими слова из названий карт, которых нет в
+справочнике (в нём нет существ Полей сражений), warn_pct и fail_pct — пороги,
+снятые leave-one-out по этим же корпусам (`--калибровка --profile <id>`). Список «не твоих
 слов» — адреса для редактора, а не приговор: половина в нём — язык отчёта
 аналитика, половина — просто чужие слова.
 """
@@ -71,6 +78,64 @@ def corpus_lexicon(exclude=None):
     return lex
 
 
+def profile_settings(profile):
+    """Блок `lexicon:` из YAML профиля или {} — тогда всё как для гайдов Constructed."""
+    if not profile:
+        return {}
+    try:
+        import yaml
+    except ImportError:  # pragma: no cover
+        return {}
+    path = C.ROOT / "config" / "profiles" / f"{profile}.yaml"
+    if not path.exists():
+        return {}
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return data.get("lexicon") or {}
+
+
+def _extra_corpus_words(name, exclude=None):
+    """Слова текстов из <корень>/<name>/guides; exclude — stem одного документа."""
+    words = []
+    for path in sorted((C.ROOT / name / "guides").glob("*.md")):
+        if exclude is not None and path.stem == exclude:
+            continue
+        words.extend(WORD.findall(C.body(path).lower()))
+    return words
+
+
+def _glossary_words(names):
+    """Термины режима из config/dictionaries/<имя>.txt: по слову или фразе на строку."""
+    words = []
+    for name in names:
+        path = C.ROOT / "config" / "dictionaries" / f"{name}.txt"
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                words.extend(WORD.findall(line.lower()))
+    return words
+
+
+def profile_lexicon(settings, exclude=None):
+    """Словарь автора плюс слова профиля. Без настроек — обычный corpus_lexicon()."""
+    if not settings:
+        return corpus_lexicon()
+    words = []
+    for name in settings.get("extra_corpora") or []:
+        words.extend(_extra_corpus_words(name, exclude))
+    words.extend(_glossary_words(settings.get("glossary") or []))
+    return corpus_lexicon() | _lemma_set(words)
+
+
+def _unknown_card_words(text):
+    """Слова из названий карт, которых нет в справочнике: «Держатель водорослей»."""
+    skip = set()
+    for name in C.sibling("claims").unknown_cards(text):
+        skip.update(WORD.findall(name.lower()))
+    return skip
+
+
 def _skip_words():
     """Слова, которые не считаются чужими: части названий карт и классов."""
     skip = set()
@@ -94,9 +159,10 @@ def _proper_names(text):
     return names
 
 
-def measure(text, lexicon=None):
+def measure(text, lexicon=None, profile=None):
     """{'unique', 'missing', 'ratio', 'words'} или None без корпуса/текста."""
-    lexicon = corpus_lexicon() if lexicon is None else lexicon
+    settings = profile_settings(profile)
+    lexicon = profile_lexicon(settings) if lexicon is None else lexicon
     if not lexicon:
         return None
     prose = C.prose_only(text)
@@ -104,6 +170,8 @@ def measure(text, lexicon=None):
     if not words:
         return None
     skip = _skip_words() | _proper_names(prose)
+    if settings.get("skip_unknown_cards"):
+        skip |= _unknown_card_words(text)
     unique = sorted(set(words))
     considered = [w for w in unique if w not in skip]
     missing = [w for w in considered if not (C.lemmas(w) & lexicon)]
@@ -115,22 +183,42 @@ def measure(text, lexicon=None):
     }
 
 
-def findings(text, m=None):
-    m = measure(text) if m is None else m
+def findings(text, m=None, profile=None):
+    m = measure(text, profile=profile) if m is None else m
     if not m or m["words"] < MIN_WORDS:
         return []
-    if m["ratio"] <= WARN_PCT:
+    settings = profile_settings(profile)
+    warn = float(settings.get("warn_pct", WARN_PCT))
+    fail = float(settings.get("fail_pct", FAIL_PCT))
+    if m["ratio"] <= warn:
         return []
-    severity = "error" if m["ratio"] > FAIL_PCT else "review"
+    severity = "error" if m["ratio"] > fail else "review"
     shown = ", ".join(m["missing"][:12])
     return [{
         "id": "lexicon.gap", "analyzer": "lexicon", "category": "voice", "severity": severity,
         "confidence": 0.75,
-        "message": f"слов, которых нет у автора: {m['ratio']}% лемм при норме 2–3% "
+        "message": f"слов, которых нет у автора: {m['ratio']}% лемм при пороге {warn:g}% "
                    f"({len(m['missing'])} из {m['unique']}): {shown}",
         "suggestion": "заменить на слова автора или убедиться, что это термин, которого в корпусе просто не было",
         "meta": {"ratio": m["ratio"], "missing": m["missing"][:40]},
     }]
+
+
+def calibrate_profile(profile, sample=12):
+    """Leave-one-out по extra_corpora профиля: чужие слова между статьями режима."""
+    settings = profile_settings(profile)
+    corpus = (settings.get("extra_corpora") or [None])[0]
+    if not corpus:
+        return None
+    files = sorted((C.ROOT / corpus / "guides").glob("*.md"))
+    step = max(1, len(files) // sample)
+    ratios = []
+    for path in files[::step][:sample]:
+        lex = profile_lexicon(settings, exclude=path.stem)
+        m = measure(C.body(path), lexicon=lex, profile=profile)
+        if m and m["words"] >= MIN_WORDS:
+            ratios.append((m["ratio"], path.stem[:40]))
+    return ratios
 
 
 def calibrate(sample=8):
@@ -152,11 +240,13 @@ def main():
     ap = argparse.ArgumentParser(description="Доля слов, которых нет у автора")
     ap.add_argument("file", nargs="?")
     ap.add_argument("--калибровка", dest="cal", action="store_true")
+    ap.add_argument("--profile", default=None,
+                    help="профиль со своим блоком lexicon (например battlegrounds-article)")
     ap.add_argument("--format", choices=["text", "json"], default="text")
     args = ap.parse_args()
     C.ensure_venv("pymorphy3")
     if args.cal:
-        ratios = calibrate()
+        ratios = calibrate_profile(args.profile) if args.profile else calibrate()
         if not ratios:
             print("нет корпуса", file=sys.stderr)
             return 2
@@ -172,11 +262,11 @@ def main():
     if not p.exists():
         print(f"нет файла: {p}", file=sys.stderr)
         return 2
-    m = measure(p.read_text(encoding="utf-8"))
+    m = measure(p.read_text(encoding="utf-8"), profile=args.profile)
     if not m:
         print("нет корпуса или текста: доля не считается", file=sys.stderr)
         return 0
-    f = findings(p.read_text(encoding="utf-8"), m)
+    f = findings(p.read_text(encoding="utf-8"), m, profile=args.profile)
     if args.format == "json":
         print(json.dumps({"metrics": m, "findings": f}, ensure_ascii=False, indent=2))
         return 0

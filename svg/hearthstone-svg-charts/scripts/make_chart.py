@@ -121,30 +121,48 @@ def icon_uri(name, photo=False):
     die(f"иконка/картинка не найдена: {name} (см. assets/datauri или укажи путь к файлу)")
 
 def inline_image(path, max_kb=100, thumb_w=480, force_jpeg=False):
-    """Inline a local image; big ones are downscaled via sips first.
+    """Inline local images; optimize with Pillow/sips only when available.
 
-    Photos stay JPEG (a PNG re-encode of a photo is ~10x heavier);
-    webp always becomes PNG so resvg can render the PNG export.
+    PNG/JPEG remain usable without a platform-specific converter. WebP needs
+    conversion to PNG for the WordPress/resvg export path.
     """
-    if path.suffix.lower() not in MIME:
-        die(f"неподдерживаемый формат картинки: {path}")
-    src = path
+    import io
+    import shutil
+
     ext = path.suffix.lower()
-    if path.stat().st_size > max_kb * 1024 or ext == ".webp" or (force_jpeg and ext != ".jpg"):
-        fmt = "png" if ext == ".webp" else "jpeg"
-        if ext == ".png" and not force_jpeg:
-            ctype = path.read_bytes()[25]        # PNG colour type: 4/6 carry alpha
-            fmt = "png" if ctype in (4, 6) else "jpeg"
-        tmp = pathlib.Path(tempfile.mkstemp(suffix="." + ("png" if fmt == "png" else "jpg"))[1])
-        if ext == ".png":
-            thumb_w = min(thumb_w, png_size(path)[0])   # не растягивать маленькие PNG
-        cmd = ["sips", "-s", "format", fmt, "--resampleWidth", str(thumb_w)]
-        if fmt == "jpeg":
-            cmd += ["-s", "formatOptions", "65"]
-        subprocess.run(cmd + [str(path), "--out", str(tmp)], check=True, capture_output=True)
-        src = tmp
-    data = src.read_bytes()
-    return f"data:{MIME[src.suffix.lower()]};base64,{base64.b64encode(data).decode()}"
+    if ext not in MIME:
+        die(f"неподдерживаемый формат картинки: {path}")
+    data, mime = path.read_bytes(), MIME[ext]
+    optimize = len(data) > max_kb * 1024 or ext == ".webp" or (force_jpeg and ext not in {".jpg", ".jpeg"})
+    if optimize:
+        try:
+            from PIL import Image
+        except ImportError:
+            Image = None
+        if Image is not None:
+            with Image.open(io.BytesIO(data)) as image:
+                image.thumbnail((thumb_w, image.height))
+                use_png = ext == ".webp" or (not force_jpeg and "A" in image.getbands())
+                output = io.BytesIO()
+                if use_png:
+                    image.save(output, format="PNG", optimize=True)
+                    mime = "image/png"
+                else:
+                    image.convert("RGB").save(output, format="JPEG", quality=65)
+                    mime = "image/jpeg"
+                data = output.getvalue()
+        elif shutil.which("sips"):
+            fmt = "png" if ext == ".webp" or (ext == ".png" and not force_jpeg and data[25] in (4, 6)) else "jpeg"
+            with tempfile.TemporaryDirectory(prefix="manacost-inline-image-") as temporary:
+                target = pathlib.Path(temporary) / ("image.png" if fmt == "png" else "image.jpg")
+                cmd = ["sips", "-s", "format", fmt, "--resampleWidth", str(thumb_w)]
+                if fmt == "jpeg":
+                    cmd += ["-s", "formatOptions", "65"]
+                subprocess.run(cmd + [str(path), "--out", str(target)], check=True, capture_output=True)
+                data, mime = target.read_bytes(), MIME[target.suffix]
+        elif ext == ".webp":
+            die("Для WebP нужен Pillow или sips; предоставьте PNG/JPEG для автономного SVG.")
+    return f"data:{mime};base64,{base64.b64encode(data).decode()}"
 
 def lerp_color(c1, c2, t):
     a = [int(c1[i:i+2], 16) for i in (1, 3, 5)]
@@ -476,9 +494,10 @@ def r_donut(spec):
                     f'L {x1i:.1f} {y1i:.1f} A {RIN} {RIN} 0 {large} 0 {x0i:.1f} {y0i:.1f} Z" '
                     f'fill="{col}" stroke="#ead6a7" stroke-width="3"/>')
         ly = ly0 + i * 36
+        value_text = serif_text(f"{r['value']:g}%")
         body.append(f'<rect x="446" y="{ly:.1f}" width="15" height="15" rx="4" fill="{col}" stroke="#5d3f12" stroke-width="0.7"/>'
                     f'<text x="470" y="{ly+12.5:.1f}" font-family="{SERIF}" font-size="15" fill="{INK}">{serif_text(r["label"])}</text>'
-                    f'<text x="754" y="{ly+12.5:.1f}" text-anchor="end" font-family="{SERIF}" font-size="15" fill="{INK}">{serif_text(f"{r['value']:g}%")}</text>')
+                    f'<text x="754" y="{ly+12.5:.1f}" text-anchor="end" font-family="{SERIF}" font-size="15" fill="{INK}">{value_text}</text>')
         a0 = a1
     # carved-ring shading so the donut reads as an inset, not a flat disc
     body.append(f'<circle cx="{CX}" cy="{CY}" r="{R}" fill="none" stroke="#30251c" stroke-width="2.5" opacity="0.15"/>'
@@ -911,8 +930,9 @@ def r_stackbars(spec):
                 seg_tags.append(f'<line x1="{x:.1f}" y1="{y}" x2="{x:.1f}" y2="{y+BH}" stroke="#ead6a7" stroke-width="1.6"/>')
             pct = s["value"] / total * 100
             if w >= 42:
+                pct_text = serif_text(f"{pct:.0f}%")
                 seg_tags.append(f'<text x="{x+w/2:.1f}" y="{y+BH/2+5.5}" text-anchor="middle" font-family="{SERIF}" '
-                                f'font-size="14.5" fill="{CREAM}">{serif_text(f"{pct:.0f}%")}</text>')
+                                f'font-size="14.5" fill="{CREAM}">{pct_text}</text>')
             x += w
         body.append(f'<g clip-path="url(#sb{i})">{"".join(seg_tags)}</g>')
         body.append(f'<rect x="{X0}" y="{y}" width="{TRACK}" height="{BH}" rx="6" fill="none" stroke="#5d0d13" stroke-width="1.2" opacity="0.45"/>'

@@ -89,6 +89,10 @@ def scan(text, patterns, only=None):
                 hi = mid - 1
         return lo + 1
 
+    # плотность на 10 000 слов для правил с scope=document: одна такая фраза в
+    # тексте автору привычна, тревожит их частота
+    words_total = max(1, len(re.findall(r"\w+", masked)))
+
     raw = []
     for p in patterns:
         if only and p["action"] not in only:
@@ -103,6 +107,8 @@ def scan(text, patterns, only=None):
                 "fix": p["fix"],
                 "note": p.get("note", ""),
                 "min_hits": p.get("min_hits", 1),
+                "scope": p.get("scope", "paragraph"),
+                "per10k_max": p.get("per10k_max"),
                 "pos": m.start(),
                 "line": line_of(m.start()),
                 "para": which_paragraph(bounds, m.start()),
@@ -114,7 +120,19 @@ def scan(text, patterns, only=None):
     for f in raw:
         counts[(f["id"], f["para"])] = counts.get((f["id"], f["para"]), 0) + 1
 
-    findings = [f for f in raw if counts[(f["id"], f["para"])] >= f["min_hits"]]
+    doc_counts = {}
+    for f in raw:
+        doc_counts[f["id"]] = doc_counts.get(f["id"], 0) + 1
+
+    def significant(f):
+        if f["scope"] == "document":
+            # плотность в коротком тексте шумит: две фразы на 555 слов дают 36 на
+            # 10 000 и роняли чистый контрольный текст, поэтому нужен и минимум срабатываний
+            n = doc_counts[f["id"]]
+            return n >= max(2, f["min_hits"]) and n / words_total * 10_000 > f["per10k_max"]
+        return counts[(f["id"], f["para"])] >= f["min_hits"]
+
+    findings = [f for f in raw if significant(f)]
     findings.sort(key=lambda f: (ACTION_ORDER[f["action"]], f["line"]))
     return findings
 

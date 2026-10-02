@@ -1,0 +1,4 @@
+interface:
+  display_name: "job-team"
+  short_description: "Оценка вакансий и авторов Hearthstone"
+  default_prompt: "Use $job-team to complete this task."

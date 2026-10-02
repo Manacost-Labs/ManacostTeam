@@ -1,0 +1,4 @@
+name: translate-team
+version: "1.0.0"
+team: TranslateTeam
+entrypoint: SKILL.md

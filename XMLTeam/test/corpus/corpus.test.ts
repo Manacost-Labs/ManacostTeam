@@ -91,7 +91,9 @@ describe.each(manifest.entries.map((entry) => [entry.file, entry] as const))(
     const document = parseReplayDocument(xml);
 
     it('matches the manifest checksum and metadata', () => {
-      expect(createHash('sha256').update(readFileSync(path)).digest('hex')).toBe(entry.sha256);
+      const bytes = readFileSync(path);
+      const canonicalBytes = Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+      expect(createHash('sha256').update(canonicalBytes).digest('hex')).toBe(entry.sha256);
       expect(document.version ?? null).toBe(entry.hsreplayVersion);
       expect(document.build ?? null).toBe(entry.build);
       expect(document.games.length).toBeGreaterThan(0);

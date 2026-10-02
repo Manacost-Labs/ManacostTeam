@@ -554,7 +554,10 @@ def claims_cmd(args) -> int:
             for card in source["cards"]:
                 print(f"  карта  {card['name']} ×{card['mentions']}  стр.{card['line']}")
             for neg in source["negations"]:
-                print(f"  «не»   [{neg['anchor_kind']}] {neg['anchor']}: {neg['sentence'][:90]}")
+                print(
+                    f"  «не»   [{neg['anchor_kind']}/{neg.get('type', 'fact')}] "
+                    f"{neg['anchor']}: {neg['sentence'][:90]}"
+                )
         return 0
     declared = [x.strip() for x in (args.declared_missing or "").split(",") if x.strip()]
     violations, warnings, metrics = claims.coverage(
@@ -1048,7 +1051,19 @@ def build_parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _ensure_utf8_stdio() -> None:
+    """Вывод в UTF-8: на Windows в трубе stdout получает cp1251 и падает на «→»."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (OSError, ValueError):
+                pass
+
+
 def main(argv=None) -> int:
+    _ensure_utf8_stdio()
     args = build_parser().parse_args(argv)
     # флаг мог стоять и до подкоманды, и после — берём то, что задано
     args.format = getattr(args, "format", None) or "text"

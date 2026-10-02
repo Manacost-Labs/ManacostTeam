@@ -63,7 +63,15 @@ FAMILY_PASS: dict[str, str] = {
 # {version} or {entity} is skipped when no value is available.
 TEMPLATES: dict[str, dict[str, tuple[str, ...]]] = {
     "en": {
-        "general": ("{topic}", "{topic} explained", "{topic} guide"),
+        "general": (
+            "{topic}",
+            "{topic} explained",
+            "{topic} guide",
+            "{topic} forum discussion {version}",
+            "{topic} tournament report {version}",
+            "{topic} developer interview {year}",
+            "{topic} specialist wiki mechanics",
+        ),
         "primary": (
             "{topic} official",
             "{topic} official documentation",
@@ -81,12 +89,27 @@ TEMPLATES: dict[str, dict[str, tuple[str, ...]]] = {
             "{topic} high rank guide {version}",
             "{topic} coaching",
         ),
-        "reddit": ("site:reddit.com {topic}", "site:reddit.com {topic} {version}"),
-        "x": ("site:x.com {topic}", "{topic} {version} discussion"),
+        "reddit": (
+            "site:reddit.com {topic}",
+            "site:reddit.com {topic} {version}",
+            "site:reddit.com {topic} mistakes",
+            "site:reddit.com {topic} discussion {year}",
+            "site:reddit.com {entity} {topic}",
+        ),
+        "x": (
+            "site:x.com {topic}",
+            "site:x.com {topic} {version}",
+            "site:twitter.com {topic} {version}",
+            "site:x.com {entity} {topic}",
+            "site:x.com {topic} nerf",
+            "site:x.com {topic} tournament {year}",
+        ),
         "youtube": (
-            "{topic} {version} guide video",
-            "{topic} mistakes video",
-            "{topic} tournament VOD",
+            "site:youtube.com {topic} {version} guide",
+            "site:youtube.com {topic} mistakes",
+            "site:youtube.com {topic} tournament VOD",
+            "site:youtube.com {entity} {topic}",
+            "site:youtube.com {topic} analysis {year}",
         ),
         "mistakes": ("{topic} mistakes", "{topic} common errors avoid"),
         "synergies": ("{topic} synergy", "{entity} interaction {topic}"),
@@ -112,12 +135,34 @@ TEMPLATES: dict[str, dict[str, tuple[str, ...]]] = {
             "{entity} статистика {version}",
         ),
         "experts": ("{topic} разбор", "{topic} гайд легенда {version}"),
-        "reddit": ("{topic} обсуждение форум",),
-        "x": ("{topic} {version} мнение",),
-        "youtube": ("{topic} {version} видео гайд", "{topic} ошибки видео"),
+        "reddit": (
+            "site:reddit.com {topic} обсуждение",
+            "site:reddit.com {topic} {version}",
+            "site:reddit.com {topic} ошибки",
+            "site:reddit.com {entity} {topic}",
+            "site:reddit.com {topic} советы {version}",
+        ),
+        "x": (
+            "site:x.com {topic} {version}",
+            "site:twitter.com {topic} {version}",
+            "site:x.com {topic} мнение",
+            "site:x.com {entity} {topic}",
+            "site:x.com {topic} ошибки {version}",
+            "site:x.com {topic} разбор {year}",
+        ),
+        "youtube": (
+            "site:youtube.com {topic} {version} гайд",
+            "site:youtube.com {topic} ошибки",
+            "site:youtube.com {topic} разбор",
+            "site:youtube.com {entity} {topic}",
+        ),
         "mistakes": ("{topic} ошибки", "{topic} чего избегать"),
         "synergies": ("{topic} синергия", "{entity} взаимодействие"),
-        "counterargument": ("{topic} переоценен", "почему не {topic}", "{topic} слабый"),
+        "counterargument": (
+            "{topic} переоценен",
+            "почему не {topic}",
+            "{topic} слабый",
+        ),
         "freshness": ("{topic} {year}", "{topic} {version}"),
         "localized": ("{topic} на русском", "{topic} русское сообщество"),
     },
@@ -138,7 +183,12 @@ RUSSIAN_DEFAULT_DOMAINS = frozenset({"hearthstone"})
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -157,7 +207,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Extra branch topic when plan.json has no sections; repeatable",
     )
     parser.add_argument(
-        "--entity", action="append", default=[], help="Named entity to expand; repeatable"
+        "--entity",
+        action="append",
+        default=[],
+        help="Named entity to expand; repeatable",
     )
     parser.add_argument(
         "--version-marker",
@@ -180,7 +233,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--apply", action="store_true", help=f"Append new records to {PLAN_FILE}"
     )
-    parser.add_argument("--json", action="store_true", help="Print records as JSON lines")
+    parser.add_argument(
+        "--json", action="store_true", help="Print records as JSON lines"
+    )
     return parser.parse_args(argv)
 
 
@@ -206,7 +261,10 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def branch_list(
-    manifest: dict[str, Any], plan: dict[str, Any] | None, sections: list[str], topics: list[str]
+    manifest: dict[str, Any],
+    plan: dict[str, Any] | None,
+    sections: list[str],
+    topics: list[str],
 ) -> list[tuple[str | None, str]]:
     """Return ``(section_id, topic)`` pairs to expand."""
 
@@ -231,7 +289,9 @@ def branch_list(
     if not branches:
         question = str(manifest.get("main_question", "")).strip()
         if not question:
-            raise ValueError("manifest.json has no main_question and no sections were given")
+            raise ValueError(
+                "manifest.json has no main_question and no sections were given"
+            )
         branches.append((None, question))
     for _section_id, topic in branches:
         if len(topic.split()) > MAX_TOPIC_WORDS:
@@ -244,7 +304,9 @@ def branch_list(
 
 def version_markers(manifest: dict[str, Any], explicit: list[str]) -> list[str]:
     if explicit:
-        return list(dict.fromkeys(marker.strip() for marker in explicit if marker.strip()))
+        return list(
+            dict.fromkeys(marker.strip() for marker in explicit if marker.strip())
+        )
     context = manifest.get("current_context")
     markers: list[str] = []
     if isinstance(context, dict):
@@ -255,7 +317,9 @@ def version_markers(manifest: dict[str, Any], explicit: list[str]) -> list[str]:
     return list(dict.fromkeys(markers))
 
 
-def render(template: str, *, topic: str, year: str, version: str | None, entity: str | None) -> str | None:
+def render(
+    template: str, *, topic: str, year: str, version: str | None, entity: str | None
+) -> str | None:
     if "{version}" in template and not version:
         return None
     if "{entity}" in template and not entity:
@@ -286,12 +350,20 @@ def build_plan(
             table = TEMPLATES[language]
             for family in families:
                 for template in table.get(family, ()):
-                    version_values: list[str | None] = list(markers) if "{version}" in template else [None]
-                    entity_values: list[str | None] = list(entities) if "{entity}" in template else [None]
+                    version_values: list[str | None] = (
+                        list(markers) if "{version}" in template else [None]
+                    )
+                    entity_values: list[str | None] = (
+                        list(entities) if "{entity}" in template else [None]
+                    )
                     for version in version_values:
                         for entity in entity_values:
                             query = render(
-                                template, topic=topic, year=year, version=version, entity=entity
+                                template,
+                                topic=topic,
+                                year=year,
+                                version=version,
+                                entity=entity,
                             )
                             if not query:
                                 continue
@@ -310,6 +382,9 @@ def build_plan(
                                 "topic": topic,
                                 "status": "planned",
                                 "planned_at": planned_at,
+                                "target_platform": family
+                                if family in {"x", "reddit", "youtube"}
+                                else "web",
                             }
                             if entity:
                                 record["entity"] = entity
@@ -326,10 +401,14 @@ def summarize(records: list[dict[str, Any]]) -> str:
     for record in records:
         branch = ",".join(record.get("deliverable_section_ids", [])) or record["topic"]
         by_branch.setdefault(branch, {})
-        by_branch[branch][record["family"]] = by_branch[branch].get(record["family"], 0) + 1
+        by_branch[branch][record["family"]] = (
+            by_branch[branch].get(record["family"], 0) + 1
+        )
     lines = [f"Query plan: {len(records)} new planned queries"]
     for branch, families in by_branch.items():
-        parts = ", ".join(f"{family}={count}" for family, count in sorted(families.items()))
+        parts = ", ".join(
+            f"{family}={count}" for family, count in sorted(families.items())
+        )
         lines.append(f"- {branch}: {parts}")
     return "\n".join(lines)
 
@@ -352,18 +431,27 @@ def main(argv: list[str] | None = None) -> int:
     if depth not in DEFAULT_FAMILIES_BY_DEPTH:
         print(f"error: manifest depth is invalid: {depth}", file=sys.stderr)
         return 2
-    families = list(dict.fromkeys(args.family)) or list(DEFAULT_FAMILIES_BY_DEPTH[depth])
+    families = list(dict.fromkeys(args.family)) or list(
+        DEFAULT_FAMILIES_BY_DEPTH[depth]
+    )
     unknown = [family for family in families if family not in QUERY_FAMILIES]
     if unknown:
         print(f"error: unknown query family: {', '.join(unknown)}", file=sys.stderr)
         return 2
     domains = manifest.get("domain_adapters")
-    domain_values = {str(item) for item in domains} if isinstance(domains, list) else set()
-    default_languages = ["en", "ru"] if domain_values & RUSSIAN_DEFAULT_DOMAINS else ["en"]
+    domain_values = (
+        {str(item) for item in domains} if isinstance(domains, list) else set()
+    )
+    default_languages = (
+        ["en", "ru"] if domain_values & RUSSIAN_DEFAULT_DOMAINS else ["en"]
+    )
     languages = list(dict.fromkeys(args.language)) or default_languages
     unsupported = [language for language in languages if language not in TEMPLATES]
     if unsupported:
-        print(f"error: unsupported template language: {', '.join(unsupported)}", file=sys.stderr)
+        print(
+            f"error: unsupported template language: {', '.join(unsupported)}",
+            file=sys.stderr,
+        )
         return 2
     if "localized" not in families and any(language != "en" for language in languages):
         families.append("localized")
@@ -377,13 +465,17 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(record.get("query_id"), str)
     }
     existing_queries = [
-        str(record.get("query", "")) for record in executed + planned if record.get("query")
+        str(record.get("query", ""))
+        for record in executed + planned
+        if record.get("query")
     ]
     records = build_plan(
         branches=branches,
         families=families,
         languages=languages,
-        entities=list(dict.fromkeys(entity.strip() for entity in args.entity if entity.strip())),
+        entities=list(
+            dict.fromkeys(entity.strip() for entity in args.entity if entity.strip())
+        ),
         markers=markers,
         year=year,
         existing_queries=existing_queries,

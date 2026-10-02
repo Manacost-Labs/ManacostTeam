@@ -1,0 +1,4 @@
+interface:
+  display_name: "translate-team"
+  short_description: "Перевод Hearthstone и WoW с проверкой терминов"
+  default_prompt: "Use $translate-team to complete this task."

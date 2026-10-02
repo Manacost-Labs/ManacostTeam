@@ -1,0 +1,4 @@
+name: svg-team
+version: "1.0.0"
+team: SVGTeam
+entrypoint: SKILL.md

@@ -33,7 +33,7 @@ def test_directives_enable_arena_card_shortcodes_and_keep_unknown_card_plain() -
     assert "Формат:" not in html
     assert "Подсветка карт" not in html
     assert "<h1>Квест Жрец</h1>" in html
-    assert '<strong>Главная слабость — превращения.</strong>' in html
+    assert "<strong>Главная слабость — превращения.</strong>" in html
     assert '[hs_card id="JAIL_912"]Гадалка[/hs_card]' in html
     assert "Неизвестная карта" in html
 
@@ -55,9 +55,7 @@ def test_format_limits_card_highlighting_and_battlegrounds_uses_bg_shortcode() -
 
 
 def test_html_is_escaped_and_existing_shortcodes_are_not_nested() -> None:
-    source = (
-        'Подсветка карт\n\n[hs_card id="JAIL_912"]Гадалка[/hs_card] <script>alert(1)</script>'
-    )
+    source = 'Подсветка карт\n\n[hs_card id="JAIL_912"]Гадалка[/hs_card] <script>alert(1)</script>'
 
     html = render_wordpress_html(source, catalog=CATALOG)
 
@@ -80,7 +78,9 @@ def test_overlapping_card_names_do_not_create_nested_shortcodes() -> None:
         Card("Гадалка", "JAIL_912", frozenset({HearthstoneFormat.STANDARD})),
     )
 
-    html = render_wordpress_html("Подсветка карт\n\nВеликая Гадалка удерживает стол.", catalog=catalog)
+    html = render_wordpress_html(
+        "Подсветка карт\n\nВеликая Гадалка удерживает стол.", catalog=catalog
+    )
 
     assert '[hs_card id="TEST_001"]Великая Гадалка[/hs_card]' in html
     assert html.count("[hs_card") == 1
@@ -130,7 +130,9 @@ def test_cli_flag_overrides_the_format_directive(tmp_path) -> None:
         encoding="utf-8",
     )
 
-    assert main(["wordpress", str(source), "--catalog", str(catalog), "--hs-format", "standard"]) == 0
+    assert (
+        main(["wordpress", str(source), "--catalog", str(catalog), "--hs-format", "standard"]) == 0
+    )
 
     assert '[hs_card id="JAIL_912"]Гадалка[/hs_card]' in source.with_suffix(".html").read_text(
         encoding="utf-8"

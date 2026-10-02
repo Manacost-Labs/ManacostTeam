@@ -1,0 +1,4 @@
+interface:
+  display_name: "Emails"
+  short_description: "Marketing guidance for Emails"
+  default_prompt: "Use $emails to help with this marketing task."
