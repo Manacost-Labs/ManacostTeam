@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -70,7 +70,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "source": "teams/research-team",
       "resources": [
         {
@@ -228,7 +228,7 @@
       "name": "card-shortcodes",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "source": "teams/card-shortcodes",
       "resources": [
         {
@@ -246,5 +246,5 @@
       ]
     }
   ],
-  "release_version": "1.0.1"
+  "release_version": "1.0.2"
 }

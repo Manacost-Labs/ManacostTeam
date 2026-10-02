@@ -29,6 +29,40 @@ def test_existing_markup_code_urls_and_attributes_are_preserved():
     assert result.inserted == 0
 
 
+@pytest.mark.parametrize(
+    "protected",
+    [
+        "![Бранн Бронзобород](https://example.com/card.png)",
+        "![Бранн Бронзобород][card-image]",
+        '[Бранн Бронзобород]: https://example.com/card "Бранн Бронзобород"',
+        '<script>const card = "Бранн Бронзобород";</script>',
+        '<style>.card::after { content: "Бранн Бронзобород"; }</style>',
+    ],
+)
+def test_images_reference_definitions_and_embedded_code_remain_exact(protected):
+    source = protected + "\r\n\r\nБранн Бронзобород помогает."
+    result = apply_shortcodes(source, catalog=CATALOG, game_format="wild")
+    assert result.text == (
+        protected + '\r\n\r\n[hs_card id="CORE_LOE_077"]Бранн Бронзобород[/hs_card] помогает.'
+    )
+    assert result.inserted == 1
+    start = source.index("Бранн Бронзобород")
+    with pytest.raises(ExportError, match="overlaps"):
+        apply_shortcodes(
+            source,
+            catalog=CATALOG,
+            game_format="wild",
+            mentions=[
+                {
+                    "start": start,
+                    "end": start + 17,
+                    "card_id": "CORE_LOE_077",
+                    "text": "Бранн Бронзобород",
+                }
+            ],
+        )
+
+
 def test_ambiguous_common_noun_needs_explicit_context_confirmation():
     text = "Монетка лежала на столе. Монетка даёт ману."
     result = apply_shortcodes(text, catalog=CATALOG, game_format="wild")
@@ -39,7 +73,7 @@ def test_ambiguous_common_noun_needs_explicit_context_confirmation():
         text,
         catalog=CATALOG,
         game_format="wild",
-        mentions=[{"start": start, "end": start + 7, "card_id": "GAME_005"}],
+        mentions=[{"start": start, "end": start + 7, "card_id": "GAME_005", "text": "Монетка"}],
     )
     assert (
         selected.text
@@ -76,6 +110,44 @@ def test_repeat_run_does_not_nest_shortcodes():
     second = apply_shortcodes(first.text, catalog=CATALOG, game_format="wild")
     assert second.text == first.text
     assert second.inserted == 0
+
+
+@pytest.mark.parametrize(
+    ("source", "start", "end"),
+    [("С Бранном сильнее.", 2, 7), ("СуперБранн", 5, 10), ("Бранн_герой", 0, 5)],
+)
+def test_reviewed_spans_cannot_split_a_word(source, start, end):
+    with pytest.raises(ExportError, match="split a word"):
+        apply_shortcodes(
+            source,
+            catalog=CATALOG,
+            game_format="wild",
+            mentions=[
+                {"start": start, "end": end, "card_id": "CORE_LOE_077", "text": source[start:end]}
+            ],
+        )
+
+
+def test_full_inflected_name_preserves_punctuation_and_other_mentions():
+    result = apply_shortcodes(
+        "С «Бранном» сильнее. Бранн Бронзобород.",
+        catalog=CATALOG,
+        game_format="wild",
+        mentions=[{"start": 3, "end": 10, "card_id": "CORE_LOE_077", "text": "Бранном"}],
+    )
+    assert result.text == (
+        'С «[hs_card id="CORE_LOE_077"]Бранном[/hs_card]» сильнее. Бранн Бронзобород.'
+    )
+    assert result.inserted == 1
+
+
+@pytest.mark.parametrize("text", [None, "Бранн"])
+def test_missing_or_stale_reviewed_text_is_rejected(text):
+    mention = {"start": 0, "end": 7, "card_id": "CORE_LOE_077"}
+    if text is not None:
+        mention["text"] = text
+    with pytest.raises(ExportError, match="original text|text changed"):
+        apply_shortcodes("Бранном", catalog=CATALOG, game_format="wild", mentions=[mention])
 
 
 @pytest.mark.parametrize("text", [" Бранн", "Бранн ", "Бранн[", "Бранн<", "Бранн`"])

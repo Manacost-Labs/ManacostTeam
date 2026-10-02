@@ -1,6 +1,6 @@
 ---
 name: manacost-monorepo-gate
-description: "Маршрутизирует задачи и проверки в ManacostTeam по затронутым модулям. Используй перед изменениями в editor, research, svg, job или общем каталоге skills, а также при межмодульных задачах."
+description: "Маршрутизирует задачи и проверки семи Teams: editor, research, svg, translate, XMLTeam, job, marketing, а также общего каталога skills, переносимых пакетов и межмодульных контрактов."
 ---
 
 # Gate монорепозитория
@@ -13,7 +13,10 @@ description: "Маршрутизирует задачи и проверки в M
 | `research/` | research bundles и валидаторы | соответствующий validator или unit-тест |
 | `svg/` | генератор и визуальные артефакты | Python-синтаксис, `scripts/validate.py`, затронутый spec |
 | `XMLTeam/` | парсер и анализ XML-реплеев Hearthstone | `pnpm run typecheck` и затронутые `pnpm run test` |
+| `translate/` | перевод, термины и QA | `python -m unittest discover -s tests -v` из translate |
+| `marketing/` | реклама, специализации и права | соответствующий checklist; ссылки, подтверждённые продуктовые claims и CTA |
 | `job/`, `skills/` | chat-skills и их пакеты | frontmatter, ссылки, упаковка без секретов |
+| `teams/`, `tools/`, `release/team-skills/` | переносимые навыки семи Teams | root `python -m unittest discover -s tests -p 'test_*.py'`, сборка `--check`, smoke распакованных helpers |
 | корневые файлы | общая навигация | ссылки, diff, changelog при пользовательском изменении |
 
 Не запускай все модули «на всякий случай». Если задача затрагивает больше одного модуля, до правки зафиксируй входной артефакт, выходной артефакт, владельца каждого шага и общую проверку. Не создавай общие зависимости ради одной задачи.

@@ -33,9 +33,11 @@ AMBIGUOUS_NAMES = frozenset(
 )
 PROTECTED = re.compile(
     r"(?ms)^\s*(`{3,}|~{3,})[^\n]*\n.*?^\s*\1[^\n]*(?:\n|$)"
+    r"|^ {0,3}\[(?!\^)[^\]\n]+\]:[^\n]*(?:\n|$)"
+    r"|!\[(?:\\.|[^\]\\\n])*\]"
     r"|`+[^`\n]*`+"
     r"|\[(hs_card|hs_bg)\b[^\]]*\].*?\[/\2\]"
-    r"|<(?:code|pre)\b[^>]*>.*?</(?:code|pre)>"
+    r"|<(code|pre|script|style)\b[^>]*>.*?</\3>"
     r"|<!--.*?-->|<[^>]*>"
     r"|(?<=\]\()[^\n)]*(?=\))|https?://[^\s<>\]\)]+",
     re.IGNORECASE,
@@ -95,8 +97,18 @@ def apply_shortcodes(
                 or any(char in source[start:end] for char in "<>[]`")
             ):
                 raise ExportError("a card mention must be nonempty inline text")
-            if "text" in mention and mention["text"] != source[start:end]:
+            if not isinstance(mention.get("text"), str):
+                raise ExportError("each reviewed mention requires its original text")
+            if mention["text"] != source[start:end]:
                 raise ExportError("mention text changed since context review")
+            if (
+                start > 0 and re.match(r"\w", source[start - 1]) and re.match(r"\w", source[start])
+            ) or (
+                end < len(source)
+                and re.match(r"\w", source[end - 1])
+                and re.match(r"\w", source[end])
+            ):
+                raise ExportError("a reviewed mention must not split a word")
             if intersects(start, end, protected):
                 raise ExportError(
                     "mention overlaps code, a URL, HTML markup, or an existing shortcode"

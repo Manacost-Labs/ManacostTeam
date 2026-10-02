@@ -5,8 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 PLATFORMS = ("x", "reddit", "youtube", "web")
 INSPECTED = {
@@ -29,7 +30,7 @@ def platform_for_url(url: str) -> str:
         return "web"
     for platform, domains in {
         "x": ("x.com", "twitter.com"),
-        "reddit": ("reddit.com",),
+        "reddit": ("reddit.com", "redd.it"),
         "youtube": ("youtube.com", "youtu.be"),
     }.items():
         if any(host == domain or host.endswith("." + domain) for domain in domains):
@@ -103,6 +104,42 @@ def inspected_url(source: dict) -> str | None:
     return None
 
 
+def inspection_identity(url: str) -> str:
+    """Count a video, X post or Reddit thread once across share URL variants.
+
+    Unknown URL forms retain their full URL, including query parameters. This
+    identifies duplicate access; it does not establish independent authorship.
+    """
+    parts = urlsplit(url)
+    platform = platform_for_url(url)
+    host = parts.hostname or ""
+    if platform == "youtube":
+        video = None
+        if host == "youtu.be" or host.endswith(".youtu.be"):
+            video = parts.path.strip("/")
+        elif parts.path.rstrip("/") == "/watch":
+            video = parse_qs(parts.query).get("v", [None])[0]
+        else:
+            match = re.fullmatch(
+                r"/(?:shorts|embed|live)/([A-Za-z0-9_-]+)/?", parts.path
+            )
+            if match:
+                video = match.group(1)
+        if video and re.fullmatch(r"[A-Za-z0-9_-]+", video):
+            return "youtube:video:" + video
+    elif platform == "x":
+        match = re.search(r"/status/(\d+)(?:/|$)", parts.path)
+        if match:
+            return "x:post:" + match.group(1)
+    elif platform == "reddit":
+        match = re.search(r"/comments/([A-Za-z0-9]+)(?:/|$)", parts.path)
+        if host == "redd.it" or host.endswith(".redd.it"):
+            match = re.fullmatch(r"/([A-Za-z0-9]+)/?", parts.path)
+        if match:
+            return "reddit:thread:" + match.group(1).lower()
+    return url
+
+
 def analyze_records(
     queries: list[dict],
     sources: list[dict],
@@ -136,6 +173,9 @@ def analyze_records(
                     f"{identity}: found_by_query_ids references an unknown query"
                 )
             links[query_id].add(identity)
+    for identity, query in query_index.items():
+        if query["status"] == "no_results" and links[identity]:
+            raise ValueError(f"{identity}: no_results query cannot link to sources")
 
     def coverage(section=None, language=None):
         lanes = {
@@ -144,10 +184,12 @@ def analyze_records(
                 "failed_queries": 0,
                 "inspected_sources": 0,
                 "source_ids": [],
+                "duplicate_source_ids": [],
             }
             for platform in PLATFORMS
         }
-        urls = {platform: set() for platform in PLATFORMS}
+        identities = {platform: set() for platform in PLATFORMS}
+        matched_sources = set()
         for identity, query in query_index.items():
             if section and section not in query.get("deliverable_section_ids", []):
                 continue
@@ -167,9 +209,14 @@ def analyze_records(
                 if (
                     url
                     and platform_for_url(url) == platform
-                    and url not in urls[platform]
+                    and source_id not in matched_sources
                 ):
-                    urls[platform].add(url)
+                    matched_sources.add(source_id)
+                    key = inspection_identity(url)
+                    if key in identities[platform]:
+                        lane["duplicate_source_ids"].append(source_id)
+                        continue
+                    identities[platform].add(key)
                     lane["source_ids"].append(source_id)
                     lane["inspected_sources"] += 1
         gaps = []
@@ -187,22 +234,19 @@ def analyze_records(
                         "failed_queries": lane["failed_queries"],
                     }
                 )
-        return lanes, gaps
+        return lanes, gaps, matched_sources
 
-    platforms, global_gaps = coverage()
+    platforms, global_gaps, linked_sources = coverage()
     scopes, scope_gaps = [], []
     if sections or languages:
         for section in sections or [None]:
             for language in languages or [None]:
-                lanes, gaps = coverage(section, language)
+                lanes, gaps, _ = coverage(section, language)
                 scopes.append(
                     {"section_id": section, "language": language, "platforms": lanes}
                 )
                 scope_gaps.extend(gaps)
     gaps = scope_gaps if scopes else global_gaps
-    linked_sources = {
-        source_id for lane in platforms.values() for source_id in lane["source_ids"]
-    }
     return {
         "verdict": "partial" if gaps else "covered",
         "required_platforms": required,

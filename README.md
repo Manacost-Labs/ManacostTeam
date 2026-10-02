@@ -4,7 +4,7 @@
 
 ## Состав
 
-Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). Готовые ZIP/.skill для ChatGPT и Claude: [release/team-skills/1.0.1](release/team-skills/1.0.1/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
+Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). Готовые ZIP/.skill для ChatGPT и Claude: [release/team-skills/1.0.2](release/team-skills/1.0.2/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
 
 | Модуль | Что это | Когда использовать |
 |---|---|---|

@@ -1,4 +1,25 @@
-# Проверка Team standard 1.0.1
+# Проверка Team standard 1.0.2
+
+Свежая локальная проверка Windows, Python 3.13, 2026-10-03:
+
+| Область | Результат |
+| --- | --- |
+| EditorTeam | 442 passed, 36 skipped: внешние интеграции не запускались |
+| ResearchTeam | 224 tests OK |
+| Research gates | Skill audit, benchmark release, semantic gold, recall plan PASS |
+| Общие release/runtime tests | 25 tests OK; реальные ZIP, отказ при несовпадении версий, неизменность старых архивов, отсутствие частичного релиза при ошибке копирования, проверки input/output и исправлений Research |
+| Skills | 8 переносимых entrypoints и общий monorepo gate валидны |
+| Plugin | Распакованный 1.0.2: Claude Code strict validation PASS |
+| Сборка | 1.0.2 собран; `--check` подтверждает точный состав и воспроизводимость; старые выпуски не изменены |
+| Статические проверки | Ruff check/format затронутого Python, actionlint и diff check PASS |
+
+Итого в трёх наборах: 691 успешный тест, 36 пропущенных интеграционных тестов.
+Незатронутые модули отдельно повторно не проверялись; portable smoke выполняет
+их существующие проверки из ZIP. XML source kit сохраняет прежние байты; его
+сборка из ZIP остаётся отдельным job в CI. Импорт навыков в облачные аккаунты
+ChatGPT/Claude не выполнялся.
+
+## Предыдущий выпуск 1.0.1
 
 Локальная проверка Windows, Python 3.13, 2026-10-03:
 

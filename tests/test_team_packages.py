@@ -250,6 +250,54 @@ class PortableRuntimeTests(unittest.TestCase):
         self.assertEqual(len(report["scopes"]), 4)
         self.assertEqual(len(report["gap_details"]), 3)
 
+    def test_research_packaged_cli_deduplicates_videos_and_rejects_false_no_results(
+        self,
+    ):
+        run = self.root / "video-run"
+        run.mkdir()
+        query = {
+            "query_id": "Q1",
+            "family": "youtube",
+            "status": "completed",
+            "executed_at": "2026-10-03",
+            "result_source_ids": ["S1", "S2"],
+        }
+        sources = [
+            {
+                "source_id": "S1",
+                "url": "https://www.youtube.com/watch?v=Video_A&t=10",
+                "access_integrity": "transcript",
+            },
+            {
+                "source_id": "S2",
+                "url": "https://youtu.be/Video_A?t=20",
+                "access_integrity": "transcript",
+            },
+        ]
+        (run / "queries.jsonl").write_text(json.dumps(query) + "\n", encoding="utf-8")
+        (run / "sources.jsonl").write_text(
+            "\n".join(map(json.dumps, sources)) + "\n", encoding="utf-8"
+        )
+        process = self.run_helper(
+            "research-team",
+            "scripts/platform_coverage.py",
+            run,
+            "--require",
+            "youtube",
+            "--strict",
+        )
+        report = json.loads(process.stdout)
+        self.assertEqual(report["platforms"]["youtube"]["inspected_sources"], 1)
+        self.assertEqual(report["platforms"]["youtube"]["duplicate_source_ids"], ["S2"])
+        self.assertEqual(report["unlinked_inspected_source_ids"], [])
+        query["status"] = "no_results"
+        (run / "queries.jsonl").write_text(json.dumps(query) + "\n", encoding="utf-8")
+        process = self.run_helper(
+            "research-team", "scripts/platform_coverage.py", run, codes=(2,)
+        )
+        self.assertEqual(json.loads(process.stdout)["verdict"], "invalid")
+        self.assertNotIn("Traceback", process.stderr)
+
     def test_all_22_bundled_svg_examples_generate_valid_charts(self):
         examples = sorted((self.unpacked / "svg-team/examples/specs").glob("*.json"))
         self.assertEqual(len(examples), 22)
@@ -346,6 +394,136 @@ class PortableRuntimeTests(unittest.TestCase):
             (runtime / "tsconfig.build.json").read_text(encoding="utf-8")
         )
         self.assertTrue((runtime / build["extends"]).is_file())
+
+    def test_shortcode_cli_rejects_stale_ranges_and_bad_input_without_changing_output(
+        self,
+    ):
+        source = self.root / "guard-input.md"
+        source.write_text("С Бранном сильнее.", encoding="utf-8")
+        catalog = self.root / "guard-catalog.json"
+        catalog.write_text(
+            json.dumps(
+                [
+                    {
+                        "name": "Бранн Бронзобород",
+                        "id": "CORE_LOE_077",
+                        "formats": ["wild"],
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        mentions = self.root / "guard-mentions.json"
+        output = self.root / "guard-output.md"
+        output.write_bytes(b"previous verified output")
+        for payload in [
+            "{broken",
+            "null",
+            "{}",
+            json.dumps(
+                [{"start": 2, "end": 7, "text": "Бранн", "card_id": "CORE_LOE_077"}]
+            ),
+            json.dumps(
+                [{"start": 2, "end": 9, "text": "Бранн", "card_id": "CORE_LOE_077"}]
+            ),
+            json.dumps([{"start": 2, "end": 9, "card_id": "CORE_LOE_077"}]),
+        ]:
+            with self.subTest(payload=payload):
+                mentions.write_text(payload, encoding="utf-8")
+                process = self.run_helper(
+                    "card-shortcodes",
+                    "scripts/apply_shortcodes.py",
+                    source,
+                    "--catalog",
+                    catalog,
+                    "--format",
+                    "wild",
+                    "--mentions",
+                    mentions,
+                    "--output",
+                    output,
+                    codes=(2,),
+                )
+                self.assertNotIn("Traceback", process.stderr)
+                self.assertEqual(output.read_bytes(), b"previous verified output")
+        source.write_bytes(b"\xffinvalid utf8")
+        process = self.run_helper(
+            "card-shortcodes",
+            "scripts/apply_shortcodes.py",
+            source,
+            "--catalog",
+            catalog,
+            "--format",
+            "wild",
+            "--output",
+            output,
+            codes=(2,),
+        )
+        self.assertNotIn("Traceback", process.stderr)
+        self.assertEqual(output.read_bytes(), b"previous verified output")
+
+    def test_shortcode_cli_preserves_every_input_including_hardlink_aliases(self):
+        source = self.root / "collision-input.md"
+        source.write_text("Бранн", encoding="utf-8")
+        catalog = self.root / "collision-catalog.json"
+        catalog.write_text(
+            json.dumps(
+                [
+                    {
+                        "name": "Бранн Бронзобород",
+                        "id": "CORE_LOE_077",
+                        "formats": ["wild"],
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        mentions = self.root / "collision-mentions.json"
+        mentions.write_text(
+            json.dumps(
+                [{"start": 0, "end": 5, "text": "Бранн", "card_id": "CORE_LOE_077"}]
+            ),
+            encoding="utf-8",
+        )
+        inputs = [source, catalog, mentions]
+        original = {path: path.read_bytes() for path in inputs}
+        for output in inputs:
+            with self.subTest(output=output.name):
+                process = self.run_helper(
+                    "card-shortcodes",
+                    "scripts/apply_shortcodes.py",
+                    source,
+                    "--catalog",
+                    catalog,
+                    "--format",
+                    "wild",
+                    "--mentions",
+                    mentions,
+                    "--output",
+                    output,
+                    codes=(2,),
+                )
+                self.assertNotIn("Traceback", process.stderr)
+                self.assertIn("every input file", process.stderr)
+                self.assertEqual(original, {path: path.read_bytes() for path in inputs})
+        alias = self.root / "hardlink-input.md"
+        os.link(source, alias)
+        process = self.run_helper(
+            "card-shortcodes",
+            "scripts/apply_shortcodes.py",
+            source,
+            "--catalog",
+            catalog,
+            "--format",
+            "wild",
+            "--mentions",
+            mentions,
+            "--output",
+            alias,
+            codes=(2,),
+        )
+        self.assertIn("every input file", process.stderr)
+        self.assertEqual(alias.read_bytes(), original[source])
 
 
 if __name__ == "__main__":

@@ -18,3 +18,12 @@ First collect query-plan.jsonl with `scripts/plan_queries.py`; log actual querie
 Run `python scripts/platform_coverage.py RUN_DIRECTORY --language en --language ru --section SEC-0001 --section SEC-0002`, using the actual section IDs. The default command without flags infers all non-excluded sections from plan.json and languages from query-plan.jsonl, including unexecuted branches. Flags override inferred scopes; omit sections only for a sectionless task. Sources count only when linked through result_source_ids or found_by_query_ids to a successful executed query on the same platform; unlinked inspection, snippets and duplicate URLs do not fill coverage gaps. It reports executed searches, failed attempts and inspected sources separately. `--require x --require reddit --strict` can enforce platforms the user explicitly requires. It is an access coverage check, not a consensus or quality score. Missing/blocked lanes remain partial and must be disclosed beside affected conclusions. Do not fabricate successful coverage to pass it.
 
 After an initial pass, search each section's gaps and strongest counterargument. Follow useful references upstream and remove duplicate/reposted lineage. Stop a branch when additional good sources no longer change its claims, examples or confidence. Keep useful details, timings, deck codes, exceptions and disagreements in the normal useful-data bank, even if they do not fit the main article. Apply the existing semantic, freshness, lineage and final research gates before synthesis.
+
+The access audit counts one YouTube video, X post or Reddit thread once across
+recognized share URLs, timestamp links and platform aliases. Other URL forms
+keep their full query string. `duplicate_source_ids` lists additional inspected
+records of the same original; they remain linked inspections, not unlinked gaps.
+This deduplication does not prove independent authorship or corroboration.
+`no_results` means an executed search found no sources: either forward or reverse
+source links make that ledger record invalid. Correct its status or linkage from
+the actual tool result before using the report; never change the log to force a pass.

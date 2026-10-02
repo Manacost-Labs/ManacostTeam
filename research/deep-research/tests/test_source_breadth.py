@@ -134,6 +134,8 @@ class SourceBreadthTests(unittest.TestCase):
         report = analyze_records(queries, sources, required=["x"])
         self.assertEqual(report["verdict"], "covered")
         self.assertEqual(report["platforms"]["x"]["inspected_sources"], 1)
+        self.assertEqual(report["platforms"]["x"]["duplicate_source_ids"], ["S2"])
+        self.assertEqual(report["unlinked_inspected_source_ids"], [])
         queries[0]["status"] = "blocked"
         report = analyze_records(queries, sources, required=["x"])
         self.assertEqual(report["platforms"]["x"]["inspected_sources"], 0)
@@ -155,6 +157,90 @@ class SourceBreadthTests(unittest.TestCase):
                 [{"source_id": "S1", "found_by_query_ids": ["absent"]}],
                 required=["x"],
             )
+
+    def test_share_urls_and_timestamps_count_one_original_per_platform(self):
+        from platform_coverage import analyze_records
+
+        variants = {
+            "youtube": [
+                "https://www.youtube.com/watch?v=Video_A&t=10",
+                "https://youtu.be/Video_A?si=share&t=20",
+                "https://m.youtube.com/shorts/Video_A",
+                "https://www.youtube.com/embed/Video_A",
+                "https://www.youtube.com/live/Video_A?feature=share",
+                "https://www.youtube.com/watch?v=Video_B",
+            ],
+            "x": [
+                "https://x.com/author/status/123?s=20",
+                "https://twitter.com/author/status/123#reply",
+                "https://mobile.twitter.com/author/status/123/photo/1",
+                "https://x.com/i/web/status/123",
+                "https://x.com/other/status/124",
+            ],
+            "reddit": [
+                "https://www.reddit.com/r/test/comments/abc123/title/",
+                "https://old.reddit.com/r/test/comments/abc123/title/comment/",
+                "https://redd.it/abc123",
+                "https://www.reddit.com/comments/abc123?utm_source=share",
+                "https://www.reddit.com/r/test/comments/abc124/other/",
+            ],
+        }
+        for platform, urls in variants.items():
+            with self.subTest(platform=platform):
+                sources = [
+                    {
+                        "source_id": f"S{index}",
+                        "url": url,
+                        "access_integrity": "full",
+                        "found_by_query_ids": ["Q1", "Q2"],
+                    }
+                    for index, url in enumerate(urls)
+                ]
+                queries = [
+                    {
+                        "query_id": identity,
+                        "family": platform,
+                        "status": "completed",
+                        "executed_at": "2026-10-03",
+                    }
+                    for identity in ["Q1", "Q2"]
+                ]
+                report = analyze_records(queries, sources, required=[platform])
+                lane = report["platforms"][platform]
+                self.assertEqual(lane["inspected_sources"], 2)
+                self.assertEqual(len(lane["duplicate_source_ids"]), len(urls) - 2)
+                self.assertEqual(report["unlinked_inspected_source_ids"], [])
+
+    def test_general_web_query_parameters_are_preserved(self):
+        from platform_coverage import inspection_identity
+
+        first = "https://example.com/data?patch=1"
+        second = "https://example.com/data?patch=2"
+        self.assertNotEqual(inspection_identity(first), inspection_identity(second))
+
+    def test_no_results_with_forward_or_reverse_source_links_is_invalid(self):
+        from platform_coverage import analyze_records
+
+        query = {
+            "query_id": "Q1",
+            "family": "youtube",
+            "status": "no_results",
+            "executed_at": "2026-10-03",
+        }
+        source = {
+            "source_id": "S1",
+            "url": "https://youtu.be/Video_A",
+            "access_integrity": "transcript",
+        }
+        for forward in [True, False]:
+            with self.subTest(forward=forward):
+                q = {**query, "result_source_ids": ["S1"]} if forward else query
+                s = source if forward else {**source, "found_by_query_ids": ["Q1"]}
+                with self.assertRaisesRegex(ValueError, "no_results query cannot link"):
+                    analyze_records([q], [s], required=["youtube"])
+        report = analyze_records([query], [], required=["youtube"])
+        self.assertEqual(report["verdict"], "partial")
+        self.assertEqual(report["platforms"]["youtube"]["executed_queries"], 1)
 
     def test_malformed_json_has_a_controlled_line_number(self):
         import tempfile
