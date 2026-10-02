@@ -17,7 +17,10 @@
 | Сборка | Повторная сборка `--check` воспроизводима |
 | Статические проверки | Ruff затронутых runtime/tests, actionlint и staged diff check PASS |
 
-Go/Docker и остальные ОС проверяются отдельными jobs в GitHub Actions. Их
-локальный запуск не заявляется. Облачный импорт навыков в аккаунты ChatGPT/Claude
-не выполнялся. Утверждение «пакет переносим» относится к его структуре и
-проверенным helpers, с указанными в SKILL.md требованиями к среде.
+GitHub Actions завершились успешно:
+
+- [Portable Team skills 1.0.1](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37076560190): воспроизводимость и XML source-kit smoke на Windows/Linux, commit `18d54de`.
+- [Editor CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37076078439): Python 3.11/3.12/3.13 на Windows/Linux/macOS, Go, NLP, корпус, eval contracts и Docker E2E.
+- [Research CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37076078564), [SVG CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37076078446), [Translate CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37076078513), [XMLTeam CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37076078419).
+
+Модульные проверки относятся к commit `f6371cd`; следующий `18d54de` изменяет упаковку/версии и проходит отдельный packaging CI. Go/Docker локально не запускались; их runtime подтверждён GitHub Actions. Облачный импорт навыков в аккаунты ChatGPT/Claude не выполнялся. Переносимость относится к структуре и проверенным helpers с требованиями к среде из SKILL.md.
