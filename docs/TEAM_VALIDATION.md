@@ -25,6 +25,15 @@ ChatGPT/Claude не выполнялся.
 Последний включает воспроизводимость и сборку XML source kit из ZIP на
 Windows/Linux. 1.0.3 добавляет исправление локального запуска и отдельный smoke,
 сохраняя архивы EditorTeam/ResearchTeam из 1.0.2 без изменения байтов.
+Для того же commit прошёл [Editor CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37079749082):
+Python 3.11/3.12/3.13 на Windows/Linux/macOS, корпус, Go, NLP, eval contracts,
+Docker toolchain, Compose health path и полный pipeline E2E. Go/Docker локально
+не запускались; здесь указан их подтверждённый результат GitHub Actions.
+
+[Portable Team skills 1.0.3](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37080514563)
+для commit `cc1047d` также завершился успешно: 26 release/runtime tests,
+воспроизводимая сборка и XML source-kit smoke на Windows/Linux. Последующие
+изменения этого отчёта не меняют runtime или содержимое архивов.
 
 ## Предыдущий выпуск 1.0.1
 
