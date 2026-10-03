@@ -22,8 +22,23 @@
 ручной сверки по evidence; access coverage не доказывает независимость или
 правильность выводов. Смысловые границы описаны в
 [изменениях 1.1.0](EDITOR_RESEARCH_QUALITY.md). Импорт в облачные аккаунты
-ChatGPT/Claude не выполнялся. GitHub CI нового commit проверяется отдельно
-после push; предыдущие результаты ниже относятся к своим выпускам.
+ChatGPT/Claude не выполнялся. Предыдущие результаты ниже относятся к своим выпускам.
+
+### GitHub CI 1.1.0
+
+Для commit `0a3f02c` прошли
+[Research CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37127360918)
+и [Portable Team skills](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37127361001):
+Windows/Linux, воспроизводимость архивов и XML source-kit smoke.
+
+Первый [Editor CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37127361023)
+обнаружил несогласованность версии внутреннего standalone builder с
+обновлённым workflow: `1.7.0` против `1.7.1`. Остальные проверки этого запуска,
+включая корпус, Go, NLP, eval contracts и Docker E2E, прошли. Сборщик исправлен;
+дополнительно проверена переносимость ссылки research-intake в автономном
+пакете. Девять packaging tests проходят, `build_team_skills.py --check`
+подтверждает, что опубликованные архивы 1.1.0 не изменились. Финальный Editor CI
+исправления проверяется отдельно.
 
 ## Предыдущий выпуск 1.0.3
 

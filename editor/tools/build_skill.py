@@ -32,7 +32,7 @@ SKILL = ROOT / ".claude" / "skills" / "hs-edit"
 OUT = ROOT / "build"
 NAME = "hearthstone-editor"
 PLUGIN_NAME = "editor-team"
-PLUGIN_VERSION = "1.7.0"   # версия следующего релиза; release/ хранит 1.6.0 до сборки --release
+PLUGIN_VERSION = "1.7.1"   # версия следующего релиза; release/ хранит 1.6.0 до сборки --release
 
 VENDOR_PACKAGES = ["pymorphy3", "pymorphy3_dicts_ru", "dawg_python", "dawg2_python", "yaml"]
 
@@ -223,7 +223,11 @@ def build(with_corpus: bool, with_vendor: bool) -> Path:
 
     src_skill = ROOT / "tools" / "SKILL.md"
     if src_skill.exists():
-        shutil.copy(src_skill, dst / "SKILL.md")
+        template = src_skill.read_text(encoding="utf-8")
+        # The template is also readable in the checkout. Source-relative
+        # references must point inside the standalone package after copying.
+        template = template.replace("../.claude/skills/hs-edit/references/", "references/")
+        (dst / "SKILL.md").write_text(template, encoding="utf-8")
 
     archive = OUT / f"{NAME}.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:

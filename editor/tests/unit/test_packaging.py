@@ -78,6 +78,8 @@ def test_build_script_runs(tmp_path):
     import build_skill
 
     assert f'version: "{build_skill.PLUGIN_VERSION}"' in packaged_skill.read_text(encoding="utf-8")
+    assert "](references/research-intake.md)" in packaged_skill.read_text(encoding="utf-8")
+    assert (root / "build" / "hearthstone-editor" / "references" / "research-intake.md").is_file()
     assert (
         root / "build" / "hearthstone-editor" / "references" / "editorial-decision-protocol.md"
     ).exists()
