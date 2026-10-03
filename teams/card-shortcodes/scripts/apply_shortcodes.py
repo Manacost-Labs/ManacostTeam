@@ -7,7 +7,12 @@ import tempfile
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(root / "python"))
+python_source = root / "python"
+if not (python_source / "editorteam").is_dir():
+    repository = root.parents[1]
+    if (repository / "teams/registry.json").is_file():
+        python_source = repository / "editor/src"
+sys.path.insert(0, str(python_source))
 from editorteam.card_shortcodes import apply_shortcodes
 from editorteam.wordpress import load_catalog
 

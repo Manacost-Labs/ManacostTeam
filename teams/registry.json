@@ -228,7 +228,7 @@
       "name": "card-shortcodes",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "source": "teams/card-shortcodes",
       "resources": [
         {
@@ -246,5 +246,5 @@
       ]
     }
   ],
-  "release_version": "1.0.2"
+  "release_version": "1.0.3"
 }

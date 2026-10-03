@@ -18,7 +18,7 @@ python tools/build_team_skills.py --check
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-Результат — release/team-skills/1.0.2: отдельные ZIP и их идентичные `.skill` aliases, combined plugin, index.json и SHA256SUMS. ZIP содержит одну верхнюю папку и ровно один SKILL.md. Архивы воспроизводимы, проверяются на внутренние ограничения проекта: до 500 файлов, 25 MiB на файл, 100 MiB после распаковки и 50 MiB на архив и исключают credentials, кэши и окружения. `build/` — локальная staging-папка и не входит в Git.
+Результат — release/team-skills/1.0.3: отдельные ZIP и их идентичные `.skill` aliases, combined plugin, index.json и SHA256SUMS. ZIP содержит одну верхнюю папку и ровно один SKILL.md. Архивы воспроизводимы, проверяются на внутренние ограничения проекта: до 500 файлов, 25 MiB на файл, 100 MiB после распаковки и 50 MiB на архив и исключают credentials, кэши и окружения. `build/` — локальная staging-папка и не входит в Git.
 
 Версия и имя согласуются между registry, SKILL.md и skill.yaml. При изменении содержимого обновите версию затронутого навыка и release_version; неизменённые навыки могут сохранить прежнюю версию. Архив с тем же именем обязан сохранять байты во всех опубликованных выпусках. Сборщик проверяет историю до записи и публикует новую папку целиком. Существующий неполный, изменённый или содержащий лишние файлы выпуск отклоняется; его содержимое сохраняется для разбора. `--check` проверяет точный состав и байты всего выпуска.
 
@@ -33,7 +33,7 @@ python -m unittest discover -s tests -p 'test_*.py'
 | XMLTeam | xml-team-1.0.1 | /xml-team |
 | JobTeam | job-team-1.0.1 | /job-team |
 | MarketingTeam | marketing-team-1.0.1 | /marketing-team |
-| Подсветка карт | card-shortcodes-1.0.2 | /card-shortcodes |
+| Подсветка карт | card-shortcodes-1.0.3 | /card-shortcodes |
 
 **Claude web:** загрузите отдельный ZIP в Customize → Skills при включённом Code execution. Доступность меню зависит от настроек аккаунта/организации. [Официальная инструкция](https://support.claude.com/en/articles/12512180-use-skills-in-claude).
 

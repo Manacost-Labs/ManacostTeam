@@ -2,7 +2,7 @@
 name: card-shortcodes
 description: "Добавление контекстных шорткодов подсветки карт Hearthstone без редактуры текста."
 metadata:
-  version: "1.0.2"
+  version: "1.0.3"
 ---
 
 # EditorTeam

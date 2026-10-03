@@ -1,4 +1,4 @@
-# Проверка Team standard 1.0.2
+# Проверка Team standard 1.0.3
 
 Свежая локальная проверка Windows, Python 3.13, 2026-10-03:
 
@@ -7,17 +7,24 @@
 | EditorTeam | 442 passed, 36 skipped: внешние интеграции не запускались |
 | ResearchTeam | 224 tests OK |
 | Research gates | Skill audit, benchmark release, semantic gold, recall plan PASS |
-| Общие release/runtime tests | 25 tests OK; реальные ZIP, отказ при несовпадении версий, неизменность старых архивов, отсутствие частичного релиза при ошибке копирования, проверки input/output и исправлений Research |
+| Общие release/runtime tests | 26 tests OK; реальные ZIP, отказ при несовпадении версий, неизменность старых архивов, отсутствие частичного релиза при ошибке копирования, проверки input/output и исправлений Research; запуск подсветки напрямую из checkout при другой рабочей папке |
 | Skills | 8 переносимых entrypoints и общий monorepo gate валидны |
-| Plugin | Распакованный 1.0.2: Claude Code strict validation PASS |
-| Сборка | 1.0.2 собран; `--check` подтверждает точный состав и воспроизводимость; старые выпуски не изменены |
+| Plugin | Распакованный 1.0.3: Claude Code strict validation PASS |
+| Сборка | 1.0.3 собран; `--check` подтверждает точный состав и воспроизводимость; старые выпуски не изменены |
 | Статические проверки | Ruff check/format затронутого Python, actionlint и diff check PASS |
 
-Итого в трёх наборах: 691 успешный тест, 36 пропущенных интеграционных тестов.
+Итого в трёх наборах: 692 успешных теста, 36 пропущенных интеграционных тестов.
 Незатронутые модули отдельно повторно не проверялись; portable smoke выполняет
 их существующие проверки из ZIP. XML source kit сохраняет прежние байты; его
 сборка из ZIP остаётся отдельным job в CI. Импорт навыков в облачные аккаунты
 ChatGPT/Claude не выполнялся.
+
+Для commit `00b1d81`, содержащего изменения Editor/Research и выпуск 1.0.2,
+уже прошли [Research CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37079749058)
+и [Portable Team skills](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37079749065).
+Последний включает воспроизводимость и сборку XML source kit из ZIP на
+Windows/Linux. 1.0.3 добавляет исправление локального запуска и отдельный smoke,
+сохраняя архивы EditorTeam/ResearchTeam из 1.0.2 без изменения байтов.
 
 ## Предыдущий выпуск 1.0.1
 

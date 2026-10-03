@@ -525,6 +525,52 @@ class PortableRuntimeTests(unittest.TestCase):
         self.assertIn("every input file", process.stderr)
         self.assertEqual(alias.read_bytes(), original[source])
 
+    def test_shortcode_cli_runs_directly_from_checkout_outside_repository(self):
+        source, catalog, output = (
+            self.root / "checkout-input.md",
+            self.root / "checkout-catalog.json",
+            self.root / "checkout-output.md",
+        )
+        source.write_bytes("Бранн Бронзобород помогает.\r\n".encode())
+        catalog.write_text(
+            json.dumps(
+                [
+                    {
+                        "name": "Бранн Бронзобород",
+                        "id": "CORE_LOE_077",
+                        "formats": ["wild"],
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        process = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "teams/card-shortcodes/scripts/apply_shortcodes.py"),
+                str(source),
+                "--catalog",
+                str(catalog),
+                "--format",
+                "wild",
+                "--output",
+                str(output),
+            ],
+            cwd=self.root,
+            env=self.env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=20,
+            check=False,
+        )
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        self.assertEqual(json.loads(process.stdout)["inserted"], 1)
+        self.assertEqual(
+            output.read_bytes(),
+            '[hs_card id="CORE_LOE_077"]Бранн Бронзобород[/hs_card] помогает.\r\n'.encode(),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
