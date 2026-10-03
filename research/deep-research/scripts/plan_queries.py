@@ -19,6 +19,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from platform_coverage import (
+    analyze_records,
+    inspection_targets,
+    planned_scopes,
+    query_platform,
+)
 from search_support import QUERY_FAMILIES, QUERY_PASSES, next_id, normalize_query
 
 PLAN_FILE = "query-plan.jsonl"
@@ -236,6 +242,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--json", action="store_true", help="Print records as JSON lines"
     )
+    parser.add_argument(
+        "--coverage-gaps",
+        action="store_true",
+        help="Queue pending/new queries only for incomplete platform/section/language lanes",
+    )
+    parser.add_argument(
+        "--min-inspected",
+        action="append",
+        default=[],
+        metavar="PLATFORM=N",
+        help="Breadth goal for --coverage-gaps; default 1 unique inspected material",
+    )
     return parser.parse_args(argv)
 
 
@@ -413,6 +431,42 @@ def summarize(records: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def gap_queue(
+    fresh: list[dict[str, Any]],
+    pending: list[dict[str, Any]],
+    executed: list[dict[str, Any]],
+    gaps: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Reuse unexecuted planned records; never present them as logged access."""
+    done_ids = {record.get("query_id") for record in executed}
+    done_queries = {
+        normalize_query(record["query"]) for record in executed if record.get("query")
+    }
+    selected = []
+    seen = set()
+    for record in pending + fresh:
+        if (
+            record.get("status") != "planned"
+            or record.get("query_id") in done_ids
+            or normalize_query(record.get("query", "")) in done_queries
+        ):
+            continue
+        for gap in gaps:
+            if (
+                query_platform(record) == gap["platform"]
+                and (not gap["language"] or record.get("language") == gap["language"])
+                and (
+                    not gap["section_id"]
+                    or gap["section_id"] in record.get("deliverable_section_ids", [])
+                )
+            ):
+                if record["query_id"] not in seen:
+                    seen.add(record["query_id"])
+                    selected.append({**record, "coverage_gap_reason": gap["reason"]})
+                break
+    return selected
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     root = Path(args.directory).expanduser().resolve()
@@ -453,7 +507,11 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    if "localized" not in families and any(language != "en" for language in languages):
+    if (
+        "localized" not in families
+        and any(language != "en" for language in languages)
+        and not (args.coverage_gaps and args.family)
+    ):
         families.append("localized")
 
     as_of = str(manifest.get("as_of", ""))
@@ -482,6 +540,40 @@ def main(argv: list[str] | None = None) -> int:
         existing_ids=existing_ids,
         coverage_enabled="coverage_contract_version" in manifest,
     )
+    fresh_ids = {record["query_id"] for record in records}
+    try:
+        targets = inspection_targets(args.min_inspected)
+        if targets and not args.coverage_gaps:
+            raise ValueError(
+                "--min-inspected requires --coverage-gaps in the query planner"
+            )
+        if args.coverage_gaps:
+            sections, planned_languages = planned_scopes(root)
+            required = list(
+                dict.fromkeys(
+                    family if family in {"x", "reddit", "youtube"} else "web"
+                    for family in families
+                )
+            )
+            report = analyze_records(
+                executed,
+                load_jsonl(root / "sources.jsonl"),
+                required=required,
+                sections=args.section or sections,
+                languages=args.language or planned_languages or languages,
+                min_inspected=targets,
+            )
+            # Pending queries from an earlier plan are part of the work queue,
+            # but --apply appends only fresh records. Completed/failed records
+            # stay in the execution ledger and require an explicit retry.
+            pending = [record for record in planned if record.get("family") in families]
+            records = gap_queue(records, pending, executed, report["gap_details"])
+            for record in records:
+                if record["query_id"] in fresh_ids:
+                    record["pass"] = "gap"
+    except (OSError, ValueError, TypeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     for pass_name in {record["pass"] for record in records}:
         assert pass_name in QUERY_PASSES
 
@@ -490,13 +582,25 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(record, ensure_ascii=False))
     else:
         print(summarize(records))
+        if args.coverage_gaps:
+            print(
+                f"- incomplete lanes: {len(report['gap_details'])}; queued queries: {len(records)}"
+            )
+            if report["gap_details"] and not records:
+                print(
+                    "- no untried templates remain: add named entities/branch labels, inspect original candidates, or document an unresolved gap"
+                )
         if not markers:
             print("- note: no version markers; version-bound templates were skipped")
-    if args.apply and records:
+    new_records = [record for record in records if record["query_id"] in fresh_ids]
+    if args.apply and new_records:
         with (root / PLAN_FILE).open("a", encoding="utf-8") as stream:
-            for record in records:
+            for record in new_records:
                 stream.write(json.dumps(record, ensure_ascii=False) + "\n")
-        print(f"Appended {len(records)} records to {PLAN_FILE}")
+        print(
+            f"Appended {len(new_records)} records to {PLAN_FILE}",
+            file=sys.stderr if args.json else sys.stdout,
+        )
     elif not args.apply and not args.json:
         print("Preview only; use --apply to write the plan")
     return 0

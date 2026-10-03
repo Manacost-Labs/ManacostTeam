@@ -15,6 +15,14 @@ For Chinese Hearthstone questions, load [Chinese Hearthstone intelligence](refer
 
 For deep/exhaustive work, use [broad platform search](references/broad-platform-search.md): separate section-level X, Reddit, YouTube and general-web passes, EN/RU variants, creator searches, practical examples and contrary evidence. Plan queries with scripts/plan_queries.py and audit actual access with scripts/platform_coverage.py. Do not equate query generation with executed searches or platform coverage with independent corroboration.
 
+After the first pass, use `scripts/plan_queries.py RUN_DIRECTORY --coverage-gaps --json`
+to queue pending/new queries only for incomplete platform/section/language lanes.
+For a material disputed section, configure relevant `--min-inspected PLATFORM=N`
+goals identically in the coverage audit and gap planner. These count distinct
+inspected materials, not independent authors or confirmations. Preserve useful
+examples, exceptions, values and video timestamps with their conditions and
+direct evidence in the EditorTeam handoff and useful-data bank.
+
 Before searching, record four choices in the research plan. For a guide, article, or other structured deliverable, also define its provisional section outline and source emphasis before generating queries.
 
 1. Research type: fact-check, explanatory, comparative, statistical, strategic, technical, landscape, or community intelligence. Select more than one when needed.

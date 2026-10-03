@@ -8,6 +8,7 @@ import json
 import re
 import sys
 from collections import Counter
+from html import unescape
 from pathlib import Path
 
 NEGATION = re.compile(r"\b(?:не|нельзя|никогда|not|never|don't|do\s+not)\b", re.IGNORECASE)
@@ -41,7 +42,9 @@ _META_NEGATION = re.compile(
     re.IGNORECASE | re.VERBOSE,
 )
 # «не просто X, а Y» и «X, а не Y»: отрицание только в противопоставлении
-_CONTRAST = re.compile(r",\s*а\s+не\s|\bне\s+(?:просто|только)\s[^.!?;]{0,80}?,\s*а\s", re.IGNORECASE)
+_CONTRAST = re.compile(
+    r",\s*а\s+не\s|\bне\s+(?:просто|только)\s[^.!?;]{0,80}?,\s*а\s", re.IGNORECASE
+)
 
 
 def negation_type(sentence: str) -> str:
@@ -56,7 +59,9 @@ def negation_type(sentence: str) -> str:
     Требовать сохранить два последних вида нельзя: тогда переплавка тащит в
     текст риторику источника, а именно её и надо вычищать.
     """
-    if _META_NEGATION.search(sentence):
+    if _META_NEGATION.search(sentence) and not NEGATION.search(
+        _CONTRAST.sub(" ", _META_NEGATION.sub(" ", sentence))
+    ):
         return "rhetorical"
     leftover = _CONTRAST.sub(" ", sentence)
     if NEGATION.search(sentence) and not NEGATION.search(leftover):
@@ -81,26 +86,114 @@ def _similarity(left: str, right: str) -> float:
 
 
 def negation_flips(before: str, after: str) -> list[dict]:
+    """Compare local clauses in both directions; this is a lexical guard.
+
+    A negation in a different clause cannot mask a flipped fact. Matching is
+    deliberately conservative: substantial paraphrases need claim review.
+    """
     issues = []
-    after_sentences = _sentences(after)
-    for source in _sentences(before):
-        if not NEGATION.search(source) or negation_type(source) != "fact":
-            continue
-        best = max(after_sentences, key=lambda item: _similarity(source, item), default="")
-        similarity = _similarity(source, best)
-        if similarity >= 0.6 and best and not NEGATION.search(best):
+
+    def units(text):
+        return [
+            clause.strip()
+            for sentence in _sentences(text)
+            for clause in re.split(r";|:\s+|,\s+(?:но|зато)\s+", sentence, flags=re.I)
+            if clause.strip() and negation_type(clause) == "fact"
+        ]
+
+    old, new = units(before), units(after)
+    seen = set()
+    for sources, targets, reverse in ((old, new, False), (new, old, True)):
+        for source in sources:
+            best = max(targets, key=lambda item: _similarity(source, item), default="")
+            similarity = _similarity(source, best)
+            if (
+                similarity < 0.6
+                or not best
+                or bool(NEGATION.search(source)) == bool(NEGATION.search(best))
+            ):
+                continue
+            left, right = (best, source) if reverse else (source, best)
+            if (left, right) in seen:
+                continue
+            seen.add((left, right))
             issues.append(
                 {
                     "kind": "FACTUAL_SEMANTIC_DRIFT",
                     "field": "negation",
-                    "message": "после редактуры исчезло отрицание",
-                    "before": source,
-                    "after": best,
+                    "message": "после редактуры изменилось отрицание игрового факта или совета",
+                    "before": left,
+                    "after": right,
                     "similarity": round(similarity, 3),
                     "severity": "error",
                 }
             )
     return issues
+
+
+def number_binding_drift(before: str, after: str) -> list[dict]:
+    """Catch exchanged values in unchanged lexical frames, allowing moves.
+
+    This does not infer numbers' meaning in arbitrary paraphrases. Compare
+    only matching word sequences, and ignore the order of whole sentences.
+    """
+
+    def frames(text):
+        result = {}
+        for sentence in _sentences(text):
+            values = tuple(NUMBERS.findall(sentence))
+            frame = tuple(TOKENS.findall(NUMBERS.sub(" ", sentence.casefold())))
+            if values and frame:
+                result.setdefault(frame, Counter())[values] += 1
+        return result
+
+    old, new = frames(before), frames(after)
+    return [
+        {
+            "kind": "FACTUAL_SEMANTIC_DRIFT",
+            "field": "number_binding",
+            "message": "числа поменялись местами в том же утверждении",
+            "context": " ".join(frame),
+            "before": [list(values) for values in old[frame].elements()],
+            "after": [list(values) for values in new[frame].elements()],
+            "severity": "error",
+        }
+        for frame in sorted(old.keys() & new.keys())
+        if old[frame] != new[frame]
+    ]
+
+
+def link_drift(before: str, after: str) -> list[dict]:
+    """Preserve HTTP citation destinations, including timestamps/fragments.
+
+    A repeated citation may be consolidated. Markup/HTML escaping may change;
+    destination changes need an explicit factual update, not a style edit.
+    """
+
+    def urls(text):
+        found = set()
+        for match in re.finditer(r"https?://[^\s<>\"']+", text, re.I):
+            url = unescape(match.group()).rstrip(".,;:!?…»")
+            for opening, closing in (("(", ")"), ("[", "]"), ("{", "}")):
+                while url.endswith(closing) and url.count(closing) > url.count(opening):
+                    url = url[:-1].rstrip(".,;:!?…»")
+            found.add(url)
+        return found
+
+    lost = sorted(urls(before) - urls(after))
+    return (
+        [
+            {
+                "kind": "FACTUAL_SEMANTIC_DRIFT",
+                "field": "links",
+                "message": "исчезла или изменилась ссылка на источник",
+                "lost": lost,
+                "severity": "error",
+            }
+        ]
+        if lost
+        else []
+    )
 
 
 def number_drift(
@@ -110,9 +203,9 @@ def number_drift(
     removed = left - right
     added = right - left
     allowed = Counter(allowed_removed_numbers or [])
-    if not added and not (removed - allowed):
-        return []
     if left == right:
+        return number_binding_drift(before, after)
+    if not added and not (removed - allowed):
         return []
     return [
         {
@@ -240,6 +333,7 @@ def compare(
     return [
         *negation_flips(before_text, after_text),
         *number_drift(before_text, after_text, allowed_removed_numbers),
+        *link_drift(before_text, after_text),
         *claim_contract_drift(claims_before, claims_after),
         *freshness_issues(claims_before, current_meta_epoch, current_patch),
     ]

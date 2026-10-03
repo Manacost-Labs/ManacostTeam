@@ -15,7 +15,9 @@ description: Редактура русскоязычных Hearthstone-гайд�
 
 При structured evidence сохраняй Guide Claim Contract: `claim_id`, `meaning.action`, `meaning.card`, `meaning.context`, `confidence`, `patch`, `meta_epoch`. Менять можно лексику, порядок слов и ритм; action, card, context, отрицание, числа и confidence неизменяемы. LOW не становится «обязательно», MEDIUM — «всегда».
 
-После правки запусти `semantic_diff.py` и `certainty_guard.py`. `FACTUAL_SEMANTIC_DRIFT`, `CERTAINTY_DRIFT` и `STALE_EVIDENCE` — жёсткий отказ, а не стилистическая заметка.
+Материал ResearchTeam принимай по [research-intake](references/research-intake.md): условия, уверенность, числа с их картами и ссылки с таймкодами должны пережить редактуру.
+
+После правки запусти `semantic_diff.py` и `certainty_guard.py`. `FACTUAL_SEMANTIC_DRIFT`, `CERTAINTY_DRIFT` и `STALE_EVIDENCE` — жёсткий отказ, а не стилистическая заметка. Semantic guard проверяет отрицания в обе стороны, обмен чисел в совпадающих формулировках и потерю ссылок; произвольный пересказ требует отдельной сверки смысла.
 
 <!-- shared: wordpress-shortcodes -->
 ## WordPress-шорткоды

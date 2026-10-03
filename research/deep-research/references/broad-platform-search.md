@@ -24,6 +24,55 @@ recognized share URLs, timestamp links and platform aliases. Other URL forms
 keep their full query string. `duplicate_source_ids` lists additional inspected
 records of the same original; they remain linked inspections, not unlinked gaps.
 This deduplication does not prove independent authorship or corroboration.
+
+## Targeted follow-up pass
+
+Preview the next work queue from the actual ledgers:
+
+```bash
+python scripts/plan_queries.py RUN_DIRECTORY --coverage-gaps --json
+```
+
+The queue includes still-pending queries with their existing IDs, plus new
+queries for incomplete platform/section/language lanes. Completed or failed
+queries are not silently repeated. `--apply` appends only new records and is
+idempotent; `--json --apply` keeps stdout valid JSONL and sends the write summary
+to stderr. A failed query can be retried explicitly by updating its execution
+record from the actual tool outcome; do not append a duplicate query ID.
+
+For a contested strategic section, set a relevant breadth goal, for example:
+
+```bash
+python scripts/platform_coverage.py RUN_DIRECTORY --section SEC-0001 --language en --min-inspected x=2 --min-inspected youtube=2
+python scripts/plan_queries.py RUN_DIRECTORY --coverage-gaps --section SEC-0001 --language en --min-inspected x=2 --min-inspected youtube=2 --json
+```
+
+Use the same scope and targets in both commands. Omitted platforms keep the
+default of one inspected material. Targets apply to every selected lane;
+they are review goals, not a request for unrelated volume. Share links to one
+video/post/thread count once. Different materials may still come from the
+same creator or upstream source, so apply the existing lineage and critical
+claim checks separately. A `covered` access report does not establish quality,
+representativeness, currency or independent corroboration.
+
+If there are gaps but no pending/new template queries, add relevant named
+entities with `--entity`, inspect candidate sources directly, try another
+available route, or record why the section remains unresolved. Do not rename
+old searches to manufacture fresh execution. The coverage check does not
+replace the contradiction and freshness passes; a fully covered platform
+can still contain an unsupported or stale claim.
+
+## Delivery to EditorTeam
+
+For each significant recommendation, the handoff identifies its action,
+applicable audience/patch/conditions, confidence, exceptions and direct
+evidence. Keep values attached to their entities and units. Preserve useful
+examples, mistakes and action sequences in the bank with timestamps or direct
+citations. State which phrases must stay qualified and which unresolved gaps
+prevent a publication-level conclusion. The editor-ready prose may omit
+technical ledger IDs; the human caveats and links still belong beside the
+affected advice. Use the existing handoff and useful-data templates and final
+preservation review to freeze this delivery.
 `no_results` means an executed search found no sources: either forward or reverse
 source links make that ledger record invalid. Correct its status or linkage from
 the actual tool result before using the report; never change the log to force a pass.

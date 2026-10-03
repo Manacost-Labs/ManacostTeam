@@ -200,6 +200,92 @@ class PortableRuntimeTests(unittest.TestCase):
         self.assertEqual(json.loads(process.stdout)["verdict"], "invalid")
         self.assertNotIn("Traceback", process.stderr)
 
+    def test_portable_editor_preserves_numeric_roles_and_citation_destinations(self):
+        directory = self.unpacked / "editor-team"
+        before, after = directory / "before.md", directory / "after.md"
+        before.write_text(
+            "Заклинание стоит 3 маны и наносит 5 урона. Источник: https://example.org/patch.\n",
+            encoding="utf-8",
+        )
+        after.write_text(
+            "Заклинание стоит 5 маны и наносит 3 урона.\n", encoding="utf-8"
+        )
+        result = self.run_helper(
+            "editor-team", "scripts/semantic_diff.py", before, after, codes=(1,)
+        )
+        report = json.loads(result.stdout)
+        self.assertFalse(report["accepted"])
+        self.assertEqual(
+            {item["field"] for item in report["violations"]},
+            {"number_binding", "links"},
+        )
+        after.write_text(before.read_text(encoding="utf-8"), encoding="utf-8")
+        self.run_helper("editor-team", "scripts/semantic_diff.py", before, after)
+
+    def test_portable_research_builds_a_scoped_queue_with_breadth_targets(self):
+        run = self.root / "gap-queue-run"
+        run.mkdir()
+        (run / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "main_question": "Hearthstone Arena",
+                    "depth": "deep",
+                    "coverage_contract_version": "1.0",
+                    "as_of": "2026-10-03",
+                }
+            ),
+            encoding="utf-8",
+        )
+        (run / "plan.json").write_text(
+            json.dumps(
+                {
+                    "deliverable_outline": [
+                        {"section_id": "SEC-1", "working_title": "Hearthstone Arena"},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        args = (
+            run,
+            "--coverage-gaps",
+            "--family",
+            "youtube",
+            "--language",
+            "en",
+            "--min-inspected",
+            "youtube=2",
+            "--json",
+            "--apply",
+        )
+        first = self.run_helper("research-team", "scripts/plan_queries.py", *args)
+        snapshot = (run / "query-plan.jsonl").read_bytes()
+        second = self.run_helper("research-team", "scripts/plan_queries.py", *args)
+        self.assertEqual(snapshot, (run / "query-plan.jsonl").read_bytes())
+        self.assertEqual(first.stdout, second.stdout)
+        records = [json.loads(line) for line in first.stdout.splitlines()]
+        self.assertTrue(records)
+        self.assertTrue(
+            all(
+                r["target_platform"] == "youtube" and r["status"] == "planned"
+                for r in records
+            )
+        )
+        result = self.run_helper(
+            "research-team",
+            "scripts/platform_coverage.py",
+            run,
+            "--require",
+            "youtube",
+            "--min-inspected",
+            "youtube=2",
+            "--strict",
+            codes=(1,),
+        )
+        report = json.loads(result.stdout)
+        self.assertEqual(report["gap_details"][0]["minimum_inspected"], 2)
+        self.assertEqual(report["platforms"]["youtube"]["executed_queries"], 0)
+
     def test_research_default_cli_preserves_unexecuted_planned_scopes(self):
         run = self.root / "scoped-run"
         run.mkdir()

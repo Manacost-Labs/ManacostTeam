@@ -49,7 +49,7 @@
 | [`guide_voice.py`](.claude/skills/hs-edit/scripts/guide_voice.py) | не пропускает research-report tone в `GUIDE` |
 | [`clarity.py`](.claude/skills/hs-edit/scripts/clarity.py) | проверка понятности статьи: роли терминов, тезис и нагрузка текста |
 | [`certainty_guard.py`](.claude/skills/hs-edit/scripts/certainty_guard.py) | не даёт LOW/MEDIUM claim стать категоричным |
-| [`semantic_diff.py`](.claude/skills/hs-edit/scripts/semantic_diff.py) | ловит смену отрицания, чисел и Guide Claim Contract |
+| [`semantic_diff.py`](.claude/skills/hs-edit/scripts/semantic_diff.py) | проверяет отрицания в обе стороны, подмену числовых ролей, потерю ссылок и Guide Claim Contract |
 | [`rewrite_gate.py`](.claude/skills/hs-edit/scripts/rewrite_gate.py) | затвор переплавки: результат против нормы автора, а не против исходника |
 | [`claims.py`](.claude/skills/hs-edit/scripts/claims.py) | утверждения исходника и их покрытие: карты, советы, отрицания, классы |
 | [`elegance.py`](.claude/skills/hs-edit/scripts/elegance.py) | аккуратность: номинализации, серии начал, конкретика |
@@ -70,6 +70,11 @@ python3 tools/run_evals.py --inputs-only                         # 16 кейсо
 В шлюзе — `"mode": "переплавка"` или первое слово сообщения. Два прохода: план (JSON, проверяется сайдкаром) и проза по плану; затвор сравнивает результат с нормой автора и с утверждениями исходника. Раздел без материала не выдумывается, а честно объявляется отсутствующим. Пороги стоят за краем корпуса: затвор не отвергает опубликованные гайды, это проверяет `selftest.py`.
 
 ### Evidence-hidden затвор
+
+При входящем исследовании сначала прочитайте
+[research-intake](.claude/skills/hs-edit/references/research-intake.md): условия,
+уверенность и связь чисел/источников с советами должны пережить редактуру.
+Смысл глубокого пересказа проверяется отдельно от локальных автоматических guards.
 
 ```bash
 editor-team audit guide.md --mode GUIDE

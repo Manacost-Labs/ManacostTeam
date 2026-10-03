@@ -19,8 +19,27 @@ INSPECTED = {
     "timestamped_transcript",
     "structured_data",
 }
-SUCCESS = {"completed", "partial", "no_results"}
-FAILURE = {"blocked", "failed", "error", "unavailable"}
+SUCCESS = {"executed", "completed", "partial", "no_results"}
+FAILURE = {"blocked", "failed", "error", "unavailable", "skipped"}
+
+
+def inspection_targets(values: list[str]) -> dict[str, int]:
+    """Parse optional PLATFORM=N breadth goals shared by audit and planner."""
+    targets = {}
+    for value in values:
+        platform, separator, count = value.partition("=")
+        if (
+            not separator
+            or platform not in PLATFORMS
+            or not re.fullmatch(r"[1-9][0-9]*", count)
+        ):
+            raise ValueError(
+                "--min-inspected expects x|reddit|youtube|web=N, with N >= 1"
+            )
+        if platform in targets:
+            raise ValueError(f"duplicate --min-inspected target: {platform}")
+        targets[platform] = int(count)
+    return targets
 
 
 def platform_for_url(url: str) -> str:
@@ -147,9 +166,17 @@ def analyze_records(
     required: list[str],
     sections: list[str] | None = None,
     languages: list[str] | None = None,
+    min_inspected: dict[str, int] | None = None,
 ) -> dict:
     if set(required) - set(PLATFORMS):
         raise ValueError("unknown required platform")
+    targets = dict.fromkeys(PLATFORMS, 1)
+    for platform, count in (min_inspected or {}).items():
+        if platform not in PLATFORMS or type(count) is not int or count < 1:
+            raise ValueError(
+                "min_inspected must map known platforms to positive integers"
+            )
+        targets[platform] = count
     query_index, source_index = (
         index_records(queries, "query_id"),
         index_records(sources, "source_id"),
@@ -222,7 +249,10 @@ def analyze_records(
         gaps = []
         for platform in required:
             lane = lanes[platform]
-            if not lane["executed_queries"] or not lane["inspected_sources"]:
+            if (
+                not lane["executed_queries"]
+                or lane["inspected_sources"] < targets[platform]
+            ):
                 gaps.append(
                     {
                         "platform": platform,
@@ -230,8 +260,12 @@ def analyze_records(
                         "language": language,
                         "reason": "no_executed_search"
                         if not lane["executed_queries"]
-                        else "no_linked_inspection",
+                        else "no_linked_inspection"
+                        if not lane["inspected_sources"]
+                        else "insufficient_inspections",
                         "failed_queries": lane["failed_queries"],
+                        "inspected_sources": lane["inspected_sources"],
+                        "minimum_inspected": targets[platform],
                     }
                 )
         return lanes, gaps, matched_sources
@@ -250,6 +284,7 @@ def analyze_records(
     return {
         "verdict": "partial" if gaps else "covered",
         "required_platforms": required,
+        "minimum_inspected": {platform: targets[platform] for platform in required},
         "gaps": sorted({gap["platform"] for gap in gaps}),
         "gap_details": gaps,
         "platforms": platforms,
@@ -333,6 +368,13 @@ def main() -> int:
     parser.add_argument("--section", action="append", default=[])
     parser.add_argument("--language", action="append", default=[])
     parser.add_argument("--strict", action="store_true")
+    parser.add_argument(
+        "--min-inspected",
+        action="append",
+        default=[],
+        metavar="PLATFORM=N",
+        help="Unique inspected materials needed per selected section/language; default 1",
+    )
     args = parser.parse_args()
     try:
         planned_sections, planned_languages = planned_scopes(args.directory)
@@ -342,6 +384,7 @@ def main() -> int:
             required=list(dict.fromkeys(args.require or PLATFORMS)),
             sections=args.section or planned_sections,
             languages=args.language or planned_languages,
+            min_inspected=inspection_targets(args.min_inspected),
         )
     except (ValueError, TypeError, OSError) as exc:
         print(json.dumps({"verdict": "invalid", "error": str(exc)}, ensure_ascii=False))

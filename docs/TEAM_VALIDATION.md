@@ -1,4 +1,31 @@
-# Проверка Team standard 1.0.3
+# Проверка Team standard 1.1.0
+
+Локальная проверка Windows, Python 3.13, 2026-10-03 после улучшений EditorTeam
+и ResearchTeam:
+
+| Область | Результат |
+| --- | --- |
+| EditorTeam | 454 passed, 36 skipped; внешние интеграции локально не запускались |
+| ResearchTeam | 233 tests OK |
+| Research gates | Skill audit, benchmark release, semantic gold и recall plan PASS |
+| Общие release/runtime tests | 28 tests OK; новые guards Editor и очередь Research проверены из распакованных ZIP без checkout/dependencies |
+| Skills/plugin | 8 entrypoints и monorepo gate валидны; Claude Code strict plugin validation PASS |
+| Сборка | Выпуск 1.1.0; `--check` подтверждает точный состав, воспроизводимость и неизменность старых архивов |
+| Статические проверки | Ruff затронутых файлов, формат и diff check PASS; TRY004 для двух прежних ValueError в planner исключён из lint |
+
+Итого: 715 успешных тестов, 36 пропущенных интеграционных тестов. Добавлены
+12 сценариев сохранения фактов Editor, 9 сценариев очереди/широты Research и
+2 проверки новых возможностей в переносимых пакетах. Тестовые игровые тексты
+служат синтетическими примерами поведения, а не утверждениями о текущих картах.
+
+Произвольный пересказ и соответствие цитаты конкретному совету требуют
+ручной сверки по evidence; access coverage не доказывает независимость или
+правильность выводов. Смысловые границы описаны в
+[изменениях 1.1.0](EDITOR_RESEARCH_QUALITY.md). Импорт в облачные аккаунты
+ChatGPT/Claude не выполнялся. GitHub CI нового commit проверяется отдельно
+после push; предыдущие результаты ниже относятся к своим выпускам.
+
+## Предыдущий выпуск 1.0.3
 
 Свежая локальная проверка Windows, Python 3.13, 2026-10-03:
 
