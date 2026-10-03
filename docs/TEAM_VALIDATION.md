@@ -37,8 +37,17 @@ Windows/Linux, воспроизводимость архивов и XML source-k
 включая корпус, Go, NLP, eval contracts и Docker E2E, прошли. Сборщик исправлен;
 дополнительно проверена переносимость ссылки research-intake в автономном
 пакете. Девять packaging tests проходят, `build_team_skills.py --check`
-подтверждает, что опубликованные архивы 1.1.0 не изменились. Финальный Editor CI
-исправления проверяется отдельно.
+подтверждает, что опубликованные архивы 1.1.0 не изменились. После исправления
+повторный полный локальный прогон дал 454 passed, 36 skipped.
+
+Для commit `d82cc75` полностью прошли
+[Editor CI](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37128034662)
+и [Portable Team skills](https://github.com/Manacost-Labs/ManacostTeam/actions/runs/37128034647).
+Editor CI подтвердил Python 3.11/3.12/3.13 на Windows/Linux/macOS, корпус, Go,
+NLP, eval contracts, Docker AMD64/ARM64, Compose health и полный pipeline E2E.
+Локально Go/Docker не запускались; их результат подтверждён в GitHub Actions.
+ResearchTeam не менялся в исправлении сборщика; его успешный CI относится
+к `0a3f02c`. Итоговый commit отчёта не меняет runtime или архивы.
 
 ## Предыдущий выпуск 1.0.3
 
