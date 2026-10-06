@@ -84,6 +84,11 @@ vale --config=.vale.ini --output=JSON статья.news.md
 `ru_RU.aff`, `ru_RU.dic` и текст MPL-2.0. Рабочий Docker-путь:
 `/usr/share/hunspell/ru_RU.dic`.
 
+В Python-конвейере, без Docker, подсказки об опечатках даёт необязательный SAGE:
+`editor-team spelling-hints` (см. `.claude/skills/hs-edit/references/external-checks.md`).
+Go-сервис его не вызывает: подключать SAGE к `/v2/edit` стоит сайдкаром по образцу
+Natasha, когда будет возможность собрать и проверить Go и Docker.
+
 ## markdownlint
 
 По умолчанию используется `markdownlint-cli2` и конфигурация

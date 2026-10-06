@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -184,6 +185,42 @@ class PortableRuntimeTests(unittest.TestCase):
             codes=(0, 1),
         )
         self.assertIsInstance(json.loads(process.stdout), dict)
+
+    def test_editor_typography_and_second_audit_work_from_the_unpacked_archive(self):
+        source = self.unpacked / "editor-team" / "typography-sample.md"
+        source.write_text("Колода - сильная, в 2-3 хода.\n", encoding="utf-8")
+        process = self.run_helper(
+            "editor-team",
+            "scripts/editor_team.py",
+            "ru-audit",
+            "prepare",
+            source,
+            "--format",
+            "json",
+        )
+        brief = json.loads(process.stdout)
+        self.assertTrue(Path(brief["procedure"]).is_file())
+        self.assertTrue((Path(brief["corpus"]) / "references" / "addenda.md").is_file())
+        self.assertIn("только на чтение", brief["prompt"])
+        if shutil.which("node") is None:
+            self.skipTest("Node.js нужен для Typograf")
+        result = source.with_name("typography-result.md")
+        process = self.run_helper(
+            "editor-team",
+            "scripts/editor_team.py",
+            "typography",
+            source,
+            "--output",
+            result,
+            "--format",
+            "json",
+        )
+        self.assertTrue(json.loads(process.stdout)["changed"])
+        nbsp = chr(0xA0)
+        self.assertEqual(
+            result.read_text(encoding="utf-8"),
+            f"Колода{nbsp}— сильная, в{nbsp}2-3 хода.\n",
+        )
 
     def test_research_helpers_report_missing_access_and_invalid_ledgers(self):
         self.run_helper("research-team", "scripts/plan_queries.py", "--help")

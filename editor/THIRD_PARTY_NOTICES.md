@@ -6,6 +6,9 @@
 | Компонент | Назначение | Лицензия | Ссылка |
 | --- | --- | --- | --- |
 | ru-text | каталоги «False intensifiers», «Канцелярит» и «Passive voice» адаптированы в `.vale/styles/EditorTeam/{Intensifiers,Wordiness,PassiveVoice}.yml`; тексты правил написаны заново, оставлены только обороты, отсутствующие в авторском корпусе | MIT, текст в `third_party/licenses/ru-text-LICENSE` | https://github.com/talkstream/ru-text |
+| ru-text 2.9.3 (полный корпус) | второй читающий аудитор: `references` и процедуры ru-score/ru-check скопированы без изменений в `.claude/skills/hs-edit/references/ru-text/` по коммиту `c5d2ee5e6f64d7f59a6783b32a6afc54201ccc6e` (`SOURCE.json` с хешами); основной навык ru-text не вложен | MIT, `third_party/licenses/ru-text-LICENSE` и `references/ru-text/LICENSE` | https://github.com/talkstream/ru-text |
+| Typograf 7.8.0 | тире и неразрывные пробелы; одиночная сборка `typograf.all.min.js` в `.claude/skills/hs-edit/assets/typograf/`, запускается через Node.js (`run.js`), `SOURCE.json` с SHA-256 | MIT, `third_party/licenses/typograf-LICENSE` | https://github.com/typograf/typograf |
+| SAGE | необязательные подсказки об опечатках (`editor-team spelling-hints`); код и модели не хранятся в репозитории, `torch` и `transformers` ставятся отдельно (`requirements-sage.txt`), модель по умолчанию `ai-forever/sage-fredt5-distilled-95m` (0,38 ГБ) скачивается только с `--download` | код MIT; модели sage-fredt5-distilled-95m, sage-fredt5-large, sage-m2m100-1.2B — MIT (по карточкам Hugging Face на 2026-10-06) | https://github.com/ai-forever/sage |
 | Natasha | морфология, леммы и NER | MIT | https://github.com/natasha/natasha |
 | Razdel | разбиение русского текста | MIT | https://github.com/natasha/razdel |
 | Hunspell | подсказки орфографии; в образ ставится пакет Alpine `hunspell`, слова никогда не исправляются автоматически | LGPL-2.1 / GPL-2.0 / MPL-1.1 (tri-license) | https://github.com/hunspell/hunspell |

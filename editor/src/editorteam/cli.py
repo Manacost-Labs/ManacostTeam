@@ -15,7 +15,10 @@ from pathlib import Path
 
 from editorteam import corpus as Corpus
 from editorteam import profiles as P
+from editorteam import ru_audit as RuAudit
 from editorteam import rules
+from editorteam import spell_hints as SpellHints
+from editorteam import typography as Typography
 from editorteam.bg_import import import_directory, import_guides_directory
 from editorteam.corpus_learning import CorpusError, CorpusStore
 from editorteam.finding import Finding, Report, exit_code
@@ -810,6 +813,162 @@ def wordpress_cmd(args) -> int:
     return 0
 
 
+def typography_cmd(args) -> int:
+    """Расставить тире и неразрывные пробелы через Typograf, не меняя слова."""
+    path = Path(args.file)
+    try:
+        text, eol, bom = Typography.read_document(path)
+        result = Typography.typograph(text)
+        target = Path(args.output) if args.output else path if args.write else None
+        if target is not None and (args.output or result.changed):
+            Typography.write_document(target, result.text, eol, bom)
+    except Typography.ToolUnavailable as exc:
+        print(f"типографика не запущена: {exc}", file=sys.stderr)
+        return 2
+    except (Typography.TypographyError, OSError, UnicodeDecodeError) as exc:
+        print(f"типографика отклонена: {exc}", file=sys.stderr)
+        return 2
+    summary = {
+        "lines_changed": result.lines_changed,
+        "nbsp_added": result.nbsp_added,
+        "dashes_added": result.dashes_added,
+        "protected_spans": result.protected,
+    }
+    if args.format == "json":
+        payload = {
+            "schema_version": "1.0",
+            "document": str(path),
+            "tool": {"name": "typograf", "version": result.engine_version},
+            "rules": list(result.rules),
+            "quotes": rules.typography().get("quotes", {}).get("decision"),
+            "changed": result.changed,
+            "summary": summary,
+            "written": str(target) if target is not None else None,
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        print(f"типографика: {path}   Typograf {result.engine_version}, правил {len(result.rules)}")
+        print(
+            f"  изменено строк {result.lines_changed}; неразрывных пробелов +{result.nbsp_added}; "
+            f"длинных тире +{result.dashes_added}; защищено участков {result.protected}"
+        )
+        print("  проверено: слова и символы прежние, изменился только вид пробелов и тире")
+        if target is not None:
+            print(f"  записано: {target}")
+        elif result.changed:
+            print("  ничего не записано: --write — в тот же файл, --output — в другой")
+    return 1 if args.check and result.changed else 0
+
+
+def spelling_hints_cmd(args) -> int:
+    """Подсказки SAGE об опечатках; текст не меняется, решение за редактором."""
+    if not args.file and not args.corpus:
+        print("spelling-hints: нужен файл или --corpus", file=sys.stderr)
+        return 2
+    try:
+        provider = SpellHints.SageProvider(
+            args.model, device=args.device, allow_download=args.download
+        )
+        known_word = _scripts().morph().word_is_known
+        names = Typography.card_names()
+        if args.corpus:
+            files = sorted(Path(args.corpus).glob("*.md"))[: args.limit or None]
+            summary = SpellHints.evaluate(
+                files,
+                provider,
+                known_word=known_word,
+                names=names,
+                include_model_only=args.include_model_only,
+            )
+            _print_corpus_summary(summary, args)
+            return 0
+        report = SpellHints.analyze(
+            _read(Path(args.file)),
+            provider,
+            known_word=known_word,
+            names=names,
+            document=str(args.file),
+            include_model_only=args.include_model_only,
+        )
+    except (SpellHints.ProviderUnavailable, Typography.ToolUnavailable) as exc:
+        print(f"подсказки орфографии не запущены: {exc}", file=sys.stderr)
+        return 2
+    _emit(report, args)
+    return exit_code(report, args.fail_on)
+
+
+def _print_corpus_summary(summary: dict, args) -> None:
+    if args.format == "json":
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return
+    print(f"корпус: {summary['files']} файлов, {summary['words']} слов")
+    print(f"подсказок: {summary['hints']} ({summary['hints_per_1000_words']} на 1000 слов)")
+    print("отброшено фильтрами: " + ", ".join(f"{k} {v}" for k, v in summary["dropped"].items()))
+    print("частые пары (на вычитанном тексте это ложные срабатывания):")
+    for pair, count in summary["top_pairs"]:
+        print(f"  {count:>3}  {pair}")
+
+
+def ru_audit_cmd(args) -> int:
+    """Подготовить аудит ru-text и проверить отчёт аудитора; сам аудит делает модель."""
+    path = Path(args.file)
+    try:
+        if args.ru_audit_cmd == "prepare":
+            payload = RuAudit.prepare(path, args.mode)
+            if args.format == "json":
+                print(json.dumps(payload, ensure_ascii=False, indent=2))
+            else:
+                print(f"SHA-256 текста до аудита: {payload['text_sha256']}")
+                print(f"корпус ru-text: {payload['corpus']}\n")
+                print(payload["prompt"])
+            return 0
+        text = path.read_text(encoding="utf-8")
+        report = Path(args.report).read_text(encoding="utf-8")
+        check = RuAudit.validate_report(
+            report,
+            text,
+            mode=args.mode,
+            expected_sha256=args.sha256,
+            text_sha256=RuAudit.sha256_of(path),
+        )
+    except RuAudit.AuditUnavailable as exc:
+        print(f"ru-audit: {exc}", file=sys.stderr)
+        return 2
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        print(f"ru-audit: {exc}", file=sys.stderr)
+        return 2
+    if args.strict:
+        check.errors.extend(f"строго: {warning}" for warning in check.warnings)
+    if args.format == "json":
+        print(json.dumps(check.to_dict(), ensure_ascii=False, indent=2))
+    else:
+        print(f"аудит ru-text: {args.report}")
+        if check.total is not None:
+            print(
+                f"  итог {check.total} / 10 ({check.label}); по шкалам выходит {check.expected_total}"
+            )
+        if check.scores:
+            print("  шкалы: " + " · ".join(f"{k} {v}" for k, v in check.scores.items()))
+        print(
+            f"  цитат проверено {check.quotes_checked}, не найдено {len(check.quotes_missing)}, "
+            f"примеров правил из корпуса {len(check.quotes_from_catalog)}"
+        )
+        if check.ad_rules:
+            print("  правила AD: " + ", ".join(str(n) for n in check.ad_rules))
+        readonly = {
+            "verified": "текст не менялся",
+            "violated": "текст ИЗМЕНЁН аудитором",
+            "unchecked": "неизменность не проверена: нужен --sha256 из prepare",
+        }[check.readonly]
+        print(f"  {readonly}")
+        for error in check.errors:
+            print(f"  ошибка: {error}")
+        for warning in check.warnings:
+            print(f"  предупреждение: {warning}")
+        print("  отчёт принят" if check.valid else "  отчёту нельзя доверять: повторите аудит")
+    return 0 if check.valid else 1
+
+
 def _emit(report: Report, args) -> None:
     if args.format == "json":
         print(report.to_json())
@@ -894,6 +1053,62 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON-каталог карточек: name, id и formats; нужен для «Подсветка карт»",
     )
     wp.set_defaults(func=wordpress_cmd)
+
+    ty = sub.add_parser(
+        "typography",
+        help="тире и неразрывные пробелы через Typograf; слова не меняются",
+        parents=[common],
+    )
+    ty.add_argument("file", help="Markdown или TXT; запускать после проверок и до шорткодов")
+    mode = ty.add_mutually_exclusive_group()
+    mode.add_argument("--write", action="store_true", help="записать результат в тот же файл")
+    mode.add_argument("--output", help="записать результат в другой файл")
+    mode.add_argument(
+        "--check",
+        action="store_true",
+        help="ничего не писать; код 1, если типографика не расставлена",
+    )
+    ty.set_defaults(func=typography_cmd)
+
+    sp = sub.add_parser(
+        "spelling-hints",
+        help="подсказки SAGE об опечатках: только подсказки, текст не меняется",
+        parents=[common],
+    )
+    sp.add_argument("file", nargs="?", help="Markdown или TXT")
+    sp.add_argument("--corpus", help="папка вычитанных .md: сколько подсказок модель даёт на них")
+    sp.add_argument("--limit", type=int, help="сколько файлов корпуса взять")
+    sp.add_argument("--model", default=SpellHints.DEFAULT_MODEL, help="модель Hugging Face")
+    sp.add_argument("--device", choices=["cpu", "cuda"], help="по умолчанию cuda, если есть")
+    sp.add_argument(
+        "--download", action="store_true", help="разрешить скачать модель с Hugging Face"
+    )
+    sp.add_argument(
+        "--include-model-only",
+        action="store_true",
+        help="показывать и замену одного известного слова другим (это не опечатка)",
+    )
+    sp.set_defaults(func=spelling_hints_cmd)
+
+    ra = sub.add_parser(
+        "ru-audit",
+        help="второй читающий аудитор ru-text: задание аудитору и проверка его отчёта",
+        parents=[common],
+    )
+    ra_sub = ra.add_subparsers(dest="ru_audit_cmd", required=True)
+    rap = ra_sub.add_parser("prepare", parents=[common], help="хеш текста и задание аудитору")
+    rap.add_argument("file", help="аудируемый текст")
+    rap.add_argument("--mode", choices=RuAudit.MODES, default="score")
+    rap.set_defaults(func=ru_audit_cmd)
+    rav = ra_sub.add_parser("validate", parents=[common], help="проверить отчёт аудитора")
+    rav.add_argument("file", help="аудируемый текст")
+    rav.add_argument("--report", required=True, help="отчёт аудитора, Markdown")
+    rav.add_argument("--mode", choices=RuAudit.MODES, default="score")
+    rav.add_argument(
+        "--sha256", help="хеш текста из prepare: проверяет, что аудитор ничего не менял"
+    )
+    rav.add_argument("--strict", action="store_true", help="предупреждения считать ошибками")
+    rav.set_defaults(func=ru_audit_cmd)
 
     ve = sub.add_parser("validate-edit", help="затвор смысла и confidence", parents=[common])
     ve.add_argument("before")

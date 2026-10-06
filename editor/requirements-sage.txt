@@ -1,0 +1,10 @@
+# Необязательно: подсказки SAGE об опечатках (`editor-team spelling-hints`).
+# Без этих пакетов команда сообщает «не запущено», остальные команды работают.
+# Веса модели в репозитории не хранятся и без --download не скачиваются.
+#
+# Без видеокарты torch достаточно собрать под CPU:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements-sage.txt
+torch>=2.2
+transformers>=4.40
+accelerate>=0.30

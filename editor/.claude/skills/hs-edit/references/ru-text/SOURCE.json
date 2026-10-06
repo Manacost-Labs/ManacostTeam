@@ -1,0 +1,31 @@
+{
+  "name": "ru-text",
+  "version": "2.9.3",
+  "repository": "https://github.com/talkstream/ru-text",
+  "commit": "c5d2ee5e6f64d7f59a6783b32a6afc54201ccc6e",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2026 Arseniy Kamyshev",
+  "files_origin": {
+    "LICENSE": "LICENSE",
+    "ru-score.procedure.md": "skills/ru-score/SKILL.md",
+    "ru-check.procedure.md": "skills/ru-check/SKILL.md",
+    "references/*.md": "skills/ru-text/references/*.md"
+  },
+  "not_vendored": "skills/ru-text/SKILL.md — постоянный режим «молча править типографику любого русского текста»; он спорит с СТИЛЬ.md и защитой авторского голоса.",
+  "sha256_lf": {
+    "LICENSE": "37ea601e35a544e6a4b08b1c5cb126543b2ea6dc14b23620f12bdc11a00ba839",
+    "references/addenda.md": "108c8935c3e7dcde834ec5293c7beee75f6b3bf508360d1b39ea403b4cebc950",
+    "references/anti-patterns.md": "5c31b4671ccbe7a4c9c0733e969c915f37e56e9a84a7d0442547cf43db5a9ac7",
+    "references/business-writing.md": "689895e01768e129b38ffebf0dff14f577c32b677040d361d301a561fc97b2ae",
+    "references/editorial-grammar.md": "9f4788d2cb28928b25646a66139c0169e1c7f9de5a6711dff4a98902a7673cca",
+    "references/editorial-punctuation.md": "e8ff8979eaed30635b3181482454e94791b9fa86f2e8b28bb22e41bcced6b32b",
+    "references/info-style.md": "fe31d5bb9bf13aee7742bdca830889ed3f716d581651c9e2c5ed29b602d394ce",
+    "references/scoring.md": "2556092becd94f05a5795631f06d506810eb061a85dda0594b8033580fc94bf2",
+    "references/sources.md": "008e6bb32e64877b91d06eeb81e3e369004a29d03627550439215165d795045b",
+    "references/typography.md": "72c7074daf593123a255b443effe514a2e844d9175791ccfe85ccf9518ee5d98",
+    "references/ux-writing.md": "7802bc126bff4f754e4eeb0f8b986dd967ac876c038d23a0a63b5846248b4cee",
+    "ru-check.procedure.md": "9d803f92cb51f670f0bce32ef93a07a094fd55dc479f2733bae9810522c3c354",
+    "ru-score.procedure.md": "1057f053b01ad0b73bef32617bf1098acef98162a6e6f2e5d943b6139502c8ca"
+  },
+  "note": "Хеши считаются по тексту с переводами строк LF. Обновление: взять файлы нового коммита, поправить version, commit и sha256_lf, перечитать second-audit.md."
+}

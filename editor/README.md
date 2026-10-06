@@ -54,6 +54,11 @@
 | [`claims.py`](.claude/skills/hs-edit/scripts/claims.py) | утверждения исходника и их покрытие: карты, советы, отрицания, классы |
 | [`elegance.py`](.claude/skills/hs-edit/scripts/elegance.py) | аккуратность: номинализации, серии начал, конкретика |
 | [`evalscore.py`](.claude/skills/hs-edit/scripts/evalscore.py) | оценка переплавки по кейсам `tests/evals/` |
+| `editor-team typography` | Typograf: тире и неразрывные пробелы, слова не меняются; названия карт и разметка защищены |
+| `editor-team spelling-hints` | необязательные подсказки опечаток от SAGE; текст не меняется, ложные срабатывания отсекаются словарями издания |
+| `editor-team ru-audit` | второй читающий аудитор ru-text: задание аудитору и проверка его отчёта |
+
+Три последних инструмента, их порядок и пределы — в [`references/external-checks.md`](.claude/skills/hs-edit/references/external-checks.md).
 
 ### Переплавка
 

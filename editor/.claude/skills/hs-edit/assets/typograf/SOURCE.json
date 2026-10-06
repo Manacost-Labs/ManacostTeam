@@ -1,0 +1,11 @@
+{
+  "package": "typograf",
+  "version": "7.8.0",
+  "license": "MIT",
+  "license_file": "LICENSE.md",
+  "homepage": "https://github.com/typograf/typograf",
+  "tarball": "https://registry.npmjs.org/typograf/-/typograf-7.8.0.tgz",
+  "file": "dist/typograf.all.min.js",
+  "sha256": "bc7d4102742878b281e19b59595fd59a17588ed8d557812c70536c77a265ef8e",
+  "note": "Одиночная UMD-сборка со всеми локалями; запускается через run.js без npm install. Обновление: взять dist/typograf.all.min.js новой версии, поправить version и sha256, прогнать tests/unit/test_typography.py."
+}
