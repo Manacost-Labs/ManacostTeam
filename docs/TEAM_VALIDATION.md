@@ -1,4 +1,24 @@
-# Проверка Team standard 1.3.0
+# Проверка Team standard 1.4.0
+
+Windows, Python 3.13, 2026-10-10–11. План — [PUBLICATION_IMPLEMENTATION_PLAN.md](PUBLICATION_IMPLEMENTATION_PLAN.md), начало работы — [PUBLICATION_QUICKSTART.md](PUBLICATION_QUICKSTART.md).
+
+| Область | Фактически выполненная проверка |
+| --- | --- |
+| EditorTeam Python | Полный прогон из editor: 639 passed, 36 skipped. После обнаруженного в пилоте дефекта и финального исправления отдельно пройдены 76 publication tests; эти числа пересекаются и не суммируются |
+| Portable runtime | 31 tests OK; новый helper init/sources/next/status и отказ от непроверенного export проверены из ZIP с python -S, без checkout и site-packages, с русскими путями и пробелами |
+| Код и навыки | Ruff check/format затронутых Python файлов, quick_validate source/installed skill и git diff --check PASS |
+| Выпуск | Team skills 1.4.0, EditorTeam 1.4.0, новый manacost-publish 1.0.0; сборка и --check PASS; семь неизменённых навыков сохраняют прежние байты |
+| Установка | Полный portable manacost-publish установлен в пользовательский skills folder; validate_bundle, quick_validate и --help PASS. Обновление picker в уже открытом чате не проверялось |
+| Native MCP pilot | Фактически прочитан полный архивный источник; native researcher/author создал sources/handoff/draft. Первый литературный отзыв выявил недостаток и блокировал export. Исследование расширено двумя дословными цитатами в отдельном run; другой автор исправил текст, отдельные factual/literary reviewers проверили его; установленный helper с python -S довёл run до ready/export/status=unchanged |
+| Дефект, найденный пилотом | Склонение названия ошибочно считалось новым фактом. Теперь капитализация и теги без ID дают untrusted entity_hints; hard gates сохраняют числа, точные URL и type:ID. Новые ID/тип тега блокируются; имя с другим падежом при том же ID допустимо. Смысл проверяет независимый reviewer |
+| Пользовательский материал | Два автора отполировали все 10 рас, отдельный reviewer сверил полный текст с исходником. 331 шорткод/118 DBF сопоставлены живому каталогу, заменены string cardID и выделены целиком жирным. Обратная конверсия точно восстанавливает reviewed prose; labels/order сохранены. Исходная неоднозначность шага Нежити отмечена, клиент и актуальная мета не проверялись |
+| Кандидатный benchmark | 12 реальных локальных полных MCP-материалов → 12 pending карточек; frozen train/holdout. Без реального human confirmation экспорт approved отклоняется; человеческое сравнение ещё не выполнено |
+
+Начальный full pytest из корня вместо editor остановился на поиске локальных fixtures; корректный запуск из editor завершился успешно. На Windows задан PYTHONUTF8=1. Go/Research/Promptfoo в этой итерации не менялись и повторно не запускались; их результаты предыдущего выпуска приведены ниже как исторические.
+
+Native reviews подтверждают выполненную модельную проверку источников и формы статьи, а не человеческое утверждение или текущую мету. Материалы/отзывы/каталог остаются локальными вне Git. Человеческая калибровка, измерение времени, LangExtract с моделью, semantic embeddings, DSPy/RAGChecker и расширенный Council не завершены. Снижение времени на 30% не измерено. Импорт в облачные аккаунты и публикация статей на сайте не выполнялись.
+
+## Предыдущий выпуск 1.3.0
 
 Локальная проверка Windows, Python 3.13, Go 1.26.9 и Node 24, 2026-10-10.
 Контракт и границы реализации — [редакционный конвейер](EDITORIAL_PIPELINE_V3.md).

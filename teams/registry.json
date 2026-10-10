@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -252,7 +252,64 @@
           "destination": "python/editorteam/__init__.py"
         }
       ]
+    },
+    {
+      "name": "manacost-publish",
+      "team": "EditorTeam",
+      "module": "editor",
+      "version": "1.0.0",
+      "source": "teams/manacost-publish",
+      "resources": [
+        {
+          "source": "editor/src/editorteam/__init__.py",
+          "destination": "python/editorteam/__init__.py"
+        },
+        {
+          "source": "editor/src/editorteam/editorial_lab.py",
+          "destination": "python/editorteam/editorial_lab.py"
+        },
+        {
+          "source": "editor/src/editorteam/publication_run.py",
+          "destination": "python/editorteam/publication_run.py"
+        },
+        {
+          "source": "editor/src/editorteam/publication_review.py",
+          "destination": "python/editorteam/publication_review.py"
+        },
+        {
+          "source": "editor/src/editorteam/publication_benchmark.py",
+          "destination": "python/editorteam/publication_benchmark.py"
+        },
+        {
+          "source": "research/deep-research/scripts",
+          "destination": "scripts"
+        },
+        {
+          "source": "research/deep-research/references",
+          "destination": "references"
+        },
+        {
+          "source": "docs/PUBLICATION_QUICKSTART.md",
+          "destination": "references/publication-quickstart.md"
+        },
+        {
+          "source": "docs/PUBLICATION_REVIEW_CONTRACT.md",
+          "destination": "references/publication-review.md"
+        },
+        {
+          "source": "docs/EDITORIAL_PIPELINE_V3.md",
+          "destination": "references/publication-contract.md"
+        },
+        {
+          "source": "editor/СТИЛЬ.md",
+          "destination": "references/style.md"
+        },
+        {
+          "source": "editor/ГОЛОС.md",
+          "destination": "references/voice.md"
+        }
+      ]
     }
   ],
-  "release_version": "1.3.0"
+  "release_version": "1.4.0"
 }

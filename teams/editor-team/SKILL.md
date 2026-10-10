@@ -2,7 +2,7 @@
 name: editor-team
 description: "Редактура материалов Hearthstone с сохранением фактов и авторского голоса."
 metadata:
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # EditorTeam
@@ -32,3 +32,9 @@ Semantic guard проверяет оба направления отрицани
 PYTHONPATH=python. Новые статьи остаются candidate; опубликованный текст не
 становится автоматически gold и не подтверждает текущую мету. Платные тексты
 и человеческие оценки храни отдельно от переносимого пакета.
+
+Для полного возобновляемого запуска в Codex используй отдельный manacost-publish.
+Он выполняет источники → handoff → draft → независимые factual/literary reviews,
+сохраняет версии и экспортирует результат после проверок. Runtime stdlib:
+`PYTHONPATH=python python -m editorteam.publication_run --help`. Контроль цитат
+и хешей не заменяет смысловую проверку reviewer и человеческое утверждение.

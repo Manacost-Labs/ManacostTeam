@@ -10,7 +10,7 @@
 
 Исходные Teams и персональные материалы не удаляются. Старые Job `.skill` сохраняются; их редактируемые исходники теперь находятся в job/sources. Marketing перенесён с сохранением специализаций, лицензий и правил рекламы. Кампании, секреты, личные research bundles и непроверенные кандидатные корпусы не входят в общие пакеты.
 
-Сборка всех восьми навыков:
+Сборка всех девяти навыков:
 
 ```powershell
 python tools/build_team_skills.py
@@ -18,7 +18,7 @@ python tools/build_team_skills.py --check
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-Результат — release/team-skills/1.3.0: отдельные ZIP и их идентичные `.skill` aliases, combined plugin, index.json и SHA256SUMS. ZIP содержит одну верхнюю папку и ровно один SKILL.md. Архивы воспроизводимы, проверяются на внутренние ограничения проекта: до 500 файлов, 25 MiB на файл, 100 MiB после распаковки и 50 MiB на архив и исключают credentials, кэши и окружения. `build/` — локальная staging-папка и не входит в Git.
+Результат — release/team-skills/1.4.0: отдельные ZIP и их идентичные `.skill` aliases, combined plugin, index.json и SHA256SUMS. ZIP содержит одну верхнюю папку и ровно один SKILL.md. Архивы воспроизводимы, проверяются на внутренние ограничения проекта: до 500 файлов, 25 MiB на файл, 100 MiB после распаковки и 50 MiB на архив и исключают credentials, кэши и окружения. `build/` — локальная staging-папка и не входит в Git.
 
 Версия и имя согласуются между registry, SKILL.md и skill.yaml. При изменении содержимого обновите версию затронутого навыка и release_version; неизменённые навыки могут сохранить прежнюю версию. Архив с тем же именем обязан сохранять байты во всех опубликованных выпусках. Сборщик проверяет историю до записи и публикует новую папку целиком. Существующий неполный, изменённый или содержащий лишние файлы выпуск отклоняется; его содержимое сохраняется для разбора. `--check` проверяет точный состав и байты всего выпуска.
 
@@ -26,7 +26,8 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 | Team | ZIP/skill | Прямой вызов Claude Code |
 | --- | --- | --- |
-| EditorTeam | editor-team-1.3.0 | /editor-team |
+| EditorTeam | editor-team-1.4.0 | /editor-team |
+| EditorTeam | manacost-publish-1.0.0 | /manacost-publish |
 | ResearchTeam | research-team-1.2.0 | /research-team |
 | SVGTeam | svg-team-1.0.1 | /svg-team |
 | TranslateTeam | translate-team-1.0.1 | /translate-team |
@@ -39,7 +40,7 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 **Claude Code:** распакуйте ZIP с папкой навыка в `.claude/skills/` проекта или в пользовательский каталог навыков. Имя SKILL.md становится `/name`. В этом репозитории уже есть тонкие `.claude/commands` с теми же именами; они разрешают локальные ресурсы через registry. Для combined plugin namespace будет `/manacost-team:research-team` и аналогично для остальных навыков. [Официальный контракт skills](https://code.claude.com/docs/en/skills).
 
-**Локальный Codex:** `.agents/skills/` содержит восемь тонких entrypoints для основного репозитория. Они читают канонический SKILL.md из `teams/` и разрешают ресурсы по registry. Исходная папка ManacostTeam тоже получила локальные entrypoints Codex/Claude, направляющие работу в основную копию. После обновления списка навыков их можно выбрать через `/skills`, `$name` или доступный slash picker.
+**Локальный Codex:** `.agents/skills/` содержит девять тонких entrypoints для основного репозитория. Они читают канонический SKILL.md из `teams/` и разрешают ресурсы по registry. Исходная папка ManacostTeam тоже получила локальные entrypoints Codex/Claude, направляющие работу в основную копию. После обновления списка навыков их можно выбрать через `/skills`, `$name` или доступный slash picker.
 
 **ChatGPT desktop / Codex:** отдельные ZIP предназначены для доступного интерфейса standalone/custom skills. В ChatGPT web/mobile используйте combined plugin через поддерживаемый интерфейс plugins/marketplace. Plugin содержит portable plugin.json и совместимый Claude manifest; MCP-сервер не требуется. Явный вызов навыка в ChatGPT — через `@`, в Codex — через `$`; enabled skills могут появляться в slash list, но стабильная команда `/name` зависит от клиента. Обычная отправка ZIP в сообщение не регистрирует постоянную команду. Не отправляйте пакет на публичную публикацию без отдельной задачи. [OpenAI: build skills](https://learn.chatgpt.com/docs/build-skills), [slash commands](https://learn.chatgpt.com/docs/reference/slash-commands), [упаковка plugins](https://developers.openai.com/plugins/build/plugins).
 
@@ -53,4 +54,4 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 ## Проверка релиза
 
-Минимум: module tests для изменения поведения; validation восьми entrypoints; импорт/запуск helpers из распакованных ZIP; повторная сборка с --check; plugin manifests; git diff --check; inspection staged paths; remote SHA после push. Полный прогон всех модулей нужен только когда затронуты их contracts/runtime. Не объединяйте устаревшие README-baselines с результатами свежих тестов.
+Минимум: module tests для изменения поведения; validation девяти entrypoints; импорт/запуск helpers из распакованных ZIP; повторная сборка с --check; plugin manifests; git diff --check; inspection staged paths; remote SHA после push. Полный прогон всех модулей нужен только когда затронуты их contracts/runtime. Не объединяйте устаревшие README-baselines с результатами свежих тестов.

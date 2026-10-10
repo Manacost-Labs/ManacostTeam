@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `editor/teams` (Team skills 1.4.0): новый `$manacost-publish` ведёт материал от полных MCP-источников до файла через независимые фактологический и литературный отзывы в native Codex. Stdlib runner сохраняет версии, хеши и состояние, допускает две правки статьи и один recheck ошибочного отчёта; экспорт требует обеих проверок. Корпус из 12 материалов остаётся кандидатным до человеческой разметки. Portable package включает весь runtime; план и команды — `docs/PUBLICATION_QUICKSTART.md` и `docs/PUBLICATION_IMPLEMENTATION_PLAN.md`.
+
 - `editor/research` (Team skills 1.3.0): контракт проверенных утверждений и вопросов игрока, режим `reconstruct`, отдельный фактологический review и необязательная проверяющая модель; CLI decision coverage и очередь пробелов. Добавлены приватный импорт полных материалов Manacost MCP, подготовка слепого benchmark, Promptfoo edit/reconstruct и необязательные адаптеры Trafilatura/LangExtract/Sentence Transformers с экспортом для DSPy/RAGChecker. Реальные человеческие оценки и Council остаются следующими экспериментами. Контракт и команды — `docs/EDITORIAL_PIPELINE_V3.md`.
 - `translate`: добавлен Docker-подготовщик материалов для Codex без локальной LLM: терминологические выгрузки, контекст, стили, сегментный diff, translation memory и механический QA.
 - `skills`: добавлен `wow-hearthstone-translator` для двухпроходного перевода игровых материалов.

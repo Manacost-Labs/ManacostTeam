@@ -18,9 +18,10 @@ class TeamPackageTests(unittest.TestCase):
         import build_team_skills as builder
 
         entries = builder.load_registry(ROOT)
-        self.assertEqual(len(entries), 8)
+        self.assertEqual(len(entries), 9)
         self.assertEqual(len({entry["team"] for entry in entries}), 7)
         self.assertIn("card-shortcodes", {entry["name"] for entry in entries})
+        self.assertIn("manacost-publish", {entry["name"] for entry in entries})
 
     def test_zip_is_reproducible_and_rejects_unsafe_resources(self):
         import build_team_skills as builder
@@ -165,7 +166,7 @@ class PortableRuntimeTests(unittest.TestCase):
             (plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8")
         )
         self.assertEqual(portable["name"], claude["name"])
-        self.assertEqual(len(list((plugin / "skills").glob("*/SKILL.md"))), 8)
+        self.assertEqual(len(list((plugin / "skills").glob("*/SKILL.md"))), 9)
 
     def test_editor_config_and_audit_work_without_repository_or_installed_dependencies(
         self,
@@ -204,6 +205,75 @@ class PortableRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(process.returncode, 0, process.stderr)
         self.assertTrue((directory / "references/publication-contract.md").is_file())
+
+    def test_publish_runs_without_site_packages_and_blocks_unreviewed_export(self):
+        skill = self.unpacked / "manacost-publish"
+        run = self.root / "первый запуск с пробелами"
+
+        def invoke(*arguments, code=0):
+            process = subprocess.run(
+                [
+                    sys.executable,
+                    "-S",
+                    str(skill / "scripts/publish.py"),
+                    *map(str, arguments),
+                ],
+                cwd=self.root,
+                env=self.env,
+                capture_output=True,
+                encoding="utf-8",
+                timeout=30,
+                check=False,
+            )
+            self.assertEqual(process.returncode, code, process.stdout + process.stderr)
+            self.assertNotIn("Traceback", process.stderr)
+            return process
+
+        result = invoke(
+            "init",
+            run,
+            "--brief",
+            "Практический гайд",
+            "--patch",
+            "source-period:2026-03-02",
+            "--profile",
+            "battlegrounds-guide",
+            "--shortcodes",
+            "off",
+        )
+        self.assertEqual(json.loads(result.stdout)["stage"], "sources")
+        source = self.root / "полный источник.json"
+        text = "Проверьте силу стола перед сменой стратегии."
+        source.write_text(
+            json.dumps(
+                [
+                    {
+                        "id": "S1",
+                        "source": "synthetic",
+                        "url": "https://example.org/guide",
+                        "text": text,
+                        "access": "full",
+                        "sha256": hashlib.sha256(text.encode()).hexdigest(),
+                        "retrieved_at": "2026-10-10T12:00:00Z",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        invoke("submit", run, "--stage", "sources", "--artifact", source)
+        source.write_text("[]", encoding="utf-8")
+        self.assertEqual(json.loads(invoke("status", run).stdout)["stage"], "research")
+        self.assertEqual(
+            json.loads(invoke("next", run).stdout)["role"], "research_editor"
+        )
+        malformed = self.root / "invalid-handoff.json"
+        malformed.write_text("{}", encoding="utf-8")
+        invoke("submit", run, "--stage", "research", "--artifact", malformed, code=2)
+        output = self.root / "непроверенный final.md"
+        invoke("export", run, "--output", output, code=2)
+        self.assertFalse(output.exists())
+        invoke("benchmark", "prepare", "--help")
 
     def test_editor_typography_and_second_audit_work_from_the_unpacked_archive(self):
         source = self.unpacked / "editor-team" / "typography-sample.md"

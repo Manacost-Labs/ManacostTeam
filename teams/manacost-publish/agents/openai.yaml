@@ -1,0 +1,11 @@
+interface:
+  display_name: "Manacost Publish"
+  short_description: "Статья из MCP с проверкой фактов и голоса"
+  default_prompt: "Используй $manacost-publish, чтобы подготовить статью по моей теме с источниками и независимой проверкой."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "manacost"
+      description: "Статьи и материалы Manacost"
+      transport: "streamable_http"
+      url: "https://hearthpulse.net/mcp"

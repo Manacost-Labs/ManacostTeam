@@ -4,7 +4,7 @@
 
 ## Состав
 
-Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). Готовые ZIP/.skill для ChatGPT и Claude: [release/team-skills/1.3.0](release/team-skills/1.3.0/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
+Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). Готовые ZIP/.skill для ChatGPT и Claude: [release/team-skills/1.4.0](release/team-skills/1.4.0/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
 
 [Улучшения EditorTeam и ResearchTeam в 1.1.0](docs/EDITOR_RESEARCH_QUALITY.md):
 защита смысла при редактуре, очередь поиска по пробелам и передача полезных
@@ -20,6 +20,14 @@
 | [`translate/`](translate/) | Docker-подготовщик и QA для перевода WoW/Hearthstone, выполняемого Codex. | URL/текст → контекст, термины, сегменты, память переводов и проверка готового перевода. |
 | [`marketing/`](marketing/) | Рекламный контур для продуктов Hearthstone/Warcraft: 15 специализаций, стратегия, тексты, визуалы и review. | Подготовка рекламного пакета по подтверждённым фактам. |
 | [`skills/`](skills/) | Общие skills для качества, выпусков и межмодульного потока. | Координация задач, выпуск пакетов и цепочка research → editor → svg. |
+
+## Статья прямо в Codex
+
+Вызовите `$manacost-publish` с темой или ссылкой, форматом и выбором шорткодов.
+Навык использует подключённый Manacost MCP и отдельных агентов Codex: источники →
+исследование → статья → проверка фактов → литературная проверка → файл.
+Отдельный API модели для этого пути не нужен. [Начало работы](docs/PUBLICATION_QUICKSTART.md),
+[план реализации](docs/PUBLICATION_IMPLEMENTATION_PLAN.md).
 
 ## Быстрый старт
 
