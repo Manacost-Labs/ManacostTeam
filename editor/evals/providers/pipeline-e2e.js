@@ -47,7 +47,8 @@ class PipelineE2EProvider {
   }
 
   id() {
-    return this.config.retrieval === 'off' ? 'pipeline-e2e:no-retrieval' : 'pipeline-e2e';
+    const base = this.config.retrieval === 'off' ? 'pipeline-e2e:no-retrieval' : 'pipeline-e2e';
+    return this.config.mode ? `${base}:${this.config.mode}` : base;
   }
 
   async callApi(prompt, context = {}) {
@@ -59,12 +60,15 @@ class PipelineE2EProvider {
     const retrievalOff = this.config.retrieval === 'off';
     const payload = {
       text: input,
-      mode: vars.mode || 'edit',
+      mode: this.config.mode || vars.mode || 'edit',
       game: vars.game || 'hearthstone',
       profile: vars.profile || 'constructed-guide',
       language: vars.language || 'ru-RU',
       editorial_mode: vars.editorial_mode || 'GUIDE',
     };
+    if (vars.research_handoff) payload.research_handoff = vars.research_handoff;
+    if (vars.current_patch) payload.current_patch = vars.current_patch;
+    if (vars.source_claims) payload.source_claims = vars.source_claims;
     if (retrievalOff) payload.retrieval = 'off';
     const [editResponse, healthResponse] = await Promise.all([
       fetch(`${gateway}/v2/edit`, {
@@ -102,6 +106,9 @@ class PipelineE2EProvider {
         rejection_reasons: result.rejection_reasons || [],
         checks_complete: checksComplete,
         attempts: result.attempts,
+        editorial_mode: payload.mode,
+        reviewer_model: result.reviewer_model,
+        fact_review: result.fact_review || null,
         retrieval_variant: retrievalOff ? 'no-retrieval' : 'retrieval',
         retrieval_status: retrieval.status,
         retrieval_examples_used: retrieval.examples_used,

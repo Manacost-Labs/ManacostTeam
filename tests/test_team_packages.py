@@ -186,6 +186,25 @@ class PortableRuntimeTests(unittest.TestCase):
         )
         self.assertIsInstance(json.loads(process.stdout), dict)
 
+    def test_publication_helpers_run_from_the_archive_without_optional_dependencies(
+        self,
+    ):
+        self.run_helper("research-team", "scripts/editorial_handoff.py", "--help")
+        directory = self.unpacked / "editor-team"
+        env = {**self.env, "PYTHONPATH": str(directory / "python")}
+        for module in ("editorial_lab", "editorial_tools"):
+            process = subprocess.run(
+                [sys.executable, "-S", "-m", f"editorteam.{module}", "--help"],
+                cwd=directory,
+                env=env,
+                capture_output=True,
+                encoding="utf-8",
+                timeout=30,
+                check=False,
+            )
+            self.assertEqual(process.returncode, 0, process.stderr)
+        self.assertTrue((directory / "references/publication-contract.md").is_file())
+
     def test_editor_typography_and_second_audit_work_from_the_unpacked_archive(self):
         source = self.unpacked / "editor-team" / "typography-sample.md"
         source.write_text("Колода - сильная, в 2-3 хода.\n", encoding="utf-8")

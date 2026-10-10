@@ -1,4 +1,29 @@
-# Проверка Team standard 1.2.0
+# Проверка Team standard 1.3.0
+
+Локальная проверка Windows, Python 3.13, Go 1.26.9 и Node 24, 2026-10-10.
+Контракт и границы реализации — [редакционный конвейер](EDITORIAL_PIPELINE_V3.md).
+
+| Область | Результат |
+| --- | --- |
+| EditorTeam Python | 569 passed, 36 skipped; для subprocess на Windows установлен PYTHONUTF8=1. Начальный прогон без UTF-8 дал 7 ошибок кодировки; исходные файлы и эталоны не изменялись |
+| EditorTeam Go | `go test ./...` и `go vet ./...` PASS; отдельные регрессии проверяют reconstruct, потерю условий/ссылок, блокировку handoff и разделение контекстов автора/проверяющего |
+| ResearchTeam | 238 tests OK; пять новых сценариев chapter handoff и decision coverage |
+| Promptfoo contracts | 22 Node tests PASS; реальный модельный benchmark не запускался |
+| Общие release/runtime tests | 30 tests OK; новые Python CLI запускаются из распакованного ZIP без optional dependencies и checkout |
+| Сборка | Выпуск 1.3.0, EditorTeam 1.3.0 и ResearchTeam 1.2.0; `--check` подтверждает состав и воспроизводимость. Шесть неизменённых навыков сохраняют прежние байты |
+| Статические проверки | Ruff затронутых Python файлов, Go vet и diff check PASS |
+| Manacost MCP | 12 полных материалов, 196 482 символа; проверены все части и UTF-16 offsets. Тексты находятся только в локальном ignored `build/editorial-lab`, статус candidate |
+| Необязательные adapters | Trafilatura 2.3.1: реальное извлечение HTML проверено. LangExtract 1.7.1: установлен и проверен контракт объектов/интервалов; вызов модели не выполнялся |
+
+Новые игровые примеры тестов синтетические. Фактологический review проверяет
+форму модельного доказательства и дословные цитаты; истинность советов и
+соответствие источников требуют отдельной проверки. Council, LangExtract с
+моделью, semantic embedding, DSPy/RAGChecker и человеческий benchmark пока не
+запускались. Снижение времени редактора на 30% не измерено. Импорт ZIP в
+облачные аккаунты и production deployment не выполнялись; результаты CI
+этого выпуска сюда не включены.
+
+## Предыдущий выпуск 1.2.0
 
 Локальная проверка Windows, Python 3.13 (набор editor — Python 3.12 в `.venv`),
 Node 24, 2026-10-06 после добавления Typograf, SAGE и ru-text в EditorTeam:

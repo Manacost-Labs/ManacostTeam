@@ -5,9 +5,13 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "source": "teams/editor-team",
       "resources": [
+        {
+          "source": "docs/EDITORIAL_PIPELINE_V3.md",
+          "destination": "references/publication-contract.md"
+        },
         {
           "source": "editor/tools/SKILL.md",
           "destination": "references/editor-workflow.md"
@@ -70,9 +74,13 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "teams/research-team",
       "resources": [
+        {
+          "source": "docs/EDITORIAL_PIPELINE_V3.md",
+          "destination": "references/publication-contract.md"
+        },
         {
           "source": "research/deep-research/SKILL.md",
           "destination": "references/research-workflow.md"
@@ -246,5 +254,5 @@
       ]
     }
   ],
-  "release_version": "1.2.0"
+  "release_version": "1.3.0"
 }

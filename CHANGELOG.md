@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `editor/research` (Team skills 1.3.0): контракт проверенных утверждений и вопросов игрока, режим `reconstruct`, отдельный фактологический review и необязательная проверяющая модель; CLI decision coverage и очередь пробелов. Добавлены приватный импорт полных материалов Manacost MCP, подготовка слепого benchmark, Promptfoo edit/reconstruct и необязательные адаптеры Trafilatura/LangExtract/Sentence Transformers с экспортом для DSPy/RAGChecker. Реальные человеческие оценки и Council остаются следующими экспериментами. Контракт и команды — `docs/EDITORIAL_PIPELINE_V3.md`.
 - `translate`: добавлен Docker-подготовщик материалов для Codex без локальной LLM: терминологические выгрузки, контекст, стили, сегментный diff, translation memory и механический QA.
 - `skills`: добавлен `wow-hearthstone-translator` для двухпроходного перевода игровых материалов.
 - `editor` (EditorTeam 1.2.0): типографика через Typograf (`editor-team typography`: тире и неразрывные пробелы, кавычки прямые по `СТИЛЬ.md`, названия карт и разметка защищены, результат проверяется), необязательные подсказки опечаток SAGE (`editor-team spelling-hints`, веса не скачиваются без `--download`) и второй читающий аудитор ru-text 2.9.3 (`editor-team ru-audit`, агент `.claude/agents/ru-auditor.md` только с Read/Grep/Glob). Подробности — `editor/.claude/skills/hs-edit/references/external-checks.md`.

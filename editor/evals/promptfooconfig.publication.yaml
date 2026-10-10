@@ -1,0 +1,21 @@
+description: "Manacost publication: edit vs reconstruct on private approved gold"
+prompts:
+  - id: file://prompts/candidate.txt
+    label: candidate
+providers:
+  - id: file://providers/pipeline-e2e.js
+    label: edit
+    config:
+      mode: edit
+      retrieval: off
+  - id: file://providers/pipeline-e2e.js
+    label: reconstruct
+    config:
+      mode: reconstruct
+      retrieval: off
+tests: file://cases/publication.js
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions/publication.js
+      metric: advice-preservation

@@ -78,7 +78,7 @@ func safeClaims(claims []map[string]any) []map[string]any {
 	out := make([]map[string]any, 0, len(claims))
 	for _, claim := range claims {
 		clean := map[string]any{}
-		for _, key := range []string{"claim_id", "meaning", "confidence", "patch", "meta_epoch"} {
+		for _, key := range []string{"claim_id", "meaning", "action", "condition", "exception", "confidence", "patch", "meta_epoch", "evidence_refs", "status"} {
 			if value, ok := claim[key]; ok {
 				clean[key] = value
 			}

@@ -22,6 +22,7 @@ type Config struct {
 	AGUIToken           string // Bearer-токен внутреннего AG-UI endpoint
 	ReasoningEffort     string // передаётся внутреннему Codex; например xhigh
 	Model               string
+	ReviewModel         string // optional independent reviewer; same configured provider
 	APIKey              string
 	AccountID           string // нужен только Cloudflare
 	BaseURL             string // свой адрес провайдера: прокси или self-hosted
@@ -78,6 +79,7 @@ func Load() (*Config, error) {
 		AGUIToken:       os.Getenv("EDITOR_AGUI_TOKEN"),
 		ReasoningEffort: env("EDITOR_REASONING_EFFORT", "xhigh"),
 		Model:           env("EDITOR_MODEL", ""),
+		ReviewModel:     os.Getenv("EDITOR_REVIEW_MODEL"),
 		APIKey:          os.Getenv("EDITOR_API_KEY"),
 		AccountID:       os.Getenv("EDITOR_CF_ACCOUNT_ID"),
 		BaseURL:         env("EDITOR_BASE_URL", os.Getenv("OLLAMA_BASE_URL")),
@@ -177,6 +179,7 @@ func (c *Config) Redacted() map[string]any {
 		"agui_token_set":       c.AGUIToken != "",
 		"provider":             c.Provider,
 		"model":                c.Model,
+		"review_model":         c.ReviewModel,
 		"reasoning_effort":     c.ReasoningEffort,
 		"base_url":             c.BaseURL,
 		"max_attempts":         c.MaxAttempts,

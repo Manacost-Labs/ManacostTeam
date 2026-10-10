@@ -22,6 +22,8 @@ func TestUnknownRetrievalModeIsBadRequest(t *testing.T) {
 		`{"text":"Текст.","mode":"edit","retrieval":"enabled"}`,
 		`{"text":"","mode":"edit"}`,
 		`{"text":"Текст.","mode":"weird"}`,
+		`{"text":"Текст.","mode":"reconstruct"}`,
+		`{"text":"Текст.","mode":"reconstruct","research_handoff":{"schema_version":1,"status":"research_blocked"}}`,
 	} {
 		recorder := httptest.NewRecorder()
 		handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/v2/edit", strings.NewReader(body)))

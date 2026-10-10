@@ -75,6 +75,13 @@ func main() {
 		pipelineLLM = nil
 	}
 	pipe := pipeline.New(pipelineLLM, an, cfg.Provider, checks...)
+	if cfg.ReviewModel != "" && cfg.Provider != "none" {
+		if cfg.Provider == "agui" {
+			pipe.Reviewer = llm.NewAGUI(cfg.AGUIURL, cfg.AGUIToken, cfg.ReviewModel, cfg.ReasoningEffort, cfg.RequestTimeout)
+		} else {
+			pipe.Reviewer = llm.New(cfg.Provider, cfg.ReviewModel, cfg.APIKey, cfg.AccountID, cfg.BaseURL, cfg.RequestTimeout)
+		}
+	}
 	pipe.Log = log
 	// Примеры стиля идут из существующего Python-корпуса; их отсутствие не
 	// мешает правке и не входит в checks_complete. Режим auto включает их
