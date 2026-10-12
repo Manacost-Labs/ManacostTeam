@@ -31,6 +31,22 @@
 
 ## Быстрый старт
 
+### Развитие для других игр и способов запуска
+
+[Проект архитектуры](docs/ARCHITECTURE.md) разделяет общие возможности,
+игровые пакеты, редакционные профили и адаптеры агентов/сервера/WordPress.
+Добавлены каталоги Hearthstone, League of Legends, World of Warcraft, Deadlock,
+Overwatch и Heroes of the Storm и проверяемый выбор контекста:
+
+```bash
+python3 tools/resolve_context.py --game league-of-legends --profile manacost --execution agent
+```
+
+Это начальный контракт метаданных, а не готовые адаптеры новых игр или installer.
+План подключения модулей и критерии миграции описаны в документе архитектуры.
+
+### Существующие модули
+
 ```bash
 git clone https://github.com/Manacost-Labs/ManacostTeam.git
 cd ManacostTeam

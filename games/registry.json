@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "games": [
+    {"id": "hearthstone", "title": "Hearthstone", "version": "0.1.0"},
+    {"id": "league-of-legends", "title": "League of Legends", "version": "0.1.0"},
+    {"id": "world-of-warcraft", "title": "World of Warcraft", "version": "0.1.0"},
+    {"id": "deadlock", "title": "Deadlock", "version": "0.1.0"},
+    {"id": "overwatch", "title": "Overwatch", "version": "0.1.0"},
+    {"id": "heroes-of-the-storm", "title": "Heroes of the Storm", "version": "0.1.0"}
+  ]
+}
