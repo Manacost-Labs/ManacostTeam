@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - 'teams/**'
+      - 'shared/**'
+      - 'games/**'
+      - 'profiles/**'
       - 'tools/**'
       - 'tests/**'
       - 'release/team-skills/**'
@@ -19,6 +22,9 @@ on:
   pull_request:
     paths:
       - 'teams/**'
+      - 'shared/**'
+      - 'games/**'
+      - 'profiles/**'
       - 'tools/**'
       - 'tests/**'
       - 'release/team-skills/**'

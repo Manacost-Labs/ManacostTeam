@@ -17,8 +17,8 @@ services:
 
   analyzer:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: editor/Dockerfile
       target: analyzer
     restart: unless-stopped
     networks:
@@ -36,8 +36,8 @@ services:
 
   gateway:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: editor/Dockerfile
       target: gateway
     restart: unless-stopped
     environment:

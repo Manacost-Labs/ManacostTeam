@@ -101,6 +101,34 @@ class TeamPackageTests(unittest.TestCase):
 
 
 class PortableRuntimeTests(unittest.TestCase):
+    def test_shared_context_works_from_both_unpacked_skills(self):
+        for name in ("editor-team", "translate-team"):
+            result = self.run_helper(name, "scripts/resolve_context.py", "--game", "world-of-warcraft", "--profile", "manacost", "--patch", "fixture-build")
+            context = json.loads(result.stdout)
+            self.assertEqual(context["game"]["id"], "world-of-warcraft")
+            directory = self.unpacked / name
+            with tempfile.TemporaryDirectory() as temporary:
+                metadata = Path(temporary) / "context.json"
+                source = Path(temporary) / "source.md"
+                metadata.write_text(json.dumps(context), encoding="utf-8")
+                source.write_text("Способность усиливает урон на 20%.", encoding="utf-8")
+                if name == "editor-team":
+                    process = subprocess.run(
+                        [sys.executable, str(directory / "scripts/editor_team.py"), "audit", str(source), "--task-context", str(metadata), "--format", "json"],
+                        cwd=temporary, env=self.env, capture_output=True, text=True, timeout=120,
+                    )
+                    self.assertEqual(process.returncode, 0, process.stderr)
+                    self.assertEqual(json.loads(process.stdout)["profile"], "wow-guide")
+                else:
+                    runtime = directory / "scripts"
+                    code = "from translation_core import scoped_translation_resources; import json,sys; from pathlib import Path; r=scoped_translation_resources(Path('.'),json.load(open(sys.argv[1])), 'retail'); print(r['scope']['game'])"
+                    process = subprocess.run(
+                        [sys.executable, "-S", "-c", code, str(metadata)], cwd=temporary,
+                        env={**self.env, "PYTHONPATH": str(runtime)}, capture_output=True, text=True,
+                    )
+                    self.assertEqual(process.returncode, 0, process.stderr)
+                    self.assertEqual(process.stdout.strip(), "world-of-warcraft")
+
     @classmethod
     def setUpClass(cls):
         import build_team_skills as builder

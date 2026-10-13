@@ -64,6 +64,7 @@ type Report struct {
 }
 
 type Rules struct {
+	TaskContext      json.RawMessage     `json:"task_context,omitempty"`
 	Game             string              `json:"game"`
 	Profile          string              `json:"profile"`
 	Depth            string              `json:"depth,omitempty"`
@@ -148,9 +149,10 @@ type ValidationContext struct {
 // RulesContext — что нужно сайдкару, чтобы собрать правила: editorial mode,
 // глубина правки и исходник (для подбора образцов манеры при переплавке).
 type RulesContext struct {
-	Mode  string
-	Depth string
-	Text  string
+	TaskContext json.RawMessage
+	Mode        string
+	Depth       string
+	Text        string
 }
 
 // Outline — план переплавки, который модель возвращает первым проходом.
@@ -283,11 +285,39 @@ func (c *Client) RulesWithContext(ctx context.Context, game, profile string, rc 
 		rc.Depth = "обычная"
 	}
 	payload := map[string]any{"game": game, "profile": profile, "mode": rc.Mode, "depth": rc.Depth}
+	if len(rc.TaskContext) > 0 {
+		payload["task_context"] = rc.TaskContext
+	}
 	if rc.Text != "" {
 		payload["text"] = rc.Text
 	}
 	err := c.post(ctx, "/rules", payload, &r)
 	return &r, err
+}
+
+// ResolvedTaskContext bridges the portable metadata envelope to legacy game/genre names.
+type ResolvedTaskContext struct {
+	Game         string          `json:"game"`
+	Profile      string          `json:"profile"`
+	CurrentPatch string          `json:"current_patch"`
+	TaskContext  json.RawMessage `json:"task_context"`
+}
+
+func (c *Client) ResolveTaskContext(ctx context.Context, envelope json.RawMessage, game, profile, patch string) (*ResolvedTaskContext, error) {
+	raw, err := c.Forward(ctx, "/context/resolve", map[string]any{
+		"task_context": envelope, "game": game, "profile": profile, "current_patch": patch,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resolved ResolvedTaskContext
+	if err := json.Unmarshal(raw, &resolved); err != nil {
+		return nil, err
+	}
+	if (resolved.Game != "hearthstone" && resolved.Game != "wow") || resolved.Profile == "" || len(resolved.TaskContext) == 0 || string(resolved.TaskContext) == "null" {
+		return nil, fmt.Errorf("invalid context resolution from analyzer")
+	}
+	return &resolved, nil
 }
 
 // ValidateOutline проверяет план переплавки против скелета профиля и

@@ -34,6 +34,7 @@ from editorteam import games as G
 from editorteam import profiles as P
 from editorteam.corpus_learning import CorpusError, CorpusStore
 from editorteam.finding import Finding, Report
+from editorteam.task_context import adapt_editor_request
 
 ROOT = Path(__file__).resolve().parents[2]
 REPO_SKILL_SCRIPTS = ROOT / ".claude" / "skills" / "hs-edit" / "scripts"
@@ -903,6 +904,7 @@ def rules_for(
     *,
     text: str | None = None,
     depth: str = "обычная",
+    task_context: dict | None = None,
 ) -> dict:
     """Правила, которые Go подставляет в запрос к модели.
 
@@ -974,6 +976,11 @@ def rules_for(
                 },
             }
         )
+    if task_context is not None and game == "wow":
+        # Hearthstone terminology/corpus examples have no authority over WoW names.
+        out.update({"replace": [], "keep": [], "corrections": []})
+        for key in ("style_examples", "style_examples_source"):
+            out.pop(key, None)
     return out
 
 
@@ -984,6 +991,9 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write(f"  {self.address_string()} {fmt % args}\n")
 
     def _send(self, code: int, payload: dict):
+        context = getattr(self, "resolved_task_context", None)
+        if code == 200 and context is not None:
+            payload = {**payload, "task_context": context}
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1004,18 +1014,42 @@ class Handler(BaseHTTPRequestHandler):
             return None
 
     def do_GET(self):
+        self.resolved_task_context = None
         if self.path == "/health":
             self._send(200, {"ok": True, "games": G.available(), "profiles": P.available()})
         else:
             self._send(404, {"error": "нет такого пути"})
 
     def do_POST(self):
+        self.resolved_task_context = None
         data = self._read()
-        if data is None:
+        if not isinstance(data, dict):
             self._send(400, {"error": "нужен JSON в теле запроса"})
             return
         try:
-            if self.path == "/analyze":
+            if "task_context" in data:
+                if self.path not in (
+                    "/analyze",
+                    "/validate",
+                    "/rules",
+                    "/outline/validate",
+                    "/context/resolve",
+                ):
+                    raise ValueError("task_context is not supported by this endpoint")
+                data = adapt_editor_request(data)
+                self.resolved_task_context = data["task_context"]
+            if self.path == "/context/resolve":
+                if self.resolved_task_context is None:
+                    raise ValueError("task_context is required")
+                self._send(
+                    200,
+                    {
+                        "game": data["game"],
+                        "profile": data["profile"],
+                        "current_patch": data["current_patch"],
+                    },
+                )
+            elif self.path == "/analyze":
                 self._send(
                     200,
                     analyze(
@@ -1053,6 +1087,7 @@ class Handler(BaseHTTPRequestHandler):
                         data.get("mode", "GUIDE"),
                         text=data.get("text"),
                         depth=data.get("depth") or "обычная",
+                        task_context=data.get("task_context"),
                     ),
                 )
             elif self.path == "/outline/validate":

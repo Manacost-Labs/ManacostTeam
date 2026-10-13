@@ -44,6 +44,13 @@ func Build(r *analyzer.Rules, mode, depth, language string, claims []map[string]
 		TerminologyRules:  []string{"используй официальные названия карт", "Темные дары / Темный дар — не «подарки»", "на Полях сражений говори «тип существа», а не «племя»"},
 		Task:              taskFor(mode, depth), EditorialGoal: goalFor(mode, depth)}
 	if r != nil {
+		if len(r.TaskContext) > 0 {
+			b.AuthorProfile = "manacost"
+			if r.Game == "wow" {
+				b.ProtectedEntities = []string{"названия способностей, талантов, предметов и персонажей", "числа, проценты, характеристики и длительности", "ссылки и Markdown-разметка", "цитаты, отрицания и осторожные условия"}
+				b.TerminologyRules = []string{"используй подтверждённые названия для выбранного продукта и сборки WoW", "не придумывай официальную локализацию; неподтверждённое имя оставь на проверку"}
+			}
+		}
 		for _, pair := range r.Replace {
 			if pair["from"] != "" && pair["to"] != "" {
 				b.TerminologyRules = append(b.TerminologyRules, pair["from"]+" → "+pair["to"])

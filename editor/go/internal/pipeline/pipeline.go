@@ -75,6 +75,7 @@ func RequestIDFrom(ctx context.Context) string {
 }
 
 type Request struct {
+	TaskContext      json.RawMessage  `json:"task_context,omitempty"`
 	Text             string           `json:"text"`
 	Mode             string           `json:"mode"` // proofread | edit | rewrite | reconstruct
 	Handoff          *ResearchHandoff `json:"research_handoff,omitempty"`
@@ -133,6 +134,7 @@ func (e *RequestError) Error() string { return e.Message }
 var ErrInvalidRetrieval = &RequestError{Message: "retrieval должен быть auto, on или off"}
 
 type Result struct {
+	TaskContext              json.RawMessage     `json:"task_context,omitempty"`
 	Text                     string              `json:"text"`
 	Mode                     string              `json:"mode"`
 	Status                   string              `json:"status"`
@@ -262,6 +264,20 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			req.Profile = req.Handoff.StyleProfile
 		}
 	}
+	if len(req.TaskContext) > 0 {
+		if s.RulesClient == nil {
+			return nil, &RequestError{Message: "task_context requires the context-capable analyzer"}
+		}
+		resolved, err := s.RulesClient.ResolveTaskContext(ctx, req.TaskContext, req.Game, req.Profile, req.CurrentPatch)
+		if err != nil {
+			var responseErr *analyzer.ResponseError
+			if errors.As(err, &responseErr) && responseErr.Status == 400 {
+				return nil, &RequestError{Message: err.Error()}
+			}
+			return nil, fmt.Errorf("task context resolution: %w", err)
+		}
+		req.Game, req.Profile, req.CurrentPatch, req.TaskContext = resolved.Game, resolved.Profile, resolved.CurrentPatch, resolved.TaskContext
+	}
 	retrievalMode, ok := normalizeRetrievalMode(req.Retrieval)
 	if !ok {
 		return nil, ErrInvalidRetrieval
@@ -278,13 +294,14 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 
 	var pyRules *analyzer.Rules
 	if s.RulesClient != nil {
-		got, err := s.RulesClient.RulesWithContext(ctx, req.Game, req.Profile, analyzer.RulesContext{Mode: req.EditorialMode, Depth: depthFor(mode), Text: req.Text})
+		got, err := s.RulesClient.RulesWithContext(ctx, req.Game, req.Profile, analyzer.RulesContext{Mode: req.EditorialMode, Depth: depthFor(mode), Text: req.Text, TaskContext: req.TaskContext})
 		if err != nil {
 			return nil, fmt.Errorf("правила: %w", err)
 		}
 		pyRules = got
 	}
 	result := &Result{Text: req.Text, Mode: mode, Provider: s.Provider, PromptVersion: PromptVersion, PromptVariant: s.PromptVariant}
+	result.TaskContext = req.TaskContext
 	if s.LLM != nil {
 		result.Model = s.LLM.Model()
 		result.ReviewerModel = result.Model

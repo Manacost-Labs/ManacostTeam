@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -67,6 +67,26 @@
         {
           "source": "editor/third_party/licenses",
           "destination": "licenses"
+        },
+        {
+          "source": "shared/manacost_context.py",
+          "destination": "python/manacost_context.py"
+        },
+        {
+          "source": "games/registry.json",
+          "destination": "python/context-data/games/registry.json"
+        },
+        {
+          "source": "profiles/registry.json",
+          "destination": "python/context-data/profiles/registry.json"
+        },
+        {
+          "source": "tools/resolve_context.py",
+          "destination": "scripts/resolve_context.py"
+        },
+        {
+          "source": "docs/TASK_CONTEXT.md",
+          "destination": "references/task-context.md"
         }
       ]
     },
@@ -128,7 +148,7 @@
       "name": "translate-team",
       "team": "TranslateTeam",
       "module": "translate",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "source": "teams/translate-team",
       "resources": [
         {
@@ -142,6 +162,26 @@
         {
           "source": "translate/tools",
           "destination": "tools"
+        },
+        {
+          "source": "shared/manacost_context.py",
+          "destination": "scripts/manacost_context.py"
+        },
+        {
+          "source": "games/registry.json",
+          "destination": "scripts/context-data/games/registry.json"
+        },
+        {
+          "source": "profiles/registry.json",
+          "destination": "scripts/context-data/profiles/registry.json"
+        },
+        {
+          "source": "tools/resolve_context.py",
+          "destination": "scripts/resolve_context.py"
+        },
+        {
+          "source": "docs/TASK_CONTEXT.md",
+          "destination": "references/task-context.md"
         }
       ]
     },
@@ -311,5 +351,5 @@
       ]
     }
   ],
-  "release_version": "1.4.0"
+  "release_version": "1.5.0"
 }

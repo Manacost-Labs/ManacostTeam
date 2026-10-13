@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import re
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
-
 
 STYLE_PRESETS = {
     "literal": "Точный перевод без стилистической адаптации; сохраняй терминологию и структуру.",
@@ -26,7 +27,7 @@ class Segment:
 
 
 def _safe_aliases(source: str, comment: str) -> set[str]:
-    stripped = source.strip("\"“”«»")
+    stripped = source.strip('"“”«»')
     candidates = {source, stripped}
     if "manual=true" in comment:
         return {candidate for candidate in candidates if candidate}
@@ -37,7 +38,12 @@ def _safe_aliases(source: str, comment: str) -> set[str]:
     }
 
 
-def load_glossary(paths: Iterable[Path]) -> dict[str, str]:
+def load_glossary(
+    paths: Iterable[Path],
+    *,
+    build: str | None = None,
+    product: str | None = None,
+) -> dict[str, str]:
     """Use only unambiguous EN→RU pairs; avoid generic one-word dump entries."""
     variants: dict[str, set[str]] = defaultdict(set)
     for path in paths:
@@ -49,6 +55,13 @@ def load_glossary(paths: Iterable[Path]) -> dict[str, str]:
                 continue
             source, target = parts[0].strip(), parts[1].strip()
             comment = parts[2].strip() if len(parts) == 3 else ""
+            metadata = dict(
+                item.strip().split("=", 1) for item in comment.split(";") if "=" in item
+            )
+            if build is not None and metadata.get("build") != build:
+                continue
+            if product is not None and metadata.get("product") != product:
+                continue
             if not source or not target or source == "source_en":
                 continue
             for alias in _safe_aliases(source, comment):
@@ -57,6 +70,60 @@ def load_glossary(paths: Iterable[Path]) -> dict[str, str]:
         source: next(iter(targets))
         for source, targets in variants.items()
         if len(targets) == 1
+    }
+
+
+def scoped_translation_resources(
+    data_dir: Path, task_context: dict, product: str | None = None
+) -> dict:
+    """Select game/build terms and isolated EN→RU memory; never fall back to legacy memory."""
+    try:
+        from manacost_context import validate_context
+    except ModuleNotFoundError:
+        for parent in Path(__file__).resolve().parents[1:3]:
+            if (parent / "shared/manacost_context.py").is_file():
+                sys.path.insert(0, str(parent / "shared"))
+                break
+        from manacost_context import validate_context
+    context = validate_context(task_context)
+    game = context["game"]["id"]
+    if context["patch"] is None:
+        raise ValueError("translation task_context requires an exact patch/build")
+    if game == "world-of-warcraft" and (
+        not isinstance(product, str) or not product.strip()
+    ):
+        raise ValueError("World of Warcraft translation requires an explicit product")
+    if game == "hearthstone" and product is not None:
+        raise ValueError("product is only supported for World of Warcraft translation")
+    scope = {
+        "game": game,
+        "profile": context["profile"]["id"],
+        "product": product,
+        "build": context["patch"],
+        "source_locale": "enUS",
+        "target_locale": "ruRU",
+    }
+    glossary_path = data_dir / f"{game}-names.en-ru.tsv"
+    snapshot = glossary_path.read_bytes() if glossary_path.is_file() else None
+    terms = load_glossary([glossary_path], build=scope["build"], product=product)
+    if snapshot != (glossary_path.read_bytes() if glossary_path.is_file() else None):
+        raise ValueError(
+            "glossary changed while resolving resources; retry the request"
+        )
+    glossary_hash = (
+        hashlib.sha256(snapshot).hexdigest() if snapshot is not None else None
+    )
+    scope["glossary_sha256"] = glossary_hash
+    digest = hashlib.sha256(
+        json.dumps(scope, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    return {
+        "task_context": context,
+        "scope": scope,
+        "terms": terms,
+        "memory_path": data_dir / "memory" / game / digest / "approved-segments.tsv",
+        "warnings": [] if terms else ["glossary_unavailable"],
+        "glossary_sha256": glossary_hash,
     }
 
 

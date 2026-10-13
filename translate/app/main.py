@@ -23,9 +23,9 @@ from .core import (
     load_translation_memory,
     protect_terms,
     qa_translation,
+    scoped_translation_resources,
     segment_markdown,
 )
-
 
 APP_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("DATA_DIR", "/app/data"))
@@ -41,12 +41,14 @@ class PrepareRequest(BaseModel):
     text: str | None = Field(default=None, max_length=MAX_SOURCE_CHARS)
     url: str | None = Field(default=None, max_length=2048)
     title: str | None = Field(default=None, max_length=500)
-    game: str = Field(default="wow", pattern="^(wow|hearthstone)$")
+    game: str = Field(default="wow", pattern="^(wow|world-of-warcraft|hearthstone)$")
     patch: str | None = Field(default=None, max_length=80)
     class_name: str | None = Field(default=None, max_length=100)
     spec: str | None = Field(default=None, max_length=100)
     style: str = Field(default="manacost")
     previous_source: str | None = Field(default=None, max_length=MAX_SOURCE_CHARS)
+    task_context: dict[str, object] | None = None
+    product: str | None = Field(default=None, max_length=80)
 
 
 class QaRequest(BaseModel):
@@ -59,6 +61,8 @@ class MemoryRequest(BaseModel):
     source_en: str = Field(min_length=1, max_length=10000)
     target_ru: str = Field(min_length=1, max_length=10000)
     context: str = Field(default="", max_length=500)
+    task_context: dict[str, object] | None = None
+    product: str | None = Field(default=None, max_length=80)
 
 
 app = FastAPI(title="TranslateTeam Codex Preparer", version="1.0.0")
@@ -142,33 +146,87 @@ def build_codex_instruction(context: dict[str, str | None], style: str) -> str:
 
 def prepare_material(text: str, request: PrepareRequest) -> dict[str, object]:
     if len(text) > MAX_SOURCE_CHARS:
-        raise HTTPException(413, f"Материал длиннее лимита {MAX_SOURCE_CHARS} символов.")
+        raise HTTPException(
+            413, f"Материал длиннее лимита {MAX_SOURCE_CHARS} символов."
+        )
     if request.style not in STYLE_PRESETS:
-        raise HTTPException(422, f"Неизвестный стиль. Доступны: {', '.join(STYLE_PRESETS)}")
-    terms = glossary()
+        raise HTTPException(
+            422, f"Неизвестный стиль. Доступны: {', '.join(STYLE_PRESETS)}"
+        )
+    resources = None
+    selected_game, selected_patch, selected_style = (
+        request.game,
+        request.patch,
+        request.style,
+    )
+    if "task_context" in request.model_fields_set:
+        try:
+            resources = scoped_translation_resources(
+                DATA_DIR, request.task_context, request.product
+            )
+            supplied = resources["task_context"]
+            canonical = supplied["game"]["id"]
+            selected_game = "wow" if canonical == "world-of-warcraft" else canonical
+            if "game" in request.model_fields_set and request.game not in (
+                canonical,
+                selected_game,
+            ):
+                raise ValueError("game conflicts with task_context.game")
+            if (
+                "patch" in request.model_fields_set
+                and request.patch != supplied["patch"]
+            ):
+                raise ValueError("patch conflicts with task_context.patch")
+            selected_patch = supplied["patch"]
+            if supplied["profile"]["id"] == "neutral":
+                if "style" not in request.model_fields_set:
+                    selected_style = "literal"
+                elif request.style == "manacost":
+                    raise ValueError(
+                        "manacost style conflicts with the neutral editorial profile"
+                    )
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+    terms = resources["terms"] if resources else glossary()
     protected, replacements = protect_terms(text, terms)
     previous_protected, _ = protect_terms(request.previous_source or "", terms)
-    memory = load_translation_memory(memory_path())
+    memory = load_translation_memory(
+        resources["memory_path"] if resources else memory_path()
+    )
     segments = segment_markdown(protected)
     context = {
         "title": request.title,
-        "game": request.game,
-        "patch": request.patch,
+        "game": selected_game,
+        "patch": selected_patch,
         "class_name": request.class_name,
         "spec": request.spec,
     }
-    return {
-        "instruction_for_codex": build_codex_instruction(context, request.style),
+    result = {
+        "instruction_for_codex": build_codex_instruction(context, selected_style),
         "context": context,
         "protected_markdown": protected,
         "terms": replacements,
         "review_candidates": find_review_candidates(text, terms),
         "segments": [
-            {"id": segment.id, "text": segment.text, "memory_match": memory.get(segment.text)}
+            {
+                "id": segment.id,
+                "text": segment.text,
+                "memory_match": memory.get(segment.text),
+            }
             for segment in segments
         ],
         "changed_segment_ids": changed_segment_ids(previous_protected, protected),
     }
+    if resources:
+        result.update(
+            {
+                "task_context": resources["task_context"],
+                "resource_scope": resources["scope"],
+                "resource_warnings": resources["warnings"],
+                "glossary_sha256": resources["glossary_sha256"],
+            }
+        )
+    return result
 
 
 @app.get("/")
@@ -189,9 +247,14 @@ async def health() -> dict[str, object]:
 
 @app.post("/prepare")
 async def prepare(request: PrepareRequest) -> dict[str, object]:
-    if bool(request.text and request.text.strip()) == bool(request.url and request.url.strip()):
+    if bool(request.text and request.text.strip()) == bool(
+        request.url and request.url.strip()
+    ):
         raise HTTPException(422, "Передайте ровно один источник: text или url.")
     if request.url:
+        # Validate the new context before any external fetch, including explicit null.
+        if "task_context" in request.model_fields_set:
+            prepare_material("", request)
         html, final_url = await fetch_html(request.url)
         result = prepare_material(extract_markdown(html), request)
         result["source_url"] = final_url
@@ -206,5 +269,18 @@ async def qa(request: QaRequest) -> dict[str, object]:
 
 @app.post("/memory/approve")
 async def approve_memory(request: MemoryRequest) -> dict[str, object]:
-    append_translation_memory(memory_path(), request.source_en, request.target_ru, request.context)
-    return {"status": "approved", "memory_pairs": len(load_translation_memory(memory_path()))}
+    selected = memory_path()
+    if "task_context" in request.model_fields_set:
+        try:
+            selected = scoped_translation_resources(
+                DATA_DIR, request.task_context, request.product
+            )["memory_path"]
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+    append_translation_memory(
+        selected, request.source_en, request.target_ru, request.context
+    )
+    return {
+        "status": "approved",
+        "memory_pairs": len(load_translation_memory(selected)),
+    }

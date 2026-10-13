@@ -52,6 +52,44 @@ def _line_of(text: str, pos: int) -> int:
 
 
 def audit(args) -> int:
+    if getattr(args, "task_context", None):
+        if args.deep or args.strict:
+            raise ValueError("--deep/--strict are not supported with --task-context yet")
+        from editorteam.server import analyze
+        from editorteam.task_context import adapt_editor_request
+
+        selected = adapt_editor_request(
+            {
+                "task_context": json.loads(_read(Path(args.task_context))),
+                "profile": args.profile,
+            }
+        )
+        result = analyze(
+            _read(Path(args.file)),
+            selected["game"],
+            selected["profile"],
+            args.mode,
+            args.evidence_requested,
+        )
+        report = Report(document=str(args.file), profile=result["profile"])
+        result["document"] = str(args.file)
+        report.findings = [Finding(**item) for item in result["findings"]]
+        report.metrics, report.notes, report.skipped = (
+            result["metrics"],
+            result["notes"],
+            result["analyzers_skipped"],
+        )
+        if args.format == "json":
+            print(
+                json.dumps(
+                    {**result, "task_context": selected["task_context"]},
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+        else:
+            _emit(report, args)
+        return exit_code(report, args.fail_on)
     C = _scripts()
     text = _read(Path(args.file))
     profile_name = args.profile
@@ -347,10 +385,27 @@ def validate_edit(args) -> int:
         json.loads(_read(Path(args.claims_after))) if args.claims_after else claims_before
     )
     declared = [x.strip() for x in (args.declared_missing or "").split(",") if x.strip()]
+    selected = None
+    if getattr(args, "task_context", None):
+        from editorteam.task_context import adapt_editor_request
+
+        selected = adapt_editor_request(
+            {
+                "task_context": json.loads(_read(Path(args.task_context))),
+                "game": args.game,
+                "profile": args.profile,
+                "current_patch": args.current_patch,
+            }
+        )
+        args.game, args.profile, args.current_patch = (
+            selected["game"],
+            selected["profile"],
+            selected["current_patch"],
+        )
     result = validate(
         before,
         after,
-        args.game,
+        args.game or "hearthstone",
         args.profile,
         mode=args.mode,
         depth=args.depth,
@@ -360,6 +415,8 @@ def validate_edit(args) -> int:
         current_meta_epoch=args.current_meta_epoch,
         current_patch=args.current_patch,
     )
+    if selected:
+        result["task_context"] = selected["task_context"]
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
@@ -1021,6 +1078,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     a = sub.add_parser("audit", help="полный разбор материала", parents=[common])
     a.add_argument("file")
+    a.add_argument("--task-context", help="JSON общего контекста Hearthstone/WoW")
     a.add_argument(
         "--profile", choices=P.available(), help="жанр; без него определяется автоматически"
     )
@@ -1113,7 +1171,8 @@ def build_parser() -> argparse.ArgumentParser:
     ve = sub.add_parser("validate-edit", help="затвор смысла и confidence", parents=[common])
     ve.add_argument("before")
     ve.add_argument("after")
-    ve.add_argument("--game", default="hearthstone")
+    ve.add_argument("--game", help="игра; legacy default: hearthstone")
+    ve.add_argument("--task-context", help="JSON общего контекста Hearthstone/WoW")
     ve.add_argument("--profile", choices=P.available())
     ve.add_argument("--mode", choices=["GUIDE", "ANALYSIS", "REPORT"], default="GUIDE")
     ve.add_argument(
@@ -1279,11 +1338,17 @@ def _ensure_utf8_stdio() -> None:
 
 def main(argv=None) -> int:
     _ensure_utf8_stdio()
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
     # флаг мог стоять и до подкоманды, и после — берём то, что задано
     args.format = getattr(args, "format", None) or "text"
     args.fail_on = getattr(args, "fail_on", None) or "error"
-    return args.func(args)
+    try:
+        return args.func(args)
+    except ValueError as error:
+        if getattr(args, "task_context", None):
+            parser.error(str(error))
+        raise
 
 
 if __name__ == "__main__":

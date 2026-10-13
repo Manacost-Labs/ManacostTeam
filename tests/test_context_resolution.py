@@ -8,10 +8,35 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-from resolve_context import load_catalog, resolve_context
+from resolve_context import load_catalog, resolve_context  # noqa: E402
 
 
 class ContextResolutionTests(unittest.TestCase):
+    def test_received_context_rejects_tampering_and_unsupported_games(self):
+        from resolve_context import validate_context
+
+        context = resolve_context(ROOT, game="hearthstone", profile="manacost")
+        self.assertEqual(validate_context(context), context)
+        for field, value in (("schema_version", True), ("patch", "changed"), ("execution", "invalid")):
+            # patch is supplied metadata, not a claim of verified freshness.
+            altered = copy.deepcopy(context)
+            altered[field] = value
+            if field == "patch":
+                self.assertEqual(validate_context(altered)["patch"], "changed")
+            else:
+                with self.assertRaises(ValueError):
+                    validate_context(altered)
+        altered = copy.deepcopy(context)
+        altered["game"]["version"] = "999.0.0"
+        with self.assertRaises(ValueError):
+            validate_context(altered)
+        altered = copy.deepcopy(context)
+        altered["catalog_sha256"]["games"] = "0" * 64
+        with self.assertRaises(ValueError):
+            validate_context(altered)
+        with self.assertRaises(ValueError):
+            validate_context(resolve_context(ROOT, game="deadlock"))
+
     def test_each_game_resolves_in_both_modes_with_each_profile(self):
         games, _ = load_catalog(ROOT, "games")
         expected = {

@@ -17,6 +17,10 @@
 
 ### Added
 
+- Общий `task_context` для редакторских CLI/HTTP и Go `/v2/edit`, переводческих `/prepare` и `/memory/approve` для Hearthstone/WoW. Старые запросы сохраняют defaults и формат ответа.
+- Изоляция переводческих словарей по игре, продукту и сборке, памяти — дополнительно по профилю, языкам и хешу словаря. Старые данные не перемещаются.
+- Переносимые EditorTeam 1.5.0 и TranslateTeam 1.1.0 с общим stdlib runtime; выпуск Team skills 1.5.0 сохраняет прежние архивы. Контракт: `docs/TASK_CONTEXT.md`.
+
 - Добавлен каталог общих skills: monorepo gate, packaging, research-to-publication, SVG regression, freshness audit и release/migration.
 - В редакторский workflow добавлен обязательный вопрос о WordPress-шорткодах до редактуры, если пользователь не выбрал режим сам.
 - `hearthstone-replay` импортирован в `XMLTeam/` с полной Git-историей; метаданные npm-пакета переведены на monorepo remote.

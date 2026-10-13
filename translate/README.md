@@ -56,6 +56,16 @@ ALLOWED_DOMAINS=www.wowhead.com,wowhead.com,www.reddit.com,reddit.com,old.reddit
 
 ## Проверка
 
+### Общий контекст Hearthstone/WoW
+
+`/prepare` и `/memory/approve` принимают необязательный `task_context` из
+общего resolver. Новый путь выбирает термины по игре/продукту/сборке и изолирует
+translation memory, сохраняя старые вызовы без контекста.
+[Примеры и ограничения](../docs/TASK_CONTEXT.md). WoW требует `product`;
+`patch` в контексте — точный build терминологической выгрузки.
+
+### Тесты
+
 ```powershell
 python -m unittest discover -s tests -v
 ```

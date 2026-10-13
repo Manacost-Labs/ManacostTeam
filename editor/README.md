@@ -297,6 +297,11 @@ python3 -m venv .venv && .venv/bin/pip install pymorphy3 pymorphy3-dicts-ru
 
 ### Go-оркестратор
 
+Для Hearthstone/WoW доступны необязательный `task_context` в `/v2/edit` и
+`--task-context context.json` у `audit`/`validate-edit`. Старый `profile`
+сохраняет значение жанра; редакционный профиль передаётся внутри контекста.
+[Общий контракт и примеры](../docs/TASK_CONTEXT.md).
+
 Основной backend запускается из `go/`:
 
 ```bash

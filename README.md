@@ -4,7 +4,7 @@
 
 ## Состав
 
-Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). Готовые ZIP/.skill для ChatGPT и Claude: [release/team-skills/1.4.0](release/team-skills/1.4.0/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
+Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). Готовые ZIP/.skill для ChatGPT и Claude: [release/team-skills/1.5.0](release/team-skills/1.5.0/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
 
 [Улучшения EditorTeam и ResearchTeam в 1.1.0](docs/EDITOR_RESEARCH_QUALITY.md):
 защита смысла при редактуре, очередь поиска по пробелам и передача полезных
@@ -42,8 +42,9 @@ Overwatch и Heroes of the Storm и проверяемый выбор конте
 python3 tools/resolve_context.py --game league-of-legends --profile manacost --execution agent
 ```
 
-Это начальный контракт метаданных, а не готовые адаптеры новых игр или installer.
-План подключения модулей и критерии миграции описаны в документе архитектуры.
+Контекст подключён к редактуре и переводу Hearthstone/WoW через необязательный
+`task_context`. [Примеры CLI/API и совместимость](docs/TASK_CONTEXT.md).
+Адаптеры остальных игр и installer запланированы; этапы описаны в документе архитектуры.
 
 ### Существующие модули
 

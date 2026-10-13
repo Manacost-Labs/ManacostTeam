@@ -5,10 +5,16 @@ on:
     branches: [main]
     paths:
       - "translate/**"
+      - "shared/**"
+      - "games/**"
+      - "profiles/**"
       - ".github/workflows/translate-ci.yml"
   pull_request:
     paths:
       - "translate/**"
+      - "shared/**"
+      - "games/**"
+      - "profiles/**"
       - ".github/workflows/translate-ci.yml"
 
 defaults:
@@ -39,4 +45,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config --quiet
-      - run: docker build --tag translate-team:test .
+      - run: docker build --tag translate-team:test -f Dockerfile ..

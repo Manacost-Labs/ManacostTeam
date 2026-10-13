@@ -1,7 +1,8 @@
 services:
   preparer:
     build:
-      context: .
+      context: ..
+      dockerfile: translate/Dockerfile
     restart: unless-stopped
     environment:
       DATA_DIR: /app/data

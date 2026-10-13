@@ -6,12 +6,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src
 
-COPY pyproject.toml README.md ./
-COPY src ./src
-COPY .claude ./.claude
-COPY config ./config
-COPY гайды ./гайды
-COPY corpus/manifest.json ./corpus/manifest.json
+COPY editor/pyproject.toml editor/README.md ./
+COPY editor/src ./src
+COPY editor/.claude ./.claude
+COPY editor/config ./config
+COPY editor/гайды ./гайды
+COPY editor/corpus/manifest.json ./corpus/manifest.json
+COPY shared ./shared
+COPY games ./games
+COPY profiles ./profiles
 
 RUN python -m pip install --no-cache-dir \
     'pymorphy3>=2.0' \
@@ -28,7 +31,7 @@ CMD ["python", "-m", "editorteam.server", "--host", "0.0.0.0", "--port", "8731"]
 FROM golang:1.26.4-alpine AS gateway-build
 
 WORKDIR /src
-COPY go ./go
+COPY editor/go ./go
 RUN cd go && CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' \
     -o /out/editor-gateway ./cmd/editor-gateway && \
     CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' \
@@ -73,8 +76,8 @@ RUN apk add --no-cache hunspell gcompat libstdc++
 COPY --from=editorial-tools /out/hunspell/ru_RU.aff /usr/share/hunspell/ru_RU.aff
 COPY --from=editorial-tools /out/hunspell/ru_RU.dic /usr/share/hunspell/ru_RU.dic
 COPY --from=editorial-tools /out/vale /usr/local/bin/vale
-COPY .vale.ini /src/.vale.ini
-COPY .vale /src/.vale
+COPY editor/.vale.ini /src/.vale.ini
+COPY editor/.vale /src/.vale
 RUN cd go && HUNSPELL_INTEGRATION=1 HUNSPELL_BIN=hunspell \
     RU_DICT_PATH=/usr/share/hunspell/ru_RU.dic \
     go test ./internal/hunspell -run TestRealRussianDictionaryDetectsTypoAndKeepsGameAllowlist -count=1 \
@@ -93,10 +96,10 @@ COPY --from=editorial-tools /out/vale /usr/local/bin/vale
 COPY --from=editorial-tools /out/hunspell/ru_RU.aff /usr/share/hunspell/ru_RU.aff
 COPY --from=editorial-tools /out/hunspell/ru_RU.dic /usr/share/hunspell/ru_RU.dic
 COPY --from=editorial-tools /out/licenses/ru-spelling-dictionary/LICENSE /usr/share/licenses/ru-spelling-dictionary/LICENSE
-COPY --chown=editor:editor .vale.ini /app/.vale.ini
-COPY --chown=editor:editor .vale /app/.vale
-COPY config /app/config
-COPY evals /app/evals
+COPY --chown=editor:editor editor/.vale.ini /app/.vale.ini
+COPY --chown=editor:editor editor/.vale /app/.vale
+COPY editor/config /app/config
+COPY editor/evals /app/evals
 
 ENV RU_DICT_PATH=/usr/share/hunspell/ru_RU.dic \
     VALE_BIN=/usr/local/bin/vale \

@@ -1,11 +1,29 @@
 package rules
 
 import (
+	"encoding/json"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestWoWTaskContextSeparatesGenreAndEditorialProfile(t *testing.T) {
+	r := &analyzer.Rules{Game: "wow", Profile: "wow-guide", TaskContext: json.RawMessage(`{"profile":{"id":"manacost"}}`)}
+	b := Build(r, "GUIDE", "обычная", "ru-RU", nil)
+	if b.Genre != "wow-guide" || b.AuthorProfile != "manacost" {
+		t.Fatalf("genre and editorial profile confused: %+v", b)
+	}
+	for _, term := range []string{"Темные дары", "Полях сражений", "названия карт", "deck codes"} {
+		if strings.Contains(b.Prompt(), term) {
+			t.Fatalf("Hearthstone terminology leaked into WoW: %s", term)
+		}
+	}
+	legacy := Build(&analyzer.Rules{Game: "wow", Profile: "wow-guide"}, "GUIDE", "обычная", "ru-RU", nil)
+	if legacy.AuthorProfile != "wow-guide" || !strings.Contains(legacy.Prompt(), "Темные дары") {
+		t.Fatal("legacy rules changed without task_context")
+	}
+}
 
 func TestAdviceConditionsAndEvidenceSurvivePromptFiltering(t *testing.T) {
 	claim := map[string]any{"claim_id": "CLM-1", "meaning": "совет", "action": "сохранить ресурс", "condition": "слабая позиция", "exception": "риск поражения", "evidence_refs": []string{"SRC-1"}, "status": "supported_with_conditions", "source": "private-token"}
