@@ -101,6 +101,25 @@ class TeamPackageTests(unittest.TestCase):
 
 
 class PortableRuntimeTests(unittest.TestCase):
+    def test_new_game_runs_in_portable_editor_with_default_manacost(self):
+        result = self.run_helper("editor-team", "scripts/resolve_context.py", "--game", "deadlock")
+        context = json.loads(result.stdout)
+        self.assertEqual(context["profile"]["id"], "manacost")
+        with tempfile.TemporaryDirectory() as temporary:
+            metadata = Path(temporary) / "context.json"
+            source = Path(temporary) / "article.md"
+            metadata.write_text(json.dumps(context), encoding="utf-8")
+            source.write_text("Способность усиливает урон на 20%.", encoding="utf-8")
+            process = subprocess.run(
+                [sys.executable, str(self.unpacked / "editor-team/scripts/editor_team.py"), "audit", str(source), "--task-context", str(metadata), "--profile", "game-article", "--format", "json"],
+                cwd=temporary, env=self.env, capture_output=True, text=True, timeout=120,
+            )
+            self.assertEqual(process.returncode, 0, process.stderr)
+            report = json.loads(process.stdout)
+            self.assertEqual(report["game"], "deadlock")
+            self.assertEqual(report["profile"], "game-article")
+            self.assertIn("cards", report["analyzers_skipped"])
+
     def test_shared_context_works_from_both_unpacked_skills(self):
         for name in ("editor-team", "translate-team"):
             result = self.run_helper(name, "scripts/resolve_context.py", "--game", "world-of-warcraft", "--profile", "manacost", "--patch", "fixture-build")

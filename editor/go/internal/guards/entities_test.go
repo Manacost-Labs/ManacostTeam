@@ -2,6 +2,20 @@ package guards
 
 import "testing"
 
+func TestSelectedTermsDoNotUseHearthstoneEntities(t *testing.T) {
+	got := ExtractWithTerms("Темные дары и ГКД, 20% https://example.test", []string{"ГКД"})
+	found := map[string]bool{}
+	for _, entity := range got {
+		found[entity.Kind+":"+entity.Value] = true
+	}
+	if found["game_entity:Темные дары"] || !found["game_entity:ГКД"] || !found["percent:20%"] {
+		t.Fatalf("wrong game protection: %+v", got)
+	}
+	if !CompareWithTerms("урон 20% ГКД", "урон 30%", []string{"ГКД"}).HasHardChanges() {
+		t.Fatal("selected terms and numbers must remain protected")
+	}
+}
+
 func TestCompareProtectsLinksNumbersAndNegation(t *testing.T) {
 	before := "Не оставляйте карту за 3 маны: https://example.test/a."
 	after := "Оставляйте карту за 4 маны: https://example.test/a."

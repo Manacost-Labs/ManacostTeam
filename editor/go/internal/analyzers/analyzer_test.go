@@ -15,6 +15,7 @@ import (
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/finding"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/hunspell"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/natasha"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/vale"
 )
@@ -38,6 +39,15 @@ func TestNativeAnalyzerFlagsProjectTerminology(t *testing.T) {
 	result, err := (NativeGoAnalyzer{}).Analyze(context.Background(), Input{Text: "Подарки и племя на Полях сражений"})
 	if err != nil || len(result.Findings) != 2 {
 		t.Fatalf("native: %+v, %v", result, err)
+	}
+}
+
+func TestNativeTerminologyIsOnlyForHearthstone(t *testing.T) {
+	for _, game := range []string{"wow", "league", "deadlock", "overwatch", "heroes-of-the-storm"} {
+		got, err := (NativeGoAnalyzer{}).Analyze(context.Background(), Input{Text: "Подарки племени", Game: game})
+		if err != nil || len(got.Findings) != 0 {
+			t.Fatalf("%s: Hearthstone rules leaked: %+v %v", game, got, err)
+		}
 	}
 }
 
@@ -202,5 +212,30 @@ func TestValeHealthRunsVersionProbe(t *testing.T) {
 	adapter := &ValeAnalyzer{Runner: vale.New(script, "", time.Second)}
 	if err := adapter.Health(context.Background()); err == nil {
 		t.Fatal("health must execute Vale instead of checking only its path")
+	}
+}
+
+func TestHunspellUsesOnlySelectedGameAllowlist(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX fixture")
+	}
+	dir := t.TempDir()
+	bin, dict := filepath.Join(dir, "hunspell"), filepath.Join(dir, "ru.dic")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\nprintf '%s\\n' '@(#) fake' '& Муллиган 1 0: Исправление'\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dict, []byte("fake"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	runner := hunspell.New(bin, dict, []string{"ДПС"}, time.Second)
+	adapter := &HunspellAnalyzer{Runner: runner, GameAllowlists: map[string][]string{"hearthstone": {"Муллиган"}, "wow": {"ГКД"}}}
+	for game, expected := range map[string]int{"hearthstone": 0, "wow": 1} {
+		got, err := adapter.Analyze(context.Background(), Input{Text: "Муллиган", Game: game})
+		if err != nil || len(got.Findings) != expected {
+			t.Fatalf("%s: %+v %v", game, got, err)
+		}
+	}
+	if len(runner.Allowlist) != 1 || runner.Allowlist[0] != "ДПС" {
+		t.Fatal("shared runner mutated")
 	}
 }

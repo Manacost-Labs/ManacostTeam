@@ -25,7 +25,7 @@ def main() -> int:
     parser.add_argument(
         "--game", help="Canonical game ID; omit for tasks unrelated to games"
     )
-    parser.add_argument("--profile", default="neutral")
+    parser.add_argument("--profile", help="Editorial profile; default: manacost for games, neutral otherwise")
     parser.add_argument("--execution", choices=("agent", "server"), default="agent")
     parser.add_argument(
         "--patch", help="User-supplied patch/build; not independently verified"

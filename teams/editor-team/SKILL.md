@@ -1,21 +1,21 @@
 ---
 name: editor-team
-description: "Редактура материалов Hearthstone/WoW с сохранением фактов и авторского голоса."
+description: "Редактура игровых материалов в стиле Манакоста с сохранением фактов и авторского голоса."
 metadata:
-  version: "1.5.0"
+  version: "1.6.0"
 ---
 
 # EditorTeam
 
-Работай по [редакторскому workflow](references/editor-workflow.md). Его пути scripts, assets, config, python и гайды разрешаются от корня этого пакета. Используй [стиль](СТИЛЬ.md) и [голос](ГОЛОС.md) только для формы, а свежие проверенные источники — для содержания.
+Работай по [редакторскому workflow](references/editor-workflow.md). Его пути scripts, assets, config, python и гайды разрешаются от корня этого пакета. Для всех шести игр используй общий профиль Манакоста из `python/context-data/profiles/manacost/style.json`. Для Hearthstone дополнительно действуют [стиль](СТИЛЬ.md) и [голос](ГОЛОС.md); игровые примеры и терминология этих документов не переносятся на другие игры. Содержание бери из свежих проверенных источников.
 
 Сначала выбери жанр и глубину правки из задания. Сохраняй числа, ссылки, отрицания, условия и уверенность советов. Если нужны только шорткоды, используй отдельный card-shortcodes, не редактируй прозу. Не добавляй шорткоды без запроса пользователя.
 
-Для Hearthstone/WoW можно передать [общий контекст](references/task-context.md):
+Для всех игр каталога можно передать [общий контекст](references/task-context.md):
 `python scripts/resolve_context.py --game world-of-warcraft --profile manacost`
 создаёт JSON для `audit`/`validate-edit --task-context context.json` и `/v2/edit`.
 Редакционный profile внутри task_context — manacost; прежний `--profile` задаёт
-жанр, например wow-guide или news. Без task_context прежний workflow сохраняется.
+жанр, например wow-guide или news. Для LoL, Deadlock, Overwatch и Heroes of the Storm выбирай game-guide, game-article или news; не применяй структуру гайда по колоде. Если --profile resolver не задан, выбирается manacost. Без task_context прежний workflow сохраняется.
 Neutral-профиль редактора пока не подключён; не выдавай его за выполненную проверку.
 
 Материал ResearchTeam принимай по [проверке входящего исследования](references/research-intake.md): прочитай handoff и банк деталей, сохрани ограничения и сверь каждое значимое число с его картой, действием и источником. Статус ready_with_warnings сохраняет оговорки; not_ready требует ограничить вывод или уточнить исследование. В готовом GUIDE условия нужны читателю, внутренние claim IDs — редактору.

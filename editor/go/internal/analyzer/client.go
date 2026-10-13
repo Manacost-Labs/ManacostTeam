@@ -65,6 +65,7 @@ type Report struct {
 
 type Rules struct {
 	TaskContext      json.RawMessage     `json:"task_context,omitempty"`
+	StyleRules       []string            `json:"style_rules,omitempty"`
 	Game             string              `json:"game"`
 	Profile          string              `json:"profile"`
 	Depth            string              `json:"depth,omitempty"`
@@ -314,7 +315,7 @@ func (c *Client) ResolveTaskContext(ctx context.Context, envelope json.RawMessag
 	if err := json.Unmarshal(raw, &resolved); err != nil {
 		return nil, err
 	}
-	if (resolved.Game != "hearthstone" && resolved.Game != "wow") || resolved.Profile == "" || len(resolved.TaskContext) == 0 || string(resolved.TaskContext) == "null" {
+	if resolved.Game == "" || resolved.Profile == "" || len(resolved.TaskContext) == 0 || string(resolved.TaskContext) == "null" {
 		return nil, fmt.Errorf("invalid context resolution from analyzer")
 	}
 	return &resolved, nil

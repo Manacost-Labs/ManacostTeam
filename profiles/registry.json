@@ -2,6 +2,6 @@
   "schema_version": 1,
   "profiles": [
     {"id": "neutral", "title": "Нейтральный редакционный профиль", "version": "0.1.0"},
-    {"id": "manacost", "title": "Редакционный профиль Manacost", "version": "0.1.0"}
+    {"id": "manacost", "title": "Редакционный профиль Manacost", "version": "0.2.0"}
   ]
 }

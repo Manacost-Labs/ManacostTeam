@@ -35,7 +35,15 @@ class ContextResolutionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_context(altered)
         with self.assertRaises(ValueError):
-            validate_context(resolve_context(ROOT, game="deadlock"))
+            validate_context(resolve_context(ROOT, game=None))
+
+    def test_every_game_defaults_to_manacost_and_validates(self):
+        from resolve_context import validate_context
+
+        for game in load_catalog(ROOT, "games")[0]:
+            context = resolve_context(ROOT, game=game)
+            self.assertEqual(context["profile"]["id"], "manacost")
+            self.assertEqual(validate_context(context), context)
 
     def test_each_game_resolves_in_both_modes_with_each_profile(self):
         games, _ = load_catalog(ROOT, "games")

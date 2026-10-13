@@ -133,7 +133,7 @@ def _fact_keys(para, cards=None):
     return keys
 
 
-def form_metrics(text):
+def form_metrics(text, *, game="hearthstone"):
     """Таблицы, коды колод, оценочные буквы и проценты, повторённые по абзацам."""
     tables, in_table = 0, False
     for line in text.splitlines():
@@ -144,10 +144,11 @@ def form_metrics(text):
     # свои абзацы, без схлопывания переносов: строки таблицы должны остаться
     # отдельными предложениями, иначе все классы таблицы приклеятся к каждому проценту
     paras = [p for p in re.split(r"\n\s*\n|\n(?=[А-ЯЁ])", text) if len(p.split()) >= 6]
-    cards = C.sibling("consistency").card_candidates(text) if FACT.search(text) else []
+    cards = C.sibling("consistency").card_candidates(text) if game == "hearthstone" and FACT.search(text) else []
     where = {}
     for i, para in enumerate(paras):
-        for key in set(_fact_keys(para, cards)):
+        keys = _fact_keys(para, cards) if game == "hearthstone" else FACT.findall(para)
+        for key in set(keys):
             where.setdefault(key, []).append(i + 1)
     repeated = {fact: idx for fact, idx in where.items() if len(idx) >= 2}
     return {
@@ -158,10 +159,11 @@ def form_metrics(text):
     }
 
 
-def form_checks(text, form):
+def form_checks(text, form, *, game="hearthstone"):
     """(violations, warnings, metrics) по форме подачи из профиля."""
-    form = {**DEFAULT_FORM, **(form or {})}
-    fm = form_metrics(text)
+    defaults = DEFAULT_FORM if game == "hearthstone" else {"tables_max": None, "codes_max": None, "repeated_facts_max": 0, "grade_labels": "allowed"}
+    form = {**defaults, **(form or {})}
+    fm = form_metrics(text, game=game)
     violations, warnings = [], []
     if form.get("tables_max") is not None and fm["tables"] > form["tables_max"]:
         violations.append(_item(
@@ -306,7 +308,7 @@ def _item(kind, message, severity="error", **extra):
 
 
 def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=None,
-            expected_classes=None, archetype=None, expansion=None):
+            expected_classes=None, archetype=None, expansion=None, game="hearthstone"):
     """(violations, warnings, metrics) для переплавленного текста."""
     norms = {**DEFAULT_NORMS, **(norms or {}), **profile_norms(profile)}
     declared = set(declared_missing or [])
@@ -473,7 +475,7 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
     })
     # лексика автора: доля лемм, которых нет в корпусе (leave-one-out у автора 2–3%)
     lexicon = C.sibling("lexicon")
-    lx = lexicon.measure(after, profile=profile)
+    lx = lexicon.measure(after, profile=profile) if game == "hearthstone" else None
     if lx:
         metrics["lexicon"] = {"ratio": lx["ratio"], "missing": lx["missing"][:40]}
         for f in lexicon.findings(after, lx, profile=profile):
@@ -481,7 +483,7 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
             (violations if f["severity"] == "error" else warnings).append(item)
 
     # словарь автора: сленг и ранги не по локализации — отказ, а не вкус
-    term_hits = terminology_hits(after)
+    term_hits = terminology_hits(after) if game == "hearthstone" else []
     metrics["terminology_hits"] = len(term_hits)
     if term_hits:
         shown = {}
@@ -495,7 +497,7 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
         ))
 
     # форма подачи — по профилю: таблицы, коды, оценочные буквы, повторы цифр
-    form_v, form_w, form_m = form_checks(after, data.get("form"))
+    form_v, form_w, form_m = form_checks(after, data.get("form"), game=game)
     violations.extend(form_v)
     warnings.extend(form_w)
     metrics["form"] = {"tables": form_m["tables"], "codes": form_m["codes"],

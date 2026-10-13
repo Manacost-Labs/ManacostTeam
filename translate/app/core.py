@@ -78,13 +78,13 @@ def scoped_translation_resources(
 ) -> dict:
     """Select game/build terms and isolated EN→RU memory; never fall back to legacy memory."""
     try:
-        from manacost_context import validate_context
+        from manacost_context import load_manacost_style, validate_context
     except ModuleNotFoundError:
         for parent in Path(__file__).resolve().parents[1:3]:
             if (parent / "shared/manacost_context.py").is_file():
                 sys.path.insert(0, str(parent / "shared"))
                 break
-        from manacost_context import validate_context
+        from manacost_context import load_manacost_style, validate_context
     context = validate_context(task_context)
     game = context["game"]["id"]
     if context["patch"] is None:
@@ -93,11 +93,12 @@ def scoped_translation_resources(
         not isinstance(product, str) or not product.strip()
     ):
         raise ValueError("World of Warcraft translation requires an explicit product")
-    if game == "hearthstone" and product is not None:
+    if game != "world-of-warcraft" and product is not None:
         raise ValueError("product is only supported for World of Warcraft translation")
     scope = {
         "game": game,
         "profile": context["profile"]["id"],
+        "profile_version": context["profile"]["version"],
         "product": product,
         "build": context["patch"],
         "source_locale": "enUS",
@@ -124,6 +125,7 @@ def scoped_translation_resources(
         "memory_path": data_dir / "memory" / game / digest / "approved-segments.tsv",
         "warnings": [] if terms else ["glossary_unavailable"],
         "glossary_sha256": glossary_hash,
+        "editorial_style": load_manacost_style() if context["profile"]["id"] == "manacost" else None,
     }
 
 

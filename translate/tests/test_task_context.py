@@ -60,6 +60,19 @@ class TranslationContextTests(unittest.TestCase):
         self.assertIn("Old Name", wow["protected_markdown"])
         self.assertEqual(wow["task_context"]["game"]["id"], "world-of-warcraft")
 
+    def test_all_other_games_have_manacost_style_and_separate_terms(self):
+        for game in ("league-of-legends", "deadlock", "overwatch", "heroes-of-the-storm"):
+            (self.data / f"{game}-names.en-ru.tsv").write_text(
+                f"Shared Name\tИмя {game}\tbuild=123\n", encoding="utf-8"
+            )
+            result = main.prepare_material("Shared Name", main.PrepareRequest(task_context=self.context(game)))
+            self.assertEqual(list(result["terms"].values()), [f"Имя {game}"])
+            self.assertEqual(result["context"]["game"], game)
+            self.assertEqual(result["resource_scope"]["profile"], "manacost")
+            self.assertIn("вы", result["instruction_for_codex"])
+            with self.assertRaises(HTTPException):
+                main.prepare_material("Text", main.PrepareRequest(task_context=self.context(game), product="retail"))
+
     def test_memory_does_not_cross_games_profiles_products_or_builds(self):
         import asyncio
 

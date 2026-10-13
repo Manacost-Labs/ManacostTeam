@@ -34,7 +34,7 @@ from editorteam import games as G
 from editorteam import profiles as P
 from editorteam.corpus_learning import CorpusError, CorpusStore
 from editorteam.finding import Finding, Report
-from editorteam.task_context import adapt_editor_request
+from editorteam.task_context import adapt_editor_request, manacost_style
 
 ROOT = Path(__file__).resolve().parents[2]
 REPO_SKILL_SCRIPTS = ROOT / ".claude" / "skills" / "hs-edit" / "scripts"
@@ -189,7 +189,7 @@ def analyze(
         if skip:
             report.notes.append(f"сверка имён отключена: {skip}")
 
-    if prof.enabled("consistency"):
+    if prof.enabled("consistency") and g.id == "hearthstone":
         cons = C.sibling("consistency")
         for label, forms in cons.check_variants(C.mask_protected(text)):
             report.add(
@@ -297,7 +297,7 @@ def validate(
     sa, wa = soul.measure(before)
     sb, wb = soul.measure(after)
     ra, rb = rhythm.measure(before), rhythm.measure(after)
-    gone = report_mod.protected_lost(before, after)
+    gone = report_mod.protected_lost(before, after, game=g.id, protected=g.protected)
 
     violations = []
     warnings = []
@@ -479,7 +479,7 @@ def validate(
     rewrite_metrics: dict = {}
     if rewrite:
         claims_mod = C.sibling("claims")
-        source = claims_mod.extract(before, profile=prof.id)
+        source = claims_mod.extract(before, profile=prof.id) if g.id == "hearthstone" else {}
         gate_v, gate_w, gate_m = rewrite_gate.analyze(
             after,
             norms=_norms(g, prof),
@@ -487,8 +487,20 @@ def validate(
             declared_missing=declared_missing,
             expected_classes=source.get("classes") or None,
             archetype=source.get("archetype"),
+            game=g.id,
         )
-        cov_v, cov_w, cov_m = claims_mod.coverage(source, after, declared_missing=declared_missing)
+        if g.id == "hearthstone":
+            cov_v, cov_w, cov_m = claims_mod.coverage(
+                source, after, declared_missing=declared_missing
+            )
+        else:
+            cov_v, cov_w, cov_m = [], [], {}
+            warnings.append(
+                {
+                    "kind": "game_coverage_review",
+                    "message": "покрытие игровых сущностей требует ручной проверки; проверка карт Hearthstone отключена",
+                }
+            )
         violations.extend(gate_v)
         violations.extend(cov_v)
         warnings.extend(gate_w)
@@ -976,9 +988,16 @@ def rules_for(
                 },
             }
         )
-    if task_context is not None and game == "wow":
-        # Hearthstone terminology/corpus examples have no authority over WoW names.
+    if task_context is not None:
+        style = manacost_style()
+        out.update({"author_profile": "manacost", "style_rules": style["style_rules"]})
+    if task_context is not None and g.id != "hearthstone":
+        # Hearthstone terminology/corpus examples have no authority over other games.
         out.update({"replace": [], "keep": [], "corrections": []})
+        out["typography"] = style["typography"]
+        out["style_memory"]["purpose"] = ["voice", "rhythm"]
+        if depth == rewrite_gate.REWRITE:
+            out["voice_signature"] = style["voice_signature"]
         for key in ("style_examples", "style_examples_source"):
             out.pop(key, None)
     return out

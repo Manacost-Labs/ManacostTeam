@@ -315,6 +315,9 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		verifiedText = req.Handoff.VerifiedText()
 	}
 	protected := guards.Extract(verifiedText)
+	if len(req.TaskContext) > 0 && req.Game != "hearthstone" {
+		protected = guards.ExtractWithTerms(verifiedText, pyRules.Protected)
+	}
 	claims := req.Claims
 	if req.Handoff != nil {
 		claims = req.Handoff.PromptClaims()
@@ -381,6 +384,9 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		post = s.runChecks(ctx, postInput)
 		s.logStage(ctx, "postflight", started, result.Attempts, "")
 		guard = guards.Compare(req.Text, candidate)
+		if len(req.TaskContext) > 0 && req.Game != "hearthstone" {
+			guard = guards.CompareWithTerms(req.Text, candidate, pyRules.Protected)
+		}
 		if mode == "reconstruct" {
 			guard = reconstructionGuard(verifiedText, candidate)
 		}

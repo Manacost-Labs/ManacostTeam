@@ -30,6 +30,8 @@ var profileFiles = map[string]string{
 	"constructed-guide":   "input.guide.md",
 	"battlegrounds-guide": "input.guide.md",
 	"wow-guide":           "input.guide.md",
+	"game-guide":          "input.guide.md",
+	"game-article":        "input.analysis.md",
 	"news":                "input.news.md",
 	"analysis":            "input.analysis.md",
 	"analytics-article":   "input.analysis.md",

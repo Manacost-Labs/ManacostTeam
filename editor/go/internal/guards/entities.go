@@ -40,6 +40,11 @@ var patterns = []struct {
 var protectedWords = []string{"Воин", "Маг", "Жрец", "Охотник", "Разбойник", "Шаман", "Чернокнижник", "Паладин", "Друид", "Охотник на демонов", "Рыцарь смерти", "Поля сражений", "Темные дары", "Темный дар"}
 
 func Extract(text string) []Entity {
+	return ExtractWithTerms(text, protectedWords)
+}
+
+// ExtractWithTerms keeps generic entities and only the selected game's terms.
+func ExtractWithTerms(text string, terms []string) []Entity {
 	var out []Entity
 	for _, p := range patterns {
 		for _, loc := range p.re.FindAllStringIndex(text, -1) {
@@ -49,7 +54,7 @@ func Extract(text string) []Entity {
 	for _, span := range findCapitalizedPhrases(text) {
 		out = append(out, Entity{Kind: "named_entity", Value: text[span.Start:span.End], Start: span.Start, End: span.End})
 	}
-	for _, word := range protectedWords {
+	for _, word := range terms {
 		for _, span := range FindWholePhrase(text, word) {
 			out = append(out, Entity{Kind: "game_entity", Value: text[span.Start:span.End], Start: span.Start, End: span.End})
 		}
@@ -64,8 +69,12 @@ func Extract(text string) []Entity {
 }
 
 func Compare(before, after string) Report {
+	return CompareWithTerms(before, after, protectedWords)
+}
+
+func CompareWithTerms(before, after string, terms []string) Report {
 	result := Report{}
-	beforeEntities, afterEntities := Extract(before), Extract(after)
+	beforeEntities, afterEntities := ExtractWithTerms(before, terms), ExtractWithTerms(after, terms)
 	for _, want := range beforeEntities {
 		if countValue(afterEntities, want.Kind, want.Value) < countValue(beforeEntities, want.Kind, want.Value) {
 			result.Missing = append(result.Missing, want)

@@ -62,7 +62,10 @@ func main() {
 		analyzers.NativeGoAnalyzer{},
 		&analyzers.PythonAnalyzerAdapter{Client: an, LegacyScripts: analyzers.LegacyScripts, Python: cfg.PythonBinary, Timeout: cfg.PythonTimeout, MaxBytes: cfg.MaxProcessOutput},
 		&analyzers.NatashaAnalyzer{Client: natasha.New(cfg.NatashaURL, cfg.NatashaTimeout)},
-		&analyzers.HunspellAnalyzer{Runner: hunspell.New(cfg.HunspellBinary, cfg.RussianDictionary, loadAllowlists(), cfg.HunspellTimeout)},
+		&analyzers.HunspellAnalyzer{Runner: hunspell.New(cfg.HunspellBinary, cfg.RussianDictionary, loadAllowlists("common-gaming"), cfg.HunspellTimeout), GameAllowlists: map[string][]string{
+			"hearthstone": loadAllowlists("hearthstone"), "wow": loadAllowlists("world-of-warcraft"), "league": loadAllowlists("league-of-legends"),
+			"deadlock": loadAllowlists("deadlock"), "overwatch": loadAllowlists("overwatch"), "heroes-of-the-storm": loadAllowlists("heroes-of-the-storm"),
+		}},
 		&analyzers.LanguageToolAnalyzer{Client: languageTool.New(cfg.LanguageToolURL, cfg.LanguageToolTimeout)},
 		&analyzers.ValeAnalyzer{Runner: vale.New(cfg.ValeBinary, cfg.ValeConfig, cfg.ValeTimeout)},
 		&analyzers.MarkdownlintAnalyzer{Runner: markdownlint.New(cfg.MarkdownlintBinary, cfg.MarkdownlintConfig, cfg.MarkdownlintTimeout)},
@@ -114,13 +117,8 @@ func main() {
 	log.Info("остановлен")
 }
 
-func loadAllowlists() []string {
-	paths := []string{
-		"config/dictionaries/common-gaming.txt",
-		"config/dictionaries/hearthstone.txt",
-		"config/dictionaries/world-of-warcraft.txt",
-		"config/dictionaries/league-of-legends.txt",
-	}
+func loadAllowlists(game string) []string {
+	paths := []string{"config/dictionaries/" + game + ".txt"}
 	var out []string
 	for _, path := range paths {
 		data, err := os.ReadFile(filepath.Clean(path))

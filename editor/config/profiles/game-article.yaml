@@ -1,0 +1,9 @@
+id: game-article
+title: Игровая статья
+description: "Общий жанр без требований к картам, колодам или конкретной игре"
+min_words: 300
+sections: {required: [], optional: []}
+matchups: {require_classes: false}
+analyzers: {markers: true, rhythm: true, soul: true, cards: true, structure: true, consistency: false, clarity: false}
+weights: {живое: 0.30, ритм: 0.25, чистота: 0.20, названия: 0.0, согласованность: 0.15, структура: 0.10}
+note: "Специальные игровые разделы добавляйте по заданию; проверка имён зависит от игрового пака"

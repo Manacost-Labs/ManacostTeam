@@ -1,0 +1,20 @@
+id: heroes-of-the-storm
+title: Heroes of the Storm
+locale: ru
+names:
+  asset: null
+  kind: герои, способности и таланты
+  note: "нет проверенного снимка локализации этой игры; имена требуют ручной проверки"
+protected: []
+profiles: [game-guide, game-article, news]
+norms:
+  provisional: true
+  source: "голос Манакоста по корпусу Hearthstone; игровой корпус пока не калиброван"
+  rhythm_ratio: 0.51
+  rhythm_alarm: 0.45
+  sentence_mean: 14.9
+  paragraph_sentences: 2.2
+  voice_per_1k: 29.4
+  voice_low: 20.6
+  markers_per_10k: 12.2
+  author_median: null

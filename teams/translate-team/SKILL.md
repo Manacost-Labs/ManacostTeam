@@ -1,8 +1,8 @@
 ---
 name: translate-team
-description: "Перевод Hearthstone/WoW с подтверждёнными именами, сохранением смысла и QA."
+description: "Перевод игровых материалов в стиле Манакоста с подтверждёнными именами, сохранением смысла и QA."
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # TranslateTeam
@@ -13,7 +13,7 @@ metadata:
 
 Для подготовщика `/prepare` и `/memory/approve` используй [общий контекст](references/task-context.md).
 `python scripts/resolve_context.py --game world-of-warcraft --profile manacost --patch EXACT_BUILD`
-создаёт JSON; WoW также требует product. Новый путь изолирует игровые термины
+создаёт JSON; WoW также требует product. Стиль Манакоста — default для всех шести игр; общий голос находится в `scripts/context-data/profiles/manacost/style.json`. Термины берутся только из `<game-id>-names.en-ru.tsv` выбранной игры и сборки. Для новых игр sync ещё не подключён: используй проверенный TSV пользователя или пометь имена на проверку. Новый путь изолирует игровые термины
 и память по игре, продукту, сборке и профилю. Без task_context прежние вызовы
 и функции сохраняются. Portable helper `scoped_translation_resources` находится
 в scripts/translation_core.py; HTTP-сервис устанавливается отдельно.

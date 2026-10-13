@@ -1078,7 +1078,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     a = sub.add_parser("audit", help="полный разбор материала", parents=[common])
     a.add_argument("file")
-    a.add_argument("--task-context", help="JSON общего контекста Hearthstone/WoW")
+    a.add_argument("--task-context", help="JSON общего игрового контекста и стиля Манакоста")
     a.add_argument(
         "--profile", choices=P.available(), help="жанр; без него определяется автоматически"
     )
@@ -1172,7 +1172,7 @@ def build_parser() -> argparse.ArgumentParser:
     ve.add_argument("before")
     ve.add_argument("after")
     ve.add_argument("--game", help="игра; legacy default: hearthstone")
-    ve.add_argument("--task-context", help="JSON общего контекста Hearthstone/WoW")
+    ve.add_argument("--task-context", help="JSON общего игрового контекста и стиля Манакоста")
     ve.add_argument("--profile", choices=P.available())
     ve.add_argument("--mode", choices=["GUIDE", "ANALYSIS", "REPORT"], default="GUIDE")
     ve.add_argument(

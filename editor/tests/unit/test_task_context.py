@@ -38,6 +38,29 @@ def test_shared_context_accepts_legacy_alias_and_compatible_explicit_genre():
 
 
 @pytest.mark.parametrize(
+    "game", ["league-of-legends", "deadlock", "overwatch", "heroes-of-the-storm"]
+)
+def test_other_games_use_common_genre_and_keep_manacost_voice(game, sidecar):
+    status, rules = sidecar("/rules", {"task_context": context(game), "depth": "переплавка"})
+    assert status == 200
+    assert rules["profile"] == "game-guide"
+    assert rules["author_profile"] == "manacost"
+    assert rules["style_rules"]
+    assert rules["replace"] == []
+    assert "архетип" not in rules["voice_signature"].lower()
+    assert "style_examples" not in rules
+    assert "archetype_hyphen" not in rules["typography"]
+    assert "mana" not in rules["typography"]["numbers"]
+
+
+def test_other_game_cannot_use_hearthstone_genre():
+    with pytest.raises(ValueError):
+        adapt_editor_request(
+            {"task_context": context("league-of-legends"), "profile": "constructed-guide"}
+        )
+
+
+@pytest.mark.parametrize(
     "extra",
     [
         {"game": "hearthstone"},
@@ -123,7 +146,28 @@ def test_http_context_routes_apply_game_and_preserve_legacy_rules(sidecar):
     status, shared = sidecar("/rules", {"task_context": context("hearthstone")})
     assert status == 200
     shared.pop("task_context")
+    shared.pop("author_profile")
+    shared.pop("style_rules")
     assert shared == legacy
+
+
+def test_wow_protects_own_terms_without_hearthstone_terms():
+    from editorteam.server import _scripts
+
+    report = _scripts().sibling("report")
+    lost = report.protected_lost("возвещение ГКД 20", "20", game="wow", protected=["ГКД"])
+    assert "возвещение" not in lost
+    assert "ГКД" in lost
+
+
+def test_rewrite_for_other_game_skips_hearthstone_terms_and_lexicon():
+    from editorteam.server import _scripts
+
+    gate = _scripts().sibling("rewrite_gate")
+    text = "# Что делать\n\nВ этом режиме дека не нужна. Подарки племени повышают урон на 20%."
+    _, _, metrics = gate.analyze(text, profile="game-guide", game="deadlock")
+    assert metrics["terminology_hits"] == 0
+    assert "lexicon" not in metrics
 
 
 def test_http_rejects_context_conflict_and_invalid_shape(sidecar):

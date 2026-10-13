@@ -30,7 +30,7 @@ rhythm = _load("rhythm")
 soul = _load("soul")
 
 
-def protected_lost(a, b):
+def protected_lost(a, b, *, game="hearthstone", protected=None):
     """Защищённые элементы, исчезнувшие при правке.
 
     Числа, статы и коды колод править нельзя. Если они пропали, это
@@ -43,6 +43,10 @@ def protected_lost(a, b):
         "ОТК": r"\bОТК\b",
         "возвещение": r"\bвозвещени\w*",
     }
+    if game != "hearthstone":
+        pats = {"числа": pats["числа"]}
+        for term in protected or []:
+            pats[term] = rf"(?<!\w){re.escape(term)}(?!\w)"
     lost = {}
     for name, pat in pats.items():
         was = Counter(re.findall(pat, a, re.I))

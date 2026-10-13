@@ -41,7 +41,7 @@ class PrepareRequest(BaseModel):
     text: str | None = Field(default=None, max_length=MAX_SOURCE_CHARS)
     url: str | None = Field(default=None, max_length=2048)
     title: str | None = Field(default=None, max_length=500)
-    game: str = Field(default="wow", pattern="^(wow|world-of-warcraft|hearthstone)$")
+    game: str = Field(default="wow", pattern="^(wow|world-of-warcraft|hearthstone|league|league-of-legends|deadlock|overwatch|heroes-of-the-storm)$")
     patch: str | None = Field(default=None, max_length=80)
     class_name: str | None = Field(default=None, max_length=100)
     spec: str | None = Field(default=None, max_length=100)
@@ -170,6 +170,7 @@ def prepare_material(text: str, request: PrepareRequest) -> dict[str, object]:
             if "game" in request.model_fields_set and request.game not in (
                 canonical,
                 selected_game,
+                "league" if canonical == "league-of-legends" else canonical,
             ):
                 raise ValueError("game conflicts with task_context.game")
             if (
@@ -218,6 +219,8 @@ def prepare_material(text: str, request: PrepareRequest) -> dict[str, object]:
         "changed_segment_ids": changed_segment_ids(previous_protected, protected),
     }
     if resources:
+        if resources["editorial_style"] and selected_style == "manacost":
+            result["instruction_for_codex"] += "\n" + "\n".join(resources["editorial_style"]["style_rules"])
         result.update(
             {
                 "task_context": resources["task_context"],

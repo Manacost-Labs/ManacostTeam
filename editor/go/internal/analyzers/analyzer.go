@@ -85,6 +85,9 @@ func (NativeGoAnalyzer) Health(context.Context) error { return nil }
 
 func (NativeGoAnalyzer) Analyze(_ context.Context, in Input) (Result, error) {
 	r := Result{Analyzer: "native-go", Metrics: map[string]any{}}
+	if in.Game != "" && in.Game != "hearthstone" {
+		return r, nil
+	}
 	lower := strings.ToLower(in.Text)
 	if strings.Contains(lower, "подарок") || strings.Contains(lower, "подарки") {
 		r.Findings = append(r.Findings, Finding{Analyzer: r.Analyzer, RuleID: "terminology.dark-gifts-generic", Severity: "suggestion", Message: "используйте официальное название «Темные дары» или «Темный дар»"})
@@ -321,7 +324,10 @@ func (m *MarkdownlintAnalyzer) Analyze(ctx context.Context, in Input) (Result, e
 }
 
 // HunspellAnalyzer выдаёт подсказки, но не исправляет текст автоматически.
-type HunspellAnalyzer struct{ Runner *hunspell.Runner }
+type HunspellAnalyzer struct {
+	Runner         *hunspell.Runner
+	GameAllowlists map[string][]string
+}
 
 func (h *HunspellAnalyzer) Name() string { return "hunspell" }
 
@@ -336,7 +342,15 @@ func (h *HunspellAnalyzer) Analyze(ctx context.Context, in Input) (Result, error
 	if h == nil || h.Runner == nil {
 		return Result{Analyzer: "hunspell", Skipped: true, Error: "Hunspell не настроен"}, nil
 	}
-	findings, err := h.Runner.Check(ctx, in.Text)
+	runner := *h.Runner
+	if h.GameAllowlists != nil {
+		game := in.Game
+		if game == "" {
+			game = "hearthstone"
+		}
+		runner.Allowlist = append(append([]string{}, h.Runner.Allowlist...), h.GameAllowlists[game]...)
+	}
+	findings, err := runner.Check(ctx, in.Text)
 	if err != nil {
 		if errors.Is(err, hunspell.ErrNotInstalled) || errors.Is(err, hunspell.ErrDictionaryUnavailable) {
 			return Result{Analyzer: "hunspell", Skipped: true, Error: err.Error()}, nil

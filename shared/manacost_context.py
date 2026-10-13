@@ -53,12 +53,14 @@ def resolve_context(
     root: Path,
     *,
     game: str | None,
-    profile: str = "neutral",
+    profile: str | None = None,
     execution: str = "agent",
     patch: str | None = None,
 ) -> dict:
     games, game_hash = load_catalog(root, "games")
     profiles, profile_hash = load_catalog(root, "profiles")
+    if profile is None:
+        profile = "manacost" if game is not None else "neutral"
     if game is not None and (not isinstance(game, str) or game not in games):
         raise ValueError(f"unknown game: {game}")
     if not isinstance(profile, str) or profile not in profiles:
@@ -86,13 +88,8 @@ def validate_context(value: dict) -> dict:
     if not isinstance(value, dict) or type(value.get("schema_version")) is not int:
         raise ValueError("task_context requires schema_version 1")
     game, profile = value.get("game"), value.get("profile")
-    if not isinstance(game, dict) or game.get("id") not in (
-        "hearthstone",
-        "world-of-warcraft",
-    ):
-        raise ValueError(
-            "task_context supports only hearthstone and world-of-warcraft here"
-        )
+    if not isinstance(game, dict) or not isinstance(game.get("id"), str):
+        raise ValueError("task_context requires a catalogued game")
     if not isinstance(profile, dict):
         raise ValueError("task_context requires an editorial profile")
     expected = resolve_context(
@@ -107,3 +104,12 @@ def validate_context(value: dict) -> dict:
             "task_context does not match the installed catalogs/schema; resolve it again"
         )
     return expected
+
+
+def load_manacost_style() -> dict:
+    """Common editorial voice and typography; game terminology is supplied separately."""
+    style = json.loads((ROOT / "profiles/manacost/style.json").read_text(encoding="utf-8"))
+    profiles, _ = load_catalog(ROOT, "profiles")
+    if style.get("id") != "manacost" or style.get("version") != profiles["manacost"]["version"]:
+        raise ValueError("Manacost style version does not match the installed profile")
+    return style
