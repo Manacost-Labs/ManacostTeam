@@ -44,7 +44,20 @@ python3 tools/resolve_context.py --game league-of-legends --profile manacost --e
 
 Стиль Манакоста по умолчанию подключён к редактуре и переводу всех шести игр через необязательный
 `task_context`. [Примеры CLI/API и совместимость](docs/TASK_CONTEXT.md).
-Игровые термины изолированы; проверенные словари новых игр и installer остаются следующими этапами.
+Игровые термины изолированы; проверенные словари новых игр остаются следующим этапом.
+
+### Простая установка
+
+[Установка для ИИ-агентов, сервера и WordPress](docs/INSTALL.md):
+
+```bash
+python3 tools/install.py agent --client codex --directory ~/articles --game deadlock
+python3 tools/install.py server --directory ~/manacost-instance --game hearthstone
+```
+
+Для WordPress есть плагин с выбором игры и жанра. Серверный API сам создаёт
+актуальный task_context; по умолчанию платные вызовы отключены. Готовый ZIP:
+[manacost-team-wordpress-1.0.0.zip](release/install/1.0.0/manacost-team-wordpress-1.0.0.zip).
 
 ### Существующие модули
 

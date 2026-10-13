@@ -1,0 +1,96 @@
+import io
+import json
+import os
+import sys
+import tempfile
+import unittest
+import zipfile
+from pathlib import Path
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+import install  # noqa: E402
+
+
+class InstallationTests(unittest.TestCase):
+    def test_agent_install_is_portable_repeatable_and_preserves_edits(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary)
+            install.install_agent(target, "codex", ["translate-team"], "deadlock")
+            entry = target / ".agents/skills/translate-team/SKILL.md"
+            self.assertTrue(entry.is_file())
+            self.assertEqual(
+                json.loads((target / ".manacost/context.json").read_text())["game"][
+                    "id"
+                ],
+                "deadlock",
+            )
+            install.install_agent(target, "codex", ["translate-team"], "deadlock")
+            entry.write_text("user changes")
+            with self.assertRaises(ValueError):
+                install.install_agent(
+                    target, "codex", ["translate-team", "job-team"], "deadlock"
+                )
+            self.assertEqual(entry.read_text(), "user changes")
+            self.assertFalse((target / ".agents/skills/job-team").exists())
+
+    def test_archive_traversal_and_symlinks_are_rejected(self):
+        for member in ("skill/../escape", "skill/\\escape", "/skill/escape"):
+            payload = io.BytesIO()
+            with zipfile.ZipFile(payload, "w") as archive:
+                archive.writestr(member, "unsafe")
+            with self.assertRaises(ValueError):
+                install.unpack_skill(payload.getvalue(), "skill")
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary)
+            (target / "link").symlink_to(target, target_is_directory=True)
+            with self.assertRaises(ValueError):
+                install.install_files(target, {"link/file": b"unsafe"})
+
+    def test_checksum_mismatch_fails_before_installation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "not-created"
+            with patch.object(install.hashlib, "sha256") as hasher:
+                hasher.return_value.hexdigest.return_value = "wrong"
+                with self.assertRaises(ValueError):
+                    install.install_agent(
+                        target, "generic", ["translate-team"], "hearthstone"
+                    )
+            self.assertFalse(target.exists())
+
+    def test_server_install_retains_token_and_binds_loopback(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary)
+            result = install.install_server(target, "league-of-legends", 8801)
+            token = (target / "secrets/api-token.txt").read_bytes()
+            self.assertGreaterEqual(len(token.strip()), 32)
+            self.assertNotIn(token.decode().strip(), json.dumps(result))
+            install.install_server(target, "league-of-legends", 8801)
+            self.assertEqual((target / "secrets/api-token.txt").read_bytes(), token)
+            self.assertIn("MANACOST_BIND=127.0.0.1", (target / ".env").read_text())
+            self.assertNotIn("@@ROOT@@", (target / "compose.yaml").read_text())
+            if os.name != "nt":
+                self.assertEqual(
+                    (target / "secrets/api-token.txt").stat().st_mode & 0o777, 0o600
+                )
+
+    def test_wordpress_zip_is_reproducible_and_preserves_existing_archive(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "plugin.zip"
+            install.wordpress_zip(target)
+            first = target.read_bytes()
+            self.assertEqual(
+                first,
+                (
+                    ROOT / "release/install/1.0.0/manacost-team-wordpress-1.0.0.zip"
+                ).read_bytes(),
+            )
+            install.wordpress_zip(target)
+            self.assertEqual(first, target.read_bytes())
+            with zipfile.ZipFile(target) as archive:
+                self.assertIn("manacost-team/manacost-team.php", archive.namelist())
+            target.write_bytes(b"old upload")
+            with self.assertRaises(ValueError):
+                install.wordpress_zip(target)
+            self.assertEqual(target.read_bytes(), b"old upload")

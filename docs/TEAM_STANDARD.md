@@ -24,6 +24,11 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 ## Импорт и вызов
 
+Для установки из текущего релиза используйте `tools/install.py agent`:
+[команды для Codex, Claude Code и других агентов](INSTALL.md). Установщик
+проверяет SHA256 ZIP и сохраняет существующие правки; версии навыков не меняются.
+Сервер и WordPress подключаются отдельно по той же инструкции.
+
 | Team | ZIP/skill | Прямой вызов Claude Code |
 | --- | --- | --- |
 | EditorTeam | editor-team-1.6.0 | /editor-team |

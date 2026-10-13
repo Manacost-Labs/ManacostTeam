@@ -1,0 +1,61 @@
+name: manacost
+services:
+  analyzer:
+    build:
+      context: @@ROOT@@
+      dockerfile: editor/Dockerfile
+      target: analyzer
+    restart: unless-stopped
+  editor:
+    build:
+      context: @@ROOT@@
+      dockerfile: editor/Dockerfile
+      target: gateway
+    restart: unless-stopped
+    environment:
+      EDITOR_ADDR: ":8080"
+      EDITOR_ANALYZER_URL: http://analyzer:8731
+      EDITOR_PROVIDER: ${EDITOR_PROVIDER:-none}
+      EDITOR_MODEL: ${EDITOR_MODEL:-}
+      EDITOR_API_KEY: ${EDITOR_API_KEY:-}
+      EDITOR_BASE_URL: ${EDITOR_BASE_URL:-}
+      EDITOR_ALLOW_UNAVAILABLE: "true"
+      EDITOR_RETRIEVAL: "off"
+    depends_on:
+      analyzer:
+        condition: service_healthy
+  translator:
+    build:
+      context: @@ROOT@@
+      dockerfile: translate/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATA_DIR: /app/data
+    volumes:
+      - ./data/translate:/app/data
+  api:
+    build:
+      context: @@ROOT@@
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    environment:
+      MANACOST_HOST: 0.0.0.0
+      MANACOST_TOKEN_FILE: /run/secrets/api-token
+      MANACOST_GAME: ${MANACOST_GAME:-hearthstone}
+      MANACOST_ANALYZER_URL: http://analyzer:8731
+      MANACOST_EDITOR_URL: http://editor:8080
+      MANACOST_TRANSLATOR_URL: http://translator:8000
+    secrets:
+      - api-token
+    ports:
+      - "${MANACOST_BIND:-127.0.0.1}:${MANACOST_PORT:-8800}:8800"
+    depends_on:
+      analyzer:
+        condition: service_healthy
+      editor:
+        condition: service_healthy
+      translator:
+        condition: service_started
+secrets:
+  api-token:
+    file: ./secrets/api-token.txt
