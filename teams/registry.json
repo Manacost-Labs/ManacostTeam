@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.7.1",
+      "version": "1.7.2",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -98,7 +98,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.3.0",
+      "version": "1.3.1",
       "source": "teams/research-team",
       "resources": [
         {
@@ -305,7 +305,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -363,5 +363,5 @@
       ]
     }
   ],
-  "release_version": "1.7.1"
+  "release_version": "1.7.2"
 }

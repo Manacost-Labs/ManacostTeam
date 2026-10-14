@@ -28,3 +28,30 @@ func TestUnsupportedDescriptionReturnsOriginalDespiteHighScores(t *testing.T) {
 		}
 	}
 }
+
+func TestCriticRejectsContradictoryPreservationScores(t *testing.T) {
+	for _, field := range []string{"factual_preservation", "meaning_preservation"} {
+		for _, score := range []string{"0", "7"} {
+			response := strings.Replace(criticJSON("accept"), `"`+field+`":8`, `"`+field+`":`+score, 1)
+			model := &fakeLLM{replies: []string{analysisJSON, "Готово.", response, response}}
+			result := run(t, model, "Исходный текст.", "edit")
+			if result.Accepted || result.Text != "Исходный текст." {
+				t.Fatalf("accepted %s=%s: %+v", field, score, result)
+			}
+		}
+	}
+}
+
+func TestCriticRejectsUnknownSeverity(t *testing.T) {
+	for _, severity := range []string{"critical", "erorr", ""} {
+		response := strings.Replace(criticJSON("accept"), `"findings":[]`, `"findings":[{"rule_id":"facts","severity":"`+severity+`","message":"Факт потерян"}]`, 1)
+		if _, err := parseCritic(response); err == nil {
+			t.Fatalf("unknown severity %q accepted", severity)
+		}
+	}
+	// Low stylistic scores alone do not invalidate preserved facts and meaning.
+	response := strings.Replace(criticJSON("accept"), `"clarity":8`, `"clarity":0`, 1)
+	if _, err := parseCritic(response); err != nil {
+		t.Fatal(err)
+	}
+}

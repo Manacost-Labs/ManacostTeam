@@ -17,6 +17,8 @@
 
 ### Added
 
+- EditorTeam: единая source-aware проверка фактов для старых `/edit`/AG-UI и `/v2/edit`, включая все глубины правки и `EDITOR_REVIEW_MODEL`. Go fact reviewer подтверждает сохранение уверенности и дословные confidence quotes для medium/low, как Python. Critic отклоняет accept при оценках сохранения фактов/смысла ниже 8 и не допускает неизвестную severity. Запросы и JSON/SSE-контракты старых клиентов сохранены; выпуск Team skills 1.7.2 (EditorTeam 1.7.2, ResearchTeam 1.3.1, Manacost Publish 1.1.1).
+
 - Повторная проверка всех модулей: исправлен lint EditorTeam, UTF-8 вывод resolver/установщика и чтение subprocess в Windows-тестах, метаданные ZIP WordPress закреплены независимо от ОС. API завершает соединение с ограниченным дочитыванием, чтобы HTTP 503/413 не терялись при сбросе TCP. Выпуск Team skills 1.7.1 (EditorTeam 1.7.1, TranslateTeam 1.2.1); старые архивы сохранены. Результаты и ограничения — `docs/AUDIT_2026-10-14.md`.
 
 - Граница фактов ResearchTeam → EditorTeam: snapshot и хеш источника, проверка цитаты, актуальный semantic audit с хешами записей; примеры глав привязаны к проверенным claims. Обязательная проверка новых утверждений во всём тексте отклоняет неподтверждённые редакторские добавления и возвращает исходник. Контракт и миграция: `docs/FACTUAL_BOUNDARY.md`; выпуск Team skills 1.7.0 (EditorTeam 1.7.0, ResearchTeam 1.3.0, Manacost Publish 1.1.0).

@@ -40,9 +40,17 @@ func main() {
 	} else {
 		completer = llm.New(cfg.Provider, cfg.Model, cfg.APIKey, cfg.AccountID, cfg.BaseURL, cfg.RequestTimeout)
 	}
+	ed := editor.New(completer, an, cfg.MaxAttempts)
+	if cfg.ReviewModel != "" && cfg.Provider != "none" {
+		if cfg.Provider == "agui" {
+			ed.Reviewer = llm.NewAGUI(cfg.AGUIURL, cfg.AGUIToken, cfg.ReviewModel, cfg.ReasoningEffort, cfg.RequestTimeout)
+		} else {
+			ed.Reviewer = llm.New(cfg.Provider, cfg.ReviewModel, cfg.APIKey, cfg.AccountID, cfg.BaseURL, cfg.RequestTimeout)
+		}
+	}
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           api.New(cfg, editor.New(completer, an, cfg.MaxAttempts), an, log).Routes(),
+		Handler:           api.New(cfg, ed, an, log).Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

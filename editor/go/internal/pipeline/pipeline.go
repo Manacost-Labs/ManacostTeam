@@ -32,7 +32,10 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v4"
+const PromptVersion = "editorteam-go-v5"
+
+// MinPreservationScore is the acceptance floor for facts and meaning, not style.
+const MinPreservationScore = 8
 
 // MaxRepairs ограничивает число targeted repair за один запрос.
 const MaxRepairs = 2
@@ -789,6 +792,8 @@ const criticInstruction = "\nТы critic. Не переписывай текст
 	"Поля no_new_facts и unsupported_additions обязательны. Проверь каждое новое описание, механику, имя, причинное объяснение, пример, численное значение и совет. " +
 	"Основание — только source и проверенный research_handoff, а не память модели, анализ черновика или стиль корпуса. Если подтверждения нет или смысл неясен, no_new_facts=false и перечисли добавления дословными фрагментами candidate в unsupported_additions. " +
 	"Не превращай проверку в исправление исходных фактов по памяти. Неподтверждённое утверждение не становится допустимым из-за красивого объяснения или высокой оценки текста. " +
+	"При mode=facts_only проверяй только сохранение фактов, смысла и уверенности; не отклоняй из-за стилевых предпочтений и не требуй improvements. " +
+	"verdict accept допускается только при factual_preservation>=8 и meaning_preservation>=8. Не повышай оценки ради принятия: при потере фактов или смысла верни reject либо repair с конкретными findings. " +
 	". Каждая оценка — целое число от 0 до 10. improvements — конкретные места, где candidate лучше source: category из списка clarity, structure, usefulness, natural_russian, author_voice, conciseness, terminology; " +
 	"before должен быть дословной выдержкой из source. after должен быть дословной выдержкой из candidate. Не описывай улучшение общими словами. Не выдумывай отсутствующие фрагменты. " +
 	"Каждый фрагмент не длиннее 300 символов, reason — конкретное объяснение, что стало лучше и почему. Недоказанные улучшения отбрасываются; " +
@@ -849,6 +854,11 @@ func parseCritic(text string) (criticResult, error) {
 		NaturalRussian: values["natural_russian"], AuthorVoice: values["author_voice"], Terminology: values["terminology"],
 	}
 	for _, item := range raw.Findings {
+		switch strings.ToLower(strings.TrimSpace(item.Severity)) {
+		case "info", "warning", "error", "blocker":
+		default:
+			return criticResult{}, fmt.Errorf("неизвестная severity critic: %q", item.Severity)
+		}
 		if strings.TrimSpace(item.Message) == "" {
 			continue
 		}
@@ -860,6 +870,9 @@ func parseCritic(text string) (criticResult, error) {
 	// ответ невалиден, а не «почти принят».
 	switch out.Verdict {
 	case "accept":
+		if out.Scores.FactualPreservation < MinPreservationScore || out.Scores.MeaningPreservation < MinPreservationScore {
+			return criticResult{}, errors.New("verdict accept противоречит низкой оценке сохранения фактов или смысла")
+		}
 		if out.RepairRequired {
 			return criticResult{}, errors.New("verdict accept противоречит repair_required=true")
 		}

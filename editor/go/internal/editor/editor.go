@@ -19,6 +19,7 @@ import (
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/pipeline"
 )
 
 // Глубина правки. Первые три — правка авторского текста с исходником как
@@ -100,6 +101,7 @@ type Service struct {
 	llm         llm.Completer
 	an          *analyzer.Client
 	maxAttempts int
+	Reviewer    llm.Completer // Optional separate model; defaults to llm in a fresh context.
 }
 
 func New(l llm.Completer, a *analyzer.Client, maxAttempts int) *Service {
@@ -193,6 +195,7 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 		if err != nil {
 			return nil, fmt.Errorf("проверка попытки %d: %w", attempt, err)
 		}
+		s.reviewFacts(ctx, validationText, candidate, claims, verdict)
 
 		res.Attempts = append(res.Attempts, Attempt{
 			N: attempt, Accepted: verdict.Accepted, Violations: verdict.Violations,
@@ -243,6 +246,20 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 		res.SaveStatus = "правка не сохранена: проверка не пройдена, возвращён исходный текст"
 	}
 	return res, nil
+}
+
+func (s *Service) reviewFacts(ctx context.Context, source, candidate string, claims []map[string]any, verdict *analyzer.Verdict) {
+	if !verdict.Accepted {
+		return
+	}
+	model := s.Reviewer
+	if model == nil {
+		model = s.llm
+	}
+	if err := pipeline.ReviewFactualEdit(ctx, model, source, candidate, claims); err != nil {
+		verdict.Accepted = false
+		verdict.Violations = append(verdict.Violations, analyzer.Violation{Kind: "factual_review_failed", Message: err.Error()})
+	}
 }
 
 type completionResult struct {

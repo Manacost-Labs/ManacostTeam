@@ -86,6 +86,7 @@ func main() {
 		}
 	}
 	pipe.Log = log
+	ed.Reviewer = pipe.Reviewer
 	// Примеры стиля идут из существующего Python-корпуса; их отсутствие не
 	// мешает правке и не входит в checks_complete. Режим auto включает их
 	// для edit и rewrite, off отключает целиком.

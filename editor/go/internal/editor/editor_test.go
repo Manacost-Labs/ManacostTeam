@@ -63,7 +63,10 @@ type contextualCompleter struct {
 
 func (c contextualCompleter) Model() string { return "test-context-model" }
 
-func (c contextualCompleter) Complete(_ context.Context, _ []llm.Message, _ int) (string, error) {
+func (c contextualCompleter) Complete(_ context.Context, messages []llm.Message, _ int) (string, error) {
+	if strings.Contains(messages[0].Content, "Ты critic") {
+		return goodFactualReview, nil
+	}
 	return c.completion.Text, nil
 }
 
@@ -78,7 +81,9 @@ func newService(t *testing.T, anURL, llmURL string, attempts int) *Service {
 	// клиент ходит по фиксированному адресу провайдера, поэтому в тесте
 	// подменяем транспорт на фальшивый сервер
 	lm.SetEndpointForTest(llmURL)
-	return New(lm, an, attempts)
+	service := New(lm, an, attempts)
+	service.Reviewer = &factualModel{review: goodFactualReview}
+	return service
 }
 
 func TestAcceptedOnFirstTry(t *testing.T) {

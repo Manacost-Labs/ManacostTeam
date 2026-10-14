@@ -2,7 +2,7 @@
 name: manacost-publish
 description: "Готовит статью Hearthstone в Codex: источники Manacost MCP, проверенные советы, авторский текст и независимые отзывы. Сохраняет запуск для продолжения."
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Manacost Publish

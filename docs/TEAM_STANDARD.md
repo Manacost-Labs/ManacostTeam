@@ -18,7 +18,7 @@ python tools/build_team_skills.py --check
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-Результат — release/team-skills/1.7.1: отдельные ZIP и их идентичные `.skill` aliases, combined plugin, index.json и SHA256SUMS. ZIP содержит одну верхнюю папку и ровно один SKILL.md. Архивы воспроизводимы, проверяются на внутренние ограничения проекта: до 500 файлов, 25 MiB на файл, 100 MiB после распаковки и 50 MiB на архив и исключают credentials, кэши и окружения. `build/` — локальная staging-папка и не входит в Git.
+Результат — release/team-skills/1.7.2: отдельные ZIP и их идентичные `.skill` aliases, combined plugin, index.json и SHA256SUMS. ZIP содержит одну верхнюю папку и ровно один SKILL.md. Архивы воспроизводимы, проверяются на внутренние ограничения проекта: до 500 файлов, 25 MiB на файл, 100 MiB после распаковки и 50 MiB на архив и исключают credentials, кэши и окружения. `build/` — локальная staging-папка и не входит в Git.
 
 Версия и имя согласуются между registry, SKILL.md и skill.yaml. При изменении содержимого обновите версию затронутого навыка и release_version; неизменённые навыки могут сохранить прежнюю версию. Архив с тем же именем обязан сохранять байты во всех опубликованных выпусках. Сборщик проверяет историю до записи и публикует новую папку целиком. Существующий неполный, изменённый или содержащий лишние файлы выпуск отклоняется; его содержимое сохраняется для разбора. `--check` проверяет точный состав и байты всего выпуска.
 
@@ -31,9 +31,9 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 | Team | ZIP/skill | Прямой вызов Claude Code |
 | --- | --- | --- |
-| EditorTeam | editor-team-1.7.1 | /editor-team |
-| EditorTeam | manacost-publish-1.1.0 | /manacost-publish |
-| ResearchTeam | research-team-1.3.0 | /research-team |
+| EditorTeam | editor-team-1.7.2 | /editor-team |
+| EditorTeam | manacost-publish-1.1.1 | /manacost-publish |
+| ResearchTeam | research-team-1.3.1 | /research-team |
 | SVGTeam | svg-team-1.0.1 | /svg-team |
 | TranslateTeam | translate-team-1.2.1 | /translate-team |
 | XMLTeam | xml-team-1.0.1 | /xml-team |

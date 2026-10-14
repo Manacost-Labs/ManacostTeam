@@ -48,13 +48,40 @@ const flattenedFragment = "Гарпунную пушку следует оста
 var liveText = strings.Repeat(liveFragment+" ", 6)
 var flattened = strings.Repeat(flattenedFragment+" ", 6)
 
-func llmReturning(t *testing.T, reply string) *httptest.Server {
+func llmReturning(t *testing.T, reply string, reviews ...string) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		b, _ := json.Marshal(reply)
+		var request struct {
+			Messages []llm.Message `json:"messages"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&request)
+		response := reply
+		if len(request.Messages) > 0 && strings.Contains(request.Messages[0].Content, "Ты critic") {
+			response = goodFactualReview
+			if len(reviews) > 0 {
+				response = reviews[0]
+			}
+		}
+		b, _ := json.Marshal(response)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":` + string(b) + `}}]}`))
 	}))
+}
+
+func TestLegacyRejectsAddedMechanicWithRealSidecar(t *testing.T) {
+	an := sidecarOrSkip(t)
+	bad := strings.Replace(goodFactualReview, `"no_new_facts":true`, `"no_new_facts":false`, 1)
+	lm := llmReturning(t, "Способность наносит урон и замораживает цель.", bad)
+	defer lm.Close()
+	model := llm.New("openrouter", "fake", "k", "", "", 30*time.Second)
+	model.SetEndpointForTest(lm.URL)
+	result, err := New(model, an, 1).Edit(context.Background(), Request{Text: "Способность наносит урон.", Game: "hearthstone", Profile: "news"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Accepted || result.Text != "Способность наносит урон." || len(result.Attempts) != 1 || len(result.Attempts[0].Violations) == 0 || result.Attempts[0].Violations[0].Kind != "factual_review_failed" {
+		t.Fatalf("real sidecar plus factual review failed to reject mechanic: %+v", result)
+	}
 }
 
 func TestGuardrailRejectsFlattenedEdit(t *testing.T) {

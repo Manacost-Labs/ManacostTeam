@@ -17,7 +17,9 @@ import (
 	llmpkg "github.com/Manacost-Labs/EditorTeam/go/internal/llm"
 )
 
-func testGatewayHandler(t *testing.T, token string) http.Handler {
+const goodGatewayReview = `{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":{"factual_preservation":8,"meaning_preservation":8,"clarity":8,"structure":8,"usefulness":8,"natural_russian":8,"author_voice":8,"terminology":8},"improvements":[],"regressions":[],"findings":[],"repair_required":false}`
+
+func testGatewayHandler(t *testing.T, token string, reviews ...string) http.Handler {
 	t.Helper()
 
 	analyzerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -39,8 +41,19 @@ func testGatewayHandler(t *testing.T, token string) http.Handler {
 	t.Cleanup(analyzerServer.Close)
 
 	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			Messages []llmpkg.Message `json:"messages"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&request)
+		response := "Готовый текст."
+		if len(request.Messages) > 0 && strings.Contains(request.Messages[0].Content, "Ты critic") {
+			response = goodGatewayReview
+			if len(reviews) > 0 {
+				response = reviews[0]
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, `{"choices":[{"message":{"content":"Готовый текст."}}]}`)
+		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]any{"content": response}}}})
 	}))
 	t.Cleanup(llmServer.Close)
 
@@ -137,6 +150,40 @@ func TestAGUIEditsLatestUserMessage(t *testing.T) {
 	} {
 		if !strings.Contains(delta, want) {
 			t.Fatalf("в отчёте нет %q: %s", want, delta)
+		}
+	}
+}
+
+func TestLegacyHTTPAndAGUIRejectUnsupportedEdit(t *testing.T) {
+	review := strings.Replace(goodGatewayReview, `"no_new_facts":true`, `"no_new_facts":false`, 1)
+	handler := testGatewayHandler(t, "", review)
+	for _, path := range []string{"/edit", "/ag-ui"} {
+		body := `{"text":"Исходный текст.","mode":"обычная"}`
+		if path == "/ag-ui" {
+			body = `{"threadId":"thread-facts","runId":"run-facts","messages":[{"role":"user","content":"Исходный текст."}]}`
+		}
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, path, strings.NewReader(body)))
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("%s: %d %s", path, recorder.Code, recorder.Body.String())
+		}
+		if path == "/edit" {
+			var result editor.Result
+			if err := json.Unmarshal(recorder.Body.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Accepted || result.Text != "Исходный текст." || len(result.Attempts) == 0 || len(result.Attempts[0].Violations) == 0 || result.Attempts[0].Violations[0].Kind != "factual_review_failed" {
+				t.Fatalf("unsafe legacy JSON: %+v", result)
+			}
+		} else {
+			events := sseEvents(t, recorder.Body.String())
+			if len(events) != 5 || events[4]["type"] != "RUN_FINISHED" {
+				t.Fatalf("SSE contract changed: %v", events)
+			}
+			text, _ := events[2]["delta"].(string)
+			if !strings.HasPrefix(text, "Исходный текст.") || strings.Contains(text, "Готовый текст.") || !strings.Contains(text, "Причины отказа") {
+				t.Fatalf("unsafe SSE: %s", text)
+			}
 		}
 	}
 }

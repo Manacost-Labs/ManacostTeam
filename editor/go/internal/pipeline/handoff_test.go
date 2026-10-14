@@ -85,8 +85,8 @@ func TestReconstructPromptUsesEvidenceInsteadOfDraftStructure(t *testing.T) {
 
 func TestFactReviewRejectsLostConditionAndInventedQuotes(t *testing.T) {
 	h := readyHandoff()
-	candidate := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. https://example.org/guide"
-	good := `{"candidate_checked":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","evidence_refs":["SRC-1"]}]}`
+	candidate := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. Совет может помочь. https://example.org/guide"
+	good := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"может помочь","evidence_refs":["SRC-1"]}]}`
 	if _, err := validateFactReview(good, h, candidate); err != nil {
 		t.Fatal(err)
 	}
@@ -115,8 +115,8 @@ func TestReconstructCannotIntroduceUnapprovedLinksOrNumbers(t *testing.T) {
 
 func TestReconstructRunsEvidenceReviewAndAllowsNewComposition(t *testing.T) {
 	h := readyHandoff()
-	candidate := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. [Источник](https://example.org/guide)"
-	fact := `{"candidate_checked":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","evidence_refs":["SRC-1"]}]}`
+	candidate := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. Совет может помочь. [Источник](https://example.org/guide)"
+	fact := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"может помочь","evidence_refs":["SRC-1"]}]}`
 	writer := &fakeLLM{replies: []string{candidate}}
 	reviewer := &fakeLLM{replies: []string{fact, criticJSON("accept")}}
 	s := New(writer, nil, "fake")
@@ -148,5 +148,35 @@ func TestReconstructFactFailureReturnsOriginal(t *testing.T) {
 	}
 	if result.Accepted || result.Text != "Исходник" || result.ChecksComplete {
 		t.Fatalf("unsafe result: %+v", result)
+	}
+}
+
+func TestFactReviewRequiresConfidenceAttestation(t *testing.T) {
+	h := readyHandoff()
+	candidate := h.Claims[0].Meaning + " Совет может помочь. https://example.org/guide"
+	good := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"может помочь","evidence_refs":["SRC-1"]}]}`
+	if _, err := validateFactReview(good, h, candidate); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{
+		strings.Replace(good, `"confidence_preserved":true,`, "", 1),
+		strings.Replace(good, `"confidence_preserved":true`, `"confidence_preserved":null`, 1),
+		strings.Replace(good, `"confidence_preserved":true`, `"confidence_preserved":false`, 1),
+		strings.Replace(good, `"confidence_quote":"может помочь",`, "", 1),
+		strings.Replace(good, `может помочь`, `несуществующая цитата`, 1),
+	} {
+		if _, err := validateFactReview(bad, h, candidate); err == nil {
+			t.Fatal("unverified confidence accepted")
+		}
+	}
+	for _, confidence := range []string{"medium", "low"} {
+		h.Claims[0].Confidence = confidence
+		if _, err := validateFactReview(good, h, strings.Replace(candidate, "может помочь", "гарантированно работает", 1)); err == nil {
+			t.Fatal("categorical candidate accepted without quoted uncertainty")
+		}
+	}
+	h.Claims[0].Confidence = "high"
+	if _, err := validateFactReview(strings.Replace(good, `"confidence_quote":"может помочь",`, "", 1), h, candidate); err != nil {
+		t.Fatal("high-confidence claim requires no hedge:", err)
 	}
 }

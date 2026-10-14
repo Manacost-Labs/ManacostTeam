@@ -75,6 +75,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, rules *analyzer.Rule
 		if err != nil {
 			return nil, fmt.Errorf("проверка переплавки %d: %w", attempt, err)
 		}
+		s.reviewFacts(ctx, source, candidate, claims, verdict)
 		res.Attempts = append(res.Attempts, Attempt{
 			N: attempt, Accepted: verdict.Accepted, Violations: verdict.Violations,
 			Warnings: verdict.Warnings,
