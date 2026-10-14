@@ -6,7 +6,9 @@ import hmac
 import json
 import os
 import re
+import socket
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import BoundedSemaphore
@@ -40,6 +42,27 @@ class APIServer(ThreadingHTTPServer):
         request, address = super().get_request()
         request.settimeout(15)
         return request, address
+
+    def shutdown_request(self, request):
+        # Unread HTTP data can turn close into a reset and discard a 413/503
+        # on Windows. Half-close, then drain with strict time/byte limits.
+        try:
+            request.shutdown(socket.SHUT_WR)
+            deadline = time.monotonic() + 0.1
+            remaining_bytes = MAX_BODY + 64 * 1024
+            while remaining_bytes > 0:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                request.settimeout(remaining)
+                chunk = request.recv(min(64 * 1024, remaining_bytes))
+                if not chunk:
+                    break
+                remaining_bytes -= len(chunk)
+        except OSError:
+            pass
+        finally:
+            super().shutdown_request(request)
 
     def process_request(self, request, client_address):
         if not self.slots.acquire(blocking=False):

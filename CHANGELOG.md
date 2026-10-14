@@ -17,7 +17,7 @@
 
 ### Added
 
-- Повторная проверка всех модулей: исправлен lint EditorTeam, UTF-8 вывод resolver/установщика и чтение subprocess в Windows-тестах, метаданные ZIP WordPress закреплены независимо от ОС. Выпуск Team skills 1.7.1 (EditorTeam 1.7.1, TranslateTeam 1.2.1); старые архивы сохранены. Результаты и ограничения — `docs/AUDIT_2026-10-14.md`.
+- Повторная проверка всех модулей: исправлен lint EditorTeam, UTF-8 вывод resolver/установщика и чтение subprocess в Windows-тестах, метаданные ZIP WordPress закреплены независимо от ОС. API завершает соединение с ограниченным дочитыванием, чтобы HTTP 503/413 не терялись при сбросе TCP. Выпуск Team skills 1.7.1 (EditorTeam 1.7.1, TranslateTeam 1.2.1); старые архивы сохранены. Результаты и ограничения — `docs/AUDIT_2026-10-14.md`.
 
 - Граница фактов ResearchTeam → EditorTeam: snapshot и хеш источника, проверка цитаты, актуальный semantic audit с хешами записей; примеры глав привязаны к проверенным claims. Обязательная проверка новых утверждений во всём тексте отклоняет неподтверждённые редакторские добавления и возвращает исходник. Контракт и миграция: `docs/FACTUAL_BOUNDARY.md`; выпуск Team skills 1.7.0 (EditorTeam 1.7.0, ResearchTeam 1.3.0, Manacost Publish 1.1.0).
 

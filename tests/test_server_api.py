@@ -4,6 +4,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import Mock, patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -13,6 +14,30 @@ from server.api import APIServer, Handler, prepare_request  # noqa: E402
 
 
 class ServerAPITests(unittest.TestCase):
+    def test_rejection_drains_unread_request_before_socket_close(self):
+        request = Mock()
+        request.recv.side_effect = [b"GET /health HTTP/1.0\r\n\r\n", b""]
+        self.api.shutdown_request(request)
+        request.recv.assert_called()
+        self.assertLessEqual(request.recv.call_count, 9)
+        self.assertLessEqual(request.settimeout.call_args.args[0], 0.1)
+        calls = [call[0] for call in request.mock_calls]
+        self.assertLess(calls.index("recv"), calls.index("close"))
+
+    def test_socket_drain_is_bounded_and_timeout_still_closes(self):
+        for chunks, expected_reads in (
+            ([b"x" * (64 * 1024)] * 9 + [AssertionError("unbounded drain")], 9),
+            ([b"x" * (16 * 1024)] * 36 + [AssertionError("unbounded drain")], 36),
+            ([TimeoutError("silent peer")], 1),
+        ):
+            with self.subTest(expected_reads=expected_reads):
+                request = Mock()
+                request.recv.side_effect = chunks
+                with patch("server.api.time.monotonic", return_value=0):
+                    self.api.shutdown_request(request)
+                self.assertEqual(request.recv.call_count, expected_reads)
+                request.close.assert_called_once()
+
     def setUp(self):
         self.calls = []
         calls = self.calls
@@ -162,6 +187,9 @@ class ServerAPITests(unittest.TestCase):
             self.api.slots.acquire()
         try:
             self.assertEqual(self.request("/health", token=False)[0], 503)
+            self.assertEqual(
+                self.request("/v1/editor/edit", {"text": "x" * (64 * 1024)})[0], 503
+            )
         finally:
             for _ in range(16):
                 self.api.slots.release()
