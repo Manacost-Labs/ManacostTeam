@@ -9,6 +9,7 @@ import io
 import json
 import secrets
 import stat
+import sys
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -160,12 +161,15 @@ def wordpress_zip(path: Path) -> None:
         for filename, payload in wordpress_files().items():
             info = zipfile.ZipInfo(filename, date_time=(2026, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3
             info.external_attr = 0o100644 << 16
             archive.writestr(info, payload)
     install_files(path.parent, {path.name: buffer.getvalue()})
 
 
 def main(argv=None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     agent = commands.add_parser(

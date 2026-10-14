@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,6 +15,18 @@ import install  # noqa: E402
 
 
 class InstallationTests(unittest.TestCase):
+    def test_cli_outputs_utf8_for_non_ascii_destination(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "Плагин.zip"
+            result = subprocess.run(
+                [sys.executable, str(ROOT / "tools/install.py"), "wordpress", "--zip", str(target)],
+                env={**os.environ, "PYTHONIOENCODING": "ascii", "PYTHONUTF8": "0"},
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8"))
+            self.assertEqual(json.loads(result.stdout)["zip"], str(target.absolute()))
+            self.assertTrue(target.is_file())
+
     def test_agent_install_is_portable_repeatable_and_preserves_edits(self):
         with tempfile.TemporaryDirectory() as temporary:
             target = Path(temporary)
@@ -74,6 +87,21 @@ class InstallationTests(unittest.TestCase):
                 self.assertEqual(
                     (target / "secrets/api-token.txt").stat().st_mode & 0o777, 0o600
                 )
+
+    def test_wordpress_zip_has_identical_metadata_on_windows(self):
+        class WindowsZipInfo(zipfile.ZipInfo):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.create_system = 0
+
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "plugin.zip"
+            with patch.object(zipfile, "ZipInfo", WindowsZipInfo):
+                install.wordpress_zip(target)
+            self.assertEqual(
+                target.read_bytes(),
+                (ROOT / "release/install/1.0.0/manacost-team-wordpress-1.0.0.zip").read_bytes(),
+            )
 
     def test_wordpress_zip_is_reproducible_and_preserves_existing_archive(self):
         with tempfile.TemporaryDirectory() as temporary:

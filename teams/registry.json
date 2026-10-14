@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.7.0",
+      "version": "1.7.1",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -156,7 +156,7 @@
       "name": "translate-team",
       "team": "TranslateTeam",
       "module": "translate",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "source": "teams/translate-team",
       "resources": [
         {
@@ -363,5 +363,5 @@
       ]
     }
   ],
-  "release_version": "1.7.0"
+  "release_version": "1.7.1"
 }

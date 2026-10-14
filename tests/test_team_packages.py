@@ -112,7 +112,7 @@ class PortableRuntimeTests(unittest.TestCase):
             source.write_text("Способность усиливает урон на 20%.", encoding="utf-8")
             process = subprocess.run(
                 [sys.executable, str(self.unpacked / "editor-team/scripts/editor_team.py"), "audit", str(source), "--task-context", str(metadata), "--profile", "game-article", "--format", "json"],
-                cwd=temporary, env=self.env, capture_output=True, text=True, timeout=120,
+                cwd=temporary, env=self.env, capture_output=True, text=True, encoding="utf-8", timeout=120,
             )
             self.assertEqual(process.returncode, 0, process.stderr)
             report = json.loads(process.stdout)
@@ -134,7 +134,7 @@ class PortableRuntimeTests(unittest.TestCase):
                 if name == "editor-team":
                     process = subprocess.run(
                         [sys.executable, str(directory / "scripts/editor_team.py"), "audit", str(source), "--task-context", str(metadata), "--format", "json"],
-                        cwd=temporary, env=self.env, capture_output=True, text=True, timeout=120,
+                        cwd=temporary, env=self.env, capture_output=True, text=True, encoding="utf-8", timeout=120,
                     )
                     self.assertEqual(process.returncode, 0, process.stderr)
                     self.assertEqual(json.loads(process.stdout)["profile"], "wow-guide")
@@ -143,7 +143,7 @@ class PortableRuntimeTests(unittest.TestCase):
                     code = "from translation_core import scoped_translation_resources; import json,sys; from pathlib import Path; r=scoped_translation_resources(Path('.'),json.load(open(sys.argv[1])), 'retail'); print(r['scope']['game'])"
                     process = subprocess.run(
                         [sys.executable, "-S", "-c", code, str(metadata)], cwd=temporary,
-                        env={**self.env, "PYTHONPATH": str(runtime)}, capture_output=True, text=True,
+                        env={**self.env, "PYTHONPATH": str(runtime)}, capture_output=True, text=True, encoding="utf-8",
                     )
                     self.assertEqual(process.returncode, 0, process.stderr)
                     self.assertEqual(process.stdout.strip(), "world-of-warcraft")

@@ -7,6 +7,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import pytest
+
 from editorteam.task_context import adapt_editor_request
 
 REPO = Path(__file__).resolve().parents[3]

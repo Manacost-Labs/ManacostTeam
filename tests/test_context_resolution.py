@@ -1,5 +1,6 @@
 import copy
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -121,15 +122,26 @@ class ContextResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             result = subprocess.run(
                 [sys.executable, "-S", str(script), "--game", "deadlock", "--execution", "server"],
-                cwd=temporary, capture_output=True, text=True, check=True,
+                cwd=temporary, capture_output=True, text=True, encoding="utf-8", check=True,
             )
             self.assertEqual(json.loads(result.stdout)["game"]["id"], "deadlock")
             invalid = subprocess.run(
                 [sys.executable, "-S", str(script), "--game", "unknown"],
-                cwd=temporary, capture_output=True, text=True,
+                cwd=temporary, capture_output=True, text=True, encoding="utf-8",
             )
             self.assertNotEqual(invalid.returncode, 0)
             self.assertEqual(invalid.stdout, "")
+
+    def test_cli_outputs_utf8_even_with_ascii_console(self):
+        result = subprocess.run(
+            [sys.executable, "-S", str(ROOT / "tools/resolve_context.py"),
+             "--game", "deadlock", "--patch", "Русский патч"],
+            env={**os.environ, "PYTHONIOENCODING": "ascii", "PYTHONUTF8": "0"},
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8"))
+        self.assertIn("Русский патч", result.stdout.decode("utf-8"))
+        self.assertEqual(json.loads(result.stdout)["patch"], "Русский патч")
 
 
 if __name__ == "__main__":

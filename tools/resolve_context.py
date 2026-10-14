@@ -21,6 +21,8 @@ __all__ = ["ROOT", "load_catalog", "resolve_context", "validate_context"]
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--game", help="Canonical game ID; omit for tasks unrelated to games"
