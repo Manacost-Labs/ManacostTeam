@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v3"
+const PromptVersion = "editorteam-go-v4"
 
 // MaxRepairs ограничивает число targeted repair за один запрос.
 const MaxRepairs = 2
@@ -43,6 +43,7 @@ const (
 	ReasonCriticUnavailable      = "critic_unavailable"
 	ReasonCriticTimeout          = "critic_timeout"
 	ReasonCriticRejected         = "critic_rejected"
+	ReasonUnsupportedFacts       = "unsupported_factual_addition"
 	ReasonChecksIncomplete       = "checks_incomplete"
 	ReasonProtectedEntityChanged = "protected_entity_changed"
 	ReasonHardFinding            = "hard_finding"
@@ -159,6 +160,8 @@ type Result struct {
 	SkippedAnalyzers         []string            `json:"skipped_analyzers,omitempty"`
 	Retrieval                RetrievalReport     `json:"retrieval"`
 	FactReview               *FactReview         `json:"fact_review,omitempty"`
+	FactCheckPassed          *bool               `json:"fact_check_passed,omitempty"`
+	UnsupportedAdditions     []string            `json:"unsupported_additions,omitempty"`
 	ReviewerModel            string              `json:"reviewer_model,omitempty"`
 }
 
@@ -378,6 +381,8 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		repairs  int
 	)
 	for {
+		result.FactCheckPassed = nil
+		result.UnsupportedAdditions = nil
 		postInput := base
 		postInput.Text, postInput.Before, postInput.After, postInput.ClaimsAfter = candidate, verifiedText, candidate, claims
 		started := time.Now()
@@ -425,6 +430,15 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 				break
 			}
 			findings = append(findings, critic.Findings...)
+			factsPassed := critic.NoNewFacts && len(critic.UnsupportedAdditions) == 0
+			result.FactCheckPassed = &factsPassed
+			result.UnsupportedAdditions = append([]string{}, critic.UnsupportedAdditions...)
+			if !factsPassed {
+				reasons = append(reasons, ReasonUnsupportedFacts)
+				result.FactualRisks = append(result.FactualRisks, critic.UnsupportedAdditions...)
+				result.FactualRisks = append(result.FactualRisks, "Не подтверждено отсутствие новых фактов, механик или советов")
+				break
+			}
 			if critic.Verdict == "reject" {
 				reasons = append(reasons, ReasonCriticRejected)
 				break
@@ -749,12 +763,14 @@ type criticInput struct {
 }
 
 type criticResult struct {
-	Verdict        string              `json:"verdict"`
-	Scores         Scores              `json:"scores"`
-	Improvements   []Improvement       `json:"improvements"`
-	Regressions    []string            `json:"regressions"`
-	Findings       []analyzers.Finding `json:"findings"`
-	RepairRequired bool                `json:"repair_required"`
+	NoNewFacts           bool                `json:"no_new_facts"`
+	UnsupportedAdditions []string            `json:"unsupported_additions"`
+	Verdict              string              `json:"verdict"`
+	Scores               Scores              `json:"scores"`
+	Improvements         []Improvement       `json:"improvements"`
+	Regressions          []string            `json:"regressions"`
+	Findings             []analyzers.Finding `json:"findings"`
+	RepairRequired       bool                `json:"repair_required"`
 }
 
 // criticError — типизированный сбой critic: Kind совпадает с причиной
@@ -769,7 +785,10 @@ func (e *criticError) Error() string { return e.Kind + ": " + e.Err.Error() }
 const criticInstruction = "\nТы critic. Не переписывай текст и не предлагай свою версию статьи. " +
 	"В сообщении пользователя JSON с полями source, candidate, diff, mode, analysis, source_claims, protected_entities и tool_findings: " +
 	"оцени именно изменение candidate относительно source. Верни только JSON вида " +
-	`{"verdict":"accept|repair|reject","scores":{"factual_preservation":0,"meaning_preservation":0,"clarity":0,"structure":0,"usefulness":0,"natural_russian":0,"author_voice":0,"terminology":0},"improvements":[{"category":"clarity","before":"","after":"","reason":""}],"regressions":[],"findings":[{"rule_id":"","severity":"info|warning|error|blocker","message":"","line":0}],"repair_required":false}` +
+	`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept|repair|reject","scores":{"factual_preservation":0,"meaning_preservation":0,"clarity":0,"structure":0,"usefulness":0,"natural_russian":0,"author_voice":0,"terminology":0},"improvements":[{"category":"clarity","before":"","after":"","reason":""}],"regressions":[],"findings":[{"rule_id":"","severity":"info|warning|error|blocker","message":"","line":0}],"repair_required":false}` +
+	"Поля no_new_facts и unsupported_additions обязательны. Проверь каждое новое описание, механику, имя, причинное объяснение, пример, численное значение и совет. " +
+	"Основание — только source и проверенный research_handoff, а не память модели, анализ черновика или стиль корпуса. Если подтверждения нет или смысл неясен, no_new_facts=false и перечисли добавления дословными фрагментами candidate в unsupported_additions. " +
+	"Не превращай проверку в исправление исходных фактов по памяти. Неподтверждённое утверждение не становится допустимым из-за красивого объяснения или высокой оценки текста. " +
 	". Каждая оценка — целое число от 0 до 10. improvements — конкретные места, где candidate лучше source: category из списка clarity, structure, usefulness, natural_russian, author_voice, conciseness, terminology; " +
 	"before должен быть дословной выдержкой из source. after должен быть дословной выдержкой из candidate. Не описывай улучшение общими словами. Не выдумывай отсутствующие фрагменты. " +
 	"Каждый фрагмент не длиннее 300 символов, reason — конкретное объяснение, что стало лучше и почему. Недоказанные улучшения отбрасываются; " +
@@ -785,17 +804,22 @@ var scoreKeys = []string{"factual_preservation", "meaning_preservation", "clarit
 // allowlist, все восемь оценок как целые числа в диапазоне 0–10.
 func parseCritic(text string) (criticResult, error) {
 	var raw struct {
-		Verdict        string              `json:"verdict"`
-		Scores         map[string]*float64 `json:"scores"`
-		Improvements   []Improvement       `json:"improvements"`
-		Regressions    []string            `json:"regressions"`
-		Findings       []analyzers.Finding `json:"findings"`
-		RepairRequired bool                `json:"repair_required"`
+		NoNewFacts           *bool               `json:"no_new_facts"`
+		UnsupportedAdditions []string            `json:"unsupported_additions"`
+		Verdict              string              `json:"verdict"`
+		Scores               map[string]*float64 `json:"scores"`
+		Improvements         []Improvement       `json:"improvements"`
+		Regressions          []string            `json:"regressions"`
+		Findings             []analyzers.Finding `json:"findings"`
+		RepairRequired       bool                `json:"repair_required"`
 	}
 	if err := json.Unmarshal([]byte(stripJSON(text)), &raw); err != nil {
 		return criticResult{}, fmt.Errorf("ответ critic не JSON: %w", err)
 	}
-	out := criticResult{Regressions: raw.Regressions, RepairRequired: raw.RepairRequired}
+	if raw.NoNewFacts == nil || raw.UnsupportedAdditions == nil {
+		return criticResult{}, errors.New("обязательны no_new_facts и unsupported_additions, null не допускается")
+	}
+	out := criticResult{NoNewFacts: *raw.NoNewFacts, UnsupportedAdditions: raw.UnsupportedAdditions, Regressions: raw.Regressions, RepairRequired: raw.RepairRequired}
 	for _, item := range raw.Improvements {
 		if strings.TrimSpace(item.Category) == "" || strings.TrimSpace(item.Reason) == "" {
 			continue

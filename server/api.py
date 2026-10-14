@@ -90,10 +90,10 @@ def forward(url: str, payload: dict) -> tuple[int, dict]:
 def prepare_request(path: str, value: dict, default_game: str) -> dict:
     if not isinstance(value, dict):
         raise ValueError("request must be a JSON object")
-    allowed = {"game", "patch", "text", "genre", "product", "mode"}
+    allowed = {"game", "patch", "text", "genre", "product", "mode", "research_handoff"}
     if set(value) - allowed:
         raise ValueError(
-            "unknown fields; use game, patch, text, genre, product and mode"
+            "unknown fields; use game, patch, text, genre, product, mode and research_handoff"
         )
     text = value.get("text")
     if not isinstance(text, str) or not text.strip():
@@ -109,6 +109,10 @@ def prepare_request(path: str, value: dict, default_game: str) -> dict:
         patch=value.get("patch"),
     )
     result = {"text": text, "task_context": context}
+    if "research_handoff" in value:
+        if path != "/v1/editor/edit" or not isinstance(value["research_handoff"], dict):
+            raise ValueError("research_handoff must be an object for editor/edit")
+        result["research_handoff"] = value["research_handoff"]
     if path == "/v1/translate/prepare":
         if value.get("genre") is not None or value.get("mode") is not None:
             raise ValueError("genre/mode do not apply to translation preparation")

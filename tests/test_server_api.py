@@ -139,6 +139,24 @@ class ServerAPITests(unittest.TestCase):
         )
         self.assertFalse(self.calls)
 
+    def test_editor_handoff_is_forwarded_only_to_edit_validation(self):
+        handoff = {"schema_version": 1, "status": "research_blocked"}
+        payload = prepare_request(
+            "/v1/editor/edit",
+            {"text": "Text", "research_handoff": handoff},
+            "hearthstone",
+        )
+        self.assertEqual(payload["research_handoff"], handoff)
+        # Semantic readiness is checked by the existing Go handoff validator,
+        # not inferred by the transport adapter from this status string.
+        for path in ("/v1/editor/analyze", "/v1/translate/prepare"):
+            with self.assertRaises(ValueError):
+                prepare_request(
+                    path,
+                    {"text": "Text", "patch": "123", "research_handoff": handoff},
+                    "hearthstone",
+                )
+
     def test_capacity_and_body_limits_reject_before_forwarding(self):
         for _ in range(16):
             self.api.slots.acquire()

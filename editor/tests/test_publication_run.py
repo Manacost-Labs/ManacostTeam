@@ -90,6 +90,7 @@ def reviews(run):
         **hashes,
         "status": "pass",
         "confidence_preserved": True,
+        "candidate_checked": True,
         "patch_matches": True,
         "unsupported_claims": [],
         "conflicts": [],

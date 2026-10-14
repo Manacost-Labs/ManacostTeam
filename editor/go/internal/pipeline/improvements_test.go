@@ -55,7 +55,7 @@ func TestValidateImprovementsAcceptsRealQuotesAndMergesDuplicates(t *testing.T) 
 }
 
 func criticWithImprovements(improvements string) string {
-	return fmt.Sprintf(`{"verdict":"accept","scores":%s,"improvements":%s,"regressions":[],"findings":[],"repair_required":false}`, scoresJSON(8), improvements)
+	return fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":%s,"improvements":%s,"regressions":[],"findings":[],"repair_required":false}`, scoresJSON(8), improvements)
 }
 
 func TestFabricatedImprovementReturnsSourceEvenWithAcceptVerdict(t *testing.T) {

@@ -64,6 +64,7 @@ def bundle():
         "handoff_sha256": handoff_hash(handoff),
         "status": "pass",
         "confidence_preserved": True,
+        "candidate_checked": True,
         "patch_matches": True,
         "unsupported_claims": [],
         "conflicts": [],
@@ -91,11 +92,29 @@ def bundle():
     return handoff, text, factual, literary
 
 
+@pytest.mark.parametrize("field", ["decision_examples", "counterexamples"])
+def test_chapter_examples_require_verified_claims(bundle, field):
+    handoff, _, _, _ = bundle
+    handoff["chapters"][0][field] = ["Выдуманный эффект способности."]
+    assert any("unverified" in error for error in validate_handoff(handoff, "test-patch"))
+    handoff["chapters"][0][field] = [handoff["claims"][0]["meaning"]]
+    assert validate_handoff(handoff, "test-patch") == []
+
+
 def test_valid_independent_reports(bundle):
     h, text, fact, style = bundle
     assert validate_handoff(h, "test-patch") == []
     assert validate_reviews(h, text, fact, style) == []
     assert handoff_hash(h) == handoff_hash(dict(reversed(list(h.items()))))
+
+
+@pytest.mark.parametrize("checked", [False, None])
+def test_full_candidate_review_is_required(bundle, checked):
+    h, text, fact, _ = bundle
+    fact["candidate_checked"] = checked
+    assert any("candidate_checked" in error for error in validate_factual(h, text, fact))
+    fact.pop("candidate_checked")
+    assert any("candidate_checked" in error for error in validate_factual(h, text, fact))
 
 
 @pytest.mark.parametrize("field", ["condition_quote", "exception_quote", "confidence_quote"])

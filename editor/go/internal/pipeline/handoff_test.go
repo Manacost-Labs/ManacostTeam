@@ -47,6 +47,25 @@ func TestHandoffRejectsCriticalGapsAndWrongPatch(t *testing.T) {
 	}
 }
 
+func TestChapterExamplesRequireVerifiedClaims(t *testing.T) {
+	for _, counterexample := range []bool{false, true} {
+		h := readyHandoff()
+		if counterexample {
+			h.Chapters[0].Counterexamples = []string{"Выдуманный эффект способности."}
+		} else {
+			h.Chapters[0].DecisionExamples = []string{"Выдуманный эффект способности."}
+		}
+		if err := h.Validate(); err == nil {
+			t.Fatal("unverified chapter example accepted")
+		}
+		h.Chapters[0].Counterexamples = nil
+		h.Chapters[0].DecisionExamples = []string{h.Claims[0].Meaning}
+		if err := h.Validate(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestReconstructPromptUsesEvidenceInsteadOfDraftStructure(t *testing.T) {
 	model := &fakeLLM{replies: []string{"Готовый текст"}}
 	service := New(model, nil, "fake")
@@ -67,13 +86,18 @@ func TestReconstructPromptUsesEvidenceInsteadOfDraftStructure(t *testing.T) {
 func TestFactReviewRejectsLostConditionAndInventedQuotes(t *testing.T) {
 	h := readyHandoff()
 	candidate := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. https://example.org/guide"
-	good := `{"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","evidence_refs":["SRC-1"]}]}`
+	good := `{"candidate_checked":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","evidence_refs":["SRC-1"]}]}`
 	if _, err := validateFactReview(good, h, candidate); err != nil {
 		t.Fatal(err)
 	}
 	for _, bad := range []string{strings.Replace(good, "при слабой позиции", "несуществующая цитата", 1), strings.Replace(good, `"supported"`, `"insufficient"`, 1), `{"claims":[]}`} {
 		if _, err := validateFactReview(bad, h, candidate); err == nil {
 			t.Fatal("unverified claim accepted")
+		}
+	}
+	for _, bad := range []string{strings.Replace(good, `"candidate_checked":true,`, "", 1), strings.Replace(good, `"candidate_checked":true`, `"candidate_checked":false`, 1), strings.Replace(good, `"unsupported_claims":[]`, `"unsupported_claims":["выдуманная механика"]`, 1)} {
+		if _, err := validateFactReview(bad, h, candidate); err == nil {
+			t.Fatal("unreviewed/additional claim accepted")
 		}
 	}
 	if _, err := validateFactReview(good, h, strings.ReplaceAll(candidate, "https://example.org/guide", "")); err == nil {
@@ -92,7 +116,7 @@ func TestReconstructCannotIntroduceUnapprovedLinksOrNumbers(t *testing.T) {
 func TestReconstructRunsEvidenceReviewAndAllowsNewComposition(t *testing.T) {
 	h := readyHandoff()
 	candidate := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. [Источник](https://example.org/guide)"
-	fact := `{"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","evidence_refs":["SRC-1"]}]}`
+	fact := `{"candidate_checked":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","evidence_refs":["SRC-1"]}]}`
 	writer := &fakeLLM{replies: []string{candidate}}
 	reviewer := &fakeLLM{replies: []string{fact, criticJSON("accept")}}
 	s := New(writer, nil, "fake")

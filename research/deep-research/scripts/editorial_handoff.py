@@ -8,12 +8,57 @@ and semantic validators first; human review is still needed for publication.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from search_support import quote_in_text
+
 SUPPORTED = {"supported", "supported_with_conditions"}
+
+
+def record_sha256(value: dict) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+        ).encode()
+    ).hexdigest()
+
+
+def source_proof(root: Path, source: dict, quote: str) -> str:
+    relative = source.get("snapshot_path")
+    if not isinstance(relative, str) or not relative.strip():
+        raise ValueError("saved source snapshot required")
+    path = (root / relative).resolve()
+    if (
+        Path(relative).is_absolute()
+        or not path.is_relative_to(root.resolve())
+        or not path.is_file()
+    ):
+        raise ValueError("source snapshot must be a file inside the bundle")
+    payload = path.read_bytes().replace(b"\r\n", b"\n")
+    digest = hashlib.sha256(payload).hexdigest()
+    if source.get("content_sha256") != digest:
+        raise ValueError("source snapshot hash mismatch")
+    if not quote_in_text(payload.decode("utf-8"), quote):
+        raise ValueError("verbatim quote not found in saved source")
+    return digest
+
+
+def semantic_reviews(root: Path) -> list[dict]:
+    path = root / "semantic-audit.jsonl"
+    if not path.is_file():
+        return []
+    rows = [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    if not all(isinstance(row, dict) for row in rows):
+        raise ValueError("semantic audit must contain objects")
+    return rows
 
 
 def records(root: Path, name: str) -> dict[str, dict[str, Any]]:
@@ -128,6 +173,7 @@ def compile_handoff(
         records(root, name) for name in ("claims", "evidence", "sources")
     )
     patch = plan.get("patch")
+    audits = semantic_reviews(root)
     output_claims, output_sources, issues = [], {}, []
     requested = {
         cid
@@ -155,19 +201,71 @@ def compile_handoff(
             item = evidence.get(eid, {})
             sid = item.get("source_id")
             source = sources.get(sid, {})
-            quote = item.get("quote") or item.get("verbatim_quote")
+            quote = (
+                item.get("exact_excerpt")
+                or item.get("quote")
+                or item.get("verbatim_quote")
+            )
             parsed = urlsplit(source.get("url", ""))
             if (
                 not isinstance(quote, str)
                 or not quote.strip()
                 or source.get("access_integrity")
-                not in {"full_text", "full", "inspected"}
+                not in {"full_text", "full", "inspected", "transcript"}
                 or parsed.scheme not in {"http", "https"}
                 or not parsed.hostname
                 or parsed.username is not None
             ):
                 issues.append(
                     f"{cid}/{eid}: inspected source and verbatim quote required"
+                )
+                continue
+            try:
+                digest = source_proof(root, source, quote)
+            except (ValueError, OSError) as error:
+                issues.append(f"{cid}/{eid}: {error}")
+                continue
+            if item.get("relationship") != "supports" or cid not in (
+                item.get("claim_ids") or []
+            ):
+                issues.append(
+                    f"{cid}/{eid}: evidence must explicitly support this claim"
+                )
+                continue
+            matching = [
+                audit
+                for audit in audits
+                if audit.get("claim_id") == cid
+                and audit.get("evidence_id") == eid
+                and audit.get("source_id") == sid
+            ]
+            valid = [
+                audit
+                for audit in matching
+                if audit.get("claim_sha256") == record_sha256(claim)
+                and audit.get("evidence_sha256") == record_sha256(item)
+                and audit.get("source_sha256") == record_sha256(source)
+            ]
+            if not valid or any(
+                audit.get("semantic_support") != "exact"
+                or audit.get("reviewer_status") != "pass"
+                or not all(
+                    audit.get(field) is True
+                    for field in (
+                        "scope_match",
+                        "authority_match",
+                        "freshness_match",
+                        "evidence_type_match",
+                    )
+                )
+                or not isinstance(audit.get("reviewer_basis"), str)
+                or not audit["reviewer_basis"].strip()
+                or not isinstance(audit.get("audited_at"), str)
+                or not audit["audited_at"].strip()
+                for audit in valid
+            ):
+                issues.append(
+                    f"{cid}/{eid}: current exact passing semantic review required; narrow/review the claim"
                 )
                 continue
             # Evidence IDs retain distinct locators and quotes from the same source.
@@ -178,6 +276,10 @@ def compile_handoff(
                 "url": source["url"],
                 "quote": quote,
                 "locator": item.get("locator", ""),
+                "content_sha256": digest,
+                "claim_sha256": record_sha256(claim),
+                "evidence_sha256": record_sha256(item),
+                "source_sha256": record_sha256(source),
             }
         meaning = claim.get("meaning") or claim.get("claim")
         if not refs or not isinstance(meaning, str) or not meaning.strip():
@@ -197,6 +299,22 @@ def compile_handoff(
             }
         )
     report = decision_coverage(plan, {claim["claim_id"] for claim in output_claims})
+    by_id = {claim["claim_id"]: claim for claim in output_claims}
+    for chapter in plan.get("chapters", []):
+        approved = {
+            by_id[cid]["meaning"]
+            for cid in chapter.get("required_claim_ids", [])
+            if cid in by_id
+        }
+        for field in ("decision_examples", "counterexamples"):
+            examples = chapter.get(field, [])
+            if not isinstance(examples, list) or any(
+                not isinstance(example, str) or example not in approved
+                for example in examples
+            ):
+                issues.append(
+                    f"{chapter.get('chapter_id')}: {field} must reuse a verified claim of this chapter"
+                )
     report["blocking"].extend(issues)
     if not all(
         isinstance(plan.get(key), str) and plan[key].strip()
@@ -227,13 +345,34 @@ def main() -> int:
     parser.add_argument(
         "--plan",
         type=Path,
-        required=True,
         help="Editorial plan with reader questions and verified claim IDs",
     )
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--report", type=Path)
+    parser.add_argument(
+        "--review-digests",
+        action="store_true",
+        help="Print record hashes for an independent reviewer; does not approve facts",
+    )
     args = parser.parse_args()
     try:
+        if args.review_digests:
+            print(
+                json.dumps(
+                    {
+                        name: {
+                            key: record_sha256(value)
+                            for key, value in records(args.directory, name).items()
+                        }
+                        for name in ("claims", "evidence", "sources")
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
+        if args.plan is None or args.output is None or args.report is None:
+            raise ValueError("--plan, --output and --report required for compilation")
         handoff, report = compile_handoff(
             args.directory, json.loads(args.plan.read_text(encoding="utf-8"))
         )

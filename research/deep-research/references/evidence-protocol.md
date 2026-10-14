@@ -24,6 +24,13 @@ For every material evidence item:
 
 “Mentions the topic” is not evidence that a claim is true.
 
+Before editorial handoff, preserve a UTF-8 snapshot inside the bundle, record its
+content_sha256, and verify the exact excerpt against it. Link the evidence to
+the claim explicitly with relationship= supports and claim_ids. The handoff
+compiler also requires an exact passing semantic audit bound to the current
+claim/evidence/source records. Never write a description from memory merely
+because the source mentions the entity. Missing or partial support remains a gap.
+
 ## Atomic claim extraction
 
 Split compound prose. For example:

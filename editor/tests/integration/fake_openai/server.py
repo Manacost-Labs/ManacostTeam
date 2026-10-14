@@ -98,6 +98,8 @@ def _reply(stage: str, user: str) -> str:
         return json.dumps(
             {
                 "verdict": "repair" if findings else "accept",
+                "no_new_facts": True,
+                "unsupported_additions": [],
                 "scores": _scores(),
                 "improvements": improvements,
                 "regressions": [],
@@ -109,6 +111,8 @@ def _reply(stage: str, user: str) -> str:
     return json.dumps(
         {
             "verdict": "accept",
+            "no_new_facts": True,
+            "unsupported_additions": [],
             "scores": _scores(),
             "improvements": improvements,
             "regressions": [],

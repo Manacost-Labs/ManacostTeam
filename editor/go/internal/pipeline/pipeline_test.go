@@ -126,12 +126,12 @@ func criticJSON(verdict string, findings ...analyzers.Finding) string {
 		raw = []byte("[]")
 	}
 	repairRequired := verdict == "repair"
-	return fmt.Sprintf(`{"verdict":%q,"scores":%s,"improvements":%s,"regressions":[],"findings":%s,"repair_required":%v}`, verdict, scoresJSON(8), improvementJSON, raw, repairRequired)
+	return fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":%q,"scores":%s,"improvements":%s,"regressions":[],"findings":%s,"repair_required":%v}`, verdict, scoresJSON(8), improvementJSON, raw, repairRequired)
 }
 
 // criticJSONNoImprovement is a valid accept that names nothing better.
 func criticJSONNoImprovement() string {
-	return fmt.Sprintf(`{"verdict":"accept","scores":%s,"improvements":[],"regressions":[],"findings":[],"repair_required":false}`, scoresJSON(8))
+	return fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":%s,"improvements":[],"regressions":[],"findings":[],"repair_required":false}`, scoresJSON(8))
 }
 
 func warning(rule, message string) analyzers.Finding {
@@ -243,7 +243,7 @@ func TestCriticReceivesSourceCandidateDiffAndToolFindings(t *testing.T) {
 }
 
 func TestValidCriticJSONIsAccepted(t *testing.T) {
-	lm := &fakeLLM{replies: []string{analysisJSON, "Готово.", `{"verdict":"accept","scores":{"factual_preservation":10,"meaning_preservation":9,"clarity":8,"structure":7,"usefulness":6,"natural_russian":5,"author_voice":4,"terminology":3},"improvements":` + improvementJSON + `,"regressions":["ритм ровнее"],"findings":[],"repair_required":false}`}}
+	lm := &fakeLLM{replies: []string{analysisJSON, "Готово.", `{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":{"factual_preservation":10,"meaning_preservation":9,"clarity":8,"structure":7,"usefulness":6,"natural_russian":5,"author_voice":4,"terminology":3},"improvements":` + improvementJSON + `,"regressions":["ритм ровнее"],"findings":[],"repair_required":false}`}}
 	result := run(t, lm, "Текст.", "edit")
 	if !result.Accepted || result.Status != StatusEdited || !result.ScoresValid || result.CriticVerdict != "accept" || len(result.RejectionReasons) != 0 {
 		t.Fatalf("valid critic: %+v", result)
@@ -641,11 +641,11 @@ func TestCriticTimeoutDiffersFromInvalidJSONAndUnavailable(t *testing.T) {
 
 func TestInconsistentCriticReplyIsInvalid(t *testing.T) {
 	for name, reply := range map[string]string{
-		"repair without findings": fmt.Sprintf(`{"verdict":"repair","scores":%s,"improvements":[],"regressions":[],"findings":[],"repair_required":true}`, scoresJSON(8)),
-		"repair not required":     fmt.Sprintf(`{"verdict":"repair","scores":%s,"improvements":[],"regressions":[],"findings":[{"rule_id":"x","severity":"warning","message":"y"}],"repair_required":false}`, scoresJSON(8)),
-		"repair info only":        fmt.Sprintf(`{"verdict":"repair","scores":%s,"improvements":[],"regressions":[],"findings":[{"rule_id":"x","severity":"info","message":"y"}],"repair_required":true}`, scoresJSON(8)),
-		"accept requiring repair": fmt.Sprintf(`{"verdict":"accept","scores":%s,"improvements":[],"regressions":[],"findings":[],"repair_required":true}`, scoresJSON(8)),
-		"accept with blocker":     fmt.Sprintf(`{"verdict":"accept","scores":%s,"improvements":[],"regressions":[],"findings":[{"rule_id":"x","severity":"blocker","message":"y"}],"repair_required":false}`, scoresJSON(8)),
+		"repair without findings": fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":"repair","scores":%s,"improvements":[],"regressions":[],"findings":[],"repair_required":true}`, scoresJSON(8)),
+		"repair not required":     fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":"repair","scores":%s,"improvements":[],"regressions":[],"findings":[{"rule_id":"x","severity":"warning","message":"y"}],"repair_required":false}`, scoresJSON(8)),
+		"repair info only":        fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":"repair","scores":%s,"improvements":[],"regressions":[],"findings":[{"rule_id":"x","severity":"info","message":"y"}],"repair_required":true}`, scoresJSON(8)),
+		"accept requiring repair": fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":%s,"improvements":[],"regressions":[],"findings":[],"repair_required":true}`, scoresJSON(8)),
+		"accept with blocker":     fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":%s,"improvements":[],"regressions":[],"findings":[{"rule_id":"x","severity":"blocker","message":"y"}],"repair_required":false}`, scoresJSON(8)),
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := parseCritic(reply); err == nil {
@@ -700,7 +700,7 @@ func TestChangeWithoutMeasurableImprovementReturnsSource(t *testing.T) {
 		t.Fatalf("untouched text: %+v", result)
 	}
 	// Improvements without category or reason do not count.
-	empty := fmt.Sprintf(`{"verdict":"accept","scores":%s,"improvements":[{"category":"","reason":""},{"category":"clarity","reason":" "}],"regressions":[],"findings":[],"repair_required":false}`, scoresJSON(8))
+	empty := fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":%s,"improvements":[{"category":"","reason":""},{"category":"clarity","reason":" "}],"regressions":[],"findings":[],"repair_required":false}`, scoresJSON(8))
 	lm = &fakeLLM{replies: []string{analysisJSON, "Готово.", empty}}
 	if result = run(t, lm, "Текст.", "edit"); result.Accepted {
 		t.Fatalf("empty improvements accepted: %+v", result)

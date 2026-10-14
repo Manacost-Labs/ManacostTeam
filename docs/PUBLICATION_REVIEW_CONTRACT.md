@@ -21,6 +21,7 @@ editorteam.publication_review задают точный контракт; next �
   "handoff_sha256": "хеш текущего handoff",
   "status": "pass",
   "confidence_preserved": true,
+  "candidate_checked": true,
   "patch_matches": true,
   "unsupported_claims": [],
   "conflicts": [],
@@ -43,6 +44,9 @@ claim непустое. confidence_quote обязательна для medium/lo
 Для high допустима пустая confidence_quote. Ссылки в статье должны быть точными
 URL соответствующих evidence_refs. Нельзя ссылаться на другой claim/source.
 
+`candidate_checked=true` обязательно: это подтверждение проведённой проверки
+всех фактических утверждений, а не только строк из claims. Отсутствие поля,
+false или null блокируют готовность даже при остальных положительных оценках.
 Проверяющий оценивает ВСЮ статью: любой новый неподтверждённый совет заносится
 в unsupported_claims; противоречие — в conflicts. При ошибке используйте
 status=repair/blocked, false для нарушенного confidence_preserved/patch_matches

@@ -130,6 +130,16 @@ def validate_handoff(handoff: dict, current_patch: str) -> list[str]:
         for field in ("decision_examples", "counterexamples", "unresolved_questions"):
             if field in chapter and not _strings(chapter[field]):
                 errors.append(f"handoff: {chid} invalid {field}")
+        approved_examples = {
+            claims[cid].get("meaning")
+            for cid in required
+            if cid in claims and _text(claims[cid].get("meaning"))
+        }
+        for field in ("decision_examples", "counterexamples"):
+            if _strings(chapter.get(field, [])) and any(
+                example not in approved_examples for example in chapter.get(field, [])
+            ):
+                errors.append(f"handoff: {chid} unverified {field}")
         if chapter.get("unresolved_questions") and handoff["status"] == "research_ready":
             errors.append(f"handoff: {chid} unresolved questions")
     covered = set()
@@ -259,7 +269,7 @@ def validate_factual(handoff: dict, text: str, report: dict) -> list[str]:
             errors.append("factual: handoff hash mismatch")
     except (TypeError, ValueError, UnicodeError):
         return errors + ["factual: handoff is not JSON serializable"]
-    for field in ("confidence_preserved", "patch_matches"):
+    for field in ("candidate_checked", "confidence_preserved", "patch_matches"):
         if report.get(field) is not True:
             errors.append(f"factual: {field} must be true")
     for field in ("unsupported_claims", "conflicts"):
