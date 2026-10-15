@@ -85,9 +85,9 @@ def install_agent(directory: Path, client: str, names: list[str], game: str) -> 
         or any(name not in entries for name in names)
     ):
         raise ValueError("select unique skill names from teams/registry.json")
-    registry = json.loads((ROOT / "teams/registry.json").read_text())
+    registry = json.loads((ROOT / "teams/registry.json").read_text(encoding="utf-8"))
     release = ROOT / "release/team-skills" / registry["release_version"]
-    manifest = json.loads((release / "index.json").read_text())
+    manifest = json.loads((release / "index.json").read_text(encoding="utf-8"))
     prefix = {"codex": ".agents/skills/", "claude": ".claude/skills/", "generic": ""}[
         client
     ]
@@ -127,7 +127,7 @@ def install_server(directory: Path, game: str, port: int) -> dict:
     )
     compose = (
         (ROOT / "deploy/compose.yaml")
-        .read_text()
+        .read_text(encoding="utf-8")
         .replace("@@ROOT@@", json.dumps(str(ROOT)))
     )
     files = {

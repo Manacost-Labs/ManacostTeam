@@ -15,6 +15,26 @@ import install  # noqa: E402
 
 
 class InstallationTests(unittest.TestCase):
+    def test_agent_cli_uses_explicit_utf8_for_metadata(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "Навыки"
+            result = subprocess.run(
+                [
+                    sys.executable, "-X", "warn_default_encoding",
+                    "-W", "error::EncodingWarning",
+                    str(ROOT / "tools/install.py"), "agent",
+                    "--directory", str(target), "--client", "codex",
+                    "--skills", "translate-team", "--game", "deadlock",
+                ],
+                env={**os.environ, "PYTHONIOENCODING": "ascii", "PYTHONUTF8": "0"},
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8"))
+            self.assertEqual(json.loads(result.stdout)["directory"], str(target.absolute()))
+            self.assertTrue((target / ".agents/skills/translate-team/SKILL.md").is_file())
+            context = json.loads((target / ".manacost/context.json").read_text(encoding="utf-8"))
+            self.assertEqual(context["game"]["id"], "deadlock")
+
     def test_cli_outputs_utf8_for_non_ascii_destination(self):
         with tempfile.TemporaryDirectory() as temporary:
             target = Path(temporary) / "Плагин.zip"
@@ -34,7 +54,7 @@ class InstallationTests(unittest.TestCase):
             entry = target / ".agents/skills/translate-team/SKILL.md"
             self.assertTrue(entry.is_file())
             self.assertEqual(
-                json.loads((target / ".manacost/context.json").read_text())["game"][
+                json.loads((target / ".manacost/context.json").read_text(encoding="utf-8"))["game"][
                     "id"
                 ],
                 "deadlock",
@@ -48,16 +68,23 @@ class InstallationTests(unittest.TestCase):
             self.assertEqual(entry.read_text(), "user changes")
             self.assertFalse((target / ".agents/skills/job-team").exists())
 
-    def test_archive_traversal_and_symlinks_are_rejected(self):
+    def test_archive_traversal_is_rejected(self):
         for member in ("skill/../escape", "skill/\\escape", "/skill/escape"):
             payload = io.BytesIO()
             with zipfile.ZipFile(payload, "w") as archive:
                 archive.writestr(member, "unsafe")
             with self.assertRaises(ValueError):
                 install.unpack_skill(payload.getvalue(), "skill")
+
+    def test_symlink_destination_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             target = Path(temporary)
-            (target / "link").symlink_to(target, target_is_directory=True)
+            try:
+                (target / "link").symlink_to(target, target_is_directory=True)
+            except OSError as error:
+                if os.name == "nt" and error.winerror == 1314:
+                    self.skipTest("Windows account lacks permission to create symlinks")
+                raise
             with self.assertRaises(ValueError):
                 install.install_files(target, {"link/file": b"unsafe"})
 
