@@ -163,6 +163,73 @@ def number_binding_drift(before: str, after: str) -> list[dict]:
     ]
 
 
+_BOUND = re.compile(r"\b(?:не\s+)?(?:ниже|выше|менее|более|меньше|больше)\b(?=\s+\d)", re.I)
+_SCOPE = re.compile(r"\b(?:архетип|класс)(?:а|у|ом|е|ов|ах|ы)?\b", re.I)
+_SUPERLATIVE = re.compile(r"\b(?:лучш|сильнейш)\w*", re.I)
+
+
+def comparison_drift(before: str, after: str) -> list[dict]:
+    """Catch changed bounds/superlative scope only in unchanged lexical frames.
+
+    This deliberately does not infer arbitrary paraphrases or cross-language
+    equivalence. Moving sentences and equivalent bound words are harmless.
+    """
+    bounds = {
+        "ниже": "lt",
+        "менее": "lt",
+        "меньше": "lt",
+        "выше": "gt",
+        "более": "gt",
+        "больше": "gt",
+    }
+
+    def frames(text, pattern, scope):
+        result = {}
+        for sentence in _sentences(text):
+            matches = list(pattern.finditer(sentence))
+            if len(matches) != 1 or (scope and not _SUPERLATIVE.search(sentence)):
+                continue
+            match = matches[0]
+            value = " ".join(match.group().lower().split())
+            if scope:
+                value = "archetype" if value.startswith("архетип") else "class"
+            else:
+                negated = value.startswith("не ")
+                value = bounds[value.removeprefix("не ")]
+                if negated:
+                    value = {"lt": "ge", "gt": "le"}[value]
+            frame_text = pattern.sub(" comparison ", sentence.casefold())
+            if not scope:
+                # Normalize the bound and numeric roles together. Otherwise a
+                # simultaneous operator/value swap evades both frame guards.
+                value = (value, tuple(NUMBERS.findall(sentence)))
+                frame_text = NUMBERS.sub(" number ", frame_text)
+            frame = tuple(TOKENS.findall(frame_text))
+            result.setdefault(frame, Counter())[value] += 1
+        return result
+
+    issues = []
+    for pattern, field, scope in (
+        (_BOUND, "comparison_bound", False),
+        (_SCOPE, "comparison_scope", True),
+    ):
+        old, new = frames(before, pattern, scope), frames(after, pattern, scope)
+        for frame in sorted(old.keys() & new.keys()):
+            if old[frame] != new[frame]:
+                issues.append(
+                    {
+                        "kind": "FACTUAL_SEMANTIC_DRIFT",
+                        "field": field,
+                        "message": "изменилось направление, строгость или область сравнения",
+                        "context": " ".join(frame),
+                        "before": list(old[frame].elements()),
+                        "after": list(new[frame].elements()),
+                        "severity": "error",
+                    }
+                )
+    return issues
+
+
 def link_drift(before: str, after: str) -> list[dict]:
     """Preserve HTTP citation destinations, including timestamps/fragments.
 
@@ -333,6 +400,7 @@ def compare(
     return [
         *negation_flips(before_text, after_text),
         *number_drift(before_text, after_text, allowed_removed_numbers),
+        *comparison_drift(before_text, after_text),
         *link_drift(before_text, after_text),
         *claim_contract_drift(claims_before, claims_after),
         *freshness_issues(claims_before, current_meta_epoch, current_patch),

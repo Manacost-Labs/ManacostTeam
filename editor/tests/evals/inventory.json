@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "case_ids": [
+    "00-control-clean-guide",
+    "01-slop-rhetoric-bomb-warrior",
+    "02-kancelarit-mulligan-zoo",
+    "03-water-repetition-face-hunt",
+    "04-flat-rhythm-rush-warrior",
+    "05-no-address-quest-mage",
+    "06-broken-order-ramp-druid",
+    "07-thin-sections-token-druid",
+    "08-mixed-lang-highlander-mage",
+    "09-missing-mulligan-slop",
+    "10-bg-article-jargon",
+    "11-analytics-numbers-dump",
+    "12-anti-guide-slop",
+    "13-news-chat-residue",
+    "14-bold-symmetric-lists",
+    "15-stale-evidence-narration"
+  ]
+}

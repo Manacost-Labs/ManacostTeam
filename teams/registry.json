@@ -5,9 +5,13 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.7.2",
+      "version": "1.8.0",
       "source": "teams/editor-team",
       "resources": [
+        {
+          "source": "docs/QUALITY_AUDIT.md",
+          "destination": "references/quality-audit.md"
+        },
         {
           "source": "docs/EDITORIAL_PIPELINE_V3.md",
           "destination": "references/publication-contract.md"
@@ -305,9 +309,17 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "source": "teams/manacost-publish",
       "resources": [
+        {
+          "source": "docs/QUALITY_AUDIT.md",
+          "destination": "references/quality-audit.md"
+        },
+        {
+          "source": "editor/src/editorteam/quality_audit.py",
+          "destination": "python/editorteam/quality_audit.py"
+        },
         {
           "source": "editor/src/editorteam/__init__.py",
           "destination": "python/editorteam/__init__.py"
@@ -363,5 +375,5 @@
       ]
     }
   ],
-  "release_version": "1.7.2"
+  "release_version": "1.8.0"
 }

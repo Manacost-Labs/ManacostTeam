@@ -19,6 +19,9 @@ jobs:
       EDITOR_MODEL: ${{ vars.EDITOR_MODEL }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Detect provider key
         id: key
         run: |
@@ -28,10 +31,12 @@ jobs:
           else
             echo "has=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-python@v5
-        if: steps.key.outputs.has == 'true'
-        with:
-          python-version: "3.12"
+      - name: Record skipped evaluation
+        if: steps.key.outputs.has != 'true'
+        run: |
+          python src/editorteam/evaluation_status.py --skipped no_provider_key --output build/evals/nightly/status.json
+          echo "### Model quality evaluation: NOT RUN" >> "$GITHUB_STEP_SUMMARY"
+          echo "EDITOR_API_KEY is not configured. No texts were evaluated; this run provides no quality result." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-go@v5
         if: steps.key.outputs.has == 'true'
         with:
@@ -55,15 +60,37 @@ jobs:
           done
           curl -sf http://127.0.0.1:8080/health
       - name: Run evals
+        id: evaluate
         if: steps.key.outputs.has == 'true'
         run: python tools/run_evals.py --gateway http://127.0.0.1:8080 --mode переплавка --out build/evals/nightly --fail-under 0.8
+      - name: Summarize evaluation execution
+        if: always() && steps.key.outputs.has == 'true'
+        env:
+          EVAL_STEP_OUTCOME: ${{ steps.evaluate.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = Path("build/evals/nightly/report.json")
+          if report.exists():
+              status = json.loads(report.read_text())["summary"]
+          else:
+              status = {"run_status": "failed", "reason": "evaluation_report_missing", "model_evaluation_completed": False, "quality_validated": False}
+          status["evaluation_step_outcome"] = os.environ["EVAL_STEP_OUTCOME"]
+          output = Path("build/evals/nightly/status.json")
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(json.dumps(status, indent=2) + "\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("### Model evaluation execution\n\n```json\n" + json.dumps(status, indent=2) + "\n```\n\n")
+              summary.write("Automated scoring does not establish human quality or source factual correctness.\n")
+          PY
       - name: Logs on failure
         if: failure() && steps.key.outputs.has == 'true'
         run: tail -n 80 build-sidecar.log build-gateway.log || true
       - name: Upload report
-        if: always() && steps.key.outputs.has == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: evals-nightly
           path: editor/build/evals/nightly
-          if-no-files-found: ignore
+          if-no-files-found: error

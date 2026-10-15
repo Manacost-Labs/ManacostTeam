@@ -101,6 +101,35 @@ class TeamPackageTests(unittest.TestCase):
 
 
 class PortableRuntimeTests(unittest.TestCase):
+    def test_quality_audit_runs_from_both_zips_without_checkout_or_site_packages(self):
+        code = """
+import hashlib,json,tempfile
+from pathlib import Path
+from editorteam.publication_benchmark import prepare
+from editorteam.quality_audit import audit_summary,prepare_reviews
+with tempfile.TemporaryDirectory() as temporary:
+    root=Path(temporary)
+    text='Synthetic conditional advice.'
+    rows=[{'id':'one','title':'Synthetic','url':'https://example.org/one','text':text,
+           'access':'full','sha256':hashlib.sha256(text.encode()).hexdigest()}]
+    prepare(rows,root/'corpus')
+    packet=prepare_reviews(root/'corpus',root/'packet')
+    report=audit_summary(root/'corpus',[],root/'evidence')
+    assert len(packet['cases'])==1 and report['pending']==1
+    assert report['human_approved'] is False
+    assert report['results'][0]['current_facts_verified'] is False
+    print(json.dumps({'cases':report['cases'],'pending':report['pending']}))
+"""
+        for name in ("editor-team", "manacost-publish"):
+            with self.subTest(skill=name), tempfile.TemporaryDirectory() as temporary:
+                process = subprocess.run(
+                    [sys.executable, "-S", "-c", code], cwd=temporary,
+                    env={**self.env, "PYTHONPATH": str(self.unpacked / name / "python")},
+                    capture_output=True, text=True, encoding="utf-8", timeout=30,
+                )
+                self.assertEqual(process.returncode, 0, process.stderr)
+                self.assertEqual(json.loads(process.stdout), {"cases": 1, "pending": 1})
+
     def test_new_game_runs_in_portable_editor_with_default_manacost(self):
         result = self.run_helper("editor-team", "scripts/resolve_context.py", "--game", "deadlock")
         context = json.loads(result.stdout)

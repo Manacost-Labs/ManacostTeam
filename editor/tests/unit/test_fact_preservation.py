@@ -9,6 +9,53 @@ semantic_diff = C.sibling("semantic_diff")
 
 
 @pytest.mark.parametrize(
+    "before,after,field",
+    [
+        ("Винрейт колоды ниже 50%.", "Винрейт колоды выше 50%.", "comparison_bound"),
+        ("Винрейт колоды не ниже 50%.", "Винрейт колоды не выше 50%.", "comparison_bound"),
+        ("Ресурсов должно быть более 5.", "Ресурсов должно быть не менее 5.", "comparison_bound"),
+        ("Это лучшая сборка архетипа.", "Это лучшая сборка класса.", "comparison_scope"),
+    ],
+)
+def test_comparison_direction_and_scope_cannot_change_with_same_numbers(before, after, field):
+    assert any(item["field"] == field for item in semantic_diff.compare(before, after))
+
+
+@pytest.mark.parametrize(
+    "before,after",
+    [
+        ("Винрейт колоды ниже 50%.", "Винрейт колоды менее 50%."),
+        ("Винрейт колоды не ниже 50%.", "Винрейт колоды не менее 50%."),
+        ("Винрейт ниже 50%. Ресурсов больше 5.", "Ресурсов больше 5. Винрейт ниже 50%."),
+        ("Выберите класс героя.", "Выберите архетип героя."),
+    ],
+)
+def test_equivalent_comparisons_and_sentence_moves_do_not_trigger_bound_guard(before, after):
+    assert not any(
+        item["field"].startswith("comparison_") for item in semantic_diff.compare(before, after)
+    )
+
+
+def test_changed_comparison_is_rejected_by_the_editor_gate():
+    result = validate(
+        "Винрейт колоды ниже 50%.", "Винрейт колоды выше 50%.", "hearthstone", "constructed-guide"
+    )
+    assert not result["accepted"]
+    assert any(item.get("field") == "comparison_bound" for item in result["violations"])
+
+
+def test_combined_bound_and_threshold_swap_cannot_evade_editor_gate():
+    result = validate(
+        "Порог ниже 50 ресурсов при запасе 10.",
+        "Порог выше 10 ресурсов при запасе 50.",
+        "hearthstone",
+        "constructed-guide",
+    )
+    assert not result["accepted"]
+    assert any(item.get("field") == "comparison_bound" for item in result["violations"])
+
+
+@pytest.mark.parametrize(
     "before, after",
     [
         (

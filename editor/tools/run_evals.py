@@ -26,10 +26,21 @@ SCRIPTS = ROOT / ".claude" / "skills" / "hs-edit" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 import common as C  # noqa: E402
 
+sys.path.insert(0, str(ROOT / "src"))
+from editorteam.evaluation_status import execution_summary  # noqa: E402
+
 CASES_DIR = ROOT / "tests" / "evals" / "cases"
+INVENTORY_PATH = ROOT / "tests" / "evals" / "inventory.json"
 
 
 def cases(selected: list[str] | None):
+    inventory = json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
+    expected = inventory.get("case_ids")
+    discovered = {d.name for d in CASES_DIR.iterdir() if (d / "case.yaml").is_file()}
+    if (inventory.get("schema_version") != 1 or not isinstance(expected, list)
+            or not expected or any(not isinstance(item, str) or not item for item in expected)
+            or len(set(expected)) != len(expected) or set(expected) != discovered):
+        raise ValueError("eval inventory mismatch: discovered case directories differ from frozen case_ids")
     out = []
     for d in sorted(CASES_DIR.iterdir()):
         if not (d / "case.yaml").exists():
@@ -58,18 +69,23 @@ def fetch_candidate(gateway: str, case: dict, mode: str, timeout: int) -> str:
     return data.get("text", ""), data
 
 
-def markdown_report(rows: list[dict]) -> str:
-    head = ("| кейс | ок | голос | ритм | кор/дл % | маркеров /10к | author | покрытие | разделы | что провалено |\n"
-            "|---|---|---|---|---|---|---|---|---|---|\n")
+def markdown_report(rows: list[dict], source: str = "gateway") -> str:
+    head = ("| кейс | источник оценки | ок | голос | ритм | кор/дл % | маркеров /10к | author | покрытие | разделы | что провалено |\n"
+            "|---|---|---|---|---|---|---|---|---|---|---|\n")
     lines = []
     for r in rows:
+        if source != "inputs" and not r.get("candidate"):
+            note = str(r.get("note", "кандидата нет")).replace("|", "\\|").replace("\n", " ")
+            lines.append(f"| {r['id']} | кандидат отсутствует | NOT RUN | — | — | — | — | — | — | — | {note} |")
+            continue
         m = r["candidate"]["metrics"] if r.get("candidate") else r["input"]["metrics"]
         target = r.get("candidate") or r["input"]
+        accepted = target["accepted"] and (source != "gateway" or r.get("gateway", {}).get("accepted") is True)
         cov = m.get("coverage") or {}
         cov_s = "/".join(str(cov.get(k, "—")) for k in ("numbers", "cards", "negations", "facts"))
         sec = m.get("sections") or {}
         lines.append(
-            f"| {r['id']} | {'✓' if target['accepted'] else '✗'} | {m.get('soul_per_1k', '—')} | "
+            f"| {r['id']} | {'вход' if source == 'inputs' else 'кандидат'} | {'✓' if accepted else '✗'} | {m.get('soul_per_1k', '—')} | "
             f"{m.get('rhythm_ratio', '—')} | {m.get('short_pct', '—')}/{m.get('long_pct', '—')} | "
             f"{m.get('markers_per_10k', {}).get('total', '—')} | {m.get('author', '—')} | {cov_s} | "
             f"{len(sec.get('present', []))}{'+' if sec.get('order_ok', True) else '!'} | "
@@ -103,7 +119,11 @@ def main() -> int:
 
     rows = []
     model = None
-    for d in cases(args.case):
+    try:
+        selected_cases = cases(args.case)
+    except (OSError, ValueError) as error:
+        ap.error(str(error))
+    for d in selected_cases:
         case = evalscore.load_case(d)
         row = {"id": case["id"], "profile": case.get("profile"),
                "input": evalscore.score(case["_input"], case, thresholds, is_input=True)}
@@ -130,12 +150,15 @@ def main() -> int:
         if args.format == "table":
             target = row.get("candidate") or row["input"]
             label = "кандидат" if row.get("candidate") else "вход"
-            print(f"{case['id']:<34} {label:<8} {'PASS' if target['accepted'] else 'FAIL':<5} "
+            passed = target['accepted'] and (source != 'gateway' or row.get('gateway', {}).get('accepted') is True)
+            verdict = 'NOT RUN' if source != 'inputs' and not row.get('candidate') else 'PASS' if passed else 'FAIL'
+            print(f"{case['id']:<34} {label:<8} {verdict:<7} "
                   f"{', '.join(target['failed'])}")
 
     scored = [r for r in rows if r.get("candidate")] if source != "inputs" else rows
     accepted = sum(1 for r in scored if (r.get("candidate") or r["input"])["accepted"])
-    share = round(accepted / len(scored), 3) if scored else 0.0
+    execution = execution_summary(rows, source, model)
+    accepted, share = execution["accepted"], execution["share"]
     failed_by_check: dict[str, int] = {}
     for r in scored:
         for check in (r.get("candidate") or r["input"])["failed"]:
@@ -145,7 +168,7 @@ def main() -> int:
         "run": {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "source": source,
                 "model": model, "corpus_version": C.corpus_manifest().get("current_version", "legacy-v1")},
         "cases": rows,
-        "summary": {"cases": len(scored), "accepted": accepted, "share": share,
+        "summary": {**execution,
                     "failed_by_check": dict(sorted(failed_by_check.items()))},
     }
     if args.baseline:
@@ -156,15 +179,18 @@ def main() -> int:
         report["summary"]["regressions"] = regressions
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (out_dir / "report.md").write_text(markdown_report(rows), encoding="utf-8")
+    (out_dir / "report.md").write_text(markdown_report(rows, source), encoding="utf-8")
     if args.format == "json":
         print(json.dumps(report, ensure_ascii=False, indent=2))
     else:
         shown = out_dir.relative_to(ROOT) if out_dir.is_relative_to(ROOT) else out_dir
-        print(f"\nпринято {accepted} из {len(scored)} ({share:.0%}); отчёт: {shown}")
+        display_share = f"{share:.0%}" if share is not None else "не запускалось"
+        print(f"\nпринято {accepted} из {len(rows)} ({display_share}); статус: {execution['run_status']}; отчёт: {shown}")
         if report["summary"].get("regressions"):
             print("регрессии: " + ", ".join(report["summary"]["regressions"]))
-    if args.fail_under is not None and share < args.fail_under:
+    if execution["run_status"] != "completed":
+        return 2
+    if args.fail_under is not None and (share is None or share < args.fail_under):
         return 1
     return 0
 
