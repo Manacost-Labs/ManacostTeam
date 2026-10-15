@@ -81,6 +81,8 @@ def strip_fence(text: str) -> str:
 
 def classify_failure(output: str, code: int | None) -> str:
     lower = output.lower()
+    if "invalid utf-8" in lower:
+        return "cli вернул вывод не в UTF-8"
     if any(hint in lower for hint in LOGIN_HINTS):
         return "cli не залогинен: выполните вход в CLI и повторите"
     if any(hint in lower for hint in RATE_HINTS):
@@ -110,9 +112,8 @@ class Backend:
             try:
                 proc = subprocess.run(
                     argv,
-                    input=stdin_text,
+                    input=stdin_text.encode("utf-8"),
                     capture_output=True,
-                    text=True,
                     timeout=timeout,
                     cwd=self.workdir or scratch,
                     check=False,
@@ -121,13 +122,16 @@ class Backend:
                 return "", None, "timeout"
             except FileNotFoundError as error:
                 return "", 127, f"команда не найдена: {error.filename}"
-            reply = ""
-            if self.name == "codex" and os.path.exists(last_message):
-                with open(last_message, encoding="utf-8") as handle:
-                    reply = handle.read()
-            else:
-                reply = proc.stdout
-            return strip_fence(reply), proc.returncode, (proc.stderr or "")[-2000:]
+            try:
+                diagnostic = proc.stderr.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
+                if self.name == "codex" and os.path.exists(last_message):
+                    with open(last_message, encoding="utf-8") as handle:
+                        reply = handle.read()
+                else:
+                    reply = proc.stdout.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
+            except UnicodeDecodeError:
+                return "", 1, "invalid UTF-8 in CLI output"
+            return strip_fence(reply), proc.returncode, diagnostic[-2000:]
 
     def argv(
         self, system: str, prompt: str, scratch: str, last_message: str

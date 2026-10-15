@@ -153,6 +153,12 @@ Prompt идёт через stdin, ответ CLI снимается с markdown-
 таймаут — HTTP 504, то есть в отчёте это `critic_unavailable` или
 `critic_timeout`, а не провал качества.
 
+Мост передаёт stdin и читает stdout/stderr в UTF-8 независимо от системной
+кодовой страницы Windows. Пользовательская команда `--backend custom` также
+должна работать в UTF-8; для Python-команды можно указать `python -X utf8`.
+Вывод с некорректной кодировкой приводит к HTTP 503 с указанием UTF-8,
+ответ сохраняет обычный JSON-формат ошибки моста.
+
 ```bash
 python tools/cli_model_bridge.py --backend codex --port 8790            # codex exec, read-only sandbox
 python tools/cli_model_bridge.py --backend claude --model sonnet         # claude -p --tools "" --bare

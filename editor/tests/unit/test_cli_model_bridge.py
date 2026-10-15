@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import shlex
+import subprocess
 import sys
 import threading
 import urllib.error
@@ -21,7 +23,7 @@ bridge_module = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
 SPEC.loader.exec_module(bridge_module)
 
-ECHO = f"{shlex.quote(sys.executable)} -c \"import sys; print('```json\\n' + sys.stdin.read().upper() + '\\n```')\""
+ECHO = f"{shlex.quote(sys.executable)} -X utf8 -c \"import sys; print('```json\\n' + sys.stdin.read().upper() + '\\n```')\""
 FAIL = f"{shlex.quote(sys.executable)} -c \"import sys; sys.stderr.write('Not logged in - Please run /login'); sys.exit(2)\""
 SLOW = f"{shlex.quote(sys.executable)} -c \"import time; time.sleep(5); print('late')\""
 
@@ -89,6 +91,70 @@ def test_bridge_folds_multi_turn_messages_into_one_prompt() -> None:
     assert "[ASSISTANT]\nмусор" in prompt
     assert prompt.endswith("[ASSISTANT]")
     assert bridge_module.build_prompt([{"role": "user", "content": "один"}]) == ("", "один")
+
+
+@pytest.mark.parametrize("prompt", ["ascii request", "Привет, 世界🙂"])
+def test_bridge_preserves_utf8_when_host_locale_is_not_utf8(tmp_path: Path, prompt: str) -> None:
+    child = tmp_path / "utf8_cli.py"
+    child.write_text(
+        "import sys\n"
+        "sys.stderr.write('готово🙂')\n"
+        "print('```json\\n✓ ' + sys.stdin.read().upper() + '\\n```')\n",
+        encoding="utf-8",
+    )
+    command = f"{shlex.quote(sys.executable)} -X utf8 {shlex.quote(str(child))}"
+    worker = """
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location('bridge', sys.argv[1])
+bridge = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(bridge)
+backend = bridge.Backend('custom', 'test-model', sys.argv[2], [], '')
+reply, code, stderr = backend.run('', json.loads(sys.argv[3]), 5)
+print(json.dumps({'reply': reply, 'code': code, 'stderr': stderr}))
+"""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-X",
+            "utf8=0",
+            "-c",
+            worker,
+            str(ROOT / "tools/cli_model_bridge.py"),
+            command,
+            json.dumps(prompt),
+        ],
+        env={**os.environ, "PYTHONUTF8": "0", "PYTHONCOERCECLOCALE": "0", "LC_ALL": "C"},
+        capture_output=True,
+        encoding="utf-8",
+        timeout=15,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {
+        "reply": "✓ " + prompt.upper(),
+        "code": 0,
+        "stderr": "готово🙂",
+    }
+
+
+@pytest.mark.parametrize("stream", ["stdout", "stderr"])
+def test_bridge_returns_503_for_invalid_utf8_output(tmp_path: Path, stream: str) -> None:
+    child = tmp_path / "invalid_utf8_cli.py"
+    child.write_text(
+        f"import sys\nsys.stdout.write('answer')\nsys.{stream}.buffer.write(b'\\xff')\n",
+        encoding="utf-8",
+    )
+    command = f"{shlex.quote(sys.executable)} -X utf8 {shlex.quote(str(child))}"
+    server, base = start(command)
+    try:
+        code, body = post(
+            f"{base}/v1/chat/completions", {"messages": [{"role": "user", "content": "x"}]}
+        )
+        assert code == 503, body
+        assert body["error"]["backend"] == "custom"
+        assert "UTF-8" in body["error"]["message"]
+    finally:
+        server.shutdown()
 
 
 def test_bridge_reports_cli_failures_as_unavailable_not_as_text() -> None:
