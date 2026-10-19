@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v14"
+const PromptVersion = "editorteam-go-v15"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -792,6 +792,7 @@ func appendUnique(values []string, more ...string) []string {
 // criticInput — данные для critic. Они уходят JSON-ом в user message, а не
 // инструкциями в system prompt.
 type criticInput struct {
+	LocalEdits        []LocalEdit         `json:"local_edits,omitempty"`
 	Source            string              `json:"source"`
 	Candidate         string              `json:"candidate"`
 	Diff              []Change            `json:"diff"`
@@ -806,6 +807,7 @@ type criticInput struct {
 }
 
 type criticResult struct {
+	EditAssessments      []EditAssessment    `json:"edit_assessments,omitempty"`
 	NoNewFacts           bool                `json:"no_new_facts"`
 	UnsupportedAdditions []string            `json:"unsupported_additions"`
 	Verdict              string              `json:"verdict"`
@@ -860,6 +862,7 @@ var scoreKeys = []string{"factual_preservation", "meaning_preservation", "clarit
 // allowlist, все восемь оценок как целые числа в диапазоне 0–10.
 func parseCritic(text string) (criticResult, error) {
 	var raw struct {
+		EditAssessments      []EditAssessment    `json:"edit_assessments"`
 		NoNewFacts           *bool               `json:"no_new_facts"`
 		UnsupportedAdditions []string            `json:"unsupported_additions"`
 		Verdict              string              `json:"verdict"`
@@ -876,7 +879,7 @@ func parseCritic(text string) (criticResult, error) {
 	if raw.NoNewFacts == nil || raw.UnsupportedAdditions == nil {
 		return criticResult{}, errors.New("обязательны no_new_facts и unsupported_additions, null не допускается")
 	}
-	out := criticResult{NoNewFacts: *raw.NoNewFacts, UnsupportedAdditions: raw.UnsupportedAdditions, Regressions: raw.Regressions, RepairRequired: raw.RepairRequired, StrengthChanges: raw.StrengthChanges}
+	out := criticResult{NoNewFacts: *raw.NoNewFacts, UnsupportedAdditions: raw.UnsupportedAdditions, Regressions: raw.Regressions, RepairRequired: raw.RepairRequired, StrengthChanges: raw.StrengthChanges, EditAssessments: raw.EditAssessments}
 	for _, item := range raw.Improvements {
 		if strings.TrimSpace(item.Category) == "" || strings.TrimSpace(item.Reason) == "" {
 			continue
@@ -1025,12 +1028,15 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	// Keep source evidence and exact preservation spans, not the writer's
 	// suggested substitutions or justification for making them.
 	in.Analysis = Analysis{}
+	if in.Mode == "edit" || in.Mode == "rewrite" {
+		in.LocalEdits = localEdits(in.Source, in.Candidate)
+	}
 	payload, err := json.Marshal(in)
 	if err != nil {
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}
 	}
 	messages := []llm.Message{
-		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode), examplesOf(in))},
+		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+localReviewInstruction(in.Mode), examplesOf(in))},
 		{Role: "user", Content: string(payload)},
 	}
 	started := time.Now()
@@ -1047,6 +1053,9 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	out, parseErr := parseCritic(text)
 	if parseErr == nil {
 		parseErr = validateStrengthChanges(in, out)
+	}
+	if parseErr == nil {
+		parseErr = validateEditAssessments(in, out)
 	}
 	if parseErr == nil {
 		s.logStage(ctx, "critic", started, attempt, "")
@@ -1067,6 +1076,9 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	out, parseErr = parseCritic(text)
 	if parseErr == nil {
 		parseErr = validateStrengthChanges(in, out)
+	}
+	if parseErr == nil {
+		parseErr = validateEditAssessments(in, out)
 	}
 	if parseErr != nil {
 		s.logStage(ctx, "critic_retry", started, attempt, ReasonCriticInvalid)

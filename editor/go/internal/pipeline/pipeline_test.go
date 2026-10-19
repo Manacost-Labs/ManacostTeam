@@ -21,12 +21,15 @@ type trace struct{ events []string }
 func (t *trace) add(event string) { t.events = append(t.events, event) }
 
 type fakeLLM struct {
-	replies  []string
-	fail     map[int]error
-	messages [][]llm.Message
-	stages   []string
-	log      *trace
-	i        int
+	// Most fixtures test other gates. Supply grounded local-review fixtures;
+	// dedicated retry tests disable this to exercise missing/invalid evidence.
+	omitLocalReview bool
+	replies         []string
+	fail            map[int]error
+	messages        [][]llm.Message
+	stages          []string
+	log             *trace
+	i               int
 }
 
 func stageOf(system string) string {
@@ -65,6 +68,16 @@ func (f *fakeLLM) Complete(_ context.Context, messages []llm.Message, _ int) (st
 		if len(messages) > 1 && json.Unmarshal([]byte(messages[1].Content), &payload) == nil {
 			reply = strings.ReplaceAll(reply, "__SOURCE__", jsonEscape(payload.Source))
 			reply = strings.ReplaceAll(reply, "__CANDIDATE__", jsonEscape(payload.Candidate))
+			var fields map[string]json.RawMessage
+			if !f.omitLocalReview && json.Unmarshal([]byte(reply), &fields) == nil && fields != nil && fields["edit_assessments"] == nil {
+				var assessments []EditAssessment
+				for _, edit := range localEdits(payload.Source, payload.Candidate) {
+					assessments = append(assessments, EditAssessment{EditID: edit.ID, ReadingQuote: edit.CandidateContext, Reading: "natural", ScopeQuote: edit.CandidateContext, Scope: "preserved", Decision: "keep", Reason: "Fixture: local review supplied independently of the gate under test."})
+				}
+				fields["edit_assessments"], _ = json.Marshal(assessments)
+				encoded, _ := json.Marshal(fields)
+				reply = string(encoded)
+			}
 		}
 	}
 	return reply, nil
