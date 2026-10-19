@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v23"
+const PromptVersion = "editorteam-go-v24"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -81,7 +81,8 @@ func RequestIDFrom(ctx context.Context) string {
 type Request struct {
 	TaskContext      json.RawMessage  `json:"task_context,omitempty"`
 	Text             string           `json:"text"`
-	Mode             string           `json:"mode"` // proofread | edit | rewrite | reconstruct
+	CandidateText    string           `json:"candidate_text,omitempty"` // edit: revise this draft against Text without regenerating it
+	Mode             string           `json:"mode"`                     // proofread | edit | rewrite | reconstruct
 	Handoff          *ResearchHandoff `json:"research_handoff,omitempty"`
 	Game             string           `json:"game,omitempty"`
 	Profile          string           `json:"profile,omitempty"`
@@ -277,6 +278,9 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		return nil, &RequestError{Message: fmt.Sprintf("неизвестный mode %q: proofread, edit, rewrite или reconstruct", req.Mode)}
 	}
 	req.Mode = mode
+	if req.CandidateText != "" && (mode != "edit" || strings.TrimSpace(req.CandidateText) == "") {
+		return nil, &RequestError{Message: "candidate_text должен содержать текст и доступен только в режиме edit"}
+	}
 	if mode == "reconstruct" || req.Handoff != nil {
 		if err := req.Handoff.Validate(); err != nil {
 			return nil, err
@@ -380,7 +384,9 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 	result.Analysis = analysis
 	result.FactualRisks = append(result.FactualRisks, analysis.FactualRisks...)
 	candidate := req.Text
-	if s.LLM != nil {
+	if req.CandidateText != "" && s.LLM != nil {
+		candidate = preserveEditParagraphs(mode, req.Text, req.CandidateText)
+	} else if s.LLM != nil {
 		started := time.Now()
 		draft, err := s.rewrite(ctx, req, bundle, analysis, examples)
 		if err != nil {
@@ -492,6 +498,8 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		repairs++
 		result.Attempts++
 		s.logStage(ctx, "repair", started, result.Attempts, "")
+		repaired = preserveEditParagraphs(mode, req.CandidateText, repaired)
+		repaired = preserveEditParagraphs(mode, candidate, repaired)
 		candidate = preserveEditParagraphs(mode, req.Text, repaired)
 	}
 

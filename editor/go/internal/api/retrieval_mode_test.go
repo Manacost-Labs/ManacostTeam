@@ -45,3 +45,20 @@ func TestUnknownRetrievalModeIsBadRequest(t *testing.T) {
 		}
 	}
 }
+
+func TestInvalidCandidateRevisionReturnsBadRequest(t *testing.T) {
+	server := New(&config.Config{MaxTextBytes: 1 << 20, RequestTimeout: 5e9}, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.SetPipeline(pipeline.New(nil, nil, "none"))
+	for _, body := range []string{
+		`{"text":"Текст.","mode":"proofread","candidate_text":"Версия."}`,
+		`{"text":"Текст.","mode":"rewrite","candidate_text":"Версия."}`,
+		`{"text":"Текст.","mode":"reconstruct","candidate_text":"Версия."}`,
+		`{"text":"Текст.","mode":"edit","candidate_text":"  "}`,
+	} {
+		r := httptest.NewRecorder()
+		server.Routes().ServeHTTP(r, httptest.NewRequest(http.MethodPost, "/v2/edit", strings.NewReader(body)))
+		if r.Code != http.StatusBadRequest || !strings.Contains(r.Body.String(), "candidate_text") {
+			t.Fatalf("candidate validation: %d %s", r.Code, r.Body.String())
+		}
+	}
+}
