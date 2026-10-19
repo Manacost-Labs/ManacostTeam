@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v20"
+const PromptVersion = "editorteam-go-v21"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -388,7 +388,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			return nil, err
 		}
 		s.logStage(ctx, "draft", started, 1, "")
-		candidate = draft
+		candidate = preserveEditParagraphs(mode, req.Text, draft)
 	}
 	result.Attempts = 1
 
@@ -492,7 +492,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		repairs++
 		result.Attempts++
 		s.logStage(ctx, "repair", started, result.Attempts, "")
-		candidate = repaired
+		candidate = preserveEditParagraphs(mode, req.Text, repaired)
 	}
 
 	// 5. Final guards и acceptance.
