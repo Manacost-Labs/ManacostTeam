@@ -73,6 +73,22 @@ func TestAnalysisPreservesOnlyRealStrongSpans(t *testing.T) {
 	}
 }
 
+func TestStrongParagraphMayBeSplitWithoutLosingItsWords(t *testing.T) {
+	quote := "Мета остаётся разнообразной. Мы продолжим следить за ситуацией."
+	in := criticInput{Source: quote, Candidate: "Мета остаётся разнообразной.\n\nМы продолжим следить за ситуацией.", KeepSpans: []StrongSpan{{Quote: quote, Reason: "Спокойный голос автора"}}}
+	if err := validateStrengthChanges(in, criticResult{Verdict: "accept"}); err != nil {
+		t.Fatal("paragraph break is not a lost strength:", err)
+	}
+	in.Candidate = "Мета остаётся разнообразной."
+	if err := validateStrengthChanges(in, criticResult{Verdict: "accept"}); err == nil {
+		t.Fatal("deleting a strong sentence still requires an explanation")
+	}
+	in.Candidate = "Мета останется разнообразной.\n\nМы продолжим следить за ситуацией."
+	if err := validateStrengthChanges(in, criticResult{Verdict: "accept"}); err == nil {
+		t.Fatal("changed certainty must not pass as whitespace normalization")
+	}
+}
+
 func TestReconstructionWriterReceivesApplicableCorrections(t *testing.T) {
 	model := &fakeLLM{replies: []string{"draft"}}
 	s := New(model, nil, "test")

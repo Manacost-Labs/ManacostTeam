@@ -1,0 +1,100 @@
+[
+  {
+    "name": "hunspell",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-hunspell-1.7.5-2-any.pkg.tar.zst",
+    "sha256": "477a9ab2ae08d19157ac538fe46ef6c5c7088a61ec694f3ad4018c6775548bd9",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  },
+  {
+    "name": "cc-libs",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-cc-libs-16.2.0-6-any.pkg.tar.zst",
+    "sha256": "0128c6f7fc227e5862351e970e52d42370c72c896db87b8413c2699c6337a13a",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  },
+  {
+    "name": "gettext-runtime",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-gettext-runtime-1.0-1-any.pkg.tar.zst",
+    "sha256": "be68d7f260633284b910c588c6d82ee304a81c8817a686d2cd9df83f872c27af",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  },
+  {
+    "name": "libiconv",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-libiconv-1.19-1-any.pkg.tar.zst",
+    "sha256": "21e334d0911f25de75d3e18e0697648bcecfa9658256d600cad0827d719c2f35",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  },
+  {
+    "name": "readline",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-readline-8.3.003-1-any.pkg.tar.zst",
+    "sha256": "b943d7e2a61ac6e0304eac11cdcee15370a8c2ccee5b84487f8ad6c1e103d66c",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  },
+  {
+    "name": "termcap",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-termcap-1.3.1-8-any.pkg.tar.zst",
+    "sha256": "205ece965d693274f200ff6c15bca8d29a093860951aeb4dbb9660817c255cc0",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  },
+  {
+    "name": "libwinpthread",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-libwinpthread-14.0.0.r495.g63ebe6cdb-1-any.pkg.tar.zst",
+    "sha256": "89cc97eb3c3a2d4f8a860e8b74eb396ce42e03dbb471dee9b2d6eaf23f72ef25",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  },
+  {
+    "name": "vale",
+    "url": "https://github.com/vale-cli/vale/releases/download/v3.17.0/vale_3.17.0_Windows_64-bit.zip",
+    "sha256": "7294214b10104bdcbad027f2a59b0e468f24edb739ea03befcef6d491bdcf58f",
+    "archive": "zip",
+    "target": "vale"
+  },
+  {
+    "name": "java",
+    "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jre_x64_windows_hotspot_21.0.12.1_1.zip",
+    "sha256": "d35f31e712f0fcf6ac5a093edc90204fbff22f720ba3950bd09d331d5e621636",
+    "archive": "zip",
+    "target": "java"
+  },
+  {
+    "name": "ru-dictionary",
+    "url": "https://github.com/Goudron/ru-spelling-dictionary/releases/download/v1.0.8/ru-spelling-dictionary-hunspell-1.0.8.zip",
+    "sha256": "b3a4672933b957258be74c6c46e016c83e8e9c796259a08c00f8fd52ebed2d97",
+    "archive": "zip",
+    "target": "dictionary"
+  },
+  {
+    "name": "languagetool",
+    "url": "https://languagetool.org/download/LanguageTool-6.6.zip",
+    "sha256": "53600506b399bb5ffe1e4c8dec794fd378212f14aaf38ccef9b6f89314d11631",
+    "archive": "zip",
+    "target": "languagetool"
+  },
+  {
+    "name": "libgcc",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-libgcc-16.2.0-6-any.pkg.tar.zst",
+    "sha256": "e0815432c4225892b0eef57055fe507fa0b9a036436f046605f6629696bd1b88",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  },
+  {
+    "name": "libstdc++",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-libstdc%2B%2B-16.2.0-6-any.pkg.tar.zst",
+    "sha256": "924b47e8c3e20b6448e29d3333acc638a4f4783c1c45230e09673532f9c4f198",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  },
+  {
+    "name": "tzdata",
+    "url": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-tzdata-2026e-1-any.pkg.tar.zst",
+    "sha256": "6d28805f8fb6517011cc309aa452111565afa1bc9188ad784cb5f62df98f0988",
+    "archive": "tar.zst",
+    "target": "hunspell"
+  }
+]

@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v7"
+const PromptVersion = "editorteam-go-v8"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -808,7 +808,7 @@ func (e *criticError) Error() string { return e.Kind + ": " + e.Err.Error() }
 
 const criticInstruction = "\nТы critic. Не переписывай текст и не предлагай свою версию статьи. " +
 	"Составь обратный план функций абзацев; оцени действие, причину, условия и альтернативу с позиции читателя. Жанр определяет применимость этих вопросов. " +
-	"keep_spans содержат сильные места исходника. Если при verdict accept такой фрагмент изменён, добавь strength_changes:[{quote,reason,replacement_quote}]: конкретное обоснование и дословную замену; для удаления replacement_quote пустая. " +
+	"keep_spans содержат сильные места исходника, а не запрет на полезную редактуру целого абзаца. Сохранение тех же слов с другими пробелами или границами абзацев не означает потерю сильного места. Исправление грамматики, повтора или тяжёлого синтаксиса допустимо при сохранении мысли, условий, уверенности и голоса; для изменения слов нужна конкретная польза и strength_changes. Если при verdict accept такой фрагмент изменён, добавь strength_changes:[{quote,reason,replacement_quote}]: конкретное обоснование и дословную замену; для удаления replacement_quote пустая. " +
 	"В improvements укажи reader_problem, benefit и meaning_risk для существенной правки. Счётчики голоса, ритма и архивных слов диагностические и сами по себе не требуют правки. " +
 	"В сообщении пользователя JSON с полями source, candidate, diff, mode, analysis, source_claims, protected_entities и tool_findings: " +
 	"оцени именно изменение candidate относительно source. Верни только JSON вида " +
@@ -942,7 +942,7 @@ func (s *Service) editorialAnalysis(ctx context.Context, req Request, bundle rul
 		}
 		return out
 	}
-	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Не требуй обязательного числа замечаний. Верни только JSON с thesis, audience, genre, paragraphs, strengths, weak_spots, repetitions, unclear, template_phrases, missing_links и factual_risks.", examples)}, {Role: "user", Content: textPayload(req.Text, examples)}})
+	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Выделяй конкретную удачную формулировку, а не весь длинный абзац: достоинство мысли не делает соседние повторы или тяжёлый синтаксис неприкосновенными. В weak_spots называй конкретную трудность для читателя и её место; не считай длину абзаца самостоятельным дефектом. Не требуй обязательного числа замечаний. Верни только JSON с thesis, audience, genre, paragraphs, strengths, weak_spots, repetitions, unclear, template_phrases, missing_links и factual_risks.", examples)}, {Role: "user", Content: textPayload(req.Text, examples)}})
 	if err != nil {
 		return Analysis{FactualRisks: []string{"анализ не разобран: " + err.Error()}}
 	}
@@ -980,7 +980,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 		return s.complete(ctx, []llm.Message{{Role: "system", Content: system}, {Role: "user", Content: string(payload)}})
 	}
 	raw, _ := json.Marshal(analysis)
-	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (не добавляй факты из него):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Верни только готовый текст. Режим "+req.Mode+". Сохрани названия, числа, ссылки, отрицания, осторожность, разметку и голос автора. Сохрани strengths, если нет конкретной смысловой или композиционной причины изменить их. Не добавляй новые карты, факты или выводы. Если править нечего, верни текст без изменений: хороший текст не трогают.", examples)
+	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (не добавляй факты из него):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Верни только готовый текст. Режим "+req.Mode+". Сохрани названия, числа, ссылки, отрицания, осторожность, разметку и голос автора. Сохрани смысл и голос strengths. Это не запрет исправлять внутри них грамматику, повтор или тяжёлый синтаксис: меняй только место с конкретной пользой для читателя, сохраняя условия и степень уверенности. В edit/rewrite можно разделить длинный абзац по смене мысли и сохранить соседние удачные формулировки; не сокращай ради самого сокращения. Сохрани сноски: звёздочка со следующим неразрывным пробелом — буквальный знак сноски; при обычном пробеле экранируй звёздочку обратной косой чертой, чтобы не получить список. Не добавляй новые карты, факты или выводы. Если править нечего, верни текст без изменений: хороший текст не трогают.", examples)
 	if req.Mode == "proofread" {
 		system += "\nКонтракт proofread: исправь только опечатки, грамматику, пунктуацию и типографику. Не меняй композицию, стиль и порядок абзацев."
 	}
@@ -1071,6 +1071,7 @@ func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, c
 		"\nИсправь в candidate только места из QA_FINDINGS: они переданы в поле findings JSON в сообщении пользователя. "+
 		"Исправляй указанный смысловой сдвиг по source: восстанавливай его факты, количество, условия, отрицания и степень уверенности. Не добавляй сведения из памяти. "+
 		"Сохрани полезные правки candidate вне отмеченной ошибки, включая ясные формулировки и исправления грамматики. Не откатывай весь текст к source и не переписывай его заново. "+
+		"Сохрани удачное разделение длинного абзаца, если оно не меняет связи мыслей. При ошибке literal_footnote восстанови буквальную звёздочку сноски с экранированием, а не пункт списка; оставь полезную редактуру её пояснения. "+
 		"Сохрани ссылки, названия и удачные места keep_spans; конкретная ошибка или обоснованное улучшение ясности допускает точечную правку. Результат снова проверит critic. "+
 		"Верни полный исправленный текст без пояснений.", examples)
 	return s.complete(ctx, []llm.Message{{Role: "system", Content: system}, {Role: "user", Content: string(payload)}})

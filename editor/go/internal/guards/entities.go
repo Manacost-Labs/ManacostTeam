@@ -27,7 +27,7 @@ var patterns = []struct {
 	{"deck_code", regexp.MustCompile(`\b[A-Za-z0-9+/]{35,}={0,2}\b`)},
 	{"percent", regexp.MustCompile(`\b\d+(?:[.,]\d+)?\s*%`)},
 	{"number", regexp.MustCompile(`\b\d+(?:[.,]\d+)?`)},
-	{"markdown", regexp.MustCompile(`(?m)^#{1,6}\s|\*\*[^*]+\*\*|` + "`" + `[^` + "`" + `]+` + "`" + `|(?m)^\s*[-*+]\s`)},
+	{"markdown", regexp.MustCompile(`(?m)^#{1,6}[ \t]|\*\*[^*]+\*\*|` + "`" + `[^` + "`" + `]+` + "`" + `|(?m)^[ \t]*[-*+][ \t]`)},
 	{"quote", regexp.MustCompile(`(?m)^>\s?.+$`)},
 	{"html", regexp.MustCompile(`</?[A-Za-z][^>]*>`)},
 }
@@ -45,7 +45,7 @@ func Extract(text string) []Entity {
 
 // ExtractWithTerms keeps generic entities and only the selected game's terms.
 func ExtractWithTerms(text string, terms []string) []Entity {
-	var out []Entity
+	out := footnoteEntities(text)
 	for _, p := range patterns {
 		for _, loc := range p.re.FindAllStringIndex(text, -1) {
 			out = append(out, Entity{Kind: p.kind, Value: text[loc[0]:loc[1]], Start: loc[0], End: loc[1]})

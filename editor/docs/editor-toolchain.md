@@ -42,6 +42,54 @@ docker compose down
 
 ## Диагностика
 
+### Windows без Docker
+
+Локальный комплект устанавливается в игнорируемый `build/editor-windows-tools`
+от корня монорепозитория. Нужны `uv`, Node.js >=22 с npm и Go; для распаковки
+zstd используется отдельный Python 3.14, для Natasha — изолированный Python 3.12.
+Пути к `uv`, `node` и `go`, которых нет в PATH, можно передать аргументами
+`--uv`, `--node`, `--go`.
+
+Из корня репозитория:
+
+```powershell
+uv run --python 3.14 --no-project editor/tools/windows_toolchain.py install
+. ./editor/tools/Start-EditorTools.ps1
+python editor/tools/windows_toolchain.py check
+# Затем запустите обычный gateway и Python-анализатор в этом окружении.
+# Повторно загрузить только переменные в текущий PowerShell:
+. ./editor/tools/Start-EditorTools.ps1 -Action Env
+# Статус и остановка только созданных этим скриптом сервисов:
+./editor/tools/Start-EditorTools.ps1 -Action Status
+./editor/tools/Start-EditorTools.ps1 -Action Stop
+```
+
+Перед повторной установкой остановите сервисы. `Start` проверяет полный
+Natasha health и настоящий запрос LanguageTool; `check` дополнительно проверяет
+русский словарь Hunspell, findings Vale и Markdownlint и сохраняет
+`smoke-check.json`. `environment.json` содержит пути и адреса, без ключей.
+`EDITOR_ALLOW_UNAVAILABLE=false`: неполный комплект не считается проверенным.
+Это не системная установка и не автозапуск после перезагрузки.
+
+Версии и SHA256 архивов закреплены в `config/windows-toolchain.lock.json`:
+[Hunspell из MSYS2](https://packages.msys2.org/packages/mingw-w64-x86_64-hunspell)
+1.7.5 с runtime-зависимостями и русским словарём 1.0.8,
+[Vale](https://github.com/vale-cli/vale/releases/tag/v3.17.0) 3.17.0,
+[LanguageTool](https://languagetool.org/download/) 6.6 и Temurin JRE 21.
+Natasha использует существующий requirements.lock. Для
+[markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli) 0.49.1
+закреплён отдельный npm lock с исправленными транзитивными зависимостями.
+Эти версии применяются одинаково к обеим сторонам живого сравнения.
+
+Два маленьких native launcher исполняют настоящие CLI без shell: npm `.cmd`
+нельзя запустить через Go `exec` как `.exe`; MinGW Hunspell требует явной
+кодировки UTF-8 и имени словаря относительно его каталога. Launchers сохраняют
+stdout/stderr и код завершения; они не подменяют findings. HTTP-сервисы слушают
+только loopback. Для остановки сверяются PID, полный путь и время создания
+процесса, чтобы не остановить чужой процесс после переиспользования PID.
+
+### Docker
+
 ```bash
 docker compose ps
 docker compose logs --no-color --tail=200 gateway nlp analyzer languagetool

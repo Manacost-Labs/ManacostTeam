@@ -48,6 +48,21 @@ func TestSemanticRepairPreservesUsefulEdit(t *testing.T) {
 	}
 }
 
+func TestFootnoteRepairRetainsParagraphEdits(t *testing.T) {
+	source := "Игроками была завершена задача. Будет выдано 14 карт*.\n\n*\u00a0По две копии каждой карты."
+	draft := "Игроки завершили задачу.\n\nВы получите 14 карт*.\n\n* По две копии каждой карты."
+	fixed := "Игроки завершили задачу.\n\nВы получите 14 карт*.\n\n\\* По две копии каждой карты."
+	model := &fakeLLM{replies: []string{analysisJSON, draft, criticJSON("accept"), fixed, criticJSON("accept")}}
+	result := run(t, model, source, "edit")
+	if !result.Accepted || result.Text != fixed || result.Attempts != 2 {
+		t.Fatalf("footnote repair lost useful prose/paragraph edits: %+v", result)
+	}
+	payload := lastUserJSON(t, model.messages[3])
+	if payload["candidate"] != draft || !strings.Contains(model.messages[3][1].Content, "literal_footnote") {
+		t.Fatalf("repair did not receive the local structural error: %+v", payload)
+	}
+}
+
 func TestSemanticRepairRemainsFailClosed(t *testing.T) {
 	source := "Будет выдано пару наград. Игроками была завершена задача."
 	draft := "Вы получите несколько наград. Игроки завершили задачу."
