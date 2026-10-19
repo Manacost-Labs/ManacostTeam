@@ -196,6 +196,49 @@ func TestWritingSeesRequiredSectionsWithoutTreatingThemAsFacts(t *testing.T) {
 	}
 }
 
+func TestWritingQuestionAndNonRedundantExplanationReachAllWritingStages(t *testing.T) {
+	bundle := rules.Build(nil, "GUIDE", "переплавка", "ru-RU", nil)
+	h := readyHandoff()
+	h.Sources = append(h.Sources, ResearchSource{ID: "SRC-2", URL: "https://example.org/timing", Quote: "Откладывайте покупку до следующего хода."})
+	h.Claims = append(h.Claims, ResearchClaim{ID: "CLM-2", Meaning: "Откладывайте покупку до следующего хода.", Action: "Откладывайте покупку", Condition: "до следующего хода", Confidence: "high", Patch: h.Patch, Status: "supported_with_conditions", EvidenceRefs: []string{"SRC-2"}})
+	h.Chapters[0].RequiredClaimIDs = append(h.Chapters[0].RequiredClaimIDs, "CLM-2")
+	h.Decisions = append(h.Decisions, DecisionQuestion{ID: "Q-2", ChapterID: "CH-1", Question: "Как долго откладывать покупку?", Required: true, Status: "answered", ClaimIDs: []string{"CLM-2"}})
+	if err := h.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	for _, stage := range []string{"writer", "critic", "repair"} {
+		t.Run(stage, func(t *testing.T) {
+			model := &fakeLLM{replies: []string{criticJSON("accept")}}
+			s := New(model, nil, "fake")
+			switch stage {
+			case "writer":
+				_, _ = s.rewrite(context.Background(), Request{Mode: "reconstruct", Handoff: h}, bundle, Analysis{}, nil)
+			case "critic":
+				_, _ = s.critic(context.Background(), bundle, criticInput{Source: h.VerifiedText(), Candidate: "Действие.", Mode: "reconstruct", Handoff: h}, 1)
+			case "repair":
+				_, _ = s.repairReconstruction(context.Background(), bundle, h, "Действие.", nil, nil, nil)
+			}
+			if len(model.messages) != 1 {
+				t.Fatal("missing writing stage", model.messages)
+			}
+			var got ResearchHandoff
+			raw, _ := json.Marshal(lastUserJSON(t, model.messages[0])["research_handoff"])
+			if err := json.Unmarshal(raw, &got); err != nil {
+				t.Fatal("writing stage lost the question-bearing handoff", err)
+			}
+			actual, _ := json.Marshal(got)
+			expected, _ := json.Marshal(h)
+			if string(actual) != string(expected) {
+				t.Fatal("writing stage lost brief, questions, required claims or conditions", stage, string(actual))
+			}
+			instruction := model.messages[0][0].Content
+			if !strings.Contains(instruction, "сквозной вопрос") || !strings.Contains(instruction, "одно и то же действие или оговорку") || !strings.Contains(instruction, "дополняющие условия") {
+				t.Fatal("writing stage lacks the question, repetition and condition boundaries", stage)
+			}
+		})
+	}
+}
+
 func TestWritingMalformedFactFeedbackCannotTriggerRepair(t *testing.T) {
 	bad := "Совет без условий."
 	for _, fact := range []string{
