@@ -24,7 +24,8 @@ var improvementCategories = map[string]struct{}{
 // не повторяется. Сравнение точное и Unicode-safe: переводы строк и
 // повторные пробелы схлопываются, регистр и слова не меняются. Fuzzy
 // matching здесь намеренно не используется: утверждению critic без цитаты
-// из настоящего изменения не верят.
+// из настоящего изменения не верят. Отдельно проверяется разбиение прозы
+// между предложениями: границы абзацев сохраняются в его цитатах.
 func ValidateImprovements(source, candidate string, improvements []Improvement) []Improvement {
 	normSource := normalizeSpace(source)
 	normCandidate := normalizeSpace(candidate)
@@ -33,10 +34,6 @@ func ValidateImprovements(source, candidate string, improvements []Improvement) 
 	hunks := diffHunks(tokenTexts(sourceTokens), tokenTexts(candidateTokens))
 	seen := map[string]struct{}{}
 	out := []Improvement{}
-	if len(hunks) == 0 {
-		// Текст не изменился (или отличается только пробелами): улучшать нечего.
-		return out
-	}
 	for _, item := range improvements {
 		category := strings.ToLower(strings.TrimSpace(item.Category))
 		if _, ok := improvementCategories[category]; !ok {
@@ -50,19 +47,20 @@ func ValidateImprovements(source, candidate string, improvements []Improvement) 
 		if len([]rune(before)) > MaxImprovementFragment || len([]rune(after)) > MaxImprovementFragment {
 			continue
 		}
-		if before == after {
-			continue
-		}
-		if !strings.Contains(normSource, before) || !strings.Contains(normCandidate, after) {
-			continue
-		}
-		if !sameHunk(tokenRanges(normSource, sourceTokens, before), tokenRanges(normCandidate, candidateTokens, after), hunks) {
-			continue
+		if category == "structure" && paragraphSplitEvidence(source, candidate, item.Before, item.After) {
+			before, after = strings.TrimSpace(item.Before), strings.TrimSpace(item.After)
+		} else {
+			if before == after || !strings.Contains(normSource, before) || !strings.Contains(normCandidate, after) {
+				continue
+			}
+			if !sameHunk(tokenRanges(normSource, sourceTokens, before), tokenRanges(normCandidate, candidateTokens, after), hunks) {
+				continue
+			}
 		}
 		if !concreteReason(item.Reason) || genericReason(item.Reason) {
 			continue
 		}
-		key := before + "\x00" + after
+		key := paragraphBreak.ReplaceAllString(strings.ReplaceAll(before+"\x00"+after, "\r\n", "\n"), "\n\n")
 		if _, dup := seen[key]; dup {
 			continue
 		}
