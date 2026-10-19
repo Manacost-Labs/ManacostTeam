@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v24"
+const PromptVersion = "editorteam-go-v25"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -400,14 +400,15 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 
 	// 4. Postflight → critic → repair, не больше MaxRepairs циклов repair.
 	var (
-		post     checkRun
-		guard    guards.Report
-		leaks    []analyzers.Finding
-		copies   []analyzers.Finding
-		critic   criticResult
-		criticOK bool
-		reasons  []string
-		repairs  int
+		post                   checkRun
+		guard                  guards.Report
+		leaks                  []analyzers.Finding
+		copies                 []analyzers.Finding
+		critic                 criticResult
+		criticOK               bool
+		reasons                []string
+		repairs                int
+		previousRepairFindings []analyzers.Finding
 	)
 	for {
 		result.FactCheckPassed = nil
@@ -487,7 +488,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			break
 		}
 		started = time.Now()
-		repaired, err := s.repair(ctx, bundle, verifiedText, candidate, todo, examples, analysis.Strengths)
+		repaired, err := s.repair(ctx, bundle, verifiedText, candidate, todo, previousRepairFindings, examples, analysis.Strengths)
 		if err != nil {
 			s.logStage(ctx, "repair", started, result.Attempts+1, errorKind(ctx, err))
 			if critic.RepairRequired || hasHardFinding(todo) {
@@ -495,6 +496,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			}
 			break
 		}
+		previousRepairFindings = append([]analyzers.Finding(nil), todo...)
 		repairs++
 		result.Attempts++
 		s.logStage(ctx, "repair", started, result.Attempts, "")
@@ -1103,12 +1105,12 @@ func examplesOf(in criticInput) []retrieval.StyleExample {
 
 // repair получает source, candidate и актуальные findings JSON-ом и должен
 // вернуть полный текст, исправив только отмеченные места.
-func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, candidate string, findings []analyzers.Finding, examples []retrieval.StyleExample, strengths ...[]StrongSpan) (string, error) {
+func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, candidate string, findings, previousFindings []analyzers.Finding, examples []retrieval.StyleExample, strengths ...[]StrongSpan) (string, error) {
 	var keep []StrongSpan
 	if len(strengths) > 0 {
 		keep = strengths[0]
 	}
-	payload, err := json.Marshal(map[string]any{"source": source, "candidate": candidate, "findings": findings, "style_examples": promptExamples(examples), "keep_spans": keep})
+	payload, err := json.Marshal(map[string]any{"source": source, "candidate": candidate, "findings": findings, "previous_repair_findings": previousFindings, "style_examples": promptExamples(examples), "keep_spans": keep})
 	if err != nil {
 		return "", err
 	}
@@ -1116,6 +1118,7 @@ func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, c
 		"\nИсправь в candidate только места из QA_FINDINGS: они переданы в поле findings JSON в сообщении пользователя. "+
 		"Исправляй указанный смысловой сдвиг по source: восстанавливай его факты, количество, условия, отрицания и степень уверенности. Не добавляй сведения из памяти. "+
 		"Сохрани полезные правки candidate вне отмеченной ошибки, включая ясные формулировки и исправления грамматики. Не откатывай весь текст к source и не переписывай его заново. "+
+		"previous_repair_findings — замечания предыдущего ремонта, а не новые задания. Текущие targets только в findings. Сохрани уже внесённую по ним корректную правку и не возвращай прежнюю ошибку, устраняя соседнюю. Пример замены в текущем finding — подсказка: если он возвращает прежний дефект, выбери другой вариант. Факты, условия и степень по source имеют приоритет над историей стилистических замечаний. "+
 		"Сохрани удачное разделение длинного абзаца, если оно не меняет связи мыслей. При ошибке literal_footnote восстанови буквальную звёздочку сноски с экранированием, а не пункт списка; оставь полезную редактуру её пояснения. "+
 		"Сохрани ссылки, названия и удачные места keep_spans; конкретная ошибка или обоснованное улучшение ясности допускает точечную правку. Результат снова проверит critic. "+
 		"Верни полный исправленный текст без пояснений."+precisionInstruction+craftInstruction, examples)
