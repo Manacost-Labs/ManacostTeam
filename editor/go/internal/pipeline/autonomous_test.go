@@ -42,7 +42,7 @@ func TestWritingRepairsGroundedFactFeedbackAndRechecksBeforeAccepting(t *testing
 		invalidFact := strings.Replace(fact, `"unsupported_claims":[]`, `"unsupported_claims":["Это гарантирует победу."]`, 1)
 		invalidFact = strings.Replace(invalidFact, `"candidate_checked":true`, `"candidate_checked":`+checked, 1)
 		writer := &fakeLLM{replies: []string{bad, good}}
-		reviewer := &fakeLLM{replies: []string{invalidFact, fact, criticJSON("accept")}}
+		reviewer := &fakeLLM{replies: []string{invalidFact, criticJSON("accept"), fact, criticJSON("accept")}}
 		qa := &scriptedAnalyzer{name: "all-written-prose"}
 		s := New(writer, nil, "fake", qa)
 		s.Reviewer = reviewer
@@ -59,11 +59,11 @@ func TestWritingRepairsGroundedFactFeedbackAndRechecksBeforeAccepting(t *testing
 		}
 		// Repeating an unsupported fact must exhaust the SAME global repair budget.
 		writer = &fakeLLM{replies: []string{bad}}
-		reviewer = &fakeLLM{replies: []string{invalidFact}}
+		reviewer = &fakeLLM{replies: []string{invalidFact, criticJSON("accept"), invalidFact, criticJSON("accept"), invalidFact}}
 		s = New(writer, nil, "fake")
 		s.Reviewer = reviewer
 		r, err = s.Run(context.Background(), Request{Mode: "write", Handoff: h})
-		if err != nil || r.Accepted || r.Text != "" || r.Attempts != MaxRepairs+1 || r.ChecksComplete || !strings.Contains(strings.Join(r.RejectionReasons, ","), "fact_review_failed") {
+		if err != nil || r.Accepted || r.Text != "" || r.Attempts != MaxRepairs+1 || r.ChecksComplete || r.FactReview != nil || (r.FactCheckPassed != nil && *r.FactCheckPassed) || len(reviewer.messages) != 5 || !strings.Contains(strings.Join(r.RejectionReasons, ","), "fact_review_failed") {
 			t.Fatalf("unresolved fact passed or budget changed: %+v %v", r, err)
 		}
 		if checked == "false" {
@@ -115,6 +115,32 @@ func TestCriticRetryIncludesDescriptiveSchemaAndAllLocalErrors(t *testing.T) {
 	model = &fakeLLM{omitLocalReview: true, replies: []string{string(invalid)}}
 	if _, err := New(model, nil, "fake").critic(context.Background(), rules.RuleBundle{}, in, 1); err == nil {
 		t.Fatal("unresolved schema/evidence errors accepted")
+	}
+}
+
+func TestWritingRepairsFactsAndConcreteProseFindingsTogether(t *testing.T) {
+	good := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. Совет может помочь. [Источник](https://example.org/guide)"
+	bad := good + " Это гарантирует победу. Уровень уверенности: средний."
+	fact := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"может помочь","evidence_refs":["SRC-1"]}]}`
+	negative := strings.Replace(fact, `"unsupported_claims":[]`, `"unsupported_claims":["Это гарантирует победу."]`, 1)
+	var prose map[string]any
+	_ = json.Unmarshal([]byte(criticJSON("repair")), &prose)
+	prose["findings"] = []map[string]any{{"rule_id": "service_note", "severity": "warning", "message": "Удалите служебное предложение «Уровень уверенности: средний.»; осторожность игрового совета сохраните."}}
+	proseJSON, _ := json.Marshal(prose)
+	writer := &fakeLLM{replies: []string{bad, good}}
+	reviewer := &fakeLLM{replies: []string{negative, string(proseJSON), fact, criticJSON("accept")}}
+	s := New(writer, nil, "fake")
+	s.Reviewer = reviewer
+	r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: readyHandoff()})
+	if len(writer.messages) < 2 {
+		t.Fatal("no repair", r, err)
+	}
+	findings, _ := json.Marshal(lastUserJSON(t, writer.messages[1])["findings"])
+	if !strings.Contains(string(findings), "handoff_fact_review") || !strings.Contains(string(findings), "service_note") {
+		t.Fatal("first repair must receive both concrete fact and prose findings", string(findings))
+	}
+	if err != nil || !r.Accepted || !r.ChecksComplete || r.Text != good || r.FactReview == nil || r.Attempts != 2 || len(reviewer.messages) != 4 {
+		t.Fatalf("candidate was not fully rechecked after combined repair: %+v %v", r, err)
 	}
 }
 
@@ -249,9 +275,10 @@ func TestWritingMalformedFactFeedbackCannotTriggerRepair(t *testing.T) {
 	} {
 		writer := &fakeLLM{replies: []string{bad}}
 		s := New(writer, nil, "fake")
-		s.Reviewer = &fakeLLM{replies: []string{fact}}
+		reviewer := &fakeLLM{replies: []string{fact}}
+		s.Reviewer = reviewer
 		r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: readyHandoff()})
-		if err != nil || r.Accepted || r.Text != "" || r.ChecksComplete || len(writer.messages) != 1 {
+		if err != nil || r.Accepted || r.Text != "" || r.ChecksComplete || len(writer.messages) != 1 || len(reviewer.messages) != 1 {
 			t.Fatalf("unreliable feedback authorized repair or acceptance: %+v %v", r, err)
 		}
 	}

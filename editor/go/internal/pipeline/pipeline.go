@@ -33,7 +33,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v35"
+const PromptVersion = "editorteam-go-v36"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -499,7 +499,11 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 					result.FactReview = &fact
 				}
 			}
-			if criticOK {
+			// A grounded negative writing review may guide a repair, not acceptance.
+			// Collect concrete prose findings in the same round so factual repairs
+			// do not consume the budget before the critic can inspect the draft.
+			// Malformed feedback and exhausted budgets already break above.
+			if criticOK || (mode == "reconstruct" && len(factFindings) > 0) {
 				var cerr *criticError
 				critic, cerr = s.critic(ctx, bundle, criticInput{
 					Source: verifiedText, Candidate: candidate, Diff: diff(verifiedText, candidate), Mode: mode, RevisionBrief: req.RevisionBrief, RevisionBase: revisionBase,
@@ -514,7 +518,10 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 				}
 				findings = append(findings, critic.Findings...)
 				factsPassed := critic.NoNewFacts && len(critic.UnsupportedAdditions) == 0
-				result.FactCheckPassed = &factsPassed
+				// During a negative handoff review, critic feedback guides repair only;
+				// it cannot attest facts or export final accepted scores/verdicts.
+				allFactsPassed := criticOK && factsPassed
+				result.FactCheckPassed = &allFactsPassed
 				result.UnsupportedAdditions = append([]string{}, critic.UnsupportedAdditions...)
 				// A failed draft may have a local fix. Only concrete critic findings
 				// authorize that repair; an unexplained rejection stays fail-closed.
