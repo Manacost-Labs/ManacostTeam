@@ -13,6 +13,7 @@ package pipeline
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,7 +33,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v31"
+const PromptVersion = "editorteam-go-v32"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -79,6 +80,9 @@ func RequestIDFrom(ctx context.Context) string {
 }
 
 type Request struct {
+	// Internal fallback: exact previous draft, review only, no new repair budget.
+	reviewOnly       bool
+	reviewStrengths  []StrongSpan
 	TaskContext      json.RawMessage  `json:"task_context,omitempty"`
 	Text             string           `json:"text"`
 	CandidateText    string           `json:"candidate_text,omitempty"`   // edit: revise this draft against Text without regenerating it
@@ -188,6 +192,14 @@ type Result struct {
 	FactCheckPassed          *bool               `json:"fact_check_passed,omitempty"`
 	UnsupportedAdditions     []string            `json:"unsupported_additions,omitempty"`
 	ReviewerModel            string              `json:"reviewer_model,omitempty"`
+	RevisionFallback         *RevisionFallback   `json:"revision_fallback,omitempty"`
+}
+
+type RevisionFallback struct {
+	KeptPrevious    bool     `json:"kept_previous"`
+	CandidateSHA256 string   `json:"candidate_sha256"`
+	AttemptReasons  []string `json:"attempt_reasons"`
+	ReviewReasons   []string `json:"review_reasons,omitempty"`
 }
 
 type Change struct {
@@ -393,12 +405,18 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 	result.Retrieval = retrievalReport
 
 	// 3. Editorial analysis и draft.
-	analysis := s.editorialAnalysis(ctx, req, bundle, examples, repairable(pre.findings)...)
+	analysis := Analysis{Strengths: req.reviewStrengths}
+	if !req.reviewOnly {
+		analysis = s.editorialAnalysis(ctx, req, bundle, examples, repairable(pre.findings)...)
+	}
 	result.Analysis = analysis
 	result.FactualRisks = append(result.FactualRisks, analysis.FactualRisks...)
 	candidate := req.Text
 	if req.CandidateText != "" && s.LLM != nil && !req.ReviseCandidate {
-		candidate = preserveEditParagraphs(mode, req.Text, req.CandidateText)
+		candidate = req.CandidateText
+		if !req.reviewOnly {
+			candidate = preserveEditParagraphs(mode, req.Text, candidate)
+		}
 	} else if s.LLM != nil {
 		started := time.Now()
 		draft, err := s.rewrite(ctx, req, bundle, analysis, examples)
@@ -414,7 +432,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 	}
 	result.Attempts = 1
 	revisionBase := ""
-	if req.ReviseCandidate {
+	if req.ReviseCandidate || req.reviewOnly {
 		revisionBase = req.CandidateText
 	}
 
@@ -513,7 +531,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			todo = mergeFindings(append(todo, repairable(critic.Findings)...))
 		}
 		needRepair := len(todo) > 0 || (s.LLM != nil && critic.RepairRequired)
-		if s.LLM == nil || mode == "proofread" || !needRepair {
+		if req.reviewOnly || s.LLM == nil || mode == "proofread" || !needRepair {
 			break
 		}
 		if repairs >= MaxRepairs {
@@ -629,6 +647,27 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 	} else {
 		result.Text = req.Text
 		result.Changes = nil
+	}
+	if !result.Accepted && (result.Status == StatusRejected || result.Text != req.CandidateText) && req.ReviseCandidate && !req.reviewOnly && s.LLM != nil && ctx.Err() == nil {
+		// A failed new revision must not silently erase useful prior edits. The
+		// original supplied draft gets one full independent review, no mutations.
+		previousReq := req
+		previousReq.ReviseCandidate, previousReq.reviewOnly = false, true
+		previousReq.reviewStrengths = append([]StrongSpan(nil), analysis.Strengths...)
+		report := &RevisionFallback{CandidateSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte(req.CandidateText))), AttemptReasons: append([]string(nil), result.RejectionReasons...)}
+		previous, err := s.Run(ctx, previousReq)
+		if err != nil {
+			report.ReviewReasons = []string{errorKind(ctx, err)}
+		} else {
+			report.ReviewReasons = append([]string(nil), previous.RejectionReasons...)
+			unchanged := previous.Status == StatusUnchanged && len(previous.RejectionReasons) == 1 && previous.RejectionReasons[0] == ReasonNoImprovement
+			if previous.Text == req.CandidateText && previous.ChecksComplete && previous.ScoresValid && previous.CriticVerdict == "accept" && (previous.Accepted || unchanged) {
+				report.KeptPrevious = true
+				previous.RevisionFallback, previous.Attempts = report, result.Attempts
+				return previous, nil
+			}
+		}
+		result.RevisionFallback = report
 	}
 	return result, nil
 }

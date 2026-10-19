@@ -34,35 +34,47 @@ func TestEchoIsReviewedInOneRegionWithoutMergingAnotherSentence(t *testing.T) {
 }
 
 func TestWritingRepairsGroundedFactFeedbackAndRechecksBeforeAccepting(t *testing.T) {
-	h := readyHandoff()
-	good := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. Совет может помочь. [Источник](https://example.org/guide)"
-	bad := good + " Это гарантирует победу."
-	fact := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"может помочь","evidence_refs":["SRC-1"]}]}`
-	invalidFact := strings.Replace(fact, `"unsupported_claims":[]`, `"unsupported_claims":["Это гарантирует победу."]`, 1)
-	writer := &fakeLLM{replies: []string{bad, good}}
-	reviewer := &fakeLLM{replies: []string{invalidFact, fact, criticJSON("accept")}}
-	qa := &scriptedAnalyzer{name: "all-written-prose"}
-	s := New(writer, nil, "fake", qa)
-	s.Reviewer = reviewer
-	r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: h})
-	if err != nil || !r.Accepted || !r.ChecksComplete || r.Text != good || r.Attempts != 2 || r.FactReview == nil {
-		t.Fatalf("grounded fact correction was not rechecked: %+v %v", r, err)
-	}
-	if len(qa.inputs) != 2 || qa.inputs[0].Text != bad || qa.inputs[1].Text != good {
-		t.Fatal("QA must check each written candidate, never an empty preflight", qa.inputs)
-	}
-	payload := lastUserJSON(t, writer.messages[1])
-	if payload["research_handoff"] == nil || payload["candidate"] != bad || payload["findings"] == nil {
-		t.Fatal("repair lost evidence, candidate, or concrete targets", payload)
-	}
-	// Repeating an unsupported fact must exhaust the SAME global repair budget.
-	writer = &fakeLLM{replies: []string{bad}}
-	reviewer = &fakeLLM{replies: []string{invalidFact}}
-	s = New(writer, nil, "fake")
-	s.Reviewer = reviewer
-	r, err = s.Run(context.Background(), Request{Mode: "write", Handoff: h})
-	if err != nil || r.Accepted || r.Text != "" || r.Attempts != MaxRepairs+1 || r.ChecksComplete || !strings.Contains(strings.Join(r.RejectionReasons, ","), "fact_review_failed") {
-		t.Fatalf("unresolved fact passed or budget changed: %+v %v", r, err)
+	for _, checked := range []string{"true", "false"} {
+		h := readyHandoff()
+		good := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. Совет может помочь. [Источник](https://example.org/guide)"
+		bad := good + " Это гарантирует победу."
+		fact := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"может помочь","evidence_refs":["SRC-1"]}]}`
+		invalidFact := strings.Replace(fact, `"unsupported_claims":[]`, `"unsupported_claims":["Это гарантирует победу."]`, 1)
+		invalidFact = strings.Replace(invalidFact, `"candidate_checked":true`, `"candidate_checked":`+checked, 1)
+		writer := &fakeLLM{replies: []string{bad, good}}
+		reviewer := &fakeLLM{replies: []string{invalidFact, fact, criticJSON("accept")}}
+		qa := &scriptedAnalyzer{name: "all-written-prose"}
+		s := New(writer, nil, "fake", qa)
+		s.Reviewer = reviewer
+		r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: h})
+		if err != nil || !r.Accepted || !r.ChecksComplete || r.Text != good || r.Attempts != 2 || r.FactReview == nil {
+			t.Fatalf("grounded fact correction was not rechecked: %+v %v", r, err)
+		}
+		if len(qa.inputs) != 2 || qa.inputs[0].Text != bad || qa.inputs[1].Text != good {
+			t.Fatal("QA must check each written candidate, never an empty preflight", qa.inputs)
+		}
+		payload := lastUserJSON(t, writer.messages[1])
+		if payload["research_handoff"] == nil || payload["candidate"] != bad || payload["findings"] == nil {
+			t.Fatal("repair lost evidence, candidate, or concrete targets", payload)
+		}
+		// Repeating an unsupported fact must exhaust the SAME global repair budget.
+		writer = &fakeLLM{replies: []string{bad}}
+		reviewer = &fakeLLM{replies: []string{invalidFact}}
+		s = New(writer, nil, "fake")
+		s.Reviewer = reviewer
+		r, err = s.Run(context.Background(), Request{Mode: "write", Handoff: h})
+		if err != nil || r.Accepted || r.Text != "" || r.Attempts != MaxRepairs+1 || r.ChecksComplete || !strings.Contains(strings.Join(r.RejectionReasons, ","), "fact_review_failed") {
+			t.Fatalf("unresolved fact passed or budget changed: %+v %v", r, err)
+		}
+		if checked == "false" {
+			writer = &fakeLLM{replies: []string{good}}
+			s = New(writer, nil, "fake")
+			s.Reviewer = &fakeLLM{replies: []string{strings.Replace(fact, `"candidate_checked":true`, `"candidate_checked":false`, 1)}}
+			r, err = s.Run(context.Background(), Request{Mode: "write", Handoff: h})
+			if err != nil || r.Accepted || r.ChecksComplete || r.Text != "" || len(writer.messages) != 1 {
+				t.Fatalf("uncertainty without a concrete target triggered repair: %+v %v", r, err)
+			}
+		}
 	}
 }
 
@@ -180,6 +192,29 @@ func TestWritingMalformedFactFeedbackCannotTriggerRepair(t *testing.T) {
 		r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: readyHandoff()})
 		if err != nil || r.Accepted || r.Text != "" || r.ChecksComplete || len(writer.messages) != 1 {
 			t.Fatalf("unreliable feedback authorized repair or acceptance: %+v %v", r, err)
+		}
+	}
+}
+
+func TestFactReviewRetriesOnlyMalformedJSONOnce(t *testing.T) {
+	candidate := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. Совет может помочь. https://example.org/guide"
+	fact := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"может помочь","evidence_refs":["SRC-1"]}]}`
+	model := &fakeLLM{replies: []string{fact + "\nКомментарий вне JSON.", fact}}
+	s := New(model, nil, "fake")
+	_, err := s.factReview(context.Background(), readyHandoff(), candidate)
+	if err != nil || len(model.messages) != 2 || len(model.messages[1]) != 4 || model.messages[0][1] != model.messages[1][1] {
+		t.Fatalf("format retry changed facts or failed: %v %+v", err, model.messages)
+	}
+	negative := strings.Replace(fact, `"candidate_checked":true`, `"candidate_checked":false`, 1)
+	for _, raw := range []string{negative, fact + "\nКомментарий вне JSON."} {
+		model = &fakeLLM{replies: []string{raw}}
+		_, err = New(model, nil, "fake").factReview(context.Background(), readyHandoff(), candidate)
+		want := 1
+		if raw != negative {
+			want = 2
+		}
+		if err == nil || len(model.messages) != want {
+			t.Fatalf("semantic failure retried or malformed reply accepted: %v %d", err, len(model.messages))
 		}
 	}
 }

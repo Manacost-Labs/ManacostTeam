@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -493,7 +494,21 @@ func (s *Service) factReview(ctx context.Context, h *ResearchHandoff, candidate 
 		"candidate_checked=true только после проверки всех утверждений, а не только обязательных claims. В unsupported_claims перечисли дословные неподтверждённые описания, механики и советы; при сомнении оставь candidate_checked=false. " +
 		"Все цитаты дословно из candidate. action_quote подтверждает смысл claim; condition_quote и exception_quote обязательны, если исходный claim содержит условие или исключение. " +
 		"Числа, формулировки и источники сверяй с handoff. Не голосуй за истину; при недостатке доказательств status insufficient."
-	raw, err := model.Complete(ctx, []llm.Message{{Role: "system", Content: system}, {Role: "user", Content: string(payload)}}, 0)
+	messages := []llm.Message{{Role: "system", Content: system}, {Role: "user", Content: string(payload)}}
+	raw, err := model.Complete(ctx, messages, 0)
+	if err != nil {
+		return FactReview{}, err
+	}
+	review, parseErr := validateFactReview(raw, h, candidate)
+	var syntax *json.SyntaxError
+	var wrongType *json.UnmarshalTypeError
+	if !errors.As(parseErr, &syntax) && !errors.As(parseErr, &wrongType) {
+		return review, parseErr
+	}
+	// Correct transport/schema format once; never retry a semantic verdict
+	// until the reviewer votes differently on the same unchanged draft.
+	retry := append(append([]llm.Message{}, messages...), llm.Message{Role: "assistant", Content: raw}, llm.Message{Role: "user", Content: "Ответ не разобран: " + parseErr.Error() + ". Верни только исправленный JSON по исходной схеме, без Markdown и комментариев. Сохрани результаты фактической проверки; отрицательный результат нельзя превращать в положительный ради формата."})
+	raw, err = model.Complete(ctx, retry, 0)
 	if err != nil {
 		return FactReview{}, err
 	}
@@ -503,7 +518,12 @@ func (s *Service) factReview(ctx context.Context, h *ResearchHandoff, candidate 
 // A structured, grounded negative review may guide a repair, never acceptance.
 // Missing attestations, invented quotations and foreign evidence stay fail-closed.
 func factRepairFindings(h *ResearchHandoff, candidate string, review FactReview, cause error) []analyzers.Finding {
-	if review.CandidateChecked == nil || !*review.CandidateChecked || review.ConfidencePreserved == nil || review.UnsupportedClaims == nil || len(review.Claims) != len(h.requiredClaims()) {
+	if review.CandidateChecked == nil || review.ConfidencePreserved == nil || review.UnsupportedClaims == nil || len(review.Claims) != len(h.requiredClaims()) {
+		return nil
+	}
+	// A reviewer may mark the whole draft unchecked after finding a concrete
+	// unsupported quote. It can guide deletion, never attest the repaired draft.
+	if !*review.CandidateChecked && len(review.UnsupportedClaims) == 0 {
 		return nil
 	}
 	for _, chapter := range h.Chapters {
