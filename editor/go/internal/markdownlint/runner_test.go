@@ -20,6 +20,12 @@ func TestSerializedDocumentHelper(t *testing.T) {
 	if err != nil {
 		os.Exit(2)
 	}
+	if os.Getenv("EDITOR_MARKDOWN_EMPTY_EXIT") == "fail" {
+		os.Exit(2)
+	}
+	if os.Getenv("EDITOR_MARKDOWN_EMPTY_EXIT") == "success" {
+		os.Exit(0)
+	}
 	if !strings.HasSuffix(string(data), "\n") {
 		os.Stdout.WriteString(`[{"lineNumber":1,"ruleNames":["MD047"],"errorDetail":"missing newline"}]`)
 	} else {
@@ -48,6 +54,16 @@ func main() { args:=append([]string{"-test.run=^TestSerializedDocumentHelper$", 
 	got, err := New(bin, "", 0).Check(context.Background(), "Готовый абзац.")
 	if err != nil || len(got) != 0 {
 		t.Fatalf("transport newline caused editorial repair: %+v %v", got, err)
+	}
+	// The real markdownlint CLI is silent when --json finds no violations.
+	t.Setenv("EDITOR_MARKDOWN_EMPTY_EXIT", "success")
+	got, err = New(bin, "", 0).Check(context.Background(), "Готовый абзац.")
+	if err != nil || len(got) != 0 {
+		t.Fatalf("successful silent CLI is not unavailable: %+v %v", got, err)
+	}
+	t.Setenv("EDITOR_MARKDOWN_EMPTY_EXIT", "fail")
+	if _, err = New(bin, "", 0).Check(context.Background(), "Готовый абзац."); err == nil {
+		t.Fatal("silent failure must remain an error")
 	}
 }
 

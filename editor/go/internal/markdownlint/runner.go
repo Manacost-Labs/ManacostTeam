@@ -106,6 +106,9 @@ func (r *Runner) Check(parent context.Context, text string) ([]finding.Finding, 
 	if err != nil && out.Len() == 0 {
 		return nil, fmt.Errorf("markdownlint: %w", err)
 	}
+	if err == nil && strings.TrimSpace(out.String()) == "" {
+		return nil, nil
+	}
 	findings, parseErr := parse(out.Bytes())
 	if parseErr != nil {
 		return nil, parseErr
