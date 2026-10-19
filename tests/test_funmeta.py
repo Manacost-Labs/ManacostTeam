@@ -1,3 +1,4 @@
+import base64
 import copy
 import hashlib
 import json
@@ -10,10 +11,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "skills/funmeta/scripts/funmeta.py"
 sys.path.insert(0, str(SCRIPT.parent))
+from deck_code import decode, normalize_deck
 from funmeta import CLASSES, initialize, validate
+from quality import export_material, next_actions, review_digests
 
 
-class FunmetaTests(unittest.TestCase):
+class FunmetaFixture:
     """Synthetic records test selection gates, never actual Hearthstone claims."""
 
     def setUp(self):
@@ -22,6 +25,7 @@ class FunmetaTests(unittest.TestCase):
         self.run = Path(self.temporary.name) / "run"
         selection = initialize(self.run, "2026-10-19", "standard")
         self.data = json.loads(selection.read_text(encoding="utf-8"))
+        self.data["schema_version"] = 1  # Keep the legacy contract covered explicitly.
         self.data.update(patch="synthetic-patch", patch_source_id="official",
                          meta_source_ids=["meta-a", "meta-b"])
         for source_id, kind, domain in (
@@ -57,6 +61,8 @@ class FunmetaTests(unittest.TestCase):
         self.data["fun_cards"] = [{"id": "card", "name": "Synthetic card",
                                    "why_fun": "Synthetic explanation", "source_ids": ["deck"]}]
 
+
+class FunmetaTests(FunmetaFixture, unittest.TestCase):
     def test_partial_result_preserves_gaps_and_never_claims_factual_acceptance(self):
         result = validate(self.data, self.run)
         self.assertEqual(result["coverage"], "partial")
@@ -174,6 +180,189 @@ class FunmetaTests(unittest.TestCase):
             self.assertEqual(result.returncode, expected_code, result.stderr)
             output = json.loads(result.stdout or result.stderr)
             self.assertEqual(output["status"], expected_status)
+
+    def test_verified_label_cannot_accept_arbitrary_text_as_deck_code(self):
+        self.candidate.update(deck_code_status="verified", deck_code="NOT A DECK CODE")
+        with self.assertRaisesRegex(ValueError, "base64"):
+            validate(self.data, self.run)
+
+
+class DeckCodeTests(unittest.TestCase):
+    def test_documented_hearthsim_vector(self):
+        # Public format example; deliberately not a legal/playable deck.
+        result = decode("AAEBAQcAAAQBAwIDAwMEAw==")
+        self.assertEqual(result, {"format": 1, "heroes": [7], "sideboards": [],
+                                  "cards": [[1, 3], [2, 3], [3, 3], [4, 3]]})
+
+    def test_sideboards_and_real_varints(self):
+        # Historical upstream wire-format fixture, not a current deck recommendation.
+        code = ("AAEBAZCaBgjlsASotgSX7wTvkQXipAX9xAXPxgXGxwUQvp8EobYElrcE+dsEuNwEutwE9v"
+                "AEhoMFopkF4KQFlMQFu8QFu8cFuJ4Gz54G0Z4GAAED8J8E/cQFuNkE/cQF/+EE/cQFAAA=")
+        result = decode(code)
+        self.assertEqual(result["heroes"], [101648])
+        self.assertEqual(sum(count for _, count in result["cards"]), 40)
+        self.assertEqual(result["sideboards"], [[69616, 1, 90749], [76984, 1, 90749], [78079, 1, 90749]])
+
+    def test_truncation_bad_version_duplicate_cards_and_unknown_trailer(self):
+        vectors = (
+            [128, 0, 1, 2, 1, 7, 1, 1, 0, 0],  # Reserved header is a byte, not a varint.
+            [0, 1, 2, 1, 128],  # Incomplete hero varint.
+            [0, 2, 2, 1, 7, 1, 1, 0, 0],
+            [0, 1, 2, 1, 7, 2, 1, 1, 0, 0],
+            [0, 1, 2, 1, 7, 1, 1, 0, 0, 9],
+            [0, 1, 2, 1, 7, 1, 1, 0, 0, 0, 99],
+        )
+        for vector in vectors:
+            with self.subTest(vector=vector), self.assertRaises(ValueError):
+                decode(base64.b64encode(bytes(vector)).decode())
+
+    def test_sideboard_requires_its_owner_and_positive_integer_counts(self):
+        deck = {"format": 2, "heroes": [7], "cards": [[1, 1]], "sideboards": [[2, 1, 3]]}
+        with self.assertRaisesRegex(ValueError, "owner"):
+            normalize_deck(deck)
+        deck.update(sideboards=[], cards=[[1, True]])
+        with self.assertRaisesRegex(ValueError, "invalid cards"):
+            normalize_deck(deck)
+
+
+class FunmetaV2Tests(FunmetaFixture, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.data["schema_version"] = 2
+        self.data["evidence"] = [{"id": "e1", "source_id": "deck",
+                                  "quote": "SYNTHETIC fixture only: deck"}]
+        self.data["search_log"] = [
+            {"id": f"{name}-{language}", "class": name, "language": language,
+             "query": f"Synthetic {name} {language}", "status": "inspected" if name == "mage" else "empty",
+             "notes": "Synthetic search outcome", "source_ids": ["deck"] if name == "mage" else []}
+            for name in CLASSES for language in ("ru", "en")
+        ]
+        for source in self.data["sources"]:
+            source["publisher"] = source["id"]
+        self.candidate.update(
+            deck_list={"format": 2, "heroes": [7], "cards": [[1, 1], [2, 1]], "sideboards": []},
+            deck_code_status="verified",
+            deck_code=base64.b64encode(bytes([0, 1, 2, 1, 7, 2, 1, 2, 0, 0, 0])).decode(),
+            explanation_evidence={field: ["e1"] for field in
+                                  ("game_plan", "fun_moment", "limitations", "legality")},
+            closest_meta_plan="Synthetic meta plan", plan_difference="Synthetic distinct interaction",
+        )
+        self.data["fun_cards"][0]["evidence_ids"] = ["e1"]
+
+    def save_review(self):
+        selection = self.run / "selection.json"
+        selection.write_text(json.dumps(self.data), encoding="utf-8")
+        (self.run / "material.md").write_text("Synthetic reviewed material, with class gaps disclosed.", encoding="utf-8")
+        review = dict(review_digests(selection), verdict="pass", checked_on="2026-10-19",
+                      facts_checked=True, plan_explained=True, coverage_checked=True,
+                      gaps_disclosed=True, findings=[], notes="Synthetic reviewer notes")
+        (self.run / "review.json").write_text(json.dumps(review), encoding="utf-8")
+        return selection
+
+    def test_v2_tracks_failures_without_counting_them_as_inspected(self):
+        result = validate(self.data, self.run)
+        self.assertEqual(result["inspected_searches"], 2)
+        self.assertEqual(result["failed_or_empty_searches"], 20)
+        self.assertEqual(result["evidence_items"], 1)
+        self.assertEqual(result["coverage"], "partial")
+
+    def test_code_must_match_full_list(self):
+        self.candidate["deck_list"]["cards"][0][0] = 99
+        with self.assertRaisesRegex(ValueError, "code/list mismatch"):
+            validate(self.data, self.run)
+
+    def test_alias_does_not_allow_duplicate_deck(self):
+        alias = copy.deepcopy(self.candidate)
+        alias.update(id="another-id", name="Another name")
+        self.data["candidates"].append(alias)
+        with self.assertRaisesRegex(ValueError, "duplicate deck"):
+            validate(self.data, self.run)
+
+    def test_made_up_quote_and_unbound_explanation_are_rejected(self):
+        changed = copy.deepcopy(self.data)
+        changed["evidence"][0]["quote"] = "This was never in the source."
+        with self.assertRaisesRegex(ValueError, "quote not found"):
+            validate(changed, self.run)
+        self.candidate["explanation_evidence"]["legality"] = ["missing"]
+        with self.assertRaisesRegex(ValueError, "unknown reference"):
+            validate(self.data, self.run)
+
+    def test_mirrors_excerpt_and_unattempted_class_are_not_accepted(self):
+        changed = copy.deepcopy(self.data)
+        changed["sources"][2]["publisher"] = "meta-a"
+        with self.assertRaisesRegex(ValueError, "mirrors"):
+            validate(changed, self.run)
+        changed = copy.deepcopy(self.data)
+        changed["sources"][3]["access"] = "excerpt"
+        with self.assertRaisesRegex(ValueError, "deck is an excerpt"):
+            validate(changed, self.run)
+        self.data["search_log"].pop()
+        with self.assertRaisesRegex(ValueError, "actual RU and EN"):
+            validate(self.data, self.run)
+
+    def test_next_prioritizes_unattempted_lanes_and_keeps_failures_visible(self):
+        before = copy.deepcopy(self.data)
+        result = next_actions(self.data)
+        self.assertEqual(result["remaining_search_lanes"], 20)
+        self.assertTrue(all(row["reason"] == "blocked_or_empty" for row in result["suggested_queries"]))
+        self.assertTrue(all(row["query"] is None and row["focus"] for row in result["suggested_queries"]))
+        self.assertEqual(self.data, before)
+        self.data["search_log"].pop()
+        self.assertEqual(next_actions(self.data)["suggested_queries"][0]["reason"], "not_attempted")
+
+    def test_next_stops_after_one_targeted_retry_and_keeps_gap(self):
+        failed = copy.deepcopy(self.data["search_log"][0])
+        failed["id"] += "-retry"
+        self.data["search_log"].append(failed)
+        result = next_actions(self.data, limit=22)
+        self.assertEqual(len(result["exhausted_lanes"]), 1)
+        self.assertIn(failed["class"], result["class_gaps"])
+        self.assertFalse(any(row["class"] == failed["class"] and row["language"] == failed["language"]
+                             for row in result["suggested_queries"]))
+
+    def test_export_requires_matching_review_and_never_overwrites(self):
+        selection = self.save_review()
+        output = self.run / "final.md"
+        result = export_material(selection, self.data, validate(self.data, self.run), output)
+        self.assertEqual(result["coverage"], "partial")
+        self.assertEqual(output.read_bytes(), (self.run / "material.md").read_bytes())
+        with self.assertRaises(FileExistsError):
+            export_material(selection, self.data, validate(self.data, self.run), output)
+
+    def test_material_or_selection_change_invalidates_review(self):
+        for field in ("material", "selection"):
+            with self.subTest(field=field):
+                selection = self.save_review()
+                path = self.run / ("material.md" if field == "material" else "selection.json")
+                path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, f"stale {field}_sha256"):
+                    export_material(selection, self.data, validate(self.data, self.run), self.run / "final.md")
+
+    def test_unresolved_findings_and_undisclosed_gaps_block_export(self):
+        for field, value, message in (("findings", ["Fix a claim"], "findings"),
+                                      ("gaps_disclosed", False, "partial coverage")):
+            with self.subTest(field=field):
+                selection = self.save_review()
+                review_path = self.run / "review.json"
+                review = json.loads(review_path.read_text(encoding="utf-8"))
+                review[field] = value
+                review_path.write_text(json.dumps(review), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, message):
+                    export_material(selection, self.data, validate(self.data, self.run), self.run / "final.md")
+
+    def test_cli_next_decode_and_export(self):
+        selection = self.save_review()
+        for arguments, status in ((["next", str(selection)], "research_in_progress"),
+                                  (["export", str(selection), "--output", str(self.run / "final.md")],
+                                   "exported_after_recorded_review")):
+            result = subprocess.run([sys.executable, str(SCRIPT), *arguments], check=False,
+                                    capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["status"], status)
+        result = subprocess.run([sys.executable, str(SCRIPT), "decode", self.candidate["deck_code"]],
+                                check=False, capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(json.loads(result.stdout)["legality_verified"])
 
 
 if __name__ == "__main__":

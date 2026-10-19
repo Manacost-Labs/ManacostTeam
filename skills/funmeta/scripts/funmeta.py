@@ -11,6 +11,9 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from deck_code import decode
+from quality import export_material, next_actions, review_digests, validate_v2
+
 CLASSES = (
     "death-knight", "demon-hunter", "druid", "hunter", "mage", "paladin",
     "priest", "rogue", "shaman", "warlock", "warrior",
@@ -60,9 +63,10 @@ def initialize(directory: Path, as_of: str, game_format: str) -> Path:
     directory.mkdir(parents=True, exist_ok=False)
     (directory / "sources").mkdir()
     selection = {
-        "schema_version": 1, "as_of": as_of, "format": game_format,
+        "schema_version": 2, "as_of": as_of, "format": game_format,
         "patch": "", "patch_source_id": "", "meta_source_ids": [],
         "sources": [], "candidates": [], "fun_cards": [],
+        "evidence": [], "search_log": [],
         "gaps": {name: "Поиск ещё не выполнен." for name in CLASSES},
     }
     path = directory / "selection.json"
@@ -77,8 +81,8 @@ def initialize(directory: Path, as_of: str, game_format: str) -> Path:
 
 def validate(data: object, directory: Path) -> dict:
     require(isinstance(data, dict), "selection must be an object")
-    require(type(data.get("schema_version")) is int and data["schema_version"] == 1,
-            "schema_version must be 1")
+    require(type(data.get("schema_version")) is int and data["schema_version"] in (1, 2),
+            "schema_version must be 1 or 2")
     as_of = iso_date(data.get("as_of"))
     game_format = data.get("format")
     require(game_format in ("standard", "wild"), "unsupported format")
@@ -156,6 +160,9 @@ def validate(data: object, directory: Path) -> dict:
         require(nonempty(candidate.get("deck_code_reason")), f"{label}: code check reason required")
         if candidate["deck_code_status"] == "verified":
             require(nonempty(candidate.get("deck_code")), f"{label}: verified code missing")
+            decoded = decode(candidate["deck_code"])
+            require(decoded["format"] == (2 if game_format == "standard" else 1),
+                    f"{label}: deck code format mismatch")
         else:
             require(not candidate.get("deck_code"), f"{label}: omit unavailable deck code")
         checks = candidate.get("meta_checks")
@@ -185,13 +192,18 @@ def validate(data: object, directory: Path) -> dict:
         require(nonempty(card.get("name")) and nonempty(card.get("why_fun")),
                 f"card {card_id}: name and explanation required")
         references(card.get("source_ids"), sources, f"card {card_id}")
-    return {
+    result = {
         "status": "structure_valid", "mechanical_checks_only": True,
         "coverage": "complete" if not gaps else "partial",
         "selected_decks": selected, "classes_with_decks": len(selected_classes),
         "class_gaps": list(gaps),
         "notice": "Source meaning, meta absence, mechanics and final prose require review.",
     }
+    if data["schema_version"] == 2:
+        result.update(validate_v2(data, directory, sources))
+    else:
+        result["warnings"] = ["Legacy v1: evidence, code/list equality and review are not verified; export disabled."]
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -203,14 +215,33 @@ def main(argv: list[str] | None = None) -> int:
     init.add_argument("--format", choices=("standard", "wild"), default="standard")
     check = commands.add_parser("check", help="Check records and snapshot integrity only")
     check.add_argument("selection", type=Path)
+    next_cmd = commands.add_parser("next", help="Suggest unfinished searches without changing a run")
+    next_cmd.add_argument("selection", type=Path)
+    next_cmd.add_argument("--limit", type=int, choices=range(1, 23), default=6)
+    digests = commands.add_parser("review-digests", help="Hash current files; never create a passing review")
+    digests.add_argument("selection", type=Path)
+    export = commands.add_parser("export", help="Copy material only after current recorded review")
+    export.add_argument("selection", type=Path)
+    export.add_argument("--output", type=Path, required=True)
+    deck = commands.add_parser("decode", help="Decode one deck code; does not prove legality")
+    deck.add_argument("code")
     args = parser.parse_args(argv)
     try:
         if args.command == "init":
             path = initialize(args.directory, args.as_of, args.format)
             result = {"status": "initialized", "selection": str(path.resolve())}
+        elif args.command == "decode":
+            result = {"deck_list": decode(args.code), "legality_verified": False}
+        elif args.command == "review-digests":
+            result = review_digests(args.selection)
         else:
             data = json.loads(args.selection.read_text(encoding="utf-8-sig"))
-            result = validate(data, args.selection.parent)
+            if args.command == "next":
+                result = next_actions(data, args.limit)
+            else:
+                result = validate(data, args.selection.parent)
+                if args.command == "export":
+                    result = export_material(args.selection, data, result, args.output)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (OSError, ValueError) as exc:
@@ -220,4 +251,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    # JSON output is UTF-8 even when PowerShell pipes use a legacy code page.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     raise SystemExit(main())
