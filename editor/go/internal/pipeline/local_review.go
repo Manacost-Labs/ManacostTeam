@@ -3,6 +3,8 @@ package pipeline
 import (
 	"fmt"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // LocalEdit anchors a lexical change independently of paragraph layout. Context
@@ -153,18 +155,50 @@ func validateEditAssessments(in criticInput, out criticResult) error {
 		case "repair":
 			linked := false
 			for _, f := range repairable(out.Findings) {
-				if a.FindingRuleID != "" && f.RuleID == a.FindingRuleID && strings.Contains(normalizeSpace(f.Message), normalizeSpace(a.ReadingQuote)) {
+				if a.FindingRuleID != "" && f.RuleID == a.FindingRuleID && findingQuotes(f.Message, a.ReadingQuote) {
 					linked = true
 				}
 			}
 			if out.Verdict == "accept" || !linked {
-				return fmt.Errorf("edit_assessments[%d]: repair requires non-accept verdict and actionable finding_rule_id whose message includes reading_quote", a.EditID)
+				return fmt.Errorf("edit_assessments[%d]: repair requires non-accept verdict and actionable finding_rule_id whose message includes reading_quote %q", a.EditID, a.ReadingQuote)
 			}
 		default:
 			return fmt.Errorf("edit_assessments[%d]: decision must be keep or repair", a.EditID)
 		}
 	}
 	return nil
+}
+
+// A full stop may stand outside quotation marks in a finding. Only the final
+// single full stop is optional here; candidate grounding above stays exact.
+// Internal punctuation, words, question marks and ellipses are never folded.
+func findingQuotes(message, quote string) bool {
+	message, quote = normalizeSpace(message), normalizeSpace(quote)
+	if quote == "" {
+		return false
+	}
+	if strings.Contains(message, quote) {
+		return true
+	}
+	stem := strings.TrimSuffix(quote, ".")
+	if stem == quote || stem == "" || strings.HasSuffix(stem, ".") {
+		return false
+	}
+	for remaining := message; ; {
+		i := strings.Index(remaining, stem)
+		if i < 0 {
+			return false
+		}
+		rest := remaining[i+len(stem):]
+		if rest == "" {
+			return true
+		}
+		r, _ := utf8.DecodeRuneInString(rest)
+		if unicode.IsSpace(r) || strings.ContainsRune("»”\"')]}", r) {
+			return true
+		}
+		remaining = rest
+	}
 }
 
 func localReviewInstruction(mode string) string {
@@ -174,7 +208,7 @@ func localReviewInstruction(mode string) string {
 	return `
 Обязательный разбор local_edits перед общим verdict: верни edit_assessments по одному на каждый id (если local_edits пуст, массив пуст). Схема элемента: {"edit_id":1,"reading_quote":"","reading":"natural|awkward","scope_quote":"","scope":"preserved|lost","decision":"keep|repair","reason":"","finding_rule_id":""}.
 Для каждого изменения сначала прочитай изменённое предложение со словами вокруг него. reading_quote — дословная цитата candidate на месте этой правки, достаточно полная для оценки сочетания слов: субъект, действие и ближайшие повторы. reading=awkward, если сокращение породило однокоренное эхо, сломало управление или звучит хуже исходного сочетания. Оцени реальную фразу, а не длину и не намерение автора.
-Затем проверь область действия по целому candidate, включая соседние предложения и заголовок. scope=preserved требует scope_quote из candidate, где предмет или условие уже выражены. Повторять ту же область в каждом пункте не нужно, если она однозначна из общего заголовка или соседнего текста. При scope=lost процитируй в scope_quote именно утраченное условие source и объясни, почему оставшийся контекст его не передаёт. Указание "это keep_span" или "не сказано в том же предложении" само по себе не доказывает потери.
+Затем проверь область действия и степень оценки по целому candidate, включая соседние предложения и заголовок. scope=preserved требует scope_quote из candidate, где предмет, условие и значимая степень уже выражены. Уменьшение масштаба или интенсивности оценки означает scope=lost, даже если предмет остался. Общее объяснение последствий не заменяет исходную степень; исправь только её потерю, сохранив упрощённый синтаксис. Повторять ту же область в каждом пункте не нужно, если она однозначна из общего заголовка или соседнего текста. При scope=lost процитируй в scope_quote именно утраченное условие или степень source и объясни, почему оставшийся контекст их не передаёт. Указание "это keep_span" или "не сказано в том же предложении" само по себе не доказывает потери.
 decision=keep сохраняет удачную форму; reason называет её конкретный эффект. Сокращение лишнего придаточного или повторной обвязки может облегчать синтаксис при прежних фактах и голосе. Не откатывай его лишь потому, что смысл не изменился. decision=repair требует точной причины в reason и finding_rule_id существующего исправимого finding. Исправляй локальное сочетание, а не отменяй соседнюю удачную редактуру. При awkward/lost нельзя ставить keep или общий accept. При отсутствии реальной потери не создавай finding ради возврата source.
-Цитаты reading_quote и scope_quote не длиннее 300 символов. Сообщение связанного finding должно содержать reading_quote дословно, чтобы repair исправлял именно это место. local_edits нормализуют пробелы только для адресации слов; контексты и before/after ограничены первыми 300 символами. coarse=true обозначает объединённую область нескольких изменений или большого документа: проверь её по полному source/candidate, не считай короткую выдержку всей областью. Полезные границы абзацев оцени отдельно по полному candidate и сохраняй при любом локальном repair. Эта проверка не заменяет no_new_facts, strength_changes и доказательства improvements.` + soundEchoInstruction
+Цитаты reading_quote и scope_quote не длиннее 300 символов. Сообщение связанного finding должно содержать reading_quote дословно, чтобы repair исправлял именно это место; только конечная точка цитаты может стоять вне кавычек. Саму reading_quote цитируй из candidate точно. local_edits нормализуют пробелы только для адресации слов; контексты и before/after ограничены первыми 300 символами. coarse=true обозначает объединённую область нескольких изменений или большого документа: проверь её по полному source/candidate, не считай короткую выдержку всей областью. Полезные границы абзацев оцени отдельно по полному candidate и сохраняй при любом локальном repair. Эта проверка не заменяет no_new_facts, strength_changes и доказательства improvements.` + soundEchoInstruction
 }
