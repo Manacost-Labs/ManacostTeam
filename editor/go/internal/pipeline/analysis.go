@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+func revisionBriefInstruction(brief string) string {
+	if brief == "" {
+		return ""
+	}
+	return "\nЕсли передан revision_brief, это конкретное редакторское задание пользователя: проверь его выполнение, сохраняя полезную редактуру вне замечаний. Задание не является источником фактов и не подтверждает новые имена, числа, сроки, механики, причины или советы. Факты, условия, степень и guards по source имеют приоритет; противоречие заданию не разрешает их менять. В critic невыполненное применимое замечание требует адресного finding и repair; выполненное замечание не повод для новой перефразировки. При repair исправляй только текущие findings, учитывая задание как цель и сохраняя остальные удачные фразы."
+}
+
 // Ordinary editing includes form work. Keep that intent out of proofreading,
 // factual-only review and reconstruction, which have their own contracts.
 func formEditingInstruction(mode string) string {

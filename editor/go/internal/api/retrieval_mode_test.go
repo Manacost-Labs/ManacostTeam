@@ -54,10 +54,12 @@ func TestInvalidCandidateRevisionReturnsBadRequest(t *testing.T) {
 		`{"text":"Текст.","mode":"rewrite","candidate_text":"Версия."}`,
 		`{"text":"Текст.","mode":"reconstruct","candidate_text":"Версия."}`,
 		`{"text":"Текст.","mode":"edit","candidate_text":"  "}`,
+		`{"text":"Текст.","mode":"edit","revision_brief":"Исправь повтор."}`,
+		`{"text":"Текст.","mode":"edit","candidate_text":"Версия.","revision_brief":"  "}`,
 	} {
 		r := httptest.NewRecorder()
 		server.Routes().ServeHTTP(r, httptest.NewRequest(http.MethodPost, "/v2/edit", strings.NewReader(body)))
-		if r.Code != http.StatusBadRequest || !strings.Contains(r.Body.String(), "candidate_text") {
+		if r.Code != http.StatusBadRequest || !(strings.Contains(r.Body.String(), "candidate_text") || strings.Contains(r.Body.String(), "revision_brief")) {
 			t.Fatalf("candidate validation: %d %s", r.Code, r.Body.String())
 		}
 	}
