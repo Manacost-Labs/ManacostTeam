@@ -30,8 +30,15 @@ INSTRUCTIONS = {
     "Собери research bundle и план, затем выполни editorial_handoff.py. "
     "Передай publication-handoff.json с прямыми цитатами из сохранённых источников. "
     "Незакрытые обязательные вопросы блокируют написание.",
-    "draft": "Напиши цельную практическую статью по handoff и выбранному профилю. "
-    "Сохрани силу советов, условия, исключения и ссылки. "
+    "draft": "Определи читателя, жанр и главный тезис по brief и editorial_context. "
+    "Напиши цельную практическую статью по handoff и выбранному профилю. "
+    "Проверь план по функциям абзацев: что каждый добавляет читателю. "
+    "Для совета объясни ситуацию, действие, причину, цену выбора и исключение, если они подтверждены. "
+    "Если начало слабое, сравни до трёх вариантов и выбери по точности обещания пользы и жанру; не превращай это в обязательный шаблон. "
+    "Сохрани силу советов, условия, исключения, ссылки и сильные фрагменты keep_spans. "
+    "Допускается оставить удачный текст без изменений. Правь локально, с понятной пользой и оценкой риска смыслового сдвига. "
+    "Не превращай inference в факт, пример illustrative в наблюдение, а выборку или мнение в универсальную рекомендацию. "
+    "Не придумывай личный опыт, ограничения или детали для заполнения карточек. "
     "Не выводи текущие игровые факты из старых образцов авторского стиля. "
     "Сохрани статью как UTF-8 Markdown.",
     "fact_review": "Независимо проверь весь текст по handoff и полным источникам. "
@@ -42,9 +49,17 @@ INSTRUCTIONS = {
     "Дай factual JSON с реальными цитатами и article_sha256/handoff_sha256. "
     "Проверь все фактические утверждения итогового текста, включая описания и механики вне обязательных claims. "
     "candidate_checked=true только после полной проверки; неподтверждённые детали занеси в unsupported_claims. "
+    "Проверь research_context, происхождение источников, выборку, временное окно, контрдоводы и decision_cards. "
+    "Если карточки присутствуют, decision_cards_checked=true допустимо только после проверки всех их полей и ссылок. "
     "Не подставляй pass без проведённой проверки.",
     "literary_review": "Независимо оцени практическую пользу, связность, естественный русский "
-    "и авторский голос. Замечания привяжи к цитатам; проверь все главы. "
+    "и авторский голос без вердикта фактического рецензента. Замечания привяжи к цитатам; проверь все главы. "
+    "Сначала отметь удачные места в strengths: quote и reason; не изобретай достоинства ради заполнения списка. "
+    "Составь paragraph_functions с quote и function; затем проверь чтение всей статьи (whole_article_checked). "
+    "В reader_check ответь на action, reason, conditions, alternative; если вопрос неприменим к жанру, объясни почему. "
+    "Для замечаний укажи benefit и meaning_risk. Ритм, местоимения и частота слов — диагностика, а не цель. "
+    "Проверь keep_spans: каждую утрату объясни в strength_changes через quote, reason, replacement_quote. "
+    "Не требуй переписывания ради изменения; unchanged — допустимый результат. "
     "Дай literary JSON с article_sha256/handoff_sha256 и четырьмя dimensions. "
     "Не выдавай непроведённую проверку за pass.",
     "ready": "Обе проверки прошли для этой версии статьи. Выполни export в новый final.md. "
@@ -145,7 +160,9 @@ def _load(run: Path) -> dict:
 def _validate_state(state: dict) -> None:
     """Reject malformed control data before accessing paths or stage artifacts."""
     if (
-        any(
+        type(state.get("review_contract_version", 1)) is not int
+        or state.get("review_contract_version", 1) not in {1, 2}
+        or any(
             not isinstance(state.get(key), str) or not state[key].strip()
             for key in ("brief", "patch", "profile")
         )
@@ -235,6 +252,7 @@ def init_run(run: Path, *, brief: str, patch: str, profile: str, shortcodes: str
     (run / "artifacts").mkdir()
     state = {
         "schema_version": 1,
+        "review_contract_version": 2,
         "brief": brief,
         "patch": patch,
         "profile": profile,
@@ -264,6 +282,37 @@ def _context(run: Path, state: dict) -> tuple[dict, str]:
     return _json(_data(run, state, "research")), _data(run, state, "draft").decode("utf-8")
 
 
+def _keep_spans(run: Path, state: dict) -> list[dict]:
+    """Carry quoted strengths from prior drafts, never an author's self-review."""
+    drafts, spans = {}, {}
+    for receipt in state["history"]:
+        if receipt["stage"] == "draft":
+            drafts[receipt["draft_revision"]] = (
+                _confined(run, receipt["path"]).read_bytes().decode("utf-8")
+            )
+        elif receipt["stage"] == "literary_review":
+            report = _json(_confined(run, receipt["path"]).read_bytes())
+            source = drafts.get(receipt["draft_revision"], "")
+            if not isinstance(report, dict) or report.get("article_sha256") != _hash(
+                source.encode("utf-8")
+            ):
+                continue
+            strengths = report.get("strengths", [])
+            if not isinstance(strengths, list):
+                continue
+            for row in strengths:
+                if (
+                    isinstance(row, dict)
+                    and isinstance(row.get("quote"), str)
+                    and row["quote"].strip()
+                    and row["quote"] in source
+                    and isinstance(row.get("reason"), str)
+                    and row["reason"].strip()
+                ):
+                    spans[row["quote"]] = {"quote": row["quote"], "reason": row["reason"]}
+    return list(spans.values())
+
+
 def next_task(run: Path) -> dict:
     from .publication_review import article_hash, handoff_hash
 
@@ -281,8 +330,12 @@ def next_task(run: Path) -> dict:
         "inputs": {
             key: str(_confined(run, receipt["path"]).resolve())
             for key, receipt in state["artifacts"].items()
+            if stage not in {"fact_review", "literary_review"}
+            or key in {"sources", "research", "draft"}
         },
         "repair": state["blocked"],
+        "review_contract_version": state.get("review_contract_version", 1),
+        "keep_spans": _keep_spans(run, state),
         "repairs_remaining": 2 - state["draft_revisions"],
         "review_retries_remaining": {
             stage: 1 - used for stage, used in state["review_retries"].items()
@@ -349,11 +402,22 @@ def _sources(rows) -> None:
 def _ground_sources(handoff: dict, candidates: list[dict]) -> list[str]:
     by_url = {row["url"]: row["text"] for row in candidates}
     errors = []
-    for source in handoff.get("sources", []):
+    counterevidence = [
+        row
+        for claim in handoff.get("claims", [])
+        for row in claim.get("research_context", {}).get("counterevidence", [])
+    ]
+    for source in [*handoff.get("sources", []), *counterevidence]:
         url = source["url"]
         if url not in by_url or not source.get("quote") or source["quote"] not in by_url[url]:
             errors.append(
                 f"source quote absent from collected full text: {source.get('source_id')}"
+            )
+        elif source.get("content_sha256") and source["content_sha256"] != _hash(
+            by_url[url].replace("\r\n", "\n").encode("utf-8")
+        ):
+            errors.append(
+                f"source content hash mismatch: {source.get('source_id', source.get('evidence_id'))}"
             )
     return errors
 
@@ -422,7 +486,12 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
             errors = (
                 validate_factual(handoff, text, report)
                 if stage == "fact_review"
-                else validate_literary(text, report)
+                else validate_literary(
+                    text,
+                    report,
+                    keep_spans=_keep_spans(run, state),
+                    require_extended=state.get("review_contract_version", 1) >= 2,
+                )
             )
             if not isinstance(report, dict) or report.get("handoff_sha256") != handoff_hash(
                 handoff
@@ -477,6 +546,8 @@ def export(run: Path, *, output: Path) -> dict:
             text,
             _json(_data(run, state, "fact_review")),
             _json(_data(run, state, "literary_review")),
+            keep_spans=_keep_spans(run, state),
+            require_extended=state.get("review_contract_version", 1) >= 2,
         )
         if errors:
             raise ValueError("; ".join(errors))

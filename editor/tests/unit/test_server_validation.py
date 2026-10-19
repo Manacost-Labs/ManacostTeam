@@ -55,7 +55,7 @@ def test_severe_shortening_is_still_rejected() -> None:
     assert "text_shrunk" in _kinds(result)
 
 
-def test_article_sized_flattening_is_still_rejected() -> None:
+def test_article_sized_flattening_is_diagnostic() -> None:
     before_sentences = []
     after_sentences = []
     for index in range(15):
@@ -70,7 +70,8 @@ def test_article_sized_flattening_is_still_rejected() -> None:
         "constructed-guide",
     )
 
-    assert "rhythm_flattened" in _kinds(result)
+    assert "rhythm_flattened" not in _kinds(result)
+    assert "rhythm_flattened" in _warning_kinds(result)
 
 
 def test_moderate_shortening_requires_review_without_automatic_rejection() -> None:

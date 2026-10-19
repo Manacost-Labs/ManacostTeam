@@ -414,6 +414,8 @@ def validate_edit(args) -> int:
         claims_after=claims_after,
         current_meta_epoch=args.current_meta_epoch,
         current_patch=args.current_patch,
+        author=args.author,
+        meaning=args.meaning,
     )
     if selected:
         result["task_context"] = selected["task_context"]
@@ -446,8 +448,8 @@ def validate_edit(args) -> int:
 CHECK_HINTS = {
     "protected_lost": "вернуть пропавшие числа, коды и защищённые слова дословно",
     "CLAIM_COVERAGE_LOST": "вернуть карту, совет или отрицание из исходника",
-    "voice_below_norm": "обращаться к читателю на «вы», советовать глаголом, оговариваться через «но» и «хотя»",
-    "rhythm_below_norm": "чередовать короткую фразу с длинным периодом",
+    "voice_below_norm": "проверить авторскую функцию фрагмента; квоты сигналов нет",
+    "rhythm_below_norm": "прочитать в контексте; снижение счётчика не требует правки",
     "markers_remove_present": "вырезать шаблонные фразы без замены",
     "markers_above_norm": "переписать от смысла: назвать факт вместо рамки",
     "structure_missing": "добавить раздел из материала исходника или объявить его отсутствующим",
@@ -456,13 +458,13 @@ CHECK_HINTS = {
     "form_codes": "коды только для рекомендуемых сборок",
     "form_grade_labels": "сказать словами, где колода стоит",
     "form_fact_repeated": "назвать цифру один раз, дальше ссылаться на вывод",
-    "lexicon_gap": "заменить слова, которых нет у автора, на его лексику",
+    "lexicon_gap": "проверить значение в контексте; отсутствие в корпусе не требует замены",
     "CERTAINTY_DRIFT": "не усиливать совет: «можно» не становится «обязательно»",
     "FACTUAL_SEMANTIC_DRIFT": "вернуть отрицание и числа исходника",
     "EVIDENCE_NARRATION_LEAK": "убрать пересказ исследования, оставить прямой совет",
     "text_shrunk": "проверить каждое удаление",
-    "voice_flattened": "вернуть живые обороты",
-    "rhythm_flattened": "не выравнивать длину предложений",
+    "voice_flattened": "проверить сохранность авторской мысли; не добавлять обороты ради счётчика",
+    "rhythm_flattened": "проверить читаемость; не откатывать правку только ради метрики",
 }
 
 
@@ -487,6 +489,8 @@ def check_cmd(args) -> int:
             mode=args.mode,
             depth=args.depth,
             declared_missing=declared,
+            author=args.author,
+            meaning=args.meaning,
         )
     else:
         gate = C.sibling("rewrite_gate")
@@ -495,6 +499,9 @@ def check_cmd(args) -> int:
             norms=gate.norms_for(args.game),
             profile=profile,
             declared_missing=declared,
+            game=args.game,
+            author=args.author,
+            meaning=args.meaning,
         )
         result = {
             "accepted": not v,
@@ -545,6 +552,12 @@ def learn_cmd(args) -> int:
     """Журнал правок: из диффа «до → после» или одной строкой."""
     from editorteam import corrections as CR
 
+    context = {
+        key: getattr(args, key, "") or ""
+        for key in ("author", "game", "genre", "meaning", "model_proposal")
+    }
+    context["scope"] = getattr(args, "scope", "local")
+
     if args.learn_cmd == "list":
         items = CR.load()
         if args.format == "json":
@@ -563,6 +576,9 @@ def learn_cmd(args) -> int:
                 kind=args.kind,
                 reason=args.reason or "",
                 source=args.source or "",
+                context=args.context or "",
+                operation=args.operation,
+                **context,
             )
         except CR.CorrectionsError as exc:
             print(str(exc), file=sys.stderr)
@@ -580,7 +596,9 @@ def learn_cmd(args) -> int:
                 kind=item["kind"],
                 reason=args.reason or "",
                 context=item["context"],
+                operation=item["operation"],
                 source=args.source or "",
+                **context,
             )
             written += 1
     if args.format == "json":
@@ -1172,6 +1190,8 @@ def build_parser() -> argparse.ArgumentParser:
     ve.add_argument("before")
     ve.add_argument("after")
     ve.add_argument("--game", help="игра; legacy default: hearthstone")
+    ve.add_argument("--author", default="manacost")
+    ve.add_argument("--meaning", default="")
     ve.add_argument("--task-context", help="JSON общего игрового контекста и стиля Манакоста")
     ve.add_argument("--profile", choices=P.available())
     ve.add_argument("--mode", choices=["GUIDE", "ANALYSIS", "REPORT"], default="GUIDE")
@@ -1200,6 +1220,8 @@ def build_parser() -> argparse.ArgumentParser:
     ck.add_argument("--source", help="исходник: включает покрытие утверждений и защиту фактов")
     ck.add_argument("--profile", choices=P.available())
     ck.add_argument("--game", default="hearthstone")
+    ck.add_argument("--author", default="manacost")
+    ck.add_argument("--meaning", default="")
     ck.add_argument(
         "--depth", choices=["лёгкая", "обычная", "глубокая", "переплавка"], default="переплавка"
     )
@@ -1226,6 +1248,19 @@ def build_parser() -> argparse.ArgumentParser:
     la.add_argument("--kind", choices=["term", "phrase", "structure", "fact"], default="phrase")
     la.add_argument("--reason", default="")
     la.add_argument("--source", default="")
+    la.add_argument("--context", default="")
+    la.add_argument("--operation", choices=["replace", "insert", "delete"], default="replace")
+    for learning_parser in (ld, la):
+        learning_parser.add_argument("--author", default="")
+        learning_parser.add_argument("--game", default="")
+        learning_parser.add_argument("--genre", default="")
+        learning_parser.add_argument("--meaning", default="")
+        learning_parser.add_argument(
+            "--scope",
+            choices=["language_norm", "author_global", "local", "fact", "structure"],
+            default="local",
+        )
+        learning_parser.add_argument("--model-proposal", default="")
     la.set_defaults(func=learn_cmd)
     ll = ln_sub.add_parser("list", parents=[common], help="показать журнал")
     ll.set_defaults(func=learn_cmd)

@@ -35,6 +35,25 @@ func TestPythonAdapterMapsSidecarReport(t *testing.T) {
 	}
 }
 
+func TestPythonAdapterPreservesCorrectionScopeAndDiagnosticSeverity(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Error(err)
+		}
+		if body["author"] != "ivan" || body["meaning"] != "application" {
+			t.Error("adapter dropped correction scope")
+		}
+		_ = json.NewEncoder(w).Encode(analyzer.Verdict{Accepted: true, Warnings: []analyzer.Violation{{Kind: "voice_below_norm", Message: "diagnostic"}}})
+	}))
+	defer server.Close()
+	p := &PythonAnalyzerAdapter{Client: analyzer.New(server.URL, time.Second)}
+	result, err := p.Analyze(context.Background(), Input{Before: "text", After: "text", Author: "ivan", Meaning: "application"})
+	if err != nil || len(result.Findings) != 1 || result.Findings[0].Severity != "warning" {
+		t.Fatalf("metric-only warning must remain diagnostic: %+v %v", result, err)
+	}
+}
+
 func TestNativeAnalyzerFlagsProjectTerminology(t *testing.T) {
 	result, err := (NativeGoAnalyzer{}).Analyze(context.Background(), Input{Text: "Подарки и племя на Полях сражений"})
 	if err != nil || len(result.Findings) != 2 {

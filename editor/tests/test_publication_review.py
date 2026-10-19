@@ -15,6 +15,20 @@ from editorteam.publication_review import (
 )
 
 
+@pytest.mark.parametrize(
+    "context",
+    [
+        {"challenging_evidence_ids": ["missing"]},
+        {"counterevidence": "bad"},
+        {"counterevidence": [{"evidence_id": "x"}]},
+    ],
+)
+def test_counterevidence_requires_valid_matching_records(bundle, context):
+    handoff, _, _, _ = bundle
+    handoff["claims"][0]["research_context"] = context
+    assert validate_handoff(handoff, handoff["patch"])
+
+
 @pytest.fixture
 def bundle():
     handoff = {
@@ -106,6 +120,89 @@ def test_valid_independent_reports(bundle):
     assert validate_handoff(h, "test-patch") == []
     assert validate_reviews(h, text, fact, style) == []
     assert handoff_hash(h) == handoff_hash(dict(reversed(list(h.items()))))
+
+
+def test_literary_strengths_require_real_quotes_and_justified_changes(bundle):
+    _, text, _, report = bundle
+    report["strengths"] = [{"quote": "not in article", "reason": "precise"}]
+    assert validate_literary(text, report)
+    report["strengths"] = [{"quote": "Сохраните ресурс", "reason": "Прямое действие"}]
+    assert validate_literary(text, report) == []
+    spans = [{"quote": "Удачная фраза", "reason": "Авторский голос"}]
+    assert validate_literary(text, report, keep_spans=spans)
+    report["strength_changes"] = [
+        {
+            "quote": "Удачная фраза",
+            "reason": "Старая формулировка скрывала условие",
+            "replacement_quote": "если нет угрозы",
+        }
+    ]
+    assert validate_literary(text, report, keep_spans=spans) == []
+
+
+def test_extended_literary_review_checks_reader_answers_and_structure(bundle):
+    _, text, _, report = bundle
+    assert validate_literary(text, report, require_extended=True)
+    report.update(
+        strengths=[],
+        paragraph_functions=[{"quote": "Сохраните ресурс", "function": "Совет с условием"}],
+        reader_check={
+            "action": "Сохранить ресурс",
+            "reason": "Сохранение возможности",
+            "conditions": "Нет угрозы",
+            "alternative": "Срочный ответ",
+        },
+        whole_article_checked=True,
+    )
+    assert validate_literary(text, report, require_extended=True) == []
+
+
+def test_structured_cards_require_field_evidence_and_independent_review(bundle):
+    h, text, fact, _ = bundle
+    card = {
+        "card_id": "card",
+        "kind": "illustrative",
+        "status": "inference",
+        "question": "Когда?",
+        "fields": {
+            "action": {"text": "Сохраните ресурс", "claim_ids": ["c"], "evidence_refs": ["s"]}
+        },
+        "gaps": [],
+    }
+    h["chapters"][0]["decision_cards"] = [card]
+    assert validate_handoff(h, h["patch"]) == []
+    fact["handoff_sha256"] = handoff_hash(h)
+    assert any("decision_cards" in e for e in validate_factual(h, text, fact))
+    fact["decision_cards_checked"] = True
+    assert validate_factual(h, text, fact) == []
+    card["fields"]["action"]["claim_ids"] = ["unknown"]
+    assert validate_handoff(h, h["patch"])
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda card: card.update(fields={}),
+        lambda card: card["fields"]["action"].update(evidence_refs=[]),
+        lambda card: card["fields"].update(
+            invented={"text": "x", "claim_ids": ["c"], "evidence_refs": ["s"]}
+        ),
+        lambda card: card.update(kind="unverified"),
+    ],
+)
+def test_malformed_decision_cards_fail_closed(bundle, mutation):
+    h, _, _, _ = bundle
+    card = {
+        "card_id": "card",
+        "kind": "derived",
+        "status": "supported",
+        "question": "When?",
+        "fields": {"action": {"text": "Do it", "claim_ids": ["c"], "evidence_refs": ["s"]}},
+        "gaps": [],
+    }
+    mutation(card)
+    h["chapters"][0]["decision_cards"] = [card]
+    assert validate_handoff(h, h["patch"])
 
 
 @pytest.mark.parametrize("checked", [False, None])

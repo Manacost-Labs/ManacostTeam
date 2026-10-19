@@ -1,9 +1,8 @@
-"""Журнал правок автора: было → стало → почему.
+"""Контекстная память правок. Пример не становится глобальным запретом.
 
-Каждое замечание автора должно стать правилом, а не остаться в чате.
-Журнал читают три места: затвор (term и phrase отклоняются как слова не по
-словарю), промпт модели (все записи показываются как «правки автора») и
-эвалы. Журнал — данные, поэтому лежит в config/, рядом со словарём.
+Одна функция applicable выбирает политику для prompt и postflight. Только
+явные language_norm/author_global могут быть обязательными; локальные,
+фактические и структурные примеры служат подсказками с сохранением контекста.
 """
 
 from __future__ import annotations
@@ -18,6 +17,8 @@ import yaml
 
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / "config" / "corrections.yaml"
 KINDS = ("term", "phrase", "structure", "fact")
+SCOPES = ("language_norm", "author_global", "local", "fact", "structure")
+OPERATIONS = ("replace", "insert", "delete")
 MAX_WORDS = 6  # длиннее — это не замена, а переписанный абзац
 WORD = re.compile(r"[А-Яа-яЁёA-Za-z'’-]+")
 
@@ -35,11 +36,30 @@ class Correction:
     context: str = ""
     date: str = ""
     source: str = ""
+    author: str = ""
+    game: str = ""
+    genre: str = ""
+    meaning: str = ""
+    scope: str = "local"
+    operation: str = "replace"
+    model_proposal: str = ""
     extra: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         out = {"was": self.was, "became": self.became, "kind": self.kind}
-        for key in ("reason", "context", "date", "source"):
+        for key in (
+            "reason",
+            "context",
+            "date",
+            "source",
+            "author",
+            "game",
+            "genre",
+            "meaning",
+            "scope",
+            "operation",
+            "model_proposal",
+        ):
             value = getattr(self, key)
             if value:
                 out[key] = value
@@ -58,21 +78,47 @@ def load(file: Path | None = None) -> list[Correction]:
     data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
     out = []
     for raw in data.get("corrections") or []:
-        if not isinstance(raw, dict) or not raw.get("was") or not raw.get("became"):
+        if not isinstance(raw, dict) or not (raw.get("was") or raw.get("became")):
             continue
         kind = raw.get("kind", "phrase")
         if kind not in KINDS:
             raise CorrectionsError(f"неизвестный kind «{kind}» у правки «{raw['was']}»")
-        known = {"was", "became", "kind", "reason", "context", "date", "source"}
+        scope = raw.get("scope", "local")
+        operation = raw.get("operation", "replace")
+        if scope not in SCOPES or operation not in OPERATIONS:
+            raise CorrectionsError("неизвестная область или операция правки")
+        known = {
+            "was",
+            "became",
+            "kind",
+            "reason",
+            "context",
+            "date",
+            "source",
+            "author",
+            "game",
+            "genre",
+            "meaning",
+            "scope",
+            "operation",
+            "model_proposal",
+        }
         out.append(
             Correction(
-                was=str(raw["was"]).strip(),
-                became=str(raw["became"]).strip(),
+                was=str(raw.get("was", "")).strip(),
+                became=str(raw.get("became", "")).strip(),
                 kind=kind,
                 reason=str(raw.get("reason", "") or ""),
                 context=str(raw.get("context", "") or ""),
                 date=str(raw.get("date", "") or ""),
                 source=str(raw.get("source", "") or ""),
+                author=str(raw.get("author", "") or ""),
+                game=str(raw.get("game", "") or ""),
+                genre=str(raw.get("genre", "") or ""),
+                meaning=str(raw.get("meaning", "") or ""),
+                scope=scope,
+                operation=operation,
+                model_proposal=str(raw.get("model_proposal", "") or ""),
                 extra={k: v for k, v in raw.items() if k not in known},
             )
         )
@@ -105,16 +151,36 @@ def add(
     reason: str = "",
     context: str = "",
     source: str = "",
+    author: str = "",
+    game: str = "",
+    genre: str = "",
+    meaning: str = "",
+    scope: str = "local",
+    operation: str = "replace",
+    model_proposal: str = "",
     file: Path | None = None,
 ) -> Correction:
     if kind not in KINDS:
         raise CorrectionsError(f"kind должен быть одним из {', '.join(KINDS)}")
+    if scope not in SCOPES or operation not in OPERATIONS:
+        raise CorrectionsError("неизвестная область или операция правки")
+    if scope == "author_global" and not author.strip():
+        raise CorrectionsError("author_global требует явного автора")
     was, became = was.strip(), became.strip()
-    if not was or not became or was == became:
-        raise CorrectionsError("нужны «было» и «стало», и они должны различаться")
+    if was == became or (operation == "replace" and (not was or not became)):
+        raise CorrectionsError("для замены нужны разные «было» и «стало»")
+    if (operation == "insert" and (was or not became)) or (
+        operation == "delete" and (not was or became)
+    ):
+        raise CorrectionsError("вставка требует пустое «было», удаление — пустое «стало»")
     items = load(file)
     for item in items:
-        if item.was.lower() == was.lower() and item.became.lower() == became.lower():
+        if (
+            item.was.lower() == was.lower()
+            and item.became.lower() == became.lower()
+            and (item.author, item.game, item.genre, item.meaning, item.scope, item.context)
+            == (author, game, genre, meaning, scope, context)
+        ):
             return item
     item = Correction(
         was=was,
@@ -124,6 +190,13 @@ def add(
         context=context,
         date=date.today().isoformat(),
         source=source,
+        author=author,
+        game=game,
+        genre=genre,
+        meaning=meaning,
+        scope=scope,
+        operation=operation,
+        model_proposal=model_proposal,
     )
     items.append(item)
     save(items, file)
@@ -131,11 +204,9 @@ def add(
 
 
 def proposals(before: str, after: str) -> list[dict]:
-    """Замены из диффа «до → после», которые похожи на правило, а не на переписку.
+    """Содержательные вставки, удаления и замены как локальные примеры.
 
-    Берутся замены не длиннее MAX_WORDS слов с каждой стороны и с хотя бы
-    одним буквенным словом; длинные куски — это пересобранный абзац, из него
-    правило не вывести.
+    Длинные изменения сохраняются как structure, а не обобщаются в запрет.
     """
     import difflib
 
@@ -143,26 +214,31 @@ def proposals(before: str, after: str) -> list[dict]:
     sm = difflib.SequenceMatcher(None, wa, wb, autojunk=False)
     out = []
     for tag, i1, i2, j1, j2 in sm.get_opcodes():
-        if tag != "replace":
+        if tag == "equal":
             continue
         was, became = " ".join(wa[i1:i2]), " ".join(wb[j1:j2])
-        if not (1 <= i2 - i1 <= MAX_WORDS and 1 <= j2 - j1 <= MAX_WORDS):
-            continue
-        if not WORD.search(was) or not WORD.search(became):
+        if not (WORD.search(was) or WORD.search(became)):
             continue
         clean = lambda s: s.strip(" .,;:!?«»\"'()—–-")  # noqa: E731
         was, became = clean(was), clean(became)
-        if not was or not became or was.lower() == became.lower():
+        if was.lower() == became.lower():
             continue
+        # Punctuation-only sides disappear during cleanup. Classify the cleaned
+        # example so saving a substantive insertion/deletion remains valid.
+        operation = "insert" if not was else "delete" if not became else "replace"
         left = " ".join(wa[max(0, i1 - 3) : i1])
         right = " ".join(wa[i2 : i2 + 3])
         kind = "term" if len(was.split()) == 1 and len(became.split()) == 1 else "phrase"
+        if operation != "replace" or max(i2 - i1, j2 - j1) > MAX_WORDS:
+            kind = "structure"
         out.append(
             {
                 "was": was,
                 "became": became,
                 "kind": kind,
                 "context": f"{left} [{was}] {right}".strip(),
+                "operation": operation,
+                "scope": "local",
             }
         )
     seen, unique = set(), []
@@ -175,17 +251,72 @@ def proposals(before: str, after: str) -> list[dict]:
     return unique
 
 
-def for_prompt(limit: int = 40) -> list[dict]:
-    """Последние правки для промпта: было → стало → почему."""
-    items = load()
+def applicable(
+    *, author: str = "", game: str = "", genre: str = "", meaning: str = "", text: str = ""
+) -> list[Correction]:
+    """Неизвестная квалификация не означает совпадение; legacy остаётся advisory."""
+    context = {"author": author, "game": game, "genre": genre, "meaning": meaning}
+    out = []
+    for c in load():
+        if any(
+            str(getattr(c, key)).strip().casefold() != str(value).strip().casefold()
+            for key, value in context.items()
+            if getattr(c, key)
+        ):
+            continue
+        if c.scope == "author_global" and not c.author:
+            continue
+        # Local context is retained for the model, never silently promoted to a ban.
+        # Qualifiers select the article; free-text context explains the intended sense.
+        out.append(c)
+    return out
+
+
+def _required(c: Correction) -> bool:
+    return (
+        c.scope in ("language_norm", "author_global")
+        and c.kind in ("term", "phrase")
+        and c.operation == "replace"
+        and bool(c.was and c.became)
+    )
+
+
+def for_prompt(limit: int = 40, **context) -> list[dict]:
+    """Лимит сокращает только примеры: скрывать обязательную норму от модели нельзя."""
+    items = applicable(**context)
+    required = [c for c in items if _required(c)]
+    optional_limit = max(0, limit - len(required))
+    optional = [c for c in items if not _required(c)]
+    selected = required + (optional[-optional_limit:] if optional_limit else [])
     return [
-        {"was": c.was, "became": c.became, "kind": c.kind, "reason": c.reason}
-        for c in items[-limit:]
+        {
+            **{
+                key: str(getattr(c, key))
+                for key in (
+                    "was",
+                    "became",
+                    "kind",
+                    "reason",
+                    "context",
+                    "date",
+                    "source",
+                    "author",
+                    "game",
+                    "genre",
+                    "meaning",
+                    "scope",
+                    "operation",
+                    "model_proposal",
+                )
+            },
+            "enforcement": "required" if _required(c) else "advisory",
+        }
+        for c in selected
     ]
 
 
-def for_gate() -> list[dict]:
-    """Правки term и phrase как правила словаря для затвора."""
+def for_gate(**context) -> list[dict]:
+    """Только явно обязательные применимые замены для затвора."""
     return [
         {
             "id": f"correction:{c.was}",
@@ -194,8 +325,8 @@ def for_gate() -> list[dict]:
             "pattern": _pattern(c.was) if len(c.was.split()) > 1 else None,
             "case_sensitive": False,
         }
-        for c in load()
-        if c.kind in ("term", "phrase")
+        for c in applicable(**context)
+        if _required(c)
     ]
 
 

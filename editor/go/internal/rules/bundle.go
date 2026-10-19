@@ -10,20 +10,21 @@ import (
 )
 
 type RuleBundle struct {
-	Task              string           `json:"task"`
-	EditorialGoal     string           `json:"editorial_goal"`
-	StyleRules        []string         `json:"style_rules"`
-	TerminologyRules  []string         `json:"terminology_rules"`
-	ProtectedEntities []string         `json:"protected_entities"`
-	SourceClaims      []map[string]any `json:"source_claims,omitempty"`
-	RelevantExamples  []string         `json:"relevant_examples,omitempty"`
-	QAFindings        []string         `json:"qa_findings,omitempty"`
-	Game              string           `json:"game"`
-	Genre             string           `json:"genre"`
-	Mode              string           `json:"mode"`
-	Depth             string           `json:"depth,omitempty"`
-	Language          string           `json:"language"`
-	AuthorProfile     string           `json:"author_profile,omitempty"`
+	Task              string              `json:"task"`
+	EditorialGoal     string              `json:"editorial_goal"`
+	StyleRules        []string            `json:"style_rules"`
+	TerminologyRules  []string            `json:"terminology_rules"`
+	Corrections       []map[string]string `json:"corrections,omitempty"`
+	ProtectedEntities []string            `json:"protected_entities"`
+	SourceClaims      []map[string]any    `json:"source_claims,omitempty"`
+	RelevantExamples  []string            `json:"relevant_examples,omitempty"`
+	QAFindings        []string            `json:"qa_findings,omitempty"`
+	Game              string              `json:"game"`
+	Genre             string              `json:"genre"`
+	Mode              string              `json:"mode"`
+	Depth             string              `json:"depth,omitempty"`
+	Language          string              `json:"language"`
+	AuthorProfile     string              `json:"author_profile,omitempty"`
 }
 
 func Build(r *analyzer.Rules, mode, depth, language string, claims []map[string]any) RuleBundle {
@@ -62,6 +63,15 @@ func Build(r *analyzer.Rules, mode, depth, language string, claims []map[string]
 		for _, keep := range r.Keep {
 			b.TerminologyRules = append(b.TerminologyRules, "не заменять: "+keep)
 		}
+		// The sidecar resolves applicability for both prompt and postflight.
+		// Keep advisory context separate from unconditional terminology rules.
+		for _, correction := range r.Corrections {
+			copy := make(map[string]string, len(correction))
+			for key, value := range correction {
+				copy[key] = value
+			}
+			b.Corrections = append(b.Corrections, copy)
+		}
 		for _, ex := range r.StyleExamples {
 			if len(b.RelevantExamples) == 4 {
 				break
@@ -81,14 +91,14 @@ func (b RuleBundle) WithQA(findings []string) RuleBundle {
 
 func (b RuleBundle) Prompt() string {
 	raw, _ := json.Marshal(b)
-	return "КОНТЕКСТ РЕДАКТОРА (служебные метрики скрыты):\n" + string(raw)
+	return "КОНТЕКСТ РЕДАКТОРА (служебные метрики скрыты). Corrections: required — обязательная применимая норма; advisory — пример только в указанном контексте, не глобальный запрет. Fact corrections и стилевые примеры не доказывают текущие игровые факты:\n" + string(raw)
 }
 
 func safeClaims(claims []map[string]any) []map[string]any {
 	out := make([]map[string]any, 0, len(claims))
 	for _, claim := range claims {
 		clean := map[string]any{}
-		for _, key := range []string{"claim_id", "meaning", "action", "condition", "exception", "confidence", "patch", "meta_epoch", "evidence_refs", "status"} {
+		for _, key := range []string{"claim_id", "meaning", "action", "condition", "exception", "confidence", "patch", "meta_epoch", "evidence_refs", "status", "research_context"} {
 			if value, ok := claim[key]; ok {
 				clean[key] = value
 			}

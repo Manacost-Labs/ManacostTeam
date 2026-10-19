@@ -266,6 +266,8 @@ def validate(
     current_meta_epoch: str | None = None,
     current_patch: str | None = None,
     evidence_requested: bool = False,
+    author: str = "manacost",
+    meaning: str = "",
 ) -> dict:
     """Затвор: что правка сделала с голосом, защищённым и ритмом.
 
@@ -274,7 +276,7 @@ def validate(
 
     В глубине «переплавка» исходник — источник фактов, а не формы, поэтому
     относительные проверки голоса, ритма и длины выключены. Вместо них —
-    абсолютные нормы автора (rewrite_gate) и покрытие утверждений (claims).
+    диагностика норм автора (rewrite_gate) и обязательное покрытие утверждений (claims).
     """
     C = _scripts()
     g = G.load(game)
@@ -317,8 +319,7 @@ def validate(
                 warnings.append(item)
                 lost_voice_signals.append(item)
         # A local voice signal is a review prompt, not a verdict by itself.
-        # Reject only article-sized flattening that crosses the corpus safety
-        # floor; short snippets and justified local deletions stay reviewable.
+        # A corpus floor adds context to the diagnostic, not a veto.
         if (
             lost_voice_signals
             and min(wa, wb) >= soul.MIN_WORDS
@@ -328,7 +329,7 @@ def validate(
             and voice_before >= g.norms.voice_low
             and voice_after < g.norms.voice_low
         ):
-            violations.append(
+            warnings.append(
                 {
                     "kind": "voice_flattened",
                     "message": (
@@ -382,8 +383,8 @@ def validate(
         )
     # Rhythm variance is meaningful on article-sized samples, but is extremely
     # noisy on snippets: changing one word in two sentences can move the ratio
-    # more than the guardrail threshold. Keep the metric below, but only gate
-    # edits when both samples are large enough for a stable comparison.
+    # more than the guardrail threshold. Keep the metric below, but only
+    # compare edits when both samples are large enough for a stable comparison.
     if (
         not rewrite
         and ra
@@ -396,10 +397,7 @@ def validate(
             "kind": "rhythm_flattened",
             "message": f"проверьте ритм: {ra['ratio']:.2f} → {rb['ratio']:.2f}",
         }
-        if g.norms.rhythm_alarm is not None and rb["ratio"] < g.norms.rhythm_alarm:
-            violations.append(item)
-        else:
-            warnings.append(item)
+        warnings.append(item)
 
     delta = 100 * (len(after) - len(before)) / max(1, len(before))
     lost_words = max(0, wa - wb)
@@ -475,7 +473,21 @@ def validate(
             else:
                 warnings.append(item)
 
-    # Переплавка: точка отсчёта — норма автора и утверждения исходника
+    if not rewrite:
+        for hit in rewrite_gate.terminology_hits(
+            after, corrections_only=True, game=g.id, author=author, genre=prof.id, meaning=meaning
+        ):
+            violations.append(
+                {
+                    "kind": "term_replace",
+                    "severity": "error",
+                    "message": f"обязательная норма: {hit['found']} → {hit['preferred']}",
+                    "rule": hit["rule"],
+                    "line": hit["line"],
+                }
+            )
+
+    # Переплавка: смысловые ограничения обязательны, нормы голоса диагностические.
     rewrite_metrics: dict = {}
     if rewrite:
         claims_mod = C.sibling("claims")
@@ -488,6 +500,8 @@ def validate(
             expected_classes=source.get("classes") or None,
             archetype=source.get("archetype"),
             game=g.id,
+            author=author,
+            meaning=meaning,
         )
         if g.id == "hearthstone":
             cov_v, cov_w, cov_m = claims_mod.coverage(
@@ -692,8 +706,9 @@ def _good_example(text: str) -> bool:
     markers = C.sibling("markers")
     if markers.scan(text, markers.load_patterns()):
         return False
-    s, _ = C.sibling("soul").measure(text)
-    return bool(s) and sum(1 for v in s.values() if v["n"] > 0) >= 2
+    # Clean, complete calm paragraphs are eligible too. Surface voice signals
+    # describe a sample; they do not establish whether it is a good explanation.
+    return bool(_editorial_functions(text)) or len(re.findall(r"[.!?](?:\s|$)", text)) >= 2
 
 
 # Семейства профилей для retrieval: тот же профиль или тот же жанр.
@@ -740,6 +755,19 @@ def _voice_features(text: str) -> list[str]:
     return [name for name, value in signals.items() if value.get("n", 0) > 0]
 
 
+def _editorial_functions(text: str) -> list[str]:
+    """Retrieval hints about paragraph purpose, never a quality score or game fact."""
+    patterns = {
+        "mechanism": r"потому что|поэтому|срабатыва|это означает|за счёт|после .*эффект",
+        "comparison": r"в отличие|по сравнению|тогда как|сильнее|слабее|лучше|хуже",
+        "warning": r"не стоит|опасн|осторож|если|только при|кроме|исключен",
+        "conclusion": r"в итоге|поэтому|таким образом|остаётся|вывод",
+        "transition": r"теперь|перейд[её]м|следующ|после этого|с другой стороны",
+        "author_remark": r"на мой взгляд|по моему опыту|я считаю|мне кажется|обычно я",
+    }
+    return [name for name, pattern in patterns.items() if re.search(pattern, text, re.I)]
+
+
 def corpus_examples(
     text: str | None,
     game: str | None,
@@ -748,6 +776,7 @@ def corpus_examples(
     author: str | None = None,
     limit: int = RETRIEVAL_MAX,
     exclude_hash: str | None = None,
+    reader_level: str | None = None,
 ) -> dict:
     """Примеры авторского стиля из корпуса для Go retrieval.
 
@@ -774,11 +803,24 @@ def corpus_examples(
     query_norm = _content_norm(text)
     doc_hashes = _document_hashes(version)
     echo = C.sibling("echo")
-    queries = C.paragraphs(text, min_words=25)[:8] or [str(text)[:1500]]
+    queries = list(dict.fromkeys(C.paragraphs(text, min_words=25))) or [str(text)[:1500]]
     best: dict[str, dict] = {}
+    searched_functions: set[str] = set()
     for query in queries:
         shared_query = set(echo.words(query))
-        for score, name, para, meta in archive.search(query, top=6):
+        query_functions = set(_editorial_functions(query))
+        candidates = list(archive.search(query, top=6))
+        new_functions = query_functions - searched_functions
+        if new_functions:
+            # Function retrieval complements lexical search, including topics with
+            # no shared card names. The same hard filters below apply to both.
+            candidates.extend(
+                (0.0, name, para, meta)
+                for name, para, _, meta in getattr(archive, "docs", [])
+                if new_functions & set(_editorial_functions(para))
+            )
+            searched_functions.update(new_functions)
+        for score, name, para, meta in candidates:
             doc_id = str(meta.get("id") or name)
             doc_game = str(meta.get("game") or G.DEFAULT).lower()
             if doc_game != want_game:
@@ -790,6 +832,9 @@ def corpus_examples(
                     continue
             doc_author = str(meta.get("author") or "manacost")
             if author and doc_author.lower() != str(author).strip().lower():
+                continue
+            level = str(meta.get("reader_level") or "").strip().lower()
+            if reader_level and level and level != reader_level.strip().lower():
                 continue
             if not _good_example(para):
                 continue
@@ -804,6 +849,8 @@ def corpus_examples(
             shared = sorted(
                 w for w in shared_query & set(echo.words(para)) if archive.idf.get(w, 0) >= 3.0
             )[:4]
+            functions = _editorial_functions(para)
+            shared_functions = sorted(query_functions & set(functions))
             item = {
                 "id": f"{doc_id}#{para_hash[:10]}",
                 "game": doc_game,
@@ -811,11 +858,20 @@ def corpus_examples(
                 "author": doc_author,
                 "excerpt": para[:RETRIEVAL_EXCERPT_MAX],
                 "voice_features": _voice_features(para),
+                "editorial_functions": functions,
+                "reader_level": level,
                 "why_relevant": (
                     ("тот же профиль" if same_profile else "тот же жанр")
                     + (f"; общие редкие слова: {', '.join(shared)}" if shared else "")
+                    + (f"; функция: {', '.join(shared_functions)}" if shared_functions else "")
                 ),
-                "score": round(float(score) + (1.0 if same_profile else 0.0), 2),
+                "score": round(
+                    float(score)
+                    + (1.0 if same_profile else 0.0)
+                    + (2.0 if shared_functions else 0.0)
+                    + (0.5 if reader_level and level else 0.0),
+                    2,
+                ),
             }
             previous = best.get(para_hash)
             if previous is None or item["score"] > previous["score"]:
@@ -832,27 +888,29 @@ def corpus_examples(
     return out
 
 
-def style_examples(text: str | None, profile_id: str) -> tuple[list[dict], str]:
+def style_examples(
+    text: str | None,
+    profile_id: str,
+    game: str = "hearthstone",
+    author: str = "manacost",
+    reader_level: str | None = None,
+) -> tuple[list[dict], str]:
     """Образцы манеры: сначала архив по темам исходника, потом отобранные заранее."""
-    C = _scripts()
     out: list[dict] = []
     seen_names: set[str] = set()
     source = "archive"
-    archive = _archive(_corpus_version()) if text else None
-    if archive is not None:
-        queries = C.paragraphs(text, min_words=25)[:8] or [text[:1500]]
-        for q in queries:
-            for score, name, para, meta in archive.search(q, top=2):
-                if score <= 3.0 or name in seen_names or not _good_example(para):
-                    continue
-                seen_names.add(name)
-                out.append(
-                    {"role": "по теме", "name": name, "text": para, "score": round(score, 2)}
-                )
-                if len(out) >= EXAMPLES_MAX:
-                    break
-            if len(out) >= EXAMPLES_MAX:
-                break
+    for item in corpus_examples(text, game, profile_id, author=author, reader_level=reader_level)[
+        "examples"
+    ]:
+        seen_names.add(item["id"].split("#")[0])
+        out.append(
+            {
+                "role": ", ".join(item["editorial_functions"]) or "объяснение",
+                "name": item["id"],
+                "text": item["excerpt"],
+                "score": item["score"],
+            }
+        )
     if len(out) < 3:
         pool = _exemplars().get("profiles", {})
         fallback = pool.get(profile_id) or []
@@ -863,6 +921,28 @@ def style_examples(text: str | None, profile_id: str) -> tuple[list[dict], str]:
             source = "exemplars" if not out else "archive+exemplars"
         for item in fallback:
             if item.get("name") in seen_names:
+                continue
+            if str(item.get("game", "hearthstone")).lower() != game.lower():
+                continue
+            if author and str(item.get("author", "manacost")).lower() != author.lower():
+                continue
+            item_profile = str(item.get("genre") or item.get("profile") or "constructed-guide")
+            if GENRE_FAMILIES.get(item_profile, item_profile) != GENRE_FAMILIES.get(
+                profile_id, profile_id
+            ):
+                continue
+            if reader_level and item.get("reader_level") and item["reader_level"] != reader_level:
+                continue
+            if text and _document_hashes(_corpus_version()).get(
+                item.get("guide_id")
+            ) == _content_hash(text):
+                continue
+            if text and (
+                _content_norm(item["text"]) in _content_norm(text)
+                or _content_norm(text) in _content_norm(item["text"])
+            ):
+                continue
+            if any(_content_norm(item["text"]) == _content_norm(old["text"]) for old in out):
                 continue
             out.append(
                 {
@@ -902,10 +982,9 @@ def marker_lists() -> dict:
 
 
 RHYTHM_INSTRUCTION = [
-    "В каждом разделе на 8 предложений — хотя бы одно короче 8 слов; на 15 — хотя бы одно длиннее 25.",
-    "Не подгоняй предложения к 12–16 словам: одинаковая длина — главный признак машинного текста.",
-    "Абзац — обычно 2–3 предложения; полотно из 6 и больше предложений режь по смысловому шву.",
-    "Три обрубка подряд — приём, четыре — тик.",
+    "Проверь, удобно ли следить за мыслью; меняй ритм только ради конкретной читательской проблемы.",
+    "Не добавляй обращения, скобки, короткие фразы или союзы ради счётчика голоса.",
+    "Сильные спокойные абзацы и результат без изменений допустимы; метрики только диагностические.",
 ]
 
 
@@ -917,6 +996,9 @@ def rules_for(
     text: str | None = None,
     depth: str = "обычная",
     task_context: dict | None = None,
+    author: str = "manacost",
+    meaning: str = "",
+    reader_level: str | None = None,
 ) -> dict:
     """Правила, которые Go подставляет в запрос к модели.
 
@@ -955,7 +1037,9 @@ def rules_for(
         "min_words": prof.min_words,
         "require_classes": prof.require_classes,
         "form": prof.form,
-        "corrections": CR.for_prompt(),
+        "corrections": CR.for_prompt(
+            author=author, game=g.id, genre=prof.id, meaning=meaning, text=text or ""
+        ),
         "norms": {
             **_norms(g, prof),
         },
@@ -973,7 +1057,9 @@ def rules_for(
     }
     if depth == rewrite_gate.REWRITE:
         structure = C.sibling("structure")
-        examples, source = style_examples(text, prof.id)
+        examples, source = style_examples(
+            text, prof.id, game=g.id, author=author, reader_level=reader_level
+        )
         out.update(
             {
                 "skeleton": structure.outline(prof.id),
@@ -993,7 +1079,7 @@ def rules_for(
         out.update({"author_profile": "manacost", "style_rules": style["style_rules"]})
     if task_context is not None and g.id != "hearthstone":
         # Hearthstone terminology/corpus examples have no authority over other games.
-        out.update({"replace": [], "keep": [], "corrections": []})
+        out.update({"replace": [], "keep": []})
         out["typography"] = style["typography"]
         out["style_memory"]["purpose"] = ["voice", "rhythm"]
         if depth == rewrite_gate.REWRITE:
@@ -1095,6 +1181,8 @@ class Handler(BaseHTTPRequestHandler):
                         current_meta_epoch=data.get("current_meta_epoch"),
                         current_patch=data.get("current_patch"),
                         evidence_requested=data.get("evidence_requested", False),
+                        author=data.get("author", "manacost"),
+                        meaning=data.get("meaning", ""),
                     ),
                 )
             elif self.path == "/rules":
@@ -1107,6 +1195,9 @@ class Handler(BaseHTTPRequestHandler):
                         text=data.get("text"),
                         depth=data.get("depth") or "обычная",
                         task_context=data.get("task_context"),
+                        author=data.get("author", "manacost"),
+                        meaning=data.get("meaning", ""),
+                        reader_level=data.get("reader_level"),
                     ),
                 )
             elif self.path == "/outline/validate":
@@ -1130,6 +1221,7 @@ class Handler(BaseHTTPRequestHandler):
                         author=data.get("author"),
                         limit=data.get("limit", RETRIEVAL_MAX),
                         exclude_hash=data.get("exclude_hash"),
+                        reader_level=data.get("reader_level"),
                     ),
                 )
             elif self.path == "/corpus/add":

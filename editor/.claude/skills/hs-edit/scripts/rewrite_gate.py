@@ -9,8 +9,7 @@
 текст. Для плохого исходника это бессмысленно — у слопа нечего терять. Здесь
 точка отсчёта другая: нормы, снятые с 49 опубликованных гайдов.
 
-  * живой голос не ниже нижней границы корпуса (20,6 на 1000 слов);
-  * ритм не ниже минимума корпуса (0,40), тревога ниже 0,45;
+  * голос и ритм сравниваются с корпусом только диагностически;
   * маркеров шаблона не больше максимума корпуса (60 на 10 000 слов), от нормы
     12,2 — предупреждение; «убрать»-маркеров не больше двух;
   * обязательные разделы профиля на месте, кроме честно объявленных
@@ -18,8 +17,7 @@
   * охват классов и зачин — относительно исходника, не константы;
   * форма подачи как у автора: не больше одной таблицы и четырёх кодов,
     без оценочных букв провайдера, каждая цифра — один раз;
-  * лексика: доля лемм, которых нет в корпусе, не больше 6% (у автора между
-    гайдами 2–3%), от 4% — предупреждение со списком слов.
+  * лексика: отсутствие в корпусе — предупреждение со списком слов, не запрет.
 
 Пороги откалиброваны так, чтобы опубликованные гайды затвор не отвергал:
 это проверяет selftest.py.
@@ -236,34 +234,20 @@ def terminology_rules():
     return out
 
 
-def correction_rules():
-    """Правки автора из config/corrections.yaml как правила словаря (term и phrase)."""
+def correction_rules(**context):
+    """Единая политика с prompt; локальные примеры не создают запретов."""
     try:
-        import yaml
+        from editorteam.corrections import for_gate
     except ImportError:
-        return []
-    import os
-    path = Path(os.environ.get("EDITOR_CORRECTIONS", C.ROOT / "config" / "corrections.yaml"))
-    if not path.exists():
-        return []
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    out = []
-    for r in data.get("corrections") or []:
-        if not isinstance(r, dict) or r.get("kind", "phrase") not in ("term", "phrase"):
-            continue
-        was, became = str(r.get("was", "")).strip(), str(r.get("became", "")).strip()
-        if not was or not became:
-            continue
-        pattern = None
-        if len(was.split()) > 1:
-            parts = [(re.escape(w)[:-2] + r"\w*") if len(w) > 4 else re.escape(w) for w in was.split()]
-            pattern = r"\b" + r"\s+".join(parts)
-        out.append({"id": f"correction:{was}", "subject": was, "preferred": became,
-                    "pattern": pattern, "case_sensitive": False})
-    return out
+        # Standalone helper, both checkout and portable package layouts.
+        for candidate in (C.ROOT / "python", C.ROOT / "src"):
+            if candidate.exists() and str(candidate) not in sys.path:
+                sys.path.insert(0, str(candidate))
+        from editorteam.corrections import for_gate
+    return for_gate(**context)
 
 
-def terminology_hits(text):
+def terminology_hits(text, *, corrections_only=False, game="hearthstone", **context):
     """Слова словаря замен и правок автора в тексте: по леммам для одного
     слова, по образцу для фразы.
 
@@ -271,7 +255,8 @@ def terminology_hits(text):
     правку «яичная сборка». Названия карт и коды не маскируются: словарь и так
     не пересекается с локализацией.
     """
-    rules = terminology_rules() + correction_rules()
+    rules = ([] if corrections_only or game != "hearthstone" else terminology_rules())
+    rules += correction_rules(text=text, game=game, **context)
     if not rules:
         return []
     hits = []
@@ -308,7 +293,8 @@ def _item(kind, message, severity="error", **extra):
 
 
 def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=None,
-            expected_classes=None, archetype=None, expansion=None, game="hearthstone"):
+            expected_classes=None, archetype=None, expansion=None, game="hearthstone",
+            author="manacost", meaning=""):
     """(violations, warnings, metrics) для переплавленного текста."""
     norms = {**DEFAULT_NORMS, **(norms or {}), **profile_norms(profile)}
     declared = set(declared_missing or [])
@@ -330,18 +316,18 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
     metrics["voice_low"] = norms["voice_low"]
     if s and words >= soul.MIN_WORDS:
         if voice_total < norms["voice_low"]:
-            violations.append(_item(
+            warnings.append(_item(
                 "voice_below_norm",
                 f"живой голос ниже нижней границы автора: {voice_total:.1f} "
                 f"при минимуме {norms['voice_low']} на 1000 слов",
-                suggestion="обращаться к читателю на «вы», советовать глаголом, оговариваться через «но» и «хотя»",
+                "review", suggestion="прочитать фрагмент в контексте; счётчик сам по себе не требует правки",
             ))
         for name, cfg in soul.SIGNALS.items():
             if s[name]["per1k"] < cfg["low"]:
                 warnings.append(_item(
                     "voice_signal_low",
                     f"ниже нормы: {name} — {s[name]['per1k']:.1f} при минимуме {cfg['low']} на 1000 слов",
-                    "review", signal=name, suggestion=cfg["hint"],
+                    "review", signal=name, suggestion="проверить уместность и авторскую функцию; квоты сигналов нет",
                 ))
 
     # ритм — абсолютно, с двумя порогами
@@ -350,11 +336,11 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
     metrics["rhythm_alarm"] = norms["rhythm_alarm"]
     if r and r["n"] >= MIN_RHYTHM_SENTENCES:
         if r["ratio"] < RHYTHM_FLOOR:
-            violations.append(_item(
+            warnings.append(_item(
                 "rhythm_below_norm",
                 f"ритм выровнен: разброс/среднее {r['ratio']:.2f} при минимуме корпуса "
                 f"{RHYTHM_FLOOR} (норма автора {norms['rhythm_ratio']})",
-                suggestion="чередовать короткую фразу с длинным периодом, не подгонять предложения к одной длине",
+                "review", suggestion="проверить читаемость; не менять длину предложений ради метрики",
             ))
         elif r["ratio"] < norms["rhythm_alarm"]:
             warnings.append(_item(
@@ -483,7 +469,7 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
             (violations if f["severity"] == "error" else warnings).append(item)
 
     # словарь автора: сленг и ранги не по локализации — отказ, а не вкус
-    term_hits = terminology_hits(after) if game == "hearthstone" else []
+    term_hits = terminology_hits(after, game=game, author=author, genre=profile, meaning=meaning)
     metrics["terminology_hits"] = len(term_hits)
     if term_hits:
         shown = {}
@@ -539,6 +525,8 @@ def main():
     ap.add_argument("file")
     ap.add_argument("--profile", default="constructed-guide")
     ap.add_argument("--game", default="hearthstone")
+    ap.add_argument("--author", default="manacost")
+    ap.add_argument("--meaning", default="")
     ap.add_argument("--declared-missing", default="", help="id разделов без материала, через запятую")
     ap.add_argument("--expected-classes", default="", help="классы исходника, через запятую")
     ap.add_argument("--archetype")
@@ -556,6 +544,7 @@ def main():
     violations, warnings, metrics = analyze(
         text, norms=norms_for(args.game), profile=args.profile, declared_missing=declared,
         expected_classes=classes, archetype=args.archetype, expansion=args.expansion,
+        game=args.game, author=args.author, meaning=args.meaning,
     )
     if args.format == "json":
         print(json.dumps({"accepted": not violations, "violations": violations,

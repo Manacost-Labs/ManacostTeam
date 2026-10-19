@@ -189,17 +189,16 @@ def findings(text, m=None, profile=None):
         return []
     settings = profile_settings(profile)
     warn = float(settings.get("warn_pct", WARN_PCT))
-    fail = float(settings.get("fail_pct", FAIL_PCT))
     if m["ratio"] <= warn:
         return []
-    severity = "error" if m["ratio"] > fail else "review"
+    severity = "review"  # отсутствие в архиве не доказывает неуместность слова
     shown = ", ".join(m["missing"][:12])
     return [{
         "id": "lexicon.gap", "analyzer": "lexicon", "category": "voice", "severity": severity,
         "confidence": 0.75,
         "message": f"слов, которых нет у автора: {m['ratio']}% лемм при пороге {warn:g}% "
                    f"({len(m['missing'])} из {m['unique']}): {shown}",
-        "suggestion": "заменить на слова автора или убедиться, что это термин, которого в корпусе просто не было",
+        "suggestion": "проверить значение в контексте; отсутствие в корпусе не требует замены",
         "meta": {"ratio": m["ratio"], "missing": m["missing"][:40]},
     }]
 

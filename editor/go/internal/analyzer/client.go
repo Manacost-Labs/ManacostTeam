@@ -137,6 +137,8 @@ type MarkerLists struct {
 }
 
 type ValidationContext struct {
+	Author            string
+	Meaning           string
 	Mode              string
 	Depth             string
 	DeclaredMissing   []string
@@ -150,6 +152,9 @@ type ValidationContext struct {
 // RulesContext — что нужно сайдкару, чтобы собрать правила: editorial mode,
 // глубина правки и исходник (для подбора образцов манеры при переплавке).
 type RulesContext struct {
+	Author      string
+	Meaning     string
+	ReaderLevel string
 	TaskContext json.RawMessage
 	Mode        string
 	Depth       string
@@ -265,6 +270,12 @@ func (c *Client) ValidateWithContext(ctx context.Context, before, after, game, p
 		"claims_before":      edit.ClaimsBefore, "claims_after": edit.ClaimsAfter,
 		"current_patch": edit.CurrentPatch, "current_meta_epoch": edit.CurrentMetaEpoch,
 	}
+	if edit.Author != "" {
+		payload["author"] = edit.Author
+	}
+	if edit.Meaning != "" {
+		payload["meaning"] = edit.Meaning
+	}
 	err := c.post(ctx, "/validate", payload, &v)
 	return &v, err
 }
@@ -286,6 +297,15 @@ func (c *Client) RulesWithContext(ctx context.Context, game, profile string, rc 
 		rc.Depth = "обычная"
 	}
 	payload := map[string]any{"game": game, "profile": profile, "mode": rc.Mode, "depth": rc.Depth}
+	if rc.Author != "" {
+		payload["author"] = rc.Author
+	}
+	if rc.Meaning != "" {
+		payload["meaning"] = rc.Meaning
+	}
+	if rc.ReaderLevel != "" {
+		payload["reader_level"] = rc.ReaderLevel
+	}
 	if len(rc.TaskContext) > 0 {
 		payload["task_context"] = rc.TaskContext
 	}

@@ -43,13 +43,13 @@ def test_unknown_depth_raises():
         gate.normalize_depth("medium")
 
 
-def test_flat_voiceless_text_fails_absolute_norms():
+def test_flat_voiceless_text_has_diagnostics_not_metric_rejection():
     text = "Сборки\n" + " ".join(
         f"Колода играет карту номер {i} и делает размен на столе аккуратно." for i in range(20)
     )
     violations, warnings, metrics = gate.analyze(text, profile="constructed-guide")
-    assert "rhythm_below_norm" in kinds(violations)
-    assert "voice_below_norm" in kinds(violations)
+    assert not {"rhythm_below_norm", "voice_below_norm"} & kinds(violations)
+    assert {"rhythm_below_norm", "voice_below_norm"} <= kinds(warnings)
     assert metrics["words"] >= 150
     assert metrics["rhythm_ratio"] < gate.RHYTHM_FLOOR
 
@@ -312,12 +312,13 @@ def test_article_opening_requires_a_thesis():
     assert not [w for w in warnings if w.get("signal") == "thesis"]
 
 
-def test_provisional_profile_norms_downgrade_voice_and_rhythm_to_review():
+def test_both_measured_and_provisional_norms_are_diagnostic():
     """Нормы статей заимствованы у гайдов: плоский голос — предупреждение, не отказ."""
     flat = ("Колода занимает первое место по проценту побед. " * 12 + "\n\n") * 4
     absolute = {"voice_below_norm", "rhythm_below_norm"}
     violations, warnings, metrics = gate.analyze(flat, profile="constructed-guide")
-    assert absolute & kinds(violations)
+    assert not absolute & kinds(violations)
+    assert absolute & kinds(warnings)
     violations, warnings, metrics = gate.analyze(flat, profile="analytics-article")
     assert not absolute & kinds(violations)
     assert absolute & kinds(warnings)

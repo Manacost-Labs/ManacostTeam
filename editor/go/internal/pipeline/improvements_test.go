@@ -54,6 +54,14 @@ func TestValidateImprovementsAcceptsRealQuotesAndMergesDuplicates(t *testing.T) 
 	}
 }
 
+func TestImprovementPreservesReaderBenefitAndRisk(t *testing.T) {
+	item := Improvement{Category: "clarity", Before: "В этой статье мы рассмотрим колоду.", After: "Разберём колоду.", Reason: "служебная рамка заменена прямым тезисом", ReaderProblem: "Неясно действие автора", Benefit: "Сразу обозначено действие", MeaningRisk: "Низкий: обещание сохранено"}
+	got := ValidateImprovements(improvementSource, improvementCandidate, []Improvement{item})
+	if len(got) != 1 || got[0].ReaderProblem != item.ReaderProblem || got[0].Benefit != item.Benefit || got[0].MeaningRisk != item.MeaningRisk {
+		t.Fatalf("lost review reasoning: %#v", got)
+	}
+}
+
 func criticWithImprovements(improvements string) string {
 	return fmt.Sprintf(`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":%s,"improvements":%s,"regressions":[],"findings":[],"repair_required":false}`, scoresJSON(8), improvements)
 }

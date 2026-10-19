@@ -43,4 +43,4 @@ def test_thresholds_come_from_profile():
     assert default and default[0]["severity"] == "review"  # 6.0 не выше порога 6.0
     assert bg and bg[0]["severity"] == "review"  # выше warn 4.6, ниже fail 8.8
     m["ratio"] = 9.0
-    assert lexicon.findings("x", m, profile="battlegrounds-article")[0]["severity"] == "error"
+    assert lexicon.findings("x", m, profile="battlegrounds-article")[0]["severity"] == "review"

@@ -84,3 +84,97 @@ def test_author_is_returned_and_matched_ignoring_case(has_corpus: None) -> None:
     assert all(item["author"] == "manacost" for item in same["examples"])
     plain = server.corpus_examples(QUERY, "hearthstone", "constructed-guide")["examples"]
     assert plain and all("author" in item for item in plain)
+
+
+CALM = (
+    "После срабатывания эффекта запас ресурса увеличивается на величину полученного урона. "
+    "Поэтому порядок действий определяет доступные варианты продолжения хода и позволяет заранее "
+    "оценить остаток ресурса после обмена существами на столе. Это объяснение относится только "
+    "к описанному взаимодействию и сохраняет его условия."
+)
+
+
+def test_calm_explanation_is_eligible_without_voice_signal_quota():
+    assert server._good_example(CALM)
+    assert "mechanism" in server._editorial_functions(CALM)
+
+
+def test_retrieval_reaches_late_paragraph_and_preserves_function(monkeypatch):
+    paragraphs = [
+        ("Обычное описание ситуации и доступных вариантов. " * 7) + str(i) for i in range(9)
+    ]
+    paragraphs.append("Поэтому механизм срабатывает после действия. " * 8)
+    seen = []
+
+    class Archive:
+        idf = {}
+
+        def search(self, query, top):
+            seen.append(query)
+            if "срабатывает" not in query:
+                return []
+            return [
+                (
+                    4.0,
+                    "late",
+                    CALM,
+                    {
+                        "game": "hearthstone",
+                        "genre": "constructed-guide",
+                        "author": "ivan",
+                        "reader_level": "beginner",
+                    },
+                )
+            ]
+
+    monkeypatch.setattr(server, "_archive", lambda version: Archive())
+    monkeypatch.setattr(server, "_document_hashes", lambda version: {})
+    result = server.corpus_examples(
+        "\n\n".join(paragraphs),
+        "hearthstone",
+        "constructed-guide",
+        author="ivan",
+        reader_level="beginner",
+    )
+    assert len(seen) == 10
+    assert len(result["examples"]) == 1
+    assert "mechanism" in result["examples"][0]["editorial_functions"]
+    assert result["examples"][0]["reader_level"] == "beginner"
+    assert (
+        server.corpus_examples(
+            paragraphs[-1], "hearthstone", "constructed-guide", author="ivan", reader_level="expert"
+        )["examples"]
+        == []
+    )
+
+
+def test_function_retrieval_can_find_example_without_lexical_overlap(monkeypatch):
+    class Archive:
+        idf = {}
+        docs = [
+            (
+                "calm",
+                CALM,
+                {},
+                {"game": "hearthstone", "genre": "constructed-guide", "author": "ivan"},
+            )
+        ]
+
+        def search(self, query, top):
+            return []
+
+    monkeypatch.setattr(server, "_archive", lambda version: Archive())
+    monkeypatch.setattr(server, "_document_hashes", lambda version: {})
+    assert server.corpus_examples(
+        "Потому что иначе действие недоступно.", "hearthstone", "constructed-guide", author="ivan"
+    )["examples"]
+
+
+def test_legacy_exemplar_fallback_keeps_game_genre_author_and_self_exclusion(monkeypatch):
+    monkeypatch.setattr(server, "_archive", lambda version: None)
+    monkeypatch.setattr(
+        server, "_exemplars", lambda: {"profiles": {"global": [{"name": "sample", "text": CALM}]}}
+    )
+    assert server.style_examples("исходник", "news")[0] == []
+    assert server.style_examples("исходник", "constructed-guide", author="other")[0] == []
+    assert server.style_examples(CALM, "constructed-guide")[0] == []

@@ -154,8 +154,8 @@ def report(now, words, before=None, bwords=0):
         print("  ! Правка вычистила живое:")
         for name, n_was, n_now, _ in lost:
             print(f"      {name}: {n_was} → {n_now} мест")
-            print(f"      {SIGNALS[name]['hint']}")
-        print("    Вернуть эти места. Чистота не стоит потери голоса.")
+            print("      Проверить значение фрагмента; не добавлять сигналы ради частоты.")
+        print("    Проверить функцию этих мест в контексте. Счётчик сам по себе не требует возврата.")
     elif before and words != bwords:
         print(f"  Сигналы не удалены. Объём изменился {bwords} → {words} слов,")
         print("  поэтому частоты сдвинулись сами по себе — это не потеря.")
@@ -163,7 +163,7 @@ def report(now, words, before=None, bwords=0):
         print(f"  ! Текст суше обычного: {total:.1f} против {TOTAL_MED} в корпусе.")
         print("    Правкой это не лечится — это вопрос к черновику.")
         for name in low_flags:
-            print(f"      мало: {name} — {SIGNALS[name]['hint']}")
+            print(f"      мало: {name} — проверить уместность, квоты сигналов нет")
     else:
         print(f"  Живого достаточно: {total:.1f} на 1000 слов при норме {TOTAL_MED}.")
 

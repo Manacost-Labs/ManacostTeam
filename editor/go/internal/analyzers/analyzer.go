@@ -27,6 +27,8 @@ import (
 
 // Input — общий вход для всех анализаторов.
 type Input struct {
+	Author          string
+	Meaning         string
 	Text            string
 	Before          string
 	After           string
@@ -141,6 +143,7 @@ func (p *PythonAnalyzerAdapter) Analyze(ctx context.Context, in Input) (Result, 
 	var raw analyzer.Report
 	if in.Before != "" || in.After != "" {
 		verdict, err := p.Client.ValidateWithContext(ctx, in.Before, in.After, in.Game, in.Profile, analyzer.ValidationContext{
+			Author: in.Author, Meaning: in.Meaning,
 			Mode: in.Mode, Depth: in.Depth, CurrentPatch: in.CurrentPatch, CurrentMetaEpoch: in.CurrentMeta,
 			ClaimsBefore: in.ClaimsBefore, ClaimsAfter: in.ClaimsAfter, DeclaredMissing: in.DeclaredMissing,
 		})

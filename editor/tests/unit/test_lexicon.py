@@ -50,7 +50,7 @@ def test_findings_severity_follows_thresholds(lex):
     m = {"words": 300, "unique": 100, "missing": ["a"] * 5, "ratio": 5.0}
     assert lexicon.findings("x", m)[0]["severity"] == "review"
     m["ratio"], m["missing"] = 7.0, ["a"] * 7
-    assert lexicon.findings("x", m)[0]["severity"] == "error"
+    assert lexicon.findings("x", m)[0]["severity"] == "review"
     assert (
         lexicon.findings("x", {"words": 50, "unique": 10, "missing": ["a"] * 3, "ratio": 30.0})
         == []

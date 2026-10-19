@@ -52,3 +52,30 @@ func TestBuildIsCompactAndKeepsClaimContract(t *testing.T) {
 		t.Fatalf("термины потеряны: %s", prompt)
 	}
 }
+
+func TestApplicableCorrectionsKeepScopeAndReasonInPrompt(t *testing.T) {
+	r := &analyzer.Rules{Corrections: []map[string]string{
+		{"was": "трекер", "became": "запись партий", "scope": "local", "enforcement": "advisory", "author": "manacost", "game": "hearthstone", "genre": "meta-report", "meaning": "статистика", "context": "не приложение", "reason": "локальное предпочтение"},
+		{"was": "терм", "became": "термин", "scope": "language_norm", "enforcement": "required"},
+	}}
+	b := Build(r, "GUIDE", "обычная", "ru-RU", nil)
+	var decoded map[string]any
+	raw, err := json.Marshal(b)
+	if err != nil || json.Unmarshal(raw, &decoded) != nil {
+		t.Fatal("cannot serialize rule bundle")
+	}
+	items, ok := decoded["corrections"].([]any)
+	if !ok || len(items) != 2 {
+		t.Fatal("prompt lost the applicable correction policy")
+	}
+	for key, value := range r.Corrections[0] {
+		if items[0].(map[string]any)[key] != value {
+			t.Errorf("lost correction context %s", key)
+		}
+	}
+	for _, term := range b.TerminologyRules {
+		if strings.Contains(term, "трекер") {
+			t.Fatal("advisory correction promoted to a terminology ban")
+		}
+	}
+}

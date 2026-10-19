@@ -67,7 +67,12 @@ func ValidateImprovements(source, candidate string, improvements []Improvement) 
 			continue
 		}
 		seen[key] = struct{}{}
-		out = append(out, Improvement{Category: category, Before: before, After: after, Reason: strings.TrimSpace(item.Reason)})
+		problem, benefit, risk := strings.TrimSpace(item.ReaderProblem), strings.TrimSpace(item.Benefit), strings.TrimSpace(item.MeaningRisk)
+		// Legacy reports omit all three fields. A partial new explanation is not evidence.
+		if (problem != "" || benefit != "" || risk != "") && (problem == "" || benefit == "" || risk == "") {
+			continue
+		}
+		out = append(out, Improvement{Category: category, Before: before, After: after, Reason: strings.TrimSpace(item.Reason), ReaderProblem: problem, Benefit: benefit, MeaningRisk: risk})
 	}
 	return out
 }

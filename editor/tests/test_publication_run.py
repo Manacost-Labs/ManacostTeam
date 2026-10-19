@@ -1,5 +1,6 @@
 import hashlib
 import json
+from pathlib import Path
 
 import pytest
 
@@ -112,8 +113,110 @@ def reviews(run):
             ("usefulness", "coherence", "natural_russian", "author_voice"), "pass"
         ),
         "findings": [],
+        "strengths": [],
+        "paragraph_functions": [{"quote": "Сохраняйте ресурс", "function": "Условный совет"}],
+        "reader_check": {
+            "action": "Сохранить ресурс",
+            "reason": "Не расходовать сразу",
+            "conditions": "Слабая позиция",
+            "alternative": "Угроза поражения",
+        },
+        "whole_article_checked": True,
     }
     return factual, literary
+
+
+def test_revision_carries_strengths_from_original_review(tmp_path):
+    run = prepared(tmp_path)
+    fact, literary = reviews(run)
+    literary["strengths"] = [{"quote": "Сохраняйте ресурс", "reason": "Прямое действие"}]
+    literary["dimensions"]["coherence"] = "needs_work"
+    submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
+    submit(run, stage="literary_review", artifact=write(tmp_path, "lit.json", literary))
+    assert next_task(run).get("keep_spans") == literary["strengths"]
+    revise(run, artifact=write(tmp_path, "revised.md", "# Совет\n\n" + TEXT))
+    assert next_task(run).get("keep_spans") == literary["strengths"]
+
+
+def test_new_run_requires_extended_review_but_old_runs_remain_compatible(tmp_path):
+    run = prepared(tmp_path)
+    fact, literary = reviews(run)
+    literary.pop("strengths")
+    submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
+    result = submit(run, stage="literary_review", artifact=write(tmp_path, "lit.json", literary))
+    assert result["blocked"]
+
+
+def test_literary_reviewer_does_not_receive_factual_verdict(tmp_path):
+    run = prepared(tmp_path)
+    fact, _ = reviews(run)
+    submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
+    task = next_task(run)
+    assert task["stage"] == "literary_review"
+    assert "fact_review" not in task["inputs"]
+    assert {"research", "draft"} <= task["inputs"].keys()
+
+
+def test_legacy_run_resumes_without_new_review_fields(tmp_path):
+    run = prepared(tmp_path)
+    state = status(run)
+    state.pop("review_contract_version")
+    (run / "state.json").write_text(json.dumps(state), encoding="utf-8")
+    fact, literary = reviews(run)
+    for key in ("strengths", "paragraph_functions", "reader_check", "whole_article_checked"):
+        literary.pop(key)
+    submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
+    submit(run, stage="literary_review", artifact=write(tmp_path, "lit.json", literary))
+    output = tmp_path / "legacy-final.md"
+    export(run, output=output)
+    assert output.read_text(encoding="utf-8") == TEXT
+
+
+def test_shared_handoff_metadata_survives_saved_receipts_and_next_task(tmp_path):
+    fixture = json.loads(
+        (Path(__file__).resolve().parents[2] / "tests/fixtures/editorial-boundary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    h = fixture["handoff"]
+    run = tmp_path / "run"
+    init_run(run, brief=h["brief"], patch=h["patch"], profile=h["style_profile"], shortcodes="off")
+    text = fixture["source_text"]
+    rows = [
+        {
+            "id": "one",
+            "source": "synthetic",
+            "url": h["sources"][0]["url"],
+            "text": text,
+            "access": "full",
+            "sha256": hashlib.sha256(text.encode()).hexdigest(),
+            "retrieved_at": "2026-10-19T00:00:00Z",
+        }
+    ]
+    submit(run, stage="sources", artifact=write(tmp_path, "sources.json", rows))
+    artifact = write(tmp_path, "handoff.json", h)
+    submit(run, stage="research", artifact=artifact)
+    for stage in ("draft", "fact_review"):
+        task = next_task(run)
+        assert task["stage"] == stage
+        assert Path(task["inputs"]["research"]).read_bytes() == artifact.read_bytes()
+        if stage == "draft":
+            submit(run, stage="draft", artifact=write(tmp_path, "draft.md", text))
+
+
+def test_uncollected_counterevidence_cannot_be_submitted(tmp_path):
+    from editorteam.publication_run import _ground_sources
+
+    fixture = json.loads(
+        (Path(__file__).resolve().parents[2] / "tests/fixtures/editorial-boundary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    h = fixture["handoff"]
+    h["claims"][0]["research_context"]["counterevidence"][0]["quote"] = (
+        "A never-collected objection."
+    )
+    assert _ground_sources(h, [{"url": h["sources"][0]["url"], "text": fixture["source_text"]}])
 
 
 def test_entity_hints_reach_reviewer_without_approving_a_draft(tmp_path):
