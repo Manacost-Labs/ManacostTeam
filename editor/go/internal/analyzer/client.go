@@ -35,11 +35,16 @@ func New(base string, timeout time.Duration) *Client {
 }
 
 type Violation struct {
-	Kind    string `json:"kind"`
-	Signal  string `json:"signal,omitempty"`
-	Was     int    `json:"was,omitempty"`
-	Now     int    `json:"now,omitempty"`
-	Message string `json:"message"`
+	Kind    string          `json:"kind"`
+	Signal  string          `json:"signal,omitempty"`
+	Was     int             `json:"was,omitempty"`
+	Now     int             `json:"now,omitempty"`
+	Message string          `json:"message"`
+	Field   string          `json:"field,omitempty"`
+	Context string          `json:"context,omitempty"`
+	Before  json.RawMessage `json:"before,omitempty"`
+	After   json.RawMessage `json:"after,omitempty"`
+	Lost    []string        `json:"lost,omitempty"`
 }
 
 type Verdict struct {

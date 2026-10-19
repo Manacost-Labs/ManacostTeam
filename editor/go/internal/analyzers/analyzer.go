@@ -169,23 +169,36 @@ func (p *PythonAnalyzerAdapter) Analyze(ctx context.Context, in Input) (Result, 
 
 func verdictResult(v *analyzer.Verdict) Result {
 	r := Result{Analyzer: "python", Metrics: v.Metrics}
-	for _, item := range append(append([]analyzer.Violation{}, v.Violations...), v.Warnings...) {
-		sev := "error"
-		if containsViolation(v.Warnings, item) {
-			sev = "warning"
+	appendItems := func(items []analyzer.Violation, severity string) {
+		for _, item := range items {
+			field, contextText := item.Field, item.Context
+			if field == "" {
+				field = item.Signal
+			}
+			if contextText == "" {
+				_ = json.Unmarshal(item.After, &contextText)
+			}
+			detail := map[string]any{}
+			if len(item.Before) > 0 {
+				detail["before"] = item.Before
+			}
+			if len(item.After) > 0 {
+				detail["after"] = item.After
+			}
+			if len(item.Lost) > 0 {
+				detail["lost"] = item.Lost
+			}
+			evidence := ""
+			if len(detail) > 0 {
+				raw, _ := json.Marshal(detail)
+				evidence = string(raw)
+			}
+			r.Findings = append(r.Findings, Finding{Analyzer: "python", RuleID: item.Kind, Severity: severity, Message: item.Message, Field: field, Context: contextText, Evidence: evidence})
 		}
-		r.Findings = append(r.Findings, Finding{Analyzer: "python", RuleID: item.Kind, Severity: sev, Message: item.Message, Field: item.Signal})
 	}
+	appendItems(v.Violations, "error")
+	appendItems(v.Warnings, "warning")
 	return r
-}
-
-func containsViolation(items []analyzer.Violation, want analyzer.Violation) bool {
-	for _, item := range items {
-		if item.Kind == want.Kind && item.Message == want.Message {
-			return true
-		}
-	}
-	return false
 }
 
 func (p *PythonAnalyzerAdapter) runScript(ctx context.Context, in Input) (Result, error) {

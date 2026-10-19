@@ -54,6 +54,34 @@ func TestPythonAdapterPreservesCorrectionScopeAndDiagnosticSeverity(t *testing.T
 	}
 }
 
+func TestPythonAdapterKeepsLocalSemanticEvidenceAndErrorSeverity(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"accepted":   false,
+			"violations": []map[string]any{{"kind": "FACTUAL_SEMANTIC_DRIFT", "field": "negation", "message": "изменилось отрицание", "before": "Части открываются постепенно.", "after": "Части открываются не сразу."}},
+			"warnings":   []map[string]any{{"kind": "FACTUAL_SEMANTIC_DRIFT", "field": "other", "message": "изменилось отрицание", "before": []int{3, 5}, "after": []int{5, 3}, "lost": []string{"https://example.org/source"}}},
+		})
+	}))
+	defer server.Close()
+	p := &PythonAnalyzerAdapter{Client: analyzer.New(server.URL, time.Second)}
+	r, err := p.Analyze(context.Background(), Input{Before: "Части открываются постепенно.", After: "Части открываются не сразу."})
+	if err != nil || len(r.Findings) != 2 {
+		t.Fatalf("adapter failed: %+v %v", r, err)
+	}
+	f := r.Findings[0]
+	if f.Severity != "error" || f.Field != "negation" || f.Context != "Части открываются не сразу." {
+		t.Fatalf("repair lost local target or hard error was downgraded: %+v", f)
+	}
+	var evidence map[string]any
+	if json.Unmarshal([]byte(f.Evidence), &evidence) != nil || evidence["before"] != "Части открываются постепенно." || evidence["after"] != "Части открываются не сразу." {
+		t.Fatal("repair lost exact before/after", f.Evidence)
+	}
+	f = r.Findings[1]
+	if f.Severity != "warning" || json.Unmarshal([]byte(f.Evidence), &evidence) != nil || len(evidence["before"].([]any)) != 2 || len(evidence["lost"].([]any)) != 1 {
+		t.Fatal("typed array/link diagnostics lost", f)
+	}
+}
+
 func TestNativeAnalyzerFlagsProjectTerminology(t *testing.T) {
 	result, err := (NativeGoAnalyzer{}).Analyze(context.Background(), Input{Text: "Подарки и племя на Полях сражений"})
 	if err != nil || len(result.Findings) != 1 || result.Findings[0].RuleID != "terminology.minion-type" {
