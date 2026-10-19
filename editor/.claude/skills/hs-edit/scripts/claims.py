@@ -123,6 +123,16 @@ def _archetype(text):
 _B64_LINE = re.compile(r"^[A-Za-z0-9+/=]{8,}$")
 _UNIT = re.compile(r"\b(?:игр\w*|побед\w*|ман\w*|ход\w*|карт\w*|звезд\w*|уровн\w*|кристалл\w*|урон\w*|"
                    r"здоровь\w*|атак\w*|процент\w*|раз\w*|дней|сут\w*|недел\w*)\b", re.I)
+_DATE_DAY = r"(?:0?[1-9]|[12]\d|3[01])"
+_CALENDAR_DATE = re.compile(
+    r"(?<![\w.,])(?P<day>" + _DATE_DAY + r")(?:-(?:го|е))?"
+    r"(?:(?:\s*[–—-]\s*|\s+(?:по|до)\s+)(?P<end>" + _DATE_DAY + r")(?:-(?:го|е))?)?\s+"
+    r"(?P<month>января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\b"
+    r"(?:\s+(?P<year>\d{4})(?!\w|[.,]\d))?",
+    re.I,
+)
+_SNAPSHOT_HEADER = re.compile(r"\s*(?:патч|patch)\s+\d+(?:\.\d+)*\s*[•·|]\s*срез\s*", re.I)
+_SNAPSHOT_TAIL = re.compile(r"\s*(?:г\.|года|год)?\.?\s*", re.I)
 
 
 def deck_codes(text):
@@ -152,15 +162,39 @@ def deck_codes(text):
 
 def fact_numbers(text):
     """Числа, которые читатель считает фактом: с классом, картой, процентом или
-    единицей в том же предложении. Год в колонтитуле и номер страницы — нет.
+    единицей в том же предложении, а также календарные даты. Год в колонтитуле
+    и номер страницы — нет.
 
     Ключ — (число, класс в предложении или ""), поэтому «36,1% против Друида»
     и «36,1% за 1 000 игр» — разные факты, а повторы колонтитула не считаются.
+    Дата имеет собственный контекст месяца: её перенос в отдельное предложение
+    не теряет факт и не привязывает день к соседнему классу или количеству карт.
     """
     structure = C.sibling("structure")
     keys = set()
     for sentence in re.split(r"(?<=[.!?…])\s+|\n+", text):
-        nums = NUMBERS.findall(sentence)
+        dates = list(_CALENDAR_DATE.finditer(sentence))
+        date_positions = {item.span(part) for item in dates for part in ("day", "end", "year")
+                          if item.group(part)}
+        for item in dates:
+            # A standalone PDF snapshot header is preparation metadata. Do not
+            # generalize this to prose merely mentioning a snapshot or a patch.
+            if (_SNAPSHOT_HEADER.fullmatch(sentence[:item.start()])
+                    and _SNAPSHOT_TAIL.fullmatch(sentence[item.end():])):
+                continue
+            day, end, month, year = (item.group("day"), item.group("end"),
+                                     item.group("month").casefold(), item.group("year"))
+            if end:
+                keys.add((day, f"начало диапазона дат: {month}"))
+                keys.add((end, f"конец диапазона дат: {month}"))
+                date_name = f"{day}–{end} {month}"
+            else:
+                keys.add((day, f"дата: {month}"))
+                date_name = f"{day} {month}"
+            if year:
+                keys.add((year, f"год даты: {date_name}"))
+        nums = [item.group() for item in NUMBERS.finditer(sentence)
+                if item.span() not in date_positions]
         if not nums:
             continue
         classes = [c for c in structure.CLASSES
