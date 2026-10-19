@@ -125,6 +125,9 @@ func TestLocalTautologyRepairPreservesParagraphAndNeighborEdit(t *testing.T) {
 			a.Reading = "awkward"
 			a.Decision = "repair"
 			a.FindingRuleID = "style.echo"
+			for _, echo := range e.Echoes {
+				a.EchoDecisions = append(a.EchoDecisions, EchoDecision{Quote: echo.Quote, Verdict: "accidental", Reason: "Необязательная замена породила эхо."})
+			}
 		}
 		assessments = append(assessments, a)
 	}
@@ -134,6 +137,9 @@ func TestLocalTautologyRepairPreservesParagraphAndNeighborEdit(t *testing.T) {
 	result := run(t, model, source, "edit")
 	if !result.Accepted || result.Text != fixed || result.Attempts != 2 {
 		t.Fatalf("local repair lost useful changes: %+v", result)
+	}
+	if !strings.Contains(model.messages[2][1].Content, "sound_echoes") || !strings.Contains(model.messages[2][1].Content, "играют игроки") {
+		t.Fatal("observed pair never reached critic")
 	}
 	payload := lastUserJSON(t, model.messages[3])
 	if payload["candidate"] != draft || !strings.Contains(model.messages[3][1].Content, "style.echo") {

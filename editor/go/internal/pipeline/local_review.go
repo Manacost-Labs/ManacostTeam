@@ -8,24 +8,27 @@ import (
 // LocalEdit anchors a lexical change independently of paragraph layout. Context
 // uses normalized whitespace; the full source and candidate retain Markdown.
 type LocalEdit struct {
-	ID               int    `json:"id"`
-	Before           string `json:"before"`
-	After            string `json:"after"`
-	SourceContext    string `json:"source_context"`
-	CandidateContext string `json:"candidate_context"`
-	Coarse           bool   `json:"coarse,omitempty"`
+	Echoes           []SoundEcho `json:"sound_echoes,omitempty"`
+	EchoesTruncated  bool        `json:"echoes_truncated,omitempty"`
+	ID               int         `json:"id"`
+	Before           string      `json:"before"`
+	After            string      `json:"after"`
+	SourceContext    string      `json:"source_context"`
+	CandidateContext string      `json:"candidate_context"`
+	Coarse           bool        `json:"coarse,omitempty"`
 	span             hunk
 }
 
 type EditAssessment struct {
-	EditID        int    `json:"edit_id"`
-	ReadingQuote  string `json:"reading_quote"`
-	Reading       string `json:"reading"`
-	ScopeQuote    string `json:"scope_quote"`
-	Scope         string `json:"scope"`
-	Decision      string `json:"decision"`
-	Reason        string `json:"reason"`
-	FindingRuleID string `json:"finding_rule_id,omitempty"`
+	EchoDecisions []EchoDecision `json:"echo_decisions,omitempty"`
+	EditID        int            `json:"edit_id"`
+	ReadingQuote  string         `json:"reading_quote"`
+	Reading       string         `json:"reading"`
+	ScopeQuote    string         `json:"scope_quote"`
+	Scope         string         `json:"scope"`
+	Decision      string         `json:"decision"`
+	Reason        string         `json:"reason"`
+	FindingRuleID string         `json:"finding_rule_id,omitempty"`
 }
 
 func localEdits(source, candidate string) []LocalEdit {
@@ -48,6 +51,27 @@ func localEdits(source, candidate string) []LocalEdit {
 			CandidateContext: localExcerpt(b[max(0, h.insStart-12):min(len(b), h.insEnd+12)]), Coarse: coarse, span: h,
 		})
 	}
+	walkIntroducedEchoes(source, candidate, func(echo SoundEcho) {
+		for i := range out {
+			if touches(echo.start, echo.end, out[i].span.insStart, out[i].span.insEnd) {
+				if len(out[i].Echoes) == 4 {
+					out[i].EchoesTruncated = true
+					continue
+				}
+				echo.Quote = normalizeSpace(echo.Quote)
+				duplicate := false
+				for _, old := range out[i].Echoes {
+					if old.Quote == echo.Quote {
+						duplicate = true
+					}
+				}
+				if duplicate {
+					continue
+				}
+				out[i].Echoes = append(out[i].Echoes, echo)
+			}
+		}
+	})
 	return out
 }
 
@@ -93,6 +117,9 @@ func validateEditAssessments(in criticInput, out criticResult) error {
 			return fmt.Errorf("edit_assessments: unknown or duplicate edit_id %d", a.EditID)
 		}
 		seen[a.EditID] = true
+		if err := validateEchoDecisions(in.LocalEdits[a.EditID-1], a); err != nil {
+			return err
+		}
 		h := in.LocalEdits[a.EditID-1].span
 		anchored := false
 		for _, r := range tokenRanges(norm, tokens, normalizeSpace(a.ReadingQuote)) {
@@ -149,5 +176,5 @@ func localReviewInstruction(mode string) string {
 Для каждого изменения сначала прочитай изменённое предложение со словами вокруг него. reading_quote — дословная цитата candidate на месте этой правки, достаточно полная для оценки сочетания слов: субъект, действие и ближайшие повторы. reading=awkward, если сокращение породило однокоренное эхо, сломало управление или звучит хуже исходного сочетания. Оцени реальную фразу, а не длину и не намерение автора.
 Затем проверь область действия по целому candidate, включая соседние предложения и заголовок. scope=preserved требует scope_quote из candidate, где предмет или условие уже выражены. Повторять ту же область в каждом пункте не нужно, если она однозначна из общего заголовка или соседнего текста. При scope=lost процитируй в scope_quote именно утраченное условие source и объясни, почему оставшийся контекст его не передаёт. Указание "это keep_span" или "не сказано в том же предложении" само по себе не доказывает потери.
 decision=keep сохраняет удачную форму; reason называет её конкретный эффект. Сокращение лишнего придаточного или повторной обвязки может облегчать синтаксис при прежних фактах и голосе. Не откатывай его лишь потому, что смысл не изменился. decision=repair требует точной причины в reason и finding_rule_id существующего исправимого finding. Исправляй локальное сочетание, а не отменяй соседнюю удачную редактуру. При awkward/lost нельзя ставить keep или общий accept. При отсутствии реальной потери не создавай finding ради возврата source.
-Цитаты reading_quote и scope_quote не длиннее 300 символов. Сообщение связанного finding должно содержать reading_quote дословно, чтобы repair исправлял именно это место. local_edits нормализуют пробелы только для адресации слов; контексты и before/after ограничены первыми 300 символами. coarse=true обозначает объединённую область нескольких изменений или большого документа: проверь её по полному source/candidate, не считай короткую выдержку всей областью. Полезные границы абзацев оцени отдельно по полному candidate и сохраняй при любом локальном repair. Эта проверка не заменяет no_new_facts, strength_changes и доказательства improvements.`
+Цитаты reading_quote и scope_quote не длиннее 300 символов. Сообщение связанного finding должно содержать reading_quote дословно, чтобы repair исправлял именно это место. local_edits нормализуют пробелы только для адресации слов; контексты и before/after ограничены первыми 300 символами. coarse=true обозначает объединённую область нескольких изменений или большого документа: проверь её по полному source/candidate, не считай короткую выдержку всей областью. Полезные границы абзацев оцени отдельно по полному candidate и сохраняй при любом локальном repair. Эта проверка не заменяет no_new_facts, strength_changes и доказательства improvements.` + soundEchoInstruction
 }

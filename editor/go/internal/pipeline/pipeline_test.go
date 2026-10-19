@@ -73,6 +73,9 @@ func (f *fakeLLM) Complete(_ context.Context, messages []llm.Message, _ int) (st
 				var assessments []EditAssessment
 				for _, edit := range localEdits(payload.Source, payload.Candidate) {
 					assessments = append(assessments, EditAssessment{EditID: edit.ID, ReadingQuote: edit.CandidateContext, Reading: "natural", ScopeQuote: edit.CandidateContext, Scope: "preserved", Decision: "keep", Reason: "Fixture: local review supplied independently of the gate under test."})
+					for _, echo := range edit.Echoes {
+						assessments[len(assessments)-1].EchoDecisions = append(assessments[len(assessments)-1].EchoDecisions, EchoDecision{Quote: echo.Quote, Verdict: "functional", Reason: "Fixture: a deliberate repetition outside the tested gate."})
+					}
 				}
 				fields["edit_assessments"], _ = json.Marshal(assessments)
 				encoded, _ := json.Marshal(fields)
