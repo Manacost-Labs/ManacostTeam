@@ -240,10 +240,32 @@ def link_drift(before: str, after: str) -> list[dict]:
     def urls(text):
         found = set()
         for match in re.finditer(r"https?://[^\s<>\"']+", text, re.I):
-            url = unescape(match.group()).rstrip(".,;:!?…»")
-            for opening, closing in (("(", ")"), ("[", "]"), ("{", "}")):
-                while url.endswith(closing) and url.count(closing) > url.count(opening):
-                    url = url[:-1].rstrip(".,;:!?…»")
+            raw = match.group()
+            start, end = match.span()
+            bounded = start > 0 and end < len(text) and (
+                (text[start - 1] == "<" and text[end] == ">")
+                or (text[start - 1] in "\"'" and text[end] == text[start - 1])
+            )
+            if text[max(0, match.start() - 2) : match.start()] == "](":
+                # A Markdown destination ends at its unmatched ')', even when
+                # punctuation/emphasis follows. Keep balanced URL parentheses
+                # and literal '*' inside the destination unchanged.
+                depth = 0
+                for index, char in enumerate(raw):
+                    if char == "(":
+                        depth += 1
+                    elif char == ")":
+                        if depth == 0:
+                            raw = raw[:index]
+                            bounded = True
+                            break
+                        depth -= 1
+            url = unescape(raw)
+            if not bounded:
+                url = url.rstrip(".,;:!?…»")
+                for opening, closing in (("(", ")"), ("[", "]"), ("{", "}")):
+                    while url.endswith(closing) and url.count(closing) > url.count(opening):
+                        url = url[:-1].rstrip(".,;:!?…»")
             found.add(url)
         return found
 

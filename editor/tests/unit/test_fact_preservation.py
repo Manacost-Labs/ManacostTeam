@@ -126,3 +126,30 @@ def test_parenthesized_url_survives_markdown_to_plain_text():
     before = "[Статья](https://example.org/wiki/Example_(game))."
     after = "Источник: https://example.org/wiki/Example_(game)."
     assert semantic_diff.link_drift(before, after) == []
+
+
+@pytest.mark.parametrize("wrapper", ["*", "**", "_", "~~"])
+def test_emphasized_citation_preserves_exact_destination(wrapper):
+    url = "https://example.org/wiki/Example_(game)?t=120#turn"
+    after = f"{wrapper}Источник: [разбор]({url}).{wrapper}"
+    assert semantic_diff.link_drift(url, after) == []
+    result = validate(url, after, "hearthstone", "game-guide")
+    assert not any(item.get("field") == "links" for item in result["violations"])
+    assert semantic_diff.link_drift(url, after.replace("t=120", "t=150"))
+
+
+def test_markdown_delimiter_does_not_strip_real_url_asterisk_or_fragment():
+    url = "https://example.org/match/*#turn"
+    assert semantic_diff.link_drift(url, f"*[разбор]({url}).*") == []
+    assert semantic_diff.link_drift(url, "*[разбор](https://example.org/match/#turn).*")
+    assert semantic_diff.link_drift(url, "*[разбор](https://example.org/match/*#other).*")
+
+
+@pytest.mark.parametrize("tail", [".", ",", "?", "]", "}"])
+def test_explicit_url_punctuation_is_part_of_the_destination(tail):
+    url = "https://example.org/path" + tail
+    before = f"[Источник]({url})"
+    assert semantic_diff.link_drift(before, "[Источник](https://example.org/path)")
+    assert semantic_diff.link_drift(before, f"*[Источник]({url}).*") == []
+    assert semantic_diff.link_drift(before, f'<a href="{url}">Источник</a>.') == []
+    assert semantic_diff.link_drift(before, f"<{url}>") == []

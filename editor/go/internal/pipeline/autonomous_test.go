@@ -176,6 +176,24 @@ func TestWritingSeesRequiredSectionsWithoutTreatingThemAsFacts(t *testing.T) {
 	if !strings.Contains(string(raw), "Что делать") {
 		t.Fatal("writer never saw the sections enforced by postflight", string(raw))
 	}
+	model = &fakeLLM{replies: []string{criticJSON("accept")}}
+	s := New(model, nil, "fake")
+	_, _ = s.critic(context.Background(), bundle, criticInput{Source: "Действие.", Candidate: "Действие.", Mode: "reconstruct"}, 1)
+	if lastUserJSON(t, model.messages[0])["sections_required"] == nil {
+		t.Fatal("critic can contradict a required section it never received")
+	}
+	model = &fakeLLM{replies: []string{"Действие."}}
+	_, _ = New(model, nil, "fake").repairReconstruction(context.Background(), bundle, readyHandoff(), "Действие.", nil, nil, nil)
+	if lastUserJSON(t, model.messages[0])["sections_required"] == nil {
+		t.Fatal("repair can delete a required section it never received")
+	}
+	for _, mode := range []string{"edit", "rewrite", "proofread"} {
+		model = &fakeLLM{replies: []string{criticJSON("accept")}}
+		_, _ = New(model, nil, "fake").critic(context.Background(), bundle, criticInput{Source: "Действие.", Candidate: "Действие.", Mode: mode}, 1)
+		if lastUserJSON(t, model.messages[0])["sections_required"] != nil || reconstructionReviewInstruction(mode) != "" {
+			t.Fatal("writing-only structure leaked into", mode)
+		}
+	}
 }
 
 func TestWritingMalformedFactFeedbackCannotTriggerRepair(t *testing.T) {
