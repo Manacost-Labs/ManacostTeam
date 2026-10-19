@@ -67,7 +67,11 @@ func (s *Service) retrieve(ctx context.Context, req Request, mode, retrievalMode
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	started := time.Now()
-	query := retrieval.RetrievalQuery{Text: req.Text, Game: req.Game, Profile: req.Profile, Genre: genre, Author: req.Author, Limit: retrieval.MaxExamples}
+	queryText := req.Text
+	if mode == "reconstruct" && req.Handoff != nil {
+		queryText = req.Handoff.VerifiedText()
+	}
+	query := retrieval.RetrievalQuery{Text: queryText, Game: req.Game, Profile: req.Profile, Genre: genre, Author: req.Author, Limit: retrieval.MaxExamples}
 	examples, err := s.Retriever.Retrieve(ctx, query)
 	report.DurationMS = time.Since(started).Milliseconds()
 	if err != nil {

@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v27"
+const PromptVersion = "editorteam-go-v28"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -271,7 +271,7 @@ func (s *Service) SetPromptVariant(variant string) { s.PromptVariant = variant }
 // правила или отказ модели на этапе draft. Невалидный critic, неудачный
 // repair и любые findings превращаются в отклонение с исходным текстом.
 func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
-	if strings.TrimSpace(req.Text) == "" {
+	if strings.TrimSpace(req.Text) == "" && normalizeMode(req.Mode) != "reconstruct" {
 		return nil, &RequestError{Message: "поле text пустое"}
 	}
 	mode := normalizeMode(req.Mode)
@@ -865,7 +865,7 @@ const criticInstruction = "\nТы critic. Не переписывай текст
 	". Каждая оценка — целое число от 0 до 10. improvements — конкретные места, где candidate лучше source: category из списка clarity, structure, usefulness, natural_russian, author_voice, conciseness, terminology; " +
 	"before должен быть дословной выдержкой из source. after должен быть дословной выдержкой из candidate. Не описывай улучшение общими словами. Не выдумывай отсутствующие фрагменты. " +
 	"Каждый фрагмент не длиннее 300 символов, reason — конкретное объяснение, что стало лучше и почему. Недоказанные улучшения отбрасываются; " +
-	"если текст изменён, но назвать улучшение нечем, оставь improvements пустым: такой candidate не примут. regressions — места, где candidate хуже source. " +
+	"если текст изменён, но назвать улучшение нечем, оставь improvements пустым: такой candidate не примут. regressions — массив строк с цитатой и причиной ухудшения, не массив объектов. Для чтения цитируй candidate, утраченную степень цитируй отдельно из source в scope_quote. " +
 	"Правила согласованности: verdict accept требует repair_required=false и не допускает error или blocker; verdict repair требует repair_required=true и хотя бы одно исправимое finding; verdict reject — когда изменение нельзя принять. " +
 	"В findings указывай только конкретные исправимые места; error и blocker — только для потери смысла, факта или защищённой сущности. Хороший текст не трогают: для него verdict accept с пустыми findings. " +
 	"Проверь статью целиком: повторы между главами, противоречащие советы, последовательность объяснения и единообразие терминов. Не требуй одинакового шаблона абзацев. " +
@@ -883,7 +883,7 @@ func parseCritic(text string) (criticResult, error) {
 		Verdict              string              `json:"verdict"`
 		Scores               map[string]*float64 `json:"scores"`
 		Improvements         []Improvement       `json:"improvements"`
-		Regressions          []string            `json:"regressions"`
+		Regressions          json.RawMessage     `json:"regressions"`
 		Findings             []analyzers.Finding `json:"findings"`
 		RepairRequired       bool                `json:"repair_required"`
 		StrengthChanges      []StrengthChange    `json:"strength_changes"`
@@ -894,7 +894,7 @@ func parseCritic(text string) (criticResult, error) {
 	if raw.NoNewFacts == nil || raw.UnsupportedAdditions == nil {
 		return criticResult{}, errors.New("обязательны no_new_facts и unsupported_additions, null не допускается")
 	}
-	out := criticResult{NoNewFacts: *raw.NoNewFacts, UnsupportedAdditions: raw.UnsupportedAdditions, Regressions: raw.Regressions, RepairRequired: raw.RepairRequired, StrengthChanges: raw.StrengthChanges, EditAssessments: raw.EditAssessments}
+	out := criticResult{NoNewFacts: *raw.NoNewFacts, UnsupportedAdditions: raw.UnsupportedAdditions, RepairRequired: raw.RepairRequired, StrengthChanges: raw.StrengthChanges, EditAssessments: raw.EditAssessments}
 	for _, item := range raw.Improvements {
 		if strings.TrimSpace(item.Category) == "" || strings.TrimSpace(item.Reason) == "" {
 			continue
@@ -957,6 +957,13 @@ func parseCritic(text string) (criticResult, error) {
 			return criticResult{}, errors.New("verdict repair без исправимых findings")
 		}
 	}
+	if len(raw.Regressions) > 0 {
+		if err := json.Unmarshal(raw.Regressions, &out.Regressions); err != nil {
+			// Preserve core judgments solely to report evidence errors in the
+			// same bounded retry. An invalid description still blocks acceptance.
+			return out, fmt.Errorf("regressions must be an array of strings: %w", err)
+		}
+	}
 	return out, nil
 }
 
@@ -994,7 +1001,7 @@ func (s *Service) editorialAnalysis(ctx context.Context, req Request, bundle rul
 		payloadData["revision_brief"] = req.RevisionBrief
 	}
 	payload, _ := json.Marshal(payloadData)
-	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Выделяй конкретную удачную формулировку, а не весь длинный абзац: достоинство мысли не делает соседние повторы или тяжёлый синтаксис неприкосновенными. В weak_spots называй конкретную трудность для читателя и её место; не считай длину абзаца самостоятельным дефектом. Не требуй обязательного числа замечаний. Верни только JSON: thesis, audience, genre — строки; paragraphs, weak_spots, repetitions, unclear, template_phrases, missing_links, factual_risks — массивы строк; strengths — массив объектов {quote,reason}. paragraphs описывает функции и нужные границы мыслей, включая сохраняемые удачные абзацы. tool_observations — диагностические подсказки: проверяй их в контексте, не предлагай замену ради счётчика."+craftInstruction+formEditingInstruction(req.Mode)+revisionBriefInstruction(req.RevisionBrief), examples)}, {Role: "user", Content: string(payload)}})
+	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Выделяй конкретную удачную формулировку, а не весь длинный абзац: достоинство мысли не делает соседние повторы или тяжёлый синтаксис неприкосновенными. В weak_spots называй конкретную трудность для читателя и её место; не считай длину абзаца самостоятельным дефектом. Не требуй обязательного числа замечаний. Верни только JSON: thesis, audience, genre — строки; paragraphs, weak_spots, repetitions, unclear, template_phrases, missing_links, factual_risks — массивы строк; strengths — массив объектов {quote,reason}. paragraphs описывает функции и нужные границы мыслей, включая сохраняемые удачные абзацы. tool_observations — диагностические подсказки: проверяй их в контексте, не предлагай замену ради счётчика."+craftInstruction+proseInstruction(req.Mode)+formEditingInstruction(req.Mode)+revisionBriefInstruction(req.RevisionBrief), examples)}, {Role: "user", Content: string(payload)}})
 	if err != nil {
 		return Analysis{FactualRisks: []string{"анализ не разобран: " + err.Error()}, ToolObservations: observations}
 	}
@@ -1027,14 +1034,14 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 			"После черновика проверь функцию каждого абзаца, порядок объяснения и повторы. Конкретность, шутки, обращения и длина фраз зависят от задачи; одинаковая структура абзацев не нужна. Не заявляй личный опыт или тестирование без источника. " +
 			"Построй связный русский текст, убери повторы между главами, выдержи жанр и единый голос; соблюдай editorial_rules. Corrections.required — применимая норма, advisory — контекстный пример, не запрет. Fact corrections не доказывают текущий игровой факт. " +
 			"style_examples показывают только форму; факты бери исключительно из handoff. Верни только готовый материал."
-		return s.complete(ctx, []llm.Message{{Role: "system", Content: system + craftInstruction + precisionInstruction}, {Role: "user", Content: string(payload)}})
+		return s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+craftInstruction+precisionInstruction+proseInstruction("reconstruct"), examples)}, {Role: "user", Content: string(payload)}})
 	}
 	raw, _ := json.Marshal(analysis)
 	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (наблюдения, не обязательный план; проверь выводы по исходнику, не добавляй факты из анализа):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Верни только готовый текст. Режим "+req.Mode+". Сохрани названия, числа, ссылки, отрицания, осторожность, разметку и голос автора. Сохрани смысл и голос strengths. Это не запрет исправлять внутри них грамматику, повтор или тяжёлый синтаксис: меняй только место с конкретной пользой для читателя, сохраняя условия и степень уверенности. В edit/rewrite можно разделить длинный абзац по смене мысли и сохранить соседние удачные формулировки; не сокращай ради самого сокращения. Сохрани сноски: звёздочка со следующим неразрывным пробелом — буквальный знак сноски; при обычном пробеле экранируй звёздочку обратной косой чертой, чтобы не получить список. Не добавляй новые карты, факты или выводы. Правильность мысли не запрещает улучшать её форму. Если после проверки структуры и синтаксиса конкретной пользы нет, верни текст без изменений.", examples)
 	if req.Mode == "proofread" {
 		system += "\nКонтракт proofread: исправь только опечатки, грамматику, пунктуацию и типографику. Не меняй композицию, стиль и порядок абзацев."
 	}
-	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction + craftInstruction + formEditingInstruction(req.Mode) + "\ntool_observations и parse_warnings в анализе — диагностика, а не требования переписать текст. Опечатку проверь в контексте; частоту слов не исправляй автоматически."}, {Role: "user", Content: textPayload(req.Text, examples)}})
+	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction + craftInstruction + proseInstruction(req.Mode) + formEditingInstruction(req.Mode) + "\ntool_observations и parse_warnings в анализе — диагностика, а не требования переписать текст. Опечатку проверь в контексте; частоту слов не исправляй автоматически."}, {Role: "user", Content: textPayload(req.Text, examples)}})
 }
 
 // critic вызывает модель с JSON-данными в user message. Невалидный ответ
@@ -1055,7 +1062,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}
 	}
 	messages := []llm.Message{
-		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief), examplesOf(in))},
+		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief), examplesOf(in))},
 		{Role: "user", Content: string(payload)},
 	}
 	started := time.Now()
@@ -1070,10 +1077,8 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: kind, Err: err}
 	}
 	out, parseErr := parseCritic(text)
-	if parseErr == nil {
-		// Report independent evidence failures together within the same retry
-		// budget, instead of fixing one while hiding the other until rejection.
-		parseErr = errors.Join(validateStrengthChanges(in, out), validateEditAssessments(in, out))
+	if out.Verdict != "" {
+		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out))
 	}
 	if parseErr == nil {
 		s.logStage(ctx, "critic", started, attempt, "")
@@ -1092,8 +1097,8 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: kind, Err: err}
 	}
 	out, parseErr = parseCritic(text)
-	if parseErr == nil {
-		parseErr = errors.Join(validateStrengthChanges(in, out), validateEditAssessments(in, out))
+	if out.Verdict != "" {
+		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out))
 	}
 	if parseErr != nil {
 		s.logStage(ctx, "critic_retry", started, attempt, ReasonCriticInvalid)
@@ -1134,7 +1139,7 @@ func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, c
 		"previous_repair_findings — замечания предыдущего ремонта, а не новые задания. Текущие targets только в findings. Сохрани уже внесённую по ним корректную правку и не возвращай прежнюю ошибку, устраняя соседнюю. Пример замены в текущем finding — подсказка: если он возвращает прежний дефект, выбери другой вариант. Факты, условия и степень по source имеют приоритет над историей стилистических замечаний. "+
 		"Сохрани удачное разделение длинного абзаца, если оно не меняет связи мыслей. При ошибке literal_footnote восстанови буквальную звёздочку сноски с экранированием, а не пункт списка; оставь полезную редактуру её пояснения. "+
 		"Сохрани ссылки, названия и удачные места keep_spans; конкретная ошибка или обоснованное улучшение ясности допускает точечную правку. Результат снова проверит critic. "+
-		"Верни полный исправленный текст без пояснений."+precisionInstruction+craftInstruction+revisionBriefInstruction(revisionBrief), examples)
+		"Верни полный исправленный текст без пояснений."+precisionInstruction+craftInstruction+proseInstruction("edit")+revisionBriefInstruction(revisionBrief), examples)
 	return s.complete(ctx, []llm.Message{{Role: "system", Content: system}, {Role: "user", Content: string(payload)}})
 }
 
@@ -1176,7 +1181,7 @@ func normalizeMode(v string) string {
 		return "edit"
 	case "rewrite", "переплавка":
 		return "rewrite"
-	case "reconstruct", "пересборка":
+	case "reconstruct", "пересборка", "write", "написать":
 		return "reconstruct"
 	}
 	return ""
