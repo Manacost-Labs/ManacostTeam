@@ -113,6 +113,9 @@ func (r *Runner) Check(parent context.Context, text string) ([]finding.Finding, 
 	if parseErr != nil {
 		return nil, parseErr
 	}
+	if err != nil && len(findings) == 0 {
+		return nil, fmt.Errorf("markdownlint завершился без диагностик: %w", err)
+	}
 	return findings, nil
 }
 

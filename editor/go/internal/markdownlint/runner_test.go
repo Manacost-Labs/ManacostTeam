@@ -26,6 +26,14 @@ func TestSerializedDocumentHelper(t *testing.T) {
 	if os.Getenv("EDITOR_MARKDOWN_EMPTY_EXIT") == "success" {
 		os.Exit(0)
 	}
+	if os.Getenv("EDITOR_MARKDOWN_EMPTY_EXIT") == "json-fail" {
+		os.Stdout.WriteString(`[]`)
+		os.Exit(2)
+	}
+	if os.Getenv("EDITOR_MARKDOWN_EMPTY_EXIT") == "findings" {
+		os.Stdout.WriteString(`[{"lineNumber":1,"ruleNames":["MD022"],"errorDetail":"missing blank line"}]`)
+		os.Exit(1)
+	}
 	if !strings.HasSuffix(string(data), "\n") {
 		os.Stdout.WriteString(`[{"lineNumber":1,"ruleNames":["MD047"],"errorDetail":"missing newline"}]`)
 	} else {
@@ -64,6 +72,15 @@ func main() { args:=append([]string{"-test.run=^TestSerializedDocumentHelper$", 
 	t.Setenv("EDITOR_MARKDOWN_EMPTY_EXIT", "fail")
 	if _, err = New(bin, "", 0).Check(context.Background(), "Готовый абзац."); err == nil {
 		t.Fatal("silent failure must remain an error")
+	}
+	t.Setenv("EDITOR_MARKDOWN_EMPTY_EXIT", "json-fail")
+	if _, err = New(bin, "", 0).Check(context.Background(), "Готовый абзац."); err == nil {
+		t.Fatal("nonzero exit with empty JSON must remain an error")
+	}
+	t.Setenv("EDITOR_MARKDOWN_EMPTY_EXIT", "findings")
+	got, err = New(bin, "", 0).Check(context.Background(), "Готовый абзац.")
+	if err != nil || len(got) != 1 || got[0].RuleID != "MD022" {
+		t.Fatalf("nonzero lint result must retain findings: %+v %v", got, err)
 	}
 }
 
