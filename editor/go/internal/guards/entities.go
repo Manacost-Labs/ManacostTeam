@@ -39,6 +39,19 @@ var patterns = []struct {
 
 var protectedWords = []string{"Воин", "Маг", "Жрец", "Охотник", "Разбойник", "Шаман", "Чернокнижник", "Паладин", "Друид", "Охотник на демонов", "Рыцарь смерти", "Поля сражений", "Темные дары", "Темный дар"}
 
+// Explicit grammatical forms of selected terms, never fuzzy name matching.
+// Surface text and byte offsets remain untouched in extracted evidence.
+var grammaticalForms = map[string][]string{
+	"Поля сражений": {"Поля сражений", "Полей сражений", "Полям сражений", "Полями сражений", "Полях сражений"},
+}
+
+func formsOf(term string) []string {
+	if forms, ok := grammaticalForms[term]; ok {
+		return forms
+	}
+	return []string{term}
+}
+
 func Extract(text string) []Entity {
 	return ExtractWithTerms(text, protectedWords)
 }
@@ -55,8 +68,10 @@ func ExtractWithTerms(text string, terms []string) []Entity {
 		out = append(out, Entity{Kind: "named_entity", Value: text[span.Start:span.End], Start: span.Start, End: span.End})
 	}
 	for _, word := range terms {
-		for _, span := range FindWholePhrase(text, word) {
-			out = append(out, Entity{Kind: "game_entity", Value: text[span.Start:span.End], Start: span.Start, End: span.End})
+		for _, form := range formsOf(word) {
+			for _, span := range FindWholePhrase(text, form) {
+				out = append(out, Entity{Kind: "game_entity", Value: text[span.Start:span.End], Start: span.Start, End: span.End})
+			}
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -75,13 +90,15 @@ func Compare(before, after string) Report {
 func CompareWithTerms(before, after string, terms []string) Report {
 	result := Report{}
 	beforeEntities, afterEntities := ExtractWithTerms(before, terms), ExtractWithTerms(after, terms)
+	beforeCounts, afterCounts := entityCounts(beforeEntities, terms), entityCounts(afterEntities, terms)
 	for _, want := range beforeEntities {
-		if countValue(afterEntities, want.Kind, want.Value) < countValue(beforeEntities, want.Kind, want.Value) {
+		key := entityIdentity(want, terms)
+		if afterCounts[key] < beforeCounts[key] {
 			result.Missing = append(result.Missing, want)
 		}
 	}
 	for _, got := range afterEntities {
-		if !containsValue(beforeEntities, got.Kind, got.Value) {
+		if beforeCounts[entityIdentity(got, terms)] == 0 {
 			result.Added = append(result.Added, got.Kind+": "+got.Value)
 		}
 	}
@@ -99,23 +116,26 @@ func CompareWithTerms(before, after string, terms []string) Report {
 	return result
 }
 
-func containsValue(items []Entity, kind, value string) bool {
-	for _, item := range items {
-		if item.Kind == kind && item.Value == value {
-			return true
+func entityIdentity(item Entity, terms []string) string {
+	value := item.Value
+	if item.Kind == "game_entity" {
+		for _, term := range terms {
+			for _, form := range formsOf(term) {
+				if value == form {
+					return item.Kind + "\x00" + term
+				}
+			}
 		}
 	}
-	return false
+	return item.Kind + "\x00" + value
 }
 
-func countValue(items []Entity, kind, value string) int {
-	n := 0
+func entityCounts(items []Entity, terms []string) map[string]int {
+	counts := make(map[string]int)
 	for _, item := range items {
-		if item.Kind == kind && item.Value == value {
-			n++
-		}
+		counts[entityIdentity(item, terms)]++
 	}
-	return n
+	return counts
 }
 
 // Go's \b is an ASCII word boundary and never matches next to Cyrillic
@@ -123,13 +143,14 @@ func countValue(items []Entity, kind, value string) int {
 var (
 	negationRE    = regexp.MustCompile(`(?i)(?:^|[^\p{L}])(?:не|ни|никогда|нельзя|нет)(?:$|[^\p{L}])`)
 	uncertaintyRE = regexp.MustCompile(`(?i)(?:^|[^\p{L}])(?:может|возможно|обычно|часто|редко|скорее)(?:$|[^\p{L}])`)
+	evaluationRE  = regexp.MustCompile(`(?i)(?:^|[^\p{L}])можно\s+(?:назвать|считать|предположить|ожидать)(?:$|[^\p{L}])`)
 )
 
 func negationCount(s string) int {
 	return countWords(negationRE, s)
 }
 func uncertaintyCount(s string) int {
-	return countWords(uncertaintyRE, s)
+	return countWords(uncertaintyRE, s) + countWords(evaluationRE, s)
 }
 
 // countWords counts non-overlapping word matches; the surrounding

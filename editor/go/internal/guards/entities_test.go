@@ -2,6 +2,59 @@ package guards
 
 import "testing"
 
+func TestEvaluativeModalitySurvivesFormEditing(t *testing.T) {
+	for _, hedge := range []string{"можно назвать", "можно считать", "можно предположить", "можно ожидать"} {
+		before := "Мы думаем: " + hedge + " такой результат. Следим за ситуацией."
+		if !Compare(before, "Мы считаем результат таким.\n\nСледим за ситуацией.").HasHardChanges() {
+			t.Errorf("lost evaluative modality %q was not detected", hedge)
+		}
+		if Compare(before, "Мы думаем: "+hedge+" такой результат.\n\nСледим за ситуацией.").HasHardChanges() {
+			t.Errorf("paragraph split falsely changed %q", hedge)
+		}
+	}
+	if uncertaintyCount("Можно выбрать карту. Можно разыграть существо.") != 0 {
+		t.Fatal("ordinary permission must not become an evaluative hedge")
+	}
+}
+
+func TestSelectedTermInflectionsKeepIdentityAndEvidence(t *testing.T) {
+	forms := []string{"Поля сражений", "Полей сражений", "Полям сражений", "Полями сражений", "Полях сражений"}
+	for _, form := range forms {
+		text := "Изменения: " + form + "."
+		report := Compare("Изменения: Поля сражений.", text)
+		if report.HasHardChanges() || len(report.Added) != 0 {
+			t.Errorf("inflection changed identity %q: %+v", form, report)
+		}
+		found := false
+		for _, entity := range Extract(text) {
+			if entity.Kind == "game_entity" && entity.Value == form {
+				found = true
+				if text[entity.Start:entity.End] != form {
+					t.Errorf("surface evidence lost: %+v", entity)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("inflected term not protected: %q", form)
+		}
+		if !Compare(text, "Изменения: Арена.").HasHardChanges() {
+			t.Errorf("removed game mode not detected: %q", form)
+		}
+	}
+	if len(ExtractWithTerms("Полях сражений", []string{"ГКД"})) != 0 {
+		t.Fatal("Hearthstone aliases leaked into selected terms for another game")
+	}
+	if !Compare("Поля сражений. Полях сражений.", "Поля сражений.").HasHardChanges() {
+		t.Fatal("canonical identity must still protect occurrence count")
+	}
+	if report := Compare("Основной фокус будет сосредоточен на Полях сражений.", "Основной упор будет сделан на Поля сражений."); report.HasHardChanges() || len(report.Added) != 0 {
+		t.Fatalf("natural phrase edit still blocked by entity inflection: %+v", report)
+	}
+	if report := CompareWithTerms("Полях сражений", "Поля сражений", []string{"Полях сражений"}); !report.HasHardChanges() {
+		t.Fatal("aliases activated without selected canonical term")
+	}
+}
+
 func TestSelectedTermsDoNotUseHearthstoneEntities(t *testing.T) {
 	got := ExtractWithTerms("Темные дары и ГКД, 20% https://example.test", []string{"ГКД"})
 	found := map[string]bool{}

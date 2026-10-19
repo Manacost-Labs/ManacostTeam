@@ -455,6 +455,7 @@ func TestChangedNumberURLOrNegationReturnsSource(t *testing.T) {
 		{"number", "Карта стоит 3 маны.", "Карта стоит 4 маны."},
 		{"url", "Читайте https://example.com.", "Читайте https://evil.example."},
 		{"negation", "Не спешите с разменом.", "Спешите с разменом."},
+		{"evaluation", "Это можно считать удачным ходом.", "Это удачный ход."},
 		{"markdown", "# Совет\n\n**Не спешите.**", "Совет\n\nНе спешите."},
 	} {
 		t.Run(test.name, func(t *testing.T) {

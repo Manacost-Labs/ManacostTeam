@@ -63,6 +63,21 @@ func TestFootnoteRepairRetainsParagraphEdits(t *testing.T) {
 	}
 }
 
+func TestEvaluativeHedgeRepairKeepsUsefulFormDespiteCriticAcceptance(t *testing.T) {
+	source := "По нашей оценке, это можно назвать полезным результатом. Игроками была завершена задача."
+	draft := "По нашей оценке, это полезный результат.\n\nИгроки завершили задачу."
+	fixed := "По нашей оценке, это можно назвать полезным результатом.\n\nИгроки завершили задачу."
+	model := &fakeLLM{replies: []string{analysisJSON, draft, criticJSON("accept"), fixed, criticJSON("accept")}}
+	result := run(t, model, source, "edit")
+	if !result.Accepted || result.Text != fixed || result.Attempts != 2 {
+		t.Fatalf("hedge guard discarded form edits or accepted stronger claim: %+v", result)
+	}
+	payload := lastUserJSON(t, model.messages[3])
+	if payload["candidate"] != draft || !containsRule(findingsOf(t, payload, "findings"), "protected_entity_changed") {
+		t.Fatalf("guard did not route specific repair despite critic acceptance: %+v", payload)
+	}
+}
+
 func TestSemanticRepairRemainsFailClosed(t *testing.T) {
 	source := "Будет выдано пару наград. Игроками была завершена задача."
 	draft := "Вы получите несколько наград. Игроки завершили задачу."
