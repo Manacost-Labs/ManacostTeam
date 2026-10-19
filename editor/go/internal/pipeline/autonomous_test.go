@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
@@ -29,6 +30,39 @@ func TestEchoIsReviewedInOneRegionWithoutMergingAnotherSentence(t *testing.T) {
 		if count != 1 {
 			t.Fatalf("one echo has %d competing reviews: %s", count, quote)
 		}
+	}
+}
+
+func TestWritingRepairsGroundedFactFeedbackAndRechecksBeforeAccepting(t *testing.T) {
+	h := readyHandoff()
+	good := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. Совет может помочь. [Источник](https://example.org/guide)"
+	bad := good + " Это гарантирует победу."
+	fact := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"может помочь","evidence_refs":["SRC-1"]}]}`
+	invalidFact := strings.Replace(fact, `"unsupported_claims":[]`, `"unsupported_claims":["Это гарантирует победу."]`, 1)
+	writer := &fakeLLM{replies: []string{bad, good}}
+	reviewer := &fakeLLM{replies: []string{invalidFact, fact, criticJSON("accept")}}
+	qa := &scriptedAnalyzer{name: "all-written-prose"}
+	s := New(writer, nil, "fake", qa)
+	s.Reviewer = reviewer
+	r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: h})
+	if err != nil || !r.Accepted || !r.ChecksComplete || r.Text != good || r.Attempts != 2 || r.FactReview == nil {
+		t.Fatalf("grounded fact correction was not rechecked: %+v %v", r, err)
+	}
+	if len(qa.inputs) != 2 || qa.inputs[0].Text != bad || qa.inputs[1].Text != good {
+		t.Fatal("QA must check each written candidate, never an empty preflight", qa.inputs)
+	}
+	payload := lastUserJSON(t, writer.messages[1])
+	if payload["research_handoff"] == nil || payload["candidate"] != bad || payload["findings"] == nil {
+		t.Fatal("repair lost evidence, candidate, or concrete targets", payload)
+	}
+	// Repeating an unsupported fact must exhaust the SAME global repair budget.
+	writer = &fakeLLM{replies: []string{bad}}
+	reviewer = &fakeLLM{replies: []string{invalidFact}}
+	s = New(writer, nil, "fake")
+	s.Reviewer = reviewer
+	r, err = s.Run(context.Background(), Request{Mode: "write", Handoff: h})
+	if err != nil || r.Accepted || r.Text != "" || r.Attempts != MaxRepairs+1 || r.ChecksComplete || !strings.Contains(strings.Join(r.RejectionReasons, ","), "fact_review_failed") {
+		t.Fatalf("unresolved fact passed or budget changed: %+v %v", r, err)
 	}
 }
 
@@ -116,5 +150,53 @@ func TestWritingRetrievesStyleForVerifiedContentInsteadOfDraft(t *testing.T) {
 	_, _ = s.retrieve(context.Background(), Request{Text: "Непроверенный ИИ-черновик.", Handoff: h}, "reconstruct", "on", "guide")
 	if len(r.queries) != 1 || r.queries[0].Text != h.VerifiedText() {
 		t.Fatal("style query still depends on a draft", r.queries)
+	}
+}
+
+func TestWritingSeesRequiredSectionsWithoutTreatingThemAsFacts(t *testing.T) {
+	model := &fakeLLM{replies: []string{"Готовый текст."}}
+	bundle := rules.Build(&analyzer.Rules{SectionsRequired: []string{"Что делать"}}, "GUIDE", "переплавка", "ru-RU", nil)
+	_, err := New(model, nil, "fake").rewrite(context.Background(), Request{Mode: "reconstruct", Handoff: readyHandoff()}, bundle, Analysis{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(lastUserJSON(t, model.messages[0])["editorial_rules"])
+	if !strings.Contains(string(raw), "Что делать") {
+		t.Fatal("writer never saw the sections enforced by postflight", string(raw))
+	}
+}
+
+func TestWritingMalformedFactFeedbackCannotTriggerRepair(t *testing.T) {
+	bad := "Совет без условий."
+	for _, fact := range []string{
+		`{"claims":[]}`,
+		`{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":["Цитата, которой нет."],"claims":[{"claim_id":"CLM-1","status":"insufficient","evidence_refs":["SRC-1"]}]}`,
+		`{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"insufficient","evidence_refs":["foreign-source"]}]}`,
+		`{"candidate_checked":true,"confidence_preserved":false,"unsupported_claims":["Совет без условий."],"claims":[{"claim_id":"CLM-1","status":"insufficient","evidence_refs":["SRC-1"]}]}`,
+	} {
+		writer := &fakeLLM{replies: []string{bad}}
+		s := New(writer, nil, "fake")
+		s.Reviewer = &fakeLLM{replies: []string{fact}}
+		r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: readyHandoff()})
+		if err != nil || r.Accepted || r.Text != "" || r.ChecksComplete || len(writer.messages) != 1 {
+			t.Fatalf("unreliable feedback authorized repair or acceptance: %+v %v", r, err)
+		}
+	}
+}
+
+func TestSmallConcreteEditsAndActionArgumentsReachEditorialStages(t *testing.T) {
+	model := &fakeLLM{replies: []string{analysisJSON, "Готовый текст.", criticJSON("accept")}}
+	s := New(model, nil, "fake")
+	bundle := rules.RuleBundle{}
+	req := Request{Text: "Исходник.", Mode: "edit"}
+	a := s.editorialAnalysis(context.Background(), req, bundle, nil)
+	_, _ = s.rewrite(context.Background(), req, bundle, a, nil)
+	_, _ = s.critic(context.Background(), bundle, criticInput{Source: req.Text, Candidate: "Готовый текст.", Mode: "edit"}, 1)
+	for _, messages := range model.messages {
+		for _, rule := range []string{"не повод сохранять доказанный дубль", "в справочник три статьи"} {
+			if !strings.Contains(messages[0].Content, rule) {
+				t.Fatal("editorial policy did not reach model stage:", rule)
+			}
+		}
 	}
 }

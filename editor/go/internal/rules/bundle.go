@@ -10,6 +10,8 @@ import (
 )
 
 type RuleBundle struct {
+	// Supplied only to reconstruction; ordinary editing preserves source structure.
+	SectionsRequired  []string            `json:"-"`
 	Task              string              `json:"task"`
 	EditorialGoal     string              `json:"editorial_goal"`
 	StyleRules        []string            `json:"style_rules"`
@@ -45,6 +47,7 @@ func Build(r *analyzer.Rules, mode, depth, language string, claims []map[string]
 		TerminologyRules:  []string{"используй официальные названия карт", "Темные дары / Темный дар — не «подарки»", "на Полях сражений говори «тип существа», а не «племя»"},
 		Task:              taskFor(mode, depth), EditorialGoal: goalFor(mode, depth)}
 	if r != nil {
+		b.SectionsRequired = append([]string(nil), r.SectionsRequired...)
 		if len(r.TaskContext) > 0 {
 			b.AuthorProfile = "manacost"
 			if len(r.StyleRules) > 0 {
