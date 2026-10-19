@@ -123,7 +123,7 @@ func normalize(text string) string {
 }
 
 var genreFamilies = map[string]string{
-	"guide": "guide", "constructed-guide": "guide", "battlegrounds-guide": "guide", "wow-guide": "guide",
+	"game-guide": "guide", "guide": "guide", "constructed-guide": "guide", "battlegrounds-guide": "guide", "wow-guide": "guide",
 	"analysis": "analysis", "analytics-article": "analysis", "battlegrounds-article": "analysis", "meta-report": "analysis",
 	"news": "news",
 }

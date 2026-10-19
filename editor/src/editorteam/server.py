@@ -713,6 +713,7 @@ def _good_example(text: str) -> bool:
 
 # Семейства профилей для retrieval: тот же профиль или тот же жанр.
 GENRE_FAMILIES = {
+    "game-guide": "guide",
     "guide": "guide",
     "constructed-guide": "guide",
     "battlegrounds-guide": "guide",

@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v28"
+const PromptVersion = "editorteam-go-v29"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -81,9 +81,10 @@ func RequestIDFrom(ctx context.Context) string {
 type Request struct {
 	TaskContext      json.RawMessage  `json:"task_context,omitempty"`
 	Text             string           `json:"text"`
-	CandidateText    string           `json:"candidate_text,omitempty"` // edit: revise this draft against Text without regenerating it
-	RevisionBrief    string           `json:"revision_brief,omitempty"` // editorial task, never factual evidence
-	Mode             string           `json:"mode"`                     // proofread | edit | rewrite | reconstruct
+	CandidateText    string           `json:"candidate_text,omitempty"`   // edit: revise this draft against Text without regenerating it
+	ReviseCandidate  bool             `json:"revise_candidate,omitempty"` // opt-in local editing pass before review
+	RevisionBrief    string           `json:"revision_brief,omitempty"`   // editorial task, never factual evidence
+	Mode             string           `json:"mode"`                       // proofread | edit | rewrite | reconstruct
 	Handoff          *ResearchHandoff `json:"research_handoff,omitempty"`
 	Game             string           `json:"game,omitempty"`
 	Profile          string           `json:"profile,omitempty"`
@@ -282,6 +283,9 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 	if req.CandidateText != "" && (mode != "edit" || strings.TrimSpace(req.CandidateText) == "") {
 		return nil, &RequestError{Message: "candidate_text должен содержать текст и доступен только в режиме edit"}
 	}
+	if req.ReviseCandidate && (mode != "edit" || req.CandidateText == "") {
+		return nil, &RequestError{Message: "revise_candidate требует candidate_text и режима edit"}
+	}
 	if req.RevisionBrief != "" && (strings.TrimSpace(req.RevisionBrief) == "" || req.CandidateText == "" || mode != "edit") {
 		return nil, &RequestError{Message: "revision_brief требует непустого задания, candidate_text и режима edit"}
 	}
@@ -388,7 +392,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 	result.Analysis = analysis
 	result.FactualRisks = append(result.FactualRisks, analysis.FactualRisks...)
 	candidate := req.Text
-	if req.CandidateText != "" && s.LLM != nil {
+	if req.CandidateText != "" && s.LLM != nil && !req.ReviseCandidate {
 		candidate = preserveEditParagraphs(mode, req.Text, req.CandidateText)
 	} else if s.LLM != nil {
 		started := time.Now()
@@ -399,8 +403,15 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		}
 		s.logStage(ctx, "draft", started, 1, "")
 		candidate = preserveEditParagraphs(mode, req.Text, draft)
+		if req.ReviseCandidate {
+			candidate = preserveEditParagraphs(mode, req.CandidateText, candidate)
+		}
 	}
 	result.Attempts = 1
+	revisionBase := ""
+	if req.ReviseCandidate {
+		revisionBase = req.CandidateText
+	}
 
 	// 4. Postflight → critic → repair, не больше MaxRepairs циклов repair.
 	var (
@@ -454,7 +465,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			}
 			var cerr *criticError
 			critic, cerr = s.critic(ctx, bundle, criticInput{
-				Source: verifiedText, Candidate: candidate, Diff: diff(verifiedText, candidate), Mode: mode, RevisionBrief: req.RevisionBrief,
+				Source: verifiedText, Candidate: candidate, Diff: diff(verifiedText, candidate), Mode: mode, RevisionBrief: req.RevisionBrief, RevisionBase: revisionBase,
 				Analysis: analysis, Handoff: req.Handoff, SourceClaims: bundle.SourceClaims, ProtectedEntities: bundle.ProtectedEntities,
 				KeepSpans:    analysis.Strengths,
 				ToolFindings: repairable(findings), StyleExamples: promptExamples(examples),
@@ -492,7 +503,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			break
 		}
 		started = time.Now()
-		repaired, err := s.repair(ctx, bundle, verifiedText, candidate, todo, previousRepairFindings, examples, req.RevisionBrief, analysis.Strengths)
+		repaired, err := s.repair(ctx, bundle, verifiedText, candidate, todo, previousRepairFindings, examples, req.RevisionBrief, revisionBase, analysis.Strengths)
 		if err != nil {
 			s.logStage(ctx, "repair", started, result.Attempts+1, errorKind(ctx, err))
 			if critic.RepairRequired || hasHardFinding(todo) {
@@ -811,6 +822,7 @@ type criticInput struct {
 	Candidate         string              `json:"candidate"`
 	Diff              []Change            `json:"diff"`
 	Mode              string              `json:"mode"`
+	RevisionBase      string              `json:"revision_base,omitempty"`
 	RevisionBrief     string              `json:"revision_brief,omitempty"`
 	Analysis          Analysis            `json:"analysis"`
 	Handoff           *ResearchHandoff    `json:"research_handoff,omitempty"`
@@ -997,11 +1009,14 @@ func (s *Service) editorialAnalysis(ctx context.Context, req Request, bundle rul
 		return out
 	}
 	payloadData := map[string]any{"text": req.Text, "style_examples": promptExamples(examples), "tool_observations": observations}
+	if req.ReviseCandidate {
+		payloadData["candidate"] = req.CandidateText
+	}
 	if req.RevisionBrief != "" {
 		payloadData["revision_brief"] = req.RevisionBrief
 	}
 	payload, _ := json.Marshal(payloadData)
-	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Выделяй конкретную удачную формулировку, а не весь длинный абзац: достоинство мысли не делает соседние повторы или тяжёлый синтаксис неприкосновенными. В weak_spots называй конкретную трудность для читателя и её место; не считай длину абзаца самостоятельным дефектом. Не требуй обязательного числа замечаний. Верни только JSON: thesis, audience, genre — строки; paragraphs, weak_spots, repetitions, unclear, template_phrases, missing_links, factual_risks — массивы строк; strengths — массив объектов {quote,reason}. paragraphs описывает функции и нужные границы мыслей, включая сохраняемые удачные абзацы. tool_observations — диагностические подсказки: проверяй их в контексте, не предлагай замену ради счётчика."+craftInstruction+proseInstruction(req.Mode)+formEditingInstruction(req.Mode)+revisionBriefInstruction(req.RevisionBrief), examples)}, {Role: "user", Content: string(payload)}})
+	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Выделяй конкретную удачную формулировку, а не весь длинный абзац: достоинство мысли не делает соседние повторы или тяжёлый синтаксис неприкосновенными. В weak_spots называй конкретную трудность для читателя и её место; не считай длину абзаца самостоятельным дефектом. Не требуй обязательного числа замечаний. Верни только JSON: thesis, audience, genre — строки; paragraphs, weak_spots, repetitions, unclear, template_phrases, missing_links, factual_risks — массивы строк; strengths — массив объектов {quote,reason}. paragraphs описывает функции и нужные границы мыслей, включая сохраняемые удачные абзацы. tool_observations — диагностические подсказки: проверяй их в контексте, не предлагай замену ради счётчика."+craftInstruction+proseInstruction(req.Mode)+formEditingInstruction(req.Mode)+candidateRevisionInstruction(req.ReviseCandidate)+revisionBriefInstruction(req.RevisionBrief), examples)}, {Role: "user", Content: string(payload)}})
 	if err != nil {
 		return Analysis{FactualRisks: []string{"анализ не разобран: " + err.Error()}, ToolObservations: observations}
 	}
@@ -1041,7 +1056,13 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 	if req.Mode == "proofread" {
 		system += "\nКонтракт proofread: исправь только опечатки, грамматику, пунктуацию и типографику. Не меняй композицию, стиль и порядок абзацев."
 	}
-	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction + craftInstruction + proseInstruction(req.Mode) + formEditingInstruction(req.Mode) + "\ntool_observations и parse_warnings в анализе — диагностика, а не требования переписать текст. Опечатку проверь в контексте; частоту слов не исправляй автоматически."}, {Role: "user", Content: textPayload(req.Text, examples)}})
+	input := textPayload(req.Text, examples)
+	if req.ReviseCandidate {
+		data, _ := json.Marshal(map[string]any{"text": req.CandidateText, "source": req.Text, "style_examples": promptExamples(examples)})
+		input = string(data)
+		system += candidateRevisionInstruction(true)
+	}
+	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction + craftInstruction + proseInstruction(req.Mode) + formEditingInstruction(req.Mode) + "\ntool_observations и parse_warnings в анализе — диагностика, а не требования переписать текст. Опечатку проверь в контексте; частоту слов не исправляй автоматически."}, {Role: "user", Content: input}})
 }
 
 // critic вызывает модель с JSON-данными в user message. Невалидный ответ
@@ -1062,7 +1083,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}
 	}
 	messages := []llm.Message{
-		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief), examplesOf(in))},
+		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief)+revisionBaseInstruction(in.RevisionBase), examplesOf(in))},
 		{Role: "user", Content: string(payload)},
 	}
 	started := time.Now()
@@ -1119,12 +1140,15 @@ func examplesOf(in criticInput) []retrieval.StyleExample {
 
 // repair получает source, candidate и актуальные findings JSON-ом и должен
 // вернуть полный текст, исправив только отмеченные места.
-func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, candidate string, findings, previousFindings []analyzers.Finding, examples []retrieval.StyleExample, revisionBrief string, strengths ...[]StrongSpan) (string, error) {
+func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, candidate string, findings, previousFindings []analyzers.Finding, examples []retrieval.StyleExample, revisionBrief, revisionBase string, strengths ...[]StrongSpan) (string, error) {
 	var keep []StrongSpan
 	if len(strengths) > 0 {
 		keep = strengths[0]
 	}
 	payloadData := map[string]any{"source": source, "candidate": candidate, "findings": findings, "previous_repair_findings": previousFindings, "style_examples": promptExamples(examples), "keep_spans": keep}
+	if revisionBase != "" {
+		payloadData["revision_base"] = revisionBase
+	}
 	if revisionBrief != "" {
 		payloadData["revision_brief"] = revisionBrief
 	}
@@ -1139,7 +1163,7 @@ func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, c
 		"previous_repair_findings — замечания предыдущего ремонта, а не новые задания. Текущие targets только в findings. Сохрани уже внесённую по ним корректную правку и не возвращай прежнюю ошибку, устраняя соседнюю. Пример замены в текущем finding — подсказка: если он возвращает прежний дефект, выбери другой вариант. Факты, условия и степень по source имеют приоритет над историей стилистических замечаний. "+
 		"Сохрани удачное разделение длинного абзаца, если оно не меняет связи мыслей. При ошибке literal_footnote восстанови буквальную звёздочку сноски с экранированием, а не пункт списка; оставь полезную редактуру её пояснения. "+
 		"Сохрани ссылки, названия и удачные места keep_spans; конкретная ошибка или обоснованное улучшение ясности допускает точечную правку. Результат снова проверит critic. "+
-		"Верни полный исправленный текст без пояснений."+precisionInstruction+craftInstruction+proseInstruction("edit")+revisionBriefInstruction(revisionBrief), examples)
+		"Верни полный исправленный текст без пояснений."+precisionInstruction+craftInstruction+proseInstruction("edit")+revisionBriefInstruction(revisionBrief)+revisionBaseInstruction(revisionBase), examples)
 	return s.complete(ctx, []llm.Message{{Role: "system", Content: system}, {Role: "user", Content: string(payload)}})
 }
 

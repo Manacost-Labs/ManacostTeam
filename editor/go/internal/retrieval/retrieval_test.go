@@ -36,6 +36,17 @@ func TestSelectKeepsOnlyTheSameGame(t *testing.T) {
 	}
 }
 
+func TestGameGuideUsesGuideFamilyWithoutCrossingGameOrNews(t *testing.T) {
+	got := Select(RetrievalQuery{Text: "Порядок получения наград.", Game: "hearthstone", Profile: "game-guide"}, []StyleExample{
+		example("guide", "hearthstone", "constructed-guide", "Оставляйте монету для ключевого хода.", 2),
+		example("news", "hearthstone", "news", "Разработчики анонсировали обновление.", 10),
+		example("other-game", "wow", "wow-guide", "Не отставайте от группы.", 10),
+	})
+	if ids(got) != "guide" {
+		t.Fatal("valid general guide has no matching style family", ids(got))
+	}
+}
+
 func TestSelectPrefersSameProfileAndNeverMixesNewsIntoGuides(t *testing.T) {
 	query := RetrievalQuery{Text: "Оставляйте монету.", Game: "hearthstone", Profile: "constructed-guide"}
 	got := Select(query, []StyleExample{

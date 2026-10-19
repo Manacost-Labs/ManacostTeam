@@ -49,6 +49,13 @@ def test_other_game_and_news_profile_get_nothing(has_corpus: None) -> None:
     assert server.corpus_examples("", "hearthstone", "constructed-guide")["examples"] == []
 
 
+def test_game_guide_gets_same_game_guide_style(has_corpus: None) -> None:
+    examples = server.corpus_examples(QUERY, "hearthstone", "game-guide")["examples"]
+    assert examples
+    assert all(item["game"] == "hearthstone" for item in examples)
+    assert all(server.GENRE_FAMILIES.get(item["profile"]) == "guide" for item in examples)
+
+
 def test_edited_text_is_excluded_by_hash_and_containment(has_corpus: None) -> None:
     body = server._scripts().body(GUIDES[28])
     paragraphs = server._scripts().paragraphs(body, min_words=35)
