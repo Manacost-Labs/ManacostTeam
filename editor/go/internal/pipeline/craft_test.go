@@ -40,6 +40,10 @@ func TestFormEditingIntentIsScopedToEditorialModes(t *testing.T) {
 				if wantsForm && !strings.Contains(system, "соседних предложениях") {
 					t.Errorf("stage %s: added explanation lacks adjacent-context check", stageOf(system))
 				}
+				wantsResidualReview := wantsForm && stageOf(system) == "critic"
+				if strings.Contains(system, "Проверка оставшихся трудностей формы:") != wantsResidualReview {
+					t.Errorf("stage %s: residual form review does not match stage and mode %s", stageOf(system), mode)
+				}
 			}
 			if mode == "proofread" && !strings.Contains(lm.messages[1][0].Content, "Не меняй композицию, стиль и порядок абзацев") {
 				t.Fatal("proofreading lost its narrow contract")
@@ -68,6 +72,9 @@ func TestFormEditingIntentDoesNotReachReconstructionOrFactualReview(t *testing.T
 	for _, call := range lm.messages {
 		if strings.Contains(call[0].Content, "Задача edit/rewrite:") {
 			t.Fatal("ordinary editing intent leaked into reconstruction or factual review")
+		}
+		if strings.Contains(call[0].Content, "Проверка оставшихся трудностей формы:") {
+			t.Fatal("residual form review leaked into reconstruction or factual review")
 		}
 	}
 }

@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v12"
+const PromptVersion = "editorteam-go-v13"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -1030,7 +1030,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}
 	}
 	messages := []llm.Message{
-		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode), examplesOf(in))},
+		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode), examplesOf(in))},
 		{Role: "user", Content: string(payload)},
 	}
 	started := time.Now()
