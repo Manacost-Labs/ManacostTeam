@@ -157,6 +157,34 @@ def test_literary_reviewer_does_not_receive_factual_verdict(tmp_path):
     assert {"research", "draft"} <= task["inputs"].keys()
 
 
+def test_craft_guidance_reaches_applicable_stages_without_changing_evidence(tmp_path):
+    run = prepared(tmp_path)
+    fact, literary = reviews(run)
+    factual_task = next_task(run)
+    packet = factual_task["chapter_brief"]
+    assert "craft_guidance" not in factual_task
+    submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
+    task = next_task(run)
+    assert task["craft_guidance"]["role"] == "review"
+    assert task["craft_guidance"]["is_factual_evidence"] is False
+    assert task["chapter_brief"] == packet
+    assert "fact_review" not in task["inputs"]
+    literary["dimensions"]["coherence"] = "needs_work"
+    submit(run, stage="literary_review", artifact=write(tmp_path, "lit.json", literary))
+    repair = next_task(run)
+    assert repair["stage"] == "draft"
+    assert repair["craft_guidance"]["role"] == "write"
+    assert repair["chapter_brief"] == packet
+    # A task is a fresh snapshot; a caller cannot change future task policy.
+    repair["craft_guidance"]["principles"].clear()
+    assert next_task(run)["craft_guidance"]["principles"]
+    from editorteam.publication_run import craft_guidance
+    for stage in ("sources", "research"):
+        assert craft_guidance(stage)["role"] == "research"
+        assert craft_guidance(stage)["is_factual_evidence"] is False
+    assert craft_guidance("ready") is None
+
+
 def test_writer_packet_keeps_question_conditions_and_source_context(tmp_path):
     run = prepared(tmp_path)
     task = next_task(run)

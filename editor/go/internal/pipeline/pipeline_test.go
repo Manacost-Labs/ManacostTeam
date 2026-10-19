@@ -330,7 +330,7 @@ func TestNoFakeScoresAreFabricated(t *testing.T) {
 // --- postflight findings drive repair ----------------------------------------
 
 func TestPostflightFindingIsPassedToRepair(t *testing.T) {
-	lm := &fakeLLM{replies: []string{analysisJSON, "Черновик.", criticJSON("accept"), "Исправлено.", criticJSON("accept")}}
+	lm := &fakeLLM{replies: []string{analysisJSON, "Черновик.", criticJSON("repair", warning("confirmed.typo", "исправьте опечатку")), "Исправлено.", criticJSON("accept")}}
 	check := &scriptedAnalyzer{name: "languagetool", perRun: [][]analyzers.Finding{nil, {warning("MORFOLOGIK_RULE_RU_RU", "возможная опечатка: черновик")}, nil}}
 	result := run(t, lm, "Исходник.", "edit", check)
 	if lm.stages[3] != "repair" {
@@ -341,10 +341,13 @@ func TestPostflightFindingIsPassedToRepair(t *testing.T) {
 	if payload["source"] != "Исходник." || payload["candidate"] != "Черновик." {
 		t.Fatalf("repair payload: %+v", payload)
 	}
-	if !containsRule(findingsOf(t, payload, "findings"), "MORFOLOGIK_RULE_RU_RU") {
+	if !containsRule(findingsOf(t, payload, "findings"), "confirmed.typo") {
 		t.Fatalf("postflight finding missing from repair: %+v", payload["findings"])
 	}
-	if !strings.Contains(repair[0].Content, "возможная опечатка: черновик") {
+	if containsRule(findingsOf(t, payload, "findings"), "MORFOLOGIK_RULE_RU_RU") {
+		t.Fatal("unconfirmed soft findings must not hitchhike on an authorized repair")
+	}
+	if !strings.Contains(repair[0].Content, "исправьте опечатку") {
 		t.Fatalf("repair system prompt lacks QA message: %s", repair[0].Content)
 	}
 	if !result.Accepted || result.Text != "Исправлено." {
@@ -354,7 +357,7 @@ func TestPostflightFindingIsPassedToRepair(t *testing.T) {
 
 func TestPostflightRunsAgainAfterRepair(t *testing.T) {
 	lm := &fakeLLM{replies: []string{analysisJSON, "Черновик.", criticJSON("accept"), "Исправлено.", criticJSON("accept")}}
-	check := &scriptedAnalyzer{name: "vale", perRun: [][]analyzers.Finding{nil, {warning("EditorTeam.Intro", "служебное вступление")}, nil}}
+	check := &scriptedAnalyzer{name: "vale", perRun: [][]analyzers.Finding{nil, {analyzers.Finding{RuleID: "required.rule", Severity: "error", Message: "обязательная правка"}}, nil}}
 	result := run(t, lm, "Исходник.", "edit", check)
 	texts := make([]string, 0, len(check.inputs))
 	for _, in := range check.inputs {
@@ -374,7 +377,7 @@ func TestPostflightRunsAgainAfterRepair(t *testing.T) {
 func TestVanishedFindingIsNotSentToSecondRepair(t *testing.T) {
 	lm := &fakeLLM{replies: []string{
 		analysisJSON, "Черновик.",
-		criticJSON("repair", warning("critic.voice", "верните обращение")), "Правка 1.",
+		criticJSON("repair", warning("critic.voice", "верните обращение"), warning("EditorTeam.Intro", "служебное вступление")), "Правка 1.",
 		criticJSON("repair", warning("critic.voice", "верните обращение")), "Правка 2.",
 		criticJSON("accept"),
 	}}
@@ -405,7 +408,7 @@ func TestWarningDoesNotBlockResult(t *testing.T) {
 	if !result.Accepted || result.Text != "Черновик." || len(result.RejectionReasons) != 0 {
 		t.Fatalf("persistent warning must not reject: %+v", result)
 	}
-	if result.Attempts != 1+MaxRepairs {
+	if result.Attempts != 1 {
 		t.Fatalf("repairs: %+v", result)
 	}
 	if !result.ChecksComplete || !result.ScoresValid {
@@ -481,14 +484,12 @@ func TestDuplicateFindingsAreMerged(t *testing.T) {
 	first := &scriptedAnalyzer{name: "vale", perRun: [][]analyzers.Finding{nil, {dup, same, dup}}}
 	second := &scriptedAnalyzer{name: "vale", perRun: [][]analyzers.Finding{nil, {dup}}}
 	result := run(t, lm, "Исходник.", "edit", first, second)
-	for _, index := range []int{3, 5} {
-		findings := findingsOf(t, lastUserJSON(t, lm.messages[index]), "findings")
-		if len(findings) != 1 || findings[0]["rule_id"] != "EditorTeam.Repeat" {
-			t.Fatalf("duplicates were not merged for repair %d: %+v", index, findings)
-		}
+	findings := findingsOf(t, lastUserJSON(t, lm.messages[2]), "tool_findings")
+	if len(findings) != 1 || findings[0]["rule_id"] != "EditorTeam.Repeat" {
+		t.Fatalf("duplicates were not merged for review: %+v", findings)
 	}
-	if !result.Accepted || result.Attempts != 3 {
-		t.Fatalf("persistent warning duplicates must not reject: %+v", result)
+	if !result.Accepted || result.Attempts != 1 || len(lm.messages) != 3 {
+		t.Fatalf("persistent warning duplicates must not trigger repair: %+v", result)
 	}
 	repeats := 0
 	for _, item := range result.QAFindings {
@@ -512,7 +513,7 @@ func TestAnalyzerUnavailableIsNeverSentToTheModel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if lm.stages[3] != "repair" {
+	if strings.Join(lm.stages, ",") != "analysis,rewrite,critic" {
 		t.Fatalf("stages: %v", lm.stages)
 	}
 	for index, call := range lm.messages {
