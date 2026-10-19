@@ -159,6 +159,7 @@ class PlanQueriesTest(unittest.TestCase):
                     "coverage_note": "out of scope",
                 },
             ]
+            plan["query_localization"] = {"topics": {"SEC-0001": {"en": "Dark Gift timing", "ru": "выбор момента для дара"}}}
             (run_dir / "plan.json").write_text(json.dumps(plan), encoding="utf-8")
             write_jsonl(
                 run_dir / "queries.jsonl",
@@ -182,7 +183,7 @@ class PlanQueriesTest(unittest.TestCase):
             self.assertNotIn("Dark Gift timing explained", queries)
             self.assertIn("Dark Gift timing patch notes 36.4", queries)
             self.assertIn("Jeef overrated", queries)
-            self.assertIn("Dark Gift timing ошибки", queries)
+            self.assertIn("выбор момента для дара ошибки", queries)
             self.assertTrue(all(record["deliverable_section_ids"] == ["SEC-0001"] for record in records))
             self.assertTrue(all(record["status"] == "planned" for record in records))
             self.assertEqual(records[0]["query_id"], "QRY-0008")
@@ -604,7 +605,10 @@ class PlanQueriesRussianDefaultTest(unittest.TestCase):
             manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
             manifest["current_context"] = {"client_patch": "36.4", "mode": "Solo Battlegrounds"}
             (run_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-            result = run(PLAN, str(run_dir), "--topic", "Dark Gift timing", "--json")
+            missing = run(PLAN, str(run_dir), "--topic", "Dark Gift timing", "--json")
+            self.assertEqual(missing.returncode, 2)
+            self.assertIn("search_phrases", missing.stderr)
+            result = run(PLAN, str(run_dir), "--topic", "Dark Gift timing", "--search-phrase", "ru=выбор момента для дара", "--json")
             self.assertEqual(result.returncode, 0, result.stderr)
             records = [json.loads(line) for line in result.stdout.splitlines()]
             languages = {record["language"] for record in records}
@@ -716,9 +720,17 @@ class FreshnessCheckTest(unittest.TestCase):
             manifest["current_context"]["client_patch"] = "36.4"
             (run_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
             old_current["freshness_status"] = "VERSION_COMPATIBLE"
+            timeline_data = json.loads(TIMELINE.read_text(encoding="utf-8"))
+            reviewed = [entry for entry in timeline_data["patches"] if entry["version"] in {"36.2.1", "36.2.2"}]
+            old_current["freshness_review"] = {"reason": "Fixture verifies this subject is unchanged", "checked_at": "2026-08-31", "checked_versions": [entry["version"] for entry in reviewed], "official_source_urls": [entry["source_url"] for entry in reviewed]}
+            no_patch["freshness_status"] = "HISTORICAL"
             unknown["patch"] = "36.4"
             write_jsonl(run_dir / "sources.jsonl", [old_current, old_labeled, unknown, no_patch, still_current])
-            result = run(FRESHNESS, str(run_dir), "--strict", "--json")
+            timeline_data["checked_at"] = "2026-08-31"
+            timeline_data["official_checks"] = [{"source_url": "https://hearthstone.blizzard.com/en-us/news", "checked_at": "2026-08-31", "through": "2026-08-31", "modes": ["battlegrounds"], "result": "no_later_relevant_changes"}]
+            checked_timeline = Path(temp) / "checked-timeline.json"
+            checked_timeline.write_text(json.dumps(timeline_data), encoding="utf-8")
+            result = run(FRESHNESS, str(run_dir), "--timeline", str(checked_timeline), "--strict", "--json")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(result.stdout)
             self.assertEqual(report["findings"]["errors"], [])
@@ -859,13 +871,13 @@ class SaturationTest(unittest.TestCase):
             sat = report["saturation"]["__all__"]
             self.assertEqual(sat["claims_yielded"], 2)
             self.assertEqual(sat["last_yield_query_id"], "QRY-0002")
-            self.assertEqual(sat["trailing_zero_yield"], 3)
-            self.assertTrue(sat["saturated"])
-            self.assertFalse(any("not yet saturated" in item for item in report["findings"]["warnings"]))
-            # A query that only re-finds a known source yields nothing; one that supports a new claim resets the run.
+            self.assertEqual(sat["trailing_zero_yield"], 0)
+            self.assertFalse(sat["saturated"])
+            self.assertTrue(any("not yet saturated" in item for item in report["findings"]["warnings"]))
+            # Repeated and empty searches do not prove saturation; new inspected material is needed.
             queries.append({**executed_query("QRY-0006", "reddit", "q6", ["SRC-0002"]), "executed_at": "2026-09-01T10:09:00Z"})
             write_jsonl(run_dir / "queries.jsonl", queries)
-            self.assertEqual(search_coverage.analyze(run_dir)["saturation"]["__all__"]["trailing_zero_yield"], 4)
+            self.assertEqual(search_coverage.analyze(run_dir)["saturation"]["__all__"]["trailing_zero_yield"], 0)
             queries.append({**executed_query("QRY-0007", "youtube", "q7", ["SRC-0003"]), "executed_at": "2026-09-01T10:10:00Z"})
             write_jsonl(run_dir / "queries.jsonl", queries)
             sources = read_jsonl(run_dir / "sources.jsonl")
@@ -1000,6 +1012,8 @@ class ModelTrialTest(unittest.TestCase):
             self.assertEqual(trial["case_id"], "RECALL-006")
             self.assertEqual(trial["host"], "gemini-cli")
             self.assertEqual(trial["languages"], ["en", "ru"])
+            self.assertEqual(trial["planned_languages"], ["en"])
+            self.assertEqual(trial["pending_localization"], ["ru"])
             bundle = Path(trial["bundle"])
             manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["schema_version"], "1.2")
@@ -1067,7 +1081,8 @@ class ModelTrialTest(unittest.TestCase):
             self.assertEqual(card["components"]["anchors"]["points"], 10)
             self.assertEqual(card["components"]["challenge"]["points"], 10)
             self.assertEqual(card["components"]["fingerprints"]["points"], 10)
-            self.assertEqual(card["components"]["freshness"]["points"], 5)
+            # A bundled registry without a recorded official update check cannot prove freshness.
+            self.assertEqual(card["components"]["freshness"]["points"], 0)
             self.assertEqual(card["components"]["families"]["points"], 10)
             self.assertEqual(card["facts"]["final_validation"], "fail")
             self.assertGreater(card["total"], empty_card["total"])

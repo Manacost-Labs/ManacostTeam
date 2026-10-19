@@ -6,6 +6,10 @@ created_at:
 as_of:
 main_question:
 intended_use:
+reader:
+  audience:
+  knowledge_level:
+  task:
 research_type: []
 domain_adapters: []
 depth: quick | deep | exhaustive
@@ -28,6 +32,21 @@ scope:
 success_criteria: []
 material_decisions: []
 known_constraints: []
+research_budget:
+  max_queries: 30 # ceiling, not a target
+reader_questions:
+  - question_id: RQ-1
+    question:
+    section_id: SEC-0001
+    priority: critical # critical | material | contextual
+    status: open # open | partial | answered | excluded
+    gap:
+    claim_ids: [] # supported claims required when answered
+    search_phrases: {en: "", ru: ""}
+query_localization:
+  topics:
+    SEC-0001: {en: "", ru: ""} # use __all__ for the main topic
+  entities: [] # {entity_id, names: {en: [...], ru: [...]}}
 
 deliverable_outline:
   - section_id: SEC-0001
@@ -75,7 +94,7 @@ MAIN QUESTION
 
 For a guide or article, every decision-relevant `deliverable_outline` section must map to one or more leaf IDs. Before the first search, present a short plain-language version of the outline to the user and continue automatically unless they requested an approval checkpoint.
 
-For a new persistent `editor-ready` run, keep these sections in `plan.json` under `coverage_contract_version: "1.0"`. Omit the coverage field and `plan.json` for other output profiles. Use stable zero-padded IDs such as `SEC-0001`; never renumber them when titles change. Allowed section statuses are `planned`, `researching`, `covered`, `excluded`, and `unresolved`. A final plan may contain only `covered`, `excluded`, or `unresolved`, and the latter two require `coverage_note`. Mark a section `covered` only when it has at least one linked query, retained evidence/claim/community material, and a claim with status `supported`, `supported_with_conditions`, or `contested` routed to `main`.
+For a new persistent `editor-ready` run, keep these sections in `plan.json` under `coverage_contract_version: "1.0"`. Omit the coverage field for other output profiles; `plan.json` may still hold optional reader questions, localized phrases and budgets. Use stable zero-padded IDs such as `SEC-0001`; never renumber them when titles change. Allowed section statuses are `planned`, `researching`, `covered`, `excluded`, and `unresolved`. A final plan may contain only `covered`, `excluded`, or `unresolved`, and the latter two require `coverage_note`. Mark a section `covered` only when it has at least one linked query, retained evidence/claim/community material, and a claim with status `supported`, `supported_with_conditions`, or `contested` routed to `main`.
 
 ## Risk hypotheses
 

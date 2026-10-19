@@ -18,6 +18,7 @@ class SourceBreadthTests(unittest.TestCase):
             existing_queries=[],
             existing_ids=set(),
             coverage_enabled=True,
+            localization={"topics": {"SEC-01": {"en": "Hearthstone Arena", "ru": "Арена Hearthstone"}}},
         )
         expected = {
             "x": ("site:x.com", "site:twitter.com"),

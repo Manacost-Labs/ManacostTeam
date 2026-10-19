@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -133,6 +134,7 @@ You are running the `deep-research` Skill on a benchmark case. Read the Skill en
 - Skill entrypoint: `{skill}`
 - Research bundle (already initialized, schema 1.2): `{bundle}`
 - Registry opens and a query matrix are already planned in `{bundle / 'query-plan.jsonl'}`.
+- Requested languages: {', '.join(trial['languages'])}. Missing localization: {', '.join(trial.get('pending_localization', [])) or 'none'}. Supply real `plan.query_localization.topics` search phrases before claiming multilingual coverage. Template suffixes are not translations.
 
 ## Question
 
@@ -212,16 +214,33 @@ def start(args: argparse.Namespace) -> int:
     languages = list(dict.fromkeys(args.language)) or (
         ["en", "ru"] if case.get("domain") == "hearthstone" else ["en"]
     )
+    manifest["required_query_languages"] = languages
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     seed = run_script("registry_seed.py", str(bundle), "--apply")
     topic = str(case.get("title") or case["prompt"])[:80]
+    phrases = case.get("search_phrases", {})
+    source_language = "ru" if re.search(r"[А-Яа-яЁё]", topic) else "en"
+    available_languages = [language for language in languages if phrases.get(language) or language == source_language]
+    pending_localization = [language for language in languages if language not in available_languages]
+    if phrases:
+        plan_path = bundle / "plan.json"
+        plan_data = load_json(plan_path) if plan_path.exists() else {}
+        plan_data["query_localization"] = {"topics": {"__all__": phrases}}
+        plan_path.write_text(json.dumps(plan_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if not available_languages:
+        print("error: no supplied search_phrases match the requested languages", file=sys.stderr)
+        return 2
     plan = run_script(
         "plan_queries.py",
         str(bundle),
         "--topic",
         topic,
-        *[arg for language in languages for arg in ("--language", language)],
+        *[arg for language in available_languages for arg in ("--language", language)],
         "--apply",
     )
+    if plan.returncode != 0:
+        print(plan.stdout + plan.stderr, file=sys.stderr)
+        return plan.returncode
     trial = {
         "trial_id": f"TRIAL-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}",
         "case_id": case["case_id"],
@@ -230,6 +249,8 @@ def start(args: argparse.Namespace) -> int:
         "depth": args.depth,
         "output_profile": args.output_profile,
         "languages": languages,
+        "planned_languages": available_languages,
+        "pending_localization": pending_localization,
         "started_at": utc_now(),
         "directory": str(directory),
         "bundle": str(bundle),
@@ -241,6 +262,8 @@ def start(args: argparse.Namespace) -> int:
     print(f"- bundle: {bundle}")
     print(f"- {seed.stdout.strip().splitlines()[0] if seed.stdout.strip() else 'registry seed: no output'}")
     print(f"- {plan.stdout.strip().splitlines()[0] if plan.stdout.strip() else 'query plan: no output'}")
+    if pending_localization:
+        print(f"- incomplete localization: {', '.join(pending_localization)}; provide localized search_phrases before running those lanes")
     print(f"- paste {directory / 'TASK.md'} into {args.host} ({args.model}) and run the research")
     print(f"- afterwards: python3 {SCRIPTS / 'model_trial.py'} score {directory}")
     return 0

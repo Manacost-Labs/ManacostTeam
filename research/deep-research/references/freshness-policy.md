@@ -59,3 +59,56 @@ A page's “updated” date does not prove every embedded fact or dataset was re
 ## Freshness gate
 
 A current claim fails if the source version is unknown and a material change is plausible, the data window predates a relevant change, or current official context was never checked. Resolve with a current source, prove version compatibility, narrow to a historical claim, or disclose uncertainty.
+
+## Registry checks and historical questions
+
+`freshness_check.py` distinguishes manifest `as_of` (run date), source content
+date, source `accessed_at`, and timeline `checked_at`. A timeline `updated_at`
+only records a file edit and cannot confirm current official changes. The
+bundled historical timeline remains usable as chronology, but must be checked
+against official sources before certifying a current run. Never advance its
+check date just to satisfy a validator.
+
+Record actual inspection in the timeline:
+
+```json
+{
+  "checked_at": "2026-10-19",
+  "max_age_days": 3,
+  "official_checks": [{
+    "checked_at": "2026-10-19",
+    "through": "2026-10-19",
+    "source_url": "https://hearthstone.blizzard.com/en-us/news",
+    "modes": ["battlegrounds"],
+    "result": "no_later_relevant_changes"
+  }]
+}
+```
+
+This illustrates the format; it does not assert that this check occurred. Use
+`changes_recorded` after adding observed official changes. `through` bounds the
+question period and cannot follow `checked_at`. Checks cover the requested mode
+and date. Current checks expire after `max_age_days` (default 3); tighten for
+live events. The default official domain is blizzard.com; other timelines must
+explicitly configure `official_hosts`.
+
+Historical work declares manifest `temporal_scope` as
+`{"mode":"historical","as_of":"2026-09-15"}` and supplies the patch/context
+for that date. The run may occur later. Historical mode selects changes as of
+the question date, without imposing today's patch or rejecting a retrospective
+source merely because it was accessed later. The registry still needs a
+recorded official check covering the historical period.
+
+Source `published_at`, `updated_at`, `accessed_at` remain distinct. Use
+`content_updated_at` only after inspecting that the relevant content was
+updated; a recent page edit/access alone cannot refresh an old statistic.
+Optional source `freshness_subjects` and timeline patch `subjects` narrow
+relevant changes by stable IDs. Missing subject scope defaults conservatively
+to all mode changes. An older source labeled compatible or with an overlay
+needs `freshness_review` containing `reason`, `checked_at`, `checked_versions`
+and `official_source_urls` for every intervening relevant patch. These fields
+record human/agent inspection; deterministic validation cannot prove truth.
+
+Reports return `freshness_status: unverified` on failed date/registry/source
+checks. `verified_against_registry` expresses the recorded check boundary,
+not independently verified live-service state.

@@ -9,6 +9,7 @@ author:
 publisher:
 published_at:
 updated_at:
+content_updated_at: # only when the relevant content was inspected as updated
 effective_or_event_date:
 data_timeframe:
 accessed_at:
@@ -36,6 +37,19 @@ patch:
 season:
 freshness_status: CURRENT | LIKELY_CURRENT | VERSION-COMPATIBLE | PARTIALLY_STALE | STALE | HISTORICAL
 freshness_reason:
+freshness_subjects: []
+freshness_review:
+  reason:
+  checked_at:
+  checked_versions: []
+  official_source_urls: []
+statistical_context:
+  sample_size:
+  population:
+  rank:
+  time_window:
+  filters: []
+  methodology:
 
 evidence_type: fact | statistic | observation | opinion | speculation
 independent_source: true | false | uncertain

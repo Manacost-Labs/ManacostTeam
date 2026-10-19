@@ -268,6 +268,10 @@ class GapSearchTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self.bundle(root)
+            plan_path = root / "plan.json"
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            plan["query_localization"] = {"topics": {"SEC-1": {"ru": "стартовая рука Hearthstone"}, "SEC-2": {"ru": "матчапы Hearthstone"}}}
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
             result = self.run_plan(root, "--family", "youtube", "--language", "ru")
             self.assertEqual(result.returncode, 0, result.stderr)
             records = [json.loads(line) for line in result.stdout.splitlines()]

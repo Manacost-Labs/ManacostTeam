@@ -1,0 +1,352 @@
+{
+  "purpose": "Synthetic cross-language regression fixture; not current game facts or human evaluation",
+  "source_text": "Совет с условием. Другая проверенная информация.\n",
+  "bundle": {
+    "sources": [
+      {
+        "source_id": "SRC-1",
+        "url": "https://example.org/guide",
+        "access_integrity": "full_text",
+        "snapshot_path": "source.txt",
+        "content_sha256": "94dc126f48dd195389c44e8ba5e4f8d615a6fea9b08683c042113b31efcac4cf",
+        "title": "Synthetic scoped source",
+        "author": "Test author",
+        "lineage_id": "synthetic-origin",
+        "published_at": "2026-10-01",
+        "accessed_at": "2026-10-19"
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "EVD-1",
+        "source_id": "SRC-1",
+        "quote": "Совет с условием.",
+        "claim_ids": [
+          "CLM-1"
+        ],
+        "relationship": "supports",
+        "evidence_type": "expert_analysis",
+        "sample": {
+          "size": 40,
+          "population": "synthetic only"
+        },
+        "data_window": {
+          "start": "2026-10-01",
+          "end": "2026-10-02"
+        }
+      },
+      {
+        "evidence_id": "EVD-2",
+        "source_id": "SRC-1",
+        "quote": "Другая проверенная информация.",
+        "claim_ids": [
+          "CLM-1"
+        ],
+        "relationship": "challenges",
+        "evidence_type": "expert_analysis",
+        "sample": {
+          "size": 40,
+          "population": "synthetic only"
+        },
+        "data_window": {
+          "start": "2026-10-01",
+          "end": "2026-10-02"
+        },
+        "locator": "p2"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "CLM-1",
+        "claim": "Совет с условием.",
+        "status": "supported_with_conditions",
+        "confidence": "MEDIUM",
+        "supporting_evidence_ids": [
+          "EVD-1"
+        ],
+        "patch": "test",
+        "action": "Совет",
+        "condition": "с условием",
+        "claim_type": "recommendation",
+        "confidence_basis": "Scoped synthetic evidence",
+        "inference_steps": [
+          "Apply the condition"
+        ],
+        "scope": {
+          "mode": "test"
+        },
+        "challenging_evidence_ids": [
+          "EVD-2"
+        ]
+      }
+    ],
+    "semantic-audit": [
+      {
+        "semantic_audit_id": "SEM-1",
+        "claim_id": "CLM-1",
+        "evidence_id": "EVD-1",
+        "source_id": "SRC-1",
+        "semantic_support": "exact",
+        "reviewer_status": "pass",
+        "scope_match": true,
+        "authority_match": true,
+        "freshness_match": true,
+        "evidence_type_match": true,
+        "reviewer_basis": "Проверен совет и его условие.",
+        "audited_at": "2026-10-14T12:00:00Z",
+        "claim_sha256": "3481a61d2c6163e3d635664c283f921e3f338e82a079208584aa0dc7eef32389",
+        "evidence_sha256": "b57f2459825787e210cb1c13d99e8f0512bd7b11dbac186e99dc3772fc7898a7",
+        "source_sha256": "cd026e67bad3951f1f9030eda8304fa1269a1574a13051bccd3bd43155eb6266"
+      }
+    ],
+    "contradictions": [
+      {
+        "contradiction_id": "CTR-1",
+        "claim_id": "CLM-1",
+        "outcome": "narrowed",
+        "reason": "Only within the synthetic sample",
+        "counter_evidence_ids": [
+          "EVD-2"
+        ]
+      }
+    ]
+  },
+  "plan": {
+    "brief": "Гайд",
+    "patch": "test",
+    "style_profile": "battlegrounds-guide",
+    "chapters": [
+      {
+        "chapter_id": "CH-1",
+        "title": "Решение",
+        "required_claim_ids": [
+          "CLM-1"
+        ],
+        "decision_cards": [
+          {
+            "card_id": "CARD-1",
+            "kind": "derived",
+            "status": "inference",
+            "question": "Когда?",
+            "fields": {
+              "action": {
+                "text": "Следуйте совету при выполнении условия.",
+                "claim_ids": [
+                  "CLM-1"
+                ],
+                "evidence_refs": [
+                  "EVD-1"
+                ]
+              }
+            },
+            "gaps": []
+          }
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "question_id": "Q-1",
+        "chapter_id": "CH-1",
+        "question": "Когда?",
+        "required": true,
+        "status": "answered",
+        "claim_ids": [
+          "CLM-1"
+        ]
+      }
+    ],
+    "editorial_context": {
+      "audience": "test reader",
+      "genre": "guide",
+      "thesis": "Conditional advice"
+    }
+  },
+  "handoff": {
+    "schema_version": 1,
+    "brief": "Гайд",
+    "patch": "test",
+    "style_profile": "battlegrounds-guide",
+    "status": "research_ready",
+    "claims": [
+      {
+        "claim_id": "CLM-1",
+        "meaning": "Совет с условием.",
+        "action": "Совет",
+        "condition": "с условием",
+        "exception": "",
+        "confidence": "medium",
+        "patch": "test",
+        "status": "supported_with_conditions",
+        "evidence_refs": [
+          "EVD-1"
+        ],
+        "research_context": {
+          "claim_type": "recommendation",
+          "confidence_basis": "Scoped synthetic evidence",
+          "inference_steps": [
+            "Apply the condition"
+          ],
+          "scope": {
+            "mode": "test"
+          },
+          "challenging_evidence_ids": [
+            "EVD-2"
+          ],
+          "contradictions": [
+            {
+              "contradiction_id": "CTR-1",
+              "claim_id": "CLM-1",
+              "outcome": "narrowed",
+              "reason": "Only within the synthetic sample",
+              "counter_evidence_ids": [
+                "EVD-2"
+              ],
+              "record_sha256": "3f76761f12b9f56d9b8e3e9526bcb76433454aea8877c6b13df29f5a4a560ba4"
+            }
+          ],
+          "counterevidence": [
+            {
+              "evidence_id": "EVD-2",
+              "original_source_id": "SRC-1",
+              "url": "https://example.org/guide",
+              "quote": "Другая проверенная информация.",
+              "locator": "p2",
+              "content_sha256": "94dc126f48dd195389c44e8ba5e4f8d615a6fea9b08683c042113b31efcac4cf",
+              "evidence_sha256": "7912d2146f776090e7d8f16b2986d55d7e82d97e34d58771b25472deaf2ee166",
+              "source_sha256": "cd026e67bad3951f1f9030eda8304fa1269a1574a13051bccd3bd43155eb6266",
+              "source_context": {
+                "access_integrity": "full_text",
+                "title": "Synthetic scoped source",
+                "author": "Test author",
+                "lineage_id": "synthetic-origin",
+                "published_at": "2026-10-01",
+                "accessed_at": "2026-10-19"
+              },
+              "evidence_context": {
+                "claim_ids": [
+                  "CLM-1"
+                ],
+                "relationship": "challenges",
+                "evidence_type": "expert_analysis",
+                "sample": {
+                  "size": 40,
+                  "population": "synthetic only"
+                },
+                "data_window": {
+                  "start": "2026-10-01",
+                  "end": "2026-10-02"
+                }
+              },
+              "semantic_reviews": []
+            }
+          ]
+        }
+      }
+    ],
+    "sources": [
+      {
+        "source_id": "EVD-1",
+        "original_source_id": "SRC-1",
+        "url": "https://example.org/guide",
+        "quote": "Совет с условием.",
+        "locator": "",
+        "content_sha256": "94dc126f48dd195389c44e8ba5e4f8d615a6fea9b08683c042113b31efcac4cf",
+        "claim_sha256": "3481a61d2c6163e3d635664c283f921e3f338e82a079208584aa0dc7eef32389",
+        "evidence_sha256": "b57f2459825787e210cb1c13d99e8f0512bd7b11dbac186e99dc3772fc7898a7",
+        "source_sha256": "cd026e67bad3951f1f9030eda8304fa1269a1574a13051bccd3bd43155eb6266",
+        "claim_hashes": {
+          "CLM-1": "3481a61d2c6163e3d635664c283f921e3f338e82a079208584aa0dc7eef32389"
+        },
+        "source_context": {
+          "access_integrity": "full_text",
+          "title": "Synthetic scoped source",
+          "author": "Test author",
+          "lineage_id": "synthetic-origin",
+          "published_at": "2026-10-01",
+          "accessed_at": "2026-10-19"
+        },
+        "evidence_context": {
+          "claim_ids": [
+            "CLM-1"
+          ],
+          "relationship": "supports",
+          "evidence_type": "expert_analysis",
+          "sample": {
+            "size": 40,
+            "population": "synthetic only"
+          },
+          "data_window": {
+            "start": "2026-10-01",
+            "end": "2026-10-02"
+          }
+        },
+        "semantic_reviews": [
+          {
+            "semantic_audit_id": "SEM-1",
+            "claim_id": "CLM-1",
+            "evidence_id": "EVD-1",
+            "source_id": "SRC-1",
+            "semantic_support": "exact",
+            "reviewer_status": "pass",
+            "scope_match": true,
+            "authority_match": true,
+            "freshness_match": true,
+            "evidence_type_match": true,
+            "reviewer_basis": "Проверен совет и его условие.",
+            "audited_at": "2026-10-14T12:00:00Z",
+            "claim_sha256": "3481a61d2c6163e3d635664c283f921e3f338e82a079208584aa0dc7eef32389",
+            "evidence_sha256": "b57f2459825787e210cb1c13d99e8f0512bd7b11dbac186e99dc3772fc7898a7",
+            "source_sha256": "cd026e67bad3951f1f9030eda8304fa1269a1574a13051bccd3bd43155eb6266"
+          }
+        ]
+      }
+    ],
+    "chapters": [
+      {
+        "chapter_id": "CH-1",
+        "title": "Решение",
+        "required_claim_ids": [
+          "CLM-1"
+        ],
+        "decision_cards": [
+          {
+            "card_id": "CARD-1",
+            "kind": "derived",
+            "status": "inference",
+            "question": "Когда?",
+            "fields": {
+              "action": {
+                "text": "Следуйте совету при выполнении условия.",
+                "claim_ids": [
+                  "CLM-1"
+                ],
+                "evidence_refs": [
+                  "EVD-1"
+                ]
+              }
+            },
+            "gaps": []
+          }
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "question_id": "Q-1",
+        "chapter_id": "CH-1",
+        "question": "Когда?",
+        "required": true,
+        "status": "answered",
+        "claim_ids": [
+          "CLM-1"
+        ]
+      }
+    ],
+    "editorial_context": {
+      "audience": "test reader",
+      "genre": "guide",
+      "thesis": "Conditional advice"
+    }
+  }
+}

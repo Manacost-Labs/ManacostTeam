@@ -17,6 +17,21 @@ decision_coverage = handoff_module.decision_coverage
 
 
 class EditorialHandoffTests(unittest.TestCase):
+    def test_shared_boundary_fixture_is_reproducible(self):
+        fixture = json.loads(
+            (SCRIPTS.parents[2] / "tests/fixtures/editorial-boundary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        (self.root / "source.txt").write_text(fixture["source_text"], encoding="utf-8")
+        for name, rows in fixture["bundle"].items():
+            (self.root / f"{name}.jsonl").write_text(
+                "\n".join(json.dumps(row) for row in rows), encoding="utf-8"
+            )
+        handoff, report = compile_handoff(self.root, fixture["plan"])
+        self.assertEqual(report["blocking"], [])
+        self.assertEqual(handoff, fixture["handoff"])
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
@@ -120,12 +135,141 @@ class EditorialHandoffTests(unittest.TestCase):
         self.assertEqual(handoff["sources"][0]["quote"], "Совет с условием.")
         self.assertEqual(report["required_coverage"], 1.0)
 
+    def test_rich_context_survives_compilation_and_shared_evidence(self):
+        updates = {
+            "sources": {
+                "title": "Guide",
+                "author": "Editor",
+                "lineage_id": "origin-1",
+                "published_at": "2026-10-01",
+                "accessed_at": "2026-10-19",
+            },
+            "evidence": {
+                "evidence_type": "expert_analysis",
+                "sample": {"size": 40, "population": "test"},
+            },
+            "claims": {
+                "claim_type": "recommendation",
+                "confidence_basis": "Scoped evidence",
+                "inference_steps": ["Apply the condition"],
+                "scope": {"mode": "test"},
+            },
+        }
+        audit = dict(self.audit)
+        for name, extra in updates.items():
+            path = self.root / f"{name}.jsonl"
+            record = {**json.loads(path.read_text()), **extra}
+            path.write_text(json.dumps(record), encoding="utf-8")
+            audit[
+                {"sources": "source", "evidence": "evidence", "claims": "claim"}[name]
+                + "_sha256"
+            ] = handoff_module.record_sha256(record)
+        (self.root / "semantic-audit.jsonl").write_text(
+            json.dumps(audit), encoding="utf-8"
+        )
+        handoff, _ = compile_handoff(self.root, self.plan)
+        self.assertEqual(handoff["status"], "research_ready")
+        self.assertEqual(
+            handoff["sources"][0].get("source_context", {}).get("lineage_id"),
+            "origin-1",
+        )
+        self.assertEqual(
+            handoff["sources"][0]["evidence_context"]["sample"]["size"], 40
+        )
+        self.assertEqual(
+            handoff["claims"][0]["research_context"]["confidence_basis"],
+            "Scoped evidence",
+        )
+        self.assertEqual(
+            handoff["sources"][0]["claim_hashes"]["CLM-1"], audit["claim_sha256"]
+        )
+
+    def test_structured_decision_fields_are_grounded_and_gaps_remain_visible(self):
+        card = {
+            "card_id": "CARD-1",
+            "kind": "derived",
+            "status": "inference",
+            "question": "Когда?",
+            "fields": {
+                "action": {
+                    "text": "Следуйте совету, только когда условие выполнено.",
+                    "claim_ids": ["CLM-1"],
+                    "evidence_refs": ["EVD-1"],
+                }
+            },
+            "gaps": ["Нет независимого примера"],
+        }
+        self.plan["chapters"][0]["decision_cards"] = [card]
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(handoff["status"], "research_ready_with_gaps")
+        self.assertEqual(handoff["chapters"][0]["decision_cards"], [card])
+        self.assertTrue(report["warnings"])
+        card["fields"]["action"]["evidence_refs"] = ["unknown"]
+        self.assertEqual(
+            compile_handoff(self.root, self.plan)[0]["status"], "research_blocked"
+        )
+
+    def test_counterevidence_keeps_inspected_quote_and_missing_record_blocks(self):
+        path = self.root / "claims.jsonl"
+        claim = json.loads(path.read_text())
+        claim["challenging_evidence_ids"] = ["EVD-2"]
+        path.write_text(json.dumps(claim), encoding="utf-8")
+        self.audit["claim_sha256"] = handoff_module.record_sha256(claim)
+        (self.root / "semantic-audit.jsonl").write_text(
+            json.dumps(self.audit), encoding="utf-8"
+        )
+        self.assertEqual(
+            compile_handoff(self.root, self.plan)[0]["status"], "research_blocked"
+        )
+        counter = {
+            "evidence_id": "EVD-2",
+            "source_id": "SRC-1",
+            "quote": "Другая проверенная информация.",
+            "relationship": "challenges",
+            "claim_ids": ["CLM-1"],
+            "locator": "p2",
+        }
+        with (self.root / "evidence.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write("\n" + json.dumps(counter))
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(handoff["status"], "research_ready", report)
+        record = handoff["claims"][0]["research_context"]["counterevidence"][0]
+        self.assertEqual(record["quote"], counter["quote"])
+        self.assertEqual(record["evidence_context"]["relationship"], "challenges")
+        self.assertEqual(
+            record["content_sha256"], handoff["sources"][0]["content_sha256"]
+        )
+        self.assertEqual(record["semantic_reviews"], [])
+
+    def test_contradiction_resolution_context_survives(self):
+        row = {
+            "contradiction_id": "CTR-1",
+            "claim_id": "CLM-1",
+            "outcome": "narrowed",
+            "reason": "Only for the tested population",
+            "counter_evidence_ids": [],
+        }
+        (self.root / "contradictions.jsonl").write_text(
+            json.dumps(row), encoding="utf-8"
+        )
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(report["blocking"], [])
+        self.assertEqual(
+            handoff["claims"][0]["research_context"]["contradictions"],
+            [{**row, "record_sha256": handoff_module.record_sha256(row)}],
+        )
+
     def test_review_digests_only_reports_hashes(self):
         before = {path.name: path.read_bytes() for path in self.root.iterdir()}
         output = io.StringIO()
-        with patch.object(
-            sys, "argv", ["editorial_handoff.py", str(self.root), "--review-digests"]
-        ), redirect_stdout(output):
+        with (
+            patch.object(
+                sys,
+                "argv",
+                ["editorial_handoff.py", str(self.root), "--review-digests"],
+            ),
+            redirect_stdout(output),
+        ):
             self.assertEqual(handoff_module.main(), 0)
         hashes = json.loads(output.getvalue())
         self.assertEqual(hashes["claims"]["CLM-1"], self.audit["claim_sha256"])

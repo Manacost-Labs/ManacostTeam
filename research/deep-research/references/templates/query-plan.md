@@ -22,7 +22,14 @@ source_emphasis:
 |---|---|---|---|---|---|---|
 | QRY-001 | Q-001 | discovery | primary |  | official |  |
 
-Families: `general`, `primary`, `statistics`, `experts`, `reddit-forums`, `x-social`, `youtube`, `mistakes`, `synergies`, `counterargument`, `freshness`.
+Families: `general`, `primary`, `statistics`, `experts`, `reddit`, `x`, `youtube`, `mistakes`, `synergies`, `counterargument`, `freshness`, `localized`.
+
+Use real language-specific phrases and linked entity aliases from
+[research-progress.md](../research-progress.md). Record source-grounded
+`observations.summary`, evidenced `observations.novelty`, and significant
+`followup_questions` after reading. Generate their bounded queue with
+`plan_queries.py RUN --question-gaps --max-queries N`; errors, empty results and
+duplicate reads do not count as studied zero-yield materials.
 
 When X or YouTube emphasis is `high`, create distinct section-level query rows instead of repeating one generic topic query. Record which section each result can inform; a large provider result set does not count as broad guide coverage when it belongs to only one section.
 

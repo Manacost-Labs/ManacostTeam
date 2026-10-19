@@ -17,6 +17,93 @@ from urllib.parse import urlsplit
 from search_support import quote_in_text
 
 SUPPORTED = {"supported", "supported_with_conditions"}
+CARD_FIELDS = {
+    "situation",
+    "options",
+    "action",
+    "reason",
+    "tradeoff",
+    "exception",
+    "example",
+    "counterexample",
+}
+
+
+def context_fields(record: dict, excluded: set[str]) -> dict:
+    """Retain structured provenance without copying the full source body."""
+    return {
+        key: value
+        for key, value in record.items()
+        if key not in excluded | {"text", "html", "body", "content", "snapshot_path"}
+    }
+
+
+def decision_cards(chapter: dict, claims: dict) -> tuple[list[str], list[str]]:
+    errors, gaps, seen = [], [], set()
+    cards = chapter.get("decision_cards", [])
+    if not isinstance(cards, list) or len(cards) > 32:
+        return ["invalid decision_cards"], []
+    allowed = set(chapter.get("required_claim_ids", []))
+    for card in cards:
+        if not isinstance(card, dict):
+            errors.append("invalid decision card")
+            continue
+        identity, fields = card.get("card_id"), card.get("fields")
+        if not isinstance(identity, str) or not identity.strip() or identity in seen:
+            errors.append("invalid or duplicate card_id")
+            continue
+        seen.add(identity)
+        if (
+            card.get("kind") not in {"observed", "derived", "illustrative"}
+            or card.get("status")
+            not in {"supported", "inference", "disputed", "unknown"}
+            or not isinstance(card.get("question"), str)
+            or not card["question"].strip()
+        ):
+            errors.append(f"{identity}: invalid card kind/status/question")
+        missing = card.get("gaps", [])
+        if not isinstance(missing, list) or any(
+            not isinstance(item, str) or not item.strip() for item in missing
+        ):
+            errors.append(f"{identity}: invalid gaps")
+        else:
+            gaps.extend(f"{identity}: {item}" for item in missing)
+        if card.get("status") in {"disputed", "unknown"} and not missing:
+            errors.append(f"{identity}: unresolved card requires gaps")
+        if (
+            not isinstance(fields, dict)
+            or (not fields and card.get("status") in {"supported", "inference"})
+            or fields.keys() - CARD_FIELDS
+        ):
+            errors.append(f"{identity}: invalid card fields")
+            continue
+        for name, field in fields.items():
+            if (
+                not isinstance(field, dict)
+                or not isinstance(field.get("text"), str)
+                or not field["text"].strip()
+            ):
+                errors.append(f"{identity}/{name}: text required")
+                continue
+            ids, refs = field.get("claim_ids"), field.get("evidence_refs")
+            if (
+                not isinstance(ids, list)
+                or not ids
+                or any(
+                    not isinstance(cid, str) or cid not in allowed or cid not in claims
+                    for cid in ids
+                )
+            ):
+                errors.append(f"{identity}/{name}: chapter claim_ids required")
+                continue
+            approved = {ref for cid in ids for ref in claims[cid]["evidence_refs"]}
+            if (
+                not isinstance(refs, list)
+                or not refs
+                or any(not isinstance(ref, str) or ref not in approved for ref in refs)
+            ):
+                errors.append(f"{identity}/{name}: matching evidence_refs required")
+    return errors, gaps
 
 
 def record_sha256(value: dict) -> str:
@@ -63,9 +150,12 @@ def semantic_reviews(root: Path) -> list[dict]:
 
 def records(root: Path, name: str) -> dict[str, dict[str, Any]]:
     result = {}
-    key = {"claims": "claim_id", "sources": "source_id", "evidence": "evidence_id"}[
-        name
-    ]
+    key = {
+        "claims": "claim_id",
+        "sources": "source_id",
+        "evidence": "evidence_id",
+        "contradictions": "contradiction_id",
+    }[name]
     for line in (root / f"{name}.jsonl").read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -79,6 +169,78 @@ def records(root: Path, name: str) -> dict[str, dict[str, Any]]:
             raise ValueError(f"invalid or duplicate {key}")
         result[item[key]] = item
     return result
+
+
+def counterevidence_context(root, claim, evidence, sources, audits, ids=None):
+    """Preserve objections as objections, including reviews still pending."""
+    rows, errors = [], []
+    ids = claim.get("challenging_evidence_ids", []) if ids is None else ids
+    if not isinstance(ids, list) or any(not isinstance(eid, str) for eid in ids):
+        return [], [f"{claim['claim_id']}: invalid challenging_evidence_ids"]
+    for eid in dict.fromkeys(ids):
+        item = evidence.get(eid, {})
+        sid = item.get("source_id")
+        source = sources.get(sid, {})
+        quote = (
+            item.get("exact_excerpt") or item.get("quote") or item.get("verbatim_quote")
+        )
+        parsed = urlsplit(source.get("url", ""))
+        if (
+            not isinstance(quote, str)
+            or not quote.strip()
+            or source.get("access_integrity")
+            not in {"full_text", "full", "inspected", "transcript"}
+            or parsed.scheme not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or claim["claim_id"] not in (item.get("claim_ids") or [])
+        ):
+            errors.append(
+                f"{claim['claim_id']}/{eid}: inspected counterevidence and verbatim quote required"
+            )
+            continue
+        try:
+            digest = source_proof(root, source, quote)
+        except (ValueError, OSError) as error:
+            errors.append(f"{claim['claim_id']}/{eid}: {error}")
+            continue
+        rows.append(
+            {
+                "evidence_id": eid,
+                "original_source_id": sid,
+                "url": source["url"],
+                "quote": quote,
+                "locator": item.get("locator", ""),
+                "content_sha256": digest,
+                "evidence_sha256": record_sha256(item),
+                "source_sha256": record_sha256(source),
+                "source_context": context_fields(
+                    source, {"source_id", "url", "content_sha256"}
+                ),
+                "evidence_context": context_fields(
+                    item,
+                    {
+                        "evidence_id",
+                        "source_id",
+                        "quote",
+                        "exact_excerpt",
+                        "verbatim_quote",
+                        "locator",
+                    },
+                ),
+                "semantic_reviews": [
+                    audit
+                    for audit in audits
+                    if audit.get("claim_id") == claim["claim_id"]
+                    and audit.get("evidence_id") == eid
+                    and audit.get("source_id") == sid
+                    and audit.get("claim_sha256") == record_sha256(claim)
+                    and audit.get("evidence_sha256") == record_sha256(item)
+                    and audit.get("source_sha256") == record_sha256(source)
+                ],
+            }
+        )
+    return rows, errors
 
 
 def decision_coverage(plan: dict[str, Any], supported_ids: set[str]) -> dict[str, Any]:
@@ -174,6 +336,12 @@ def compile_handoff(
     )
     patch = plan.get("patch")
     audits = semantic_reviews(root)
+    contradictions = (
+        records(root, "contradictions")
+        if (root / "contradictions.jsonl").is_file()
+        else {}
+    )
+    contradiction_gaps = []
     output_claims, output_sources, issues = [], {}, []
     requested = {
         cid
@@ -270,6 +438,7 @@ def compile_handoff(
                 continue
             # Evidence IDs retain distinct locators and quotes from the same source.
             refs.append(eid)
+            previous_hashes = output_sources.get(eid, {}).get("claim_hashes", {})
             output_sources[eid] = {
                 "source_id": eid,
                 "original_source_id": sid,
@@ -280,11 +449,87 @@ def compile_handoff(
                 "claim_sha256": record_sha256(claim),
                 "evidence_sha256": record_sha256(item),
                 "source_sha256": record_sha256(source),
+                "claim_hashes": {**previous_hashes, cid: record_sha256(claim)},
+                "source_context": context_fields(
+                    source, {"source_id", "url", "content_sha256"}
+                ),
+                "evidence_context": context_fields(
+                    item,
+                    {
+                        "evidence_id",
+                        "source_id",
+                        "quote",
+                        "exact_excerpt",
+                        "verbatim_quote",
+                        "locator",
+                    },
+                ),
+                "semantic_reviews": [
+                    *output_sources.get(eid, {}).get("semantic_reviews", []),
+                    *valid,
+                ],
             }
         meaning = claim.get("meaning") or claim.get("claim")
         if not refs or not isinstance(meaning, str) or not meaning.strip():
             issues.append(f"{cid}: no supported meaning/evidence")
             continue
+        context = context_fields(
+            claim,
+            {
+                "claim_id",
+                "claim",
+                "meaning",
+                "action",
+                "condition",
+                "exception",
+                "confidence",
+                "patch",
+                "status",
+                "supporting_evidence_ids",
+                "counterevidence",
+            },
+        )
+        related = [row for row in contradictions.values() if row.get("claim_id") == cid]
+        ids = claim.get("challenging_evidence_ids", [])
+        if not isinstance(ids, list) or any(not isinstance(eid, str) for eid in ids):
+            issues.append(f"{cid}: invalid challenging_evidence_ids")
+            ids = []
+        if related:
+            context["contradictions"] = [
+                {**context_fields(row, set()), "record_sha256": record_sha256(row)}
+                for row in related
+            ]
+            for row in related:
+                counter_refs = row.get("counter_evidence_ids", [])
+                if (
+                    not isinstance(counter_refs, list)
+                    or any(not isinstance(eid, str) for eid in counter_refs)
+                    or not isinstance(row.get("outcome"), str)
+                    or not row["outcome"].strip()
+                ):
+                    issues.append(f"{cid}: invalid contradiction context")
+                    continue
+                ids = [*ids, *counter_refs]
+                if row["outcome"].lower() in {
+                    "open",
+                    "unresolved",
+                    "disputed",
+                    "unknown",
+                }:
+                    contradiction_gaps.append(
+                        {
+                            "claim_id": cid,
+                            "question": f"Resolve {row['contradiction_id']}",
+                            "reason": "unresolved_contradiction",
+                            "search_rounds_remaining": 1,
+                        }
+                    )
+        if "challenging_evidence_ids" in claim or ids:
+            context["challenging_evidence_ids"] = list(dict.fromkeys(ids))
+            context["counterevidence"], counter_errors = counterevidence_context(
+                root, claim, evidence, sources, audits, ids=ids
+            )
+            issues.extend(counter_errors)
         output_claims.append(
             {
                 "claim_id": cid,
@@ -296,11 +541,26 @@ def compile_handoff(
                 "patch": patch,
                 "status": claim["status"],
                 "evidence_refs": refs,
+                "research_context": context,
             }
         )
     report = decision_coverage(plan, {claim["claim_id"] for claim in output_claims})
+    report["gap_queue"].extend(contradiction_gaps)
+    report["warnings"].extend(row["question"] for row in contradiction_gaps)
     by_id = {claim["claim_id"]: claim for claim in output_claims}
     for chapter in plan.get("chapters", []):
+        card_errors, card_gaps = decision_cards(chapter, by_id)
+        issues.extend(card_errors)
+        report["warnings"].extend(card_gaps)
+        report["gap_queue"].extend(
+            {
+                "chapter_id": chapter.get("chapter_id"),
+                "question": gap,
+                "reason": "decision_card_gap",
+                "search_rounds_remaining": 1,
+            }
+            for gap in card_gaps
+        )
         approved = {
             by_id[cid]["meaning"]
             for cid in chapter.get("required_claim_ids", [])
@@ -335,6 +595,7 @@ def compile_handoff(
         "sources": list(output_sources.values()),
         "chapters": plan.get("chapters", []),
         "decisions": plan.get("decisions", []),
+        "editorial_context": plan.get("editorial_context", {}),
     }
     return handoff, report
 

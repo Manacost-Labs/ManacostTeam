@@ -19,11 +19,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from platform_coverage import SUCCESS, inspected_url, inspection_identity
 from search_support import (
     CANDIDATE_DECISIONS,
     FAMILY_MINIMUMS,
     QUERY_FAMILIES,
     QUERY_PASSES,
+    canonical_url,
     normalize_query,
     quote_in_text,
     url_host,
@@ -39,6 +41,66 @@ TOP_HOST_SHARE_LIMIT = 0.5
 TOP_HOST_MIN_SOURCES = 6
 EMPTY_QUERY_SHARE_LIMIT = 0.5
 SATURATION_ZERO_RUN = 3
+NOVELTY_KINDS = frozenset({"fact", "condition", "exception", "counterevidence", "confidence_change", "contradiction_resolved"})
+
+
+def reader_questions(plan: dict[str, Any]) -> list[dict[str, Any]]:
+    """Validate the additive question contract; legacy plans have no questions."""
+    questions = plan.get("reader_questions", [])
+    if not isinstance(questions, list):
+        raise ValueError("plan.reader_questions must be a list")
+    ids = set()
+    for question in questions:
+        if (not isinstance(question, dict) or not isinstance(question.get("question_id"), str)
+                or not question["question_id"].strip() or not isinstance(question.get("question"), str) or not question["question"].strip()):
+            raise ValueError("reader_questions require question_id and question")
+        if question["question_id"] in ids:
+            raise ValueError("duplicate reader question: " + question["question_id"])
+        ids.add(question["question_id"])
+        if question.get("status", "open") not in {"open", "partial", "answered", "excluded"}:
+            raise ValueError("reader question status must be open, partial, answered or excluded")
+        if question.get("priority", "material") not in {"critical", "material", "contextual"}:
+            raise ValueError("reader question priority must be critical, material or contextual")
+        if question.get("status") == "excluded" and not question.get("gap"):
+            raise ValueError("excluded reader question requires gap explaining the exclusion")
+    return questions
+
+
+def source_followups(queries: list[dict[str, Any]], sources: list[dict[str, Any]], questions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Read followups only from inspected material and keep their parent decision."""
+    by_id = {question["question_id"]: question for question in questions}
+    sources_by_id = {source.get("source_id"): source for source in sources}
+    result, seen = [], set()
+    for record in queries:
+        observations = record.get("observations", {})
+        if not isinstance(observations, dict):
+            raise ValueError("query observations must be an object")
+        followups = observations.get("followup_questions", [])
+        if not isinstance(followups, list):
+            raise ValueError("observations.followup_questions must be a list")
+        inspected = [sid for sid in string_list(record, "result_source_ids")
+                     if record.get("status") in SUCCESS and record.get("status") != "no_results"
+                     and sid in sources_by_id and inspected_url(sources_by_id[sid])]
+        if followups and (not inspected or not observations.get("summary")):
+            raise ValueError(f"query {record.get('query_id')}: followup requires inspected source and observations.summary")
+        for index, followup in enumerate(followups):
+            if not isinstance(followup, dict) or not followup.get("question") or not followup.get("why_it_matters"):
+                raise ValueError("followup requires question and why_it_matters")
+            parent = by_id.get(followup.get("parent_question_id"))
+            if parent is None:
+                raise ValueError("followup parent_question_id must link a reader question")
+            normalized = normalize_query(followup["question"])
+            key = (parent["question_id"], normalized)
+            if key in seen:
+                continue
+            seen.add(key)
+            item = {**followup, "question_id": f"{record.get('query_id')}:followup-{index + 1}",
+                    "section_id": parent.get("section_id"), "reader_question_id": parent["question_id"],
+                    "origin_query_id": record["query_id"], "origin_source_ids": inspected,
+                    "queue_reason": followup["why_it_matters"], "gap": followup.get("gap") or followup["why_it_matters"]}
+            reader_questions({"reader_questions": [item]})
+            result.append(item)
+    return result
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -126,7 +188,17 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
     warnings: list[str] = []
 
     # --- queries -----------------------------------------------------------
-    executed_queries = [record for record in queries if record.get("status") != "planned"]
+    executed_queries = [record for record in queries if record.get("status") not in {"planned", "skipped"}]
+    successful_queries = [record for record in executed_queries if record.get("status") in SUCCESS]
+    sources_by_id = {str(record.get("source_id")): record for record in sources}
+    inspected_by_query = {
+        str(record.get("query_id")): {
+            source_id for source_id in string_list(record, "result_source_ids")
+            if source_id in sources_by_id and inspected_url(sources_by_id[source_id])
+        }
+        for record in successful_queries if record.get("status") != "no_results"
+    }
+    studied_queries = [record for record in successful_queries if inspected_by_query.get(str(record.get("query_id")))]
     family_counter: Counter[str] = Counter()
     pass_counter: Counter[str] = Counter()
     status_counter: Counter[str] = Counter()
@@ -142,24 +214,31 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
         family_key = family if isinstance(family, str) and family in QUERY_FAMILIES else "uncategorized"
         if family_key == "uncategorized":
             non_canonical_family.append(query_id)
-        family_counter[family_key] += 1
+        if record.get("status") in SUCCESS:
+            family_counter[family_key] += 1
         pass_value = record.get("pass")
         if not (isinstance(pass_value, str) and pass_value in QUERY_PASSES):
             non_canonical_pass.append(query_id)
         pass_counter[str(pass_value)] += 1
-        status_counter[str(record.get("status"))] += 1
         language_counter[str(record.get("language", "unspecified"))] += 1
         linked = string_list(record, "result_source_ids")
         source_ids_by_query[query_id] = linked
         if linked:
             with_results += 1
             result_links += len(linked)
+    status_counter.update(str(record.get("status")) for record in queries)
 
     executed_keys = {normalize_query(str(record.get("query", ""))) for record in executed_queries}
     unexecuted = [
         str(record.get("query_id", "?"))
         for record in planned
         if normalize_query(str(record.get("query", ""))) not in executed_keys
+    ]
+    successful_keys = {normalize_query(str(record.get("query", ""))) for record in successful_queries}
+    unresolved_directions = [
+        str(record.get("query_id", "?")) for record in planned
+        if record.get("status", "planned") == "planned"
+        and normalize_query(str(record.get("query", ""))) not in successful_keys
     ]
 
     # --- branches ----------------------------------------------------------
@@ -173,7 +252,7 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
     branch_families: dict[str, set[str]] = {branch: set() for branch in branch_ids}
     branch_queries: Counter[str] = Counter()
     branch_sources: dict[str, set[str]] = {branch: set() for branch in branch_ids}
-    for record in executed_queries:
+    for record in successful_queries:
         family = record.get("family")
         family_key = family if isinstance(family, str) and family in QUERY_FAMILIES else None
         targets = string_list(record, "deliverable_section_ids") if section_ids else [ALL_BRANCH]
@@ -183,7 +262,7 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
             branch_queries[branch] += 1
             if family_key:
                 branch_families[branch].add(family_key)
-            branch_sources[branch].update(string_list(record, "result_source_ids"))
+            branch_sources[branch].update(inspected_by_query.get(str(record.get("query_id")), set()))
 
     required = FAMILY_MINIMUMS.get(depth, FAMILY_MINIMUMS["deep"])
     branches_report: dict[str, Any] = {}
@@ -348,8 +427,9 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
     for record in critical_material:
         claim_id = str(record.get("claim_id", "?"))
         challenge_search = record.get("challenge_search")
+        successful_ids = {str(query.get("query_id")) for query in successful_queries}
         searched = isinstance(challenge_search, dict) and bool(
-            string_list(challenge_search, "query_ids")
+            set(string_list(challenge_search, "query_ids")) & successful_ids
         )
         if string_list(record, "challenging_evidence_ids") or searched:
             with_challenge += 1
@@ -394,9 +474,8 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
         )
 
     # --- saturation --------------------------------------------------------
-    # A claim is attributed to the earliest executed query whose result sources
-    # carry one of its supporting evidence items. Trailing zero-yield queries
-    # on a branch approximate saturation; the rule is a signal, not a proof.
+    # Count useful evidence from inspected materials. Failed access, snippets,
+    # empty search results and repeatedly opening one material cannot saturate.
     ordered_queries = sorted(
         executed_queries,
         key=lambda record: (str(record.get("executed_at", "")), str(record.get("query_id", ""))),
@@ -404,6 +483,8 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
     claim_sources: dict[str, set[str]] = {}
     for record in claims:
         claim_id = str(record.get("claim_id", "?"))
+        if record.get("status") not in {"supported", "supported_with_conditions", "contested"}:
+            continue
         claim_sources[claim_id] = {
             str(evidence_by_id[evidence_id].get("source_id"))
             for evidence_id in string_list(record, "supporting_evidence_ids")
@@ -411,15 +492,56 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
         }
     attributed: set[str] = set()
     yield_by_query: dict[str, int] = {}
+    useful_yield_by_query: dict[str, int] = {}
+    seen_updates: set[tuple[Any, ...]] = set()
+    challenge_ids = {eid for claim in claims if claim.get("status") != "rejected" for eid in string_list(claim, "challenging_evidence_ids")}
     for record in ordered_queries:
         query_id = str(record.get("query_id", "?"))
-        found = set(string_list(record, "result_source_ids"))
+        found = inspected_by_query.get(query_id, set())
         produced = 0
         for claim_id, claim_source_ids in claim_sources.items():
             if claim_id not in attributed and claim_source_ids & found:
                 attributed.add(claim_id)
                 produced += 1
         yield_by_query[query_id] = produced
+        useful = produced
+        for evidence_id in challenge_ids:
+            item = evidence_by_id.get(evidence_id, {})
+            key = ("counterevidence", evidence_id)
+            if item.get("source_id") in found and key not in seen_updates:
+                seen_updates.add(key)
+                useful += 1
+        observations = record.get("observations", {})
+        updates = observations.get("novelty", []) if isinstance(observations, dict) else []
+        if not isinstance(updates, list):
+            errors.append(f"query {query_id}: observations.novelty must be a list")
+            updates = []
+        for update in updates:
+            if not isinstance(update, dict):
+                errors.append(f"query {query_id}: novelty must be an object")
+                continue
+            evidence_ids = string_list(update, "evidence_ids")
+            if (update.get("kind") not in NOVELTY_KINDS or not str(update.get("summary", "")).strip()
+                    or not evidence_ids or any(evidence_by_id.get(eid, {}).get("source_id") not in found for eid in evidence_ids)):
+                errors.append(f"query {query_id}: novelty needs kind, summary and evidence from an inspected result source")
+                continue
+            key = (update["kind"], normalize_query(update["summary"]), *sorted(evidence_ids))
+            if key not in seen_updates:
+                seen_updates.add(key)
+                useful += 1
+        useful_yield_by_query[query_id] = useful
+    questions = reader_questions(plan)
+    followups = source_followups(queries, sources, questions)
+    unresolved = []
+    claims_by_id = {str(claim.get("claim_id")): claim for claim in claims}
+    for question in questions + followups:
+        if question.get("status") == "answered":
+            linked = string_list(question, "claim_ids")
+            if not linked or any(claims_by_id.get(cid, {}).get("status") not in {"supported", "supported_with_conditions"} for cid in linked):
+                errors.append(f"reader question {question['question_id']}: answered requires supported claim_ids")
+                unresolved.append({**question, "gap": "Answer lacks supported linked claims"})
+        elif question.get("status") != "excluded":
+            unresolved.append(question)
     saturation: dict[str, Any] = {}
     for branch in branch_ids:
         branch_order = [
@@ -429,25 +551,44 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
         ]
         trailing = 0
         last_yield: str | None = None
+        seen_materials: set[str] = set()
+        studied = 0
         for record in branch_order:
             query_id = str(record.get("query_id", "?"))
-            if yield_by_query.get(query_id, 0):
+            materials = {inspection_identity(canonical_url(inspected_url(sources_by_id[sid]))) for sid in inspected_by_query.get(query_id, set())}
+            new_materials = materials - seen_materials
+            seen_materials.update(materials)
+            if materials:
+                studied += 1
+            if useful_yield_by_query.get(query_id, 0):
                 trailing = 0
                 last_yield = query_id
-            else:
-                trailing += 1
+            elif new_materials:
+                trailing += len(new_materials)
+        open_questions = [question["question_id"] for question in unresolved if branch == ALL_BRANCH or question.get("section_id") == branch]
+        open_followups = [question["question_id"] for question in unresolved if question.get("origin_query_id")
+                          and (branch == ALL_BRANCH or question.get("section_id") == branch)]
+        pending_directions = [str(record.get("query_id")) for record in planned
+                              if str(record.get("query_id")) in unresolved_directions
+                              and (branch == ALL_BRANCH or branch in string_list(record, "deliverable_section_ids"))]
         saturation[branch] = {
             "queries": len(branch_order),
+            "studied_queries": studied,
+            "distinct_inspected_materials": len(seen_materials),
             "claims_yielded": sum(yield_by_query.get(str(r.get("query_id")), 0) for r in branch_order),
+            "useful_updates": sum(useful_yield_by_query.get(str(r.get("query_id")), 0) for r in branch_order),
             "last_yield_query_id": last_yield,
             "trailing_zero_yield": trailing,
-            "saturated": trailing >= SATURATION_ZERO_RUN,
+            "unresolved_question_ids": open_questions,
+            "pending_query_ids": pending_directions,
+            "pending_followup_ids": open_followups,
+            "saturated": trailing >= SATURATION_ZERO_RUN and not pending_directions and not open_followups,
         }
         if section_status.get(branch) == "excluded":
             continue
         if branch_order and not saturation[branch]["saturated"]:
             warnings.append(
-                f"branch {branch}: not yet saturated ({trailing} consecutive zero-yield queries, "
+                f"branch {branch}: not yet saturated ({trailing} distinct studied zero-yield materials, "
                 f"rule needs {SATURATION_ZERO_RUN})"
             )
 
@@ -465,19 +606,38 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
         warnings.append(f"{len(non_canonical_pass)} queries use a non-canonical pass")
     if unexecuted:
         warnings.append(f"{len(unexecuted)} planned queries were never executed")
+    if unresolved_directions:
+        warnings.append(f"{len(unresolved_directions)} planned directions have no successful search; failed access does not close a direction")
     if language_counter and set(language_counter) == {"unspecified"}:
         warnings.append("queries do not record a language; localized coverage is unknown")
+    required_languages = string_list(manifest, "required_query_languages")
+    searched_languages = {record.get("language") for record in successful_queries}
+    missing_languages = [language for language in required_languages if language not in searched_languages]
+    if missing_languages:
+        errors.append("required query languages have no successful search: " + ", ".join(missing_languages))
+    if unresolved:
+        warnings.append(f"{len(unresolved)} reader questions remain open or partial; preserve their gaps")
+    incomplete = bool(errors or unresolved or unresolved_directions or any(not item["saturated"] for branch, item in saturation.items() if section_status.get(branch) != "excluded"))
 
     return {
         "research_id": manifest.get("research_id"),
         "depth": depth,
         "coverage_enabled": coverage_enabled,
+        "completion_status": "incomplete" if incomplete else "search_exhausted",
+        "reader_questions": {"total": len(questions), "followups": len(followups), "unresolved": unresolved},
         "queries": {
             "total": len(executed_queries),
+            "attempted": len(executed_queries),
+            "successful": len(successful_queries),
+            "studied": len(studied_queries),
+            "useful": sum(value > 0 for value in useful_yield_by_query.values()),
+            "skipped": status_counter["skipped"],
             "by_status": dict(status_counter),
             "by_family": dict(family_counter),
             "by_pass": dict(pass_counter),
             "by_language": dict(language_counter),
+            "required_languages": required_languages,
+            "missing_languages": missing_languages,
             "non_canonical_family": non_canonical_family,
             "non_canonical_pass": non_canonical_pass,
             "with_results": with_results,
@@ -488,6 +648,7 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
             "planned": len(planned),
             "unexecuted": len(unexecuted),
             "unexecuted_ids": unexecuted,
+            "unresolved_direction_ids": unresolved_directions,
         },
         "candidates": candidates_report,
         "sources": {
@@ -521,6 +682,7 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
         "branches": branches_report,
         "saturation": saturation,
         "yield_by_query": yield_by_query,
+        "useful_yield_by_query": useful_yield_by_query,
         "findings": {"errors": errors, "warnings": warnings},
     }
 
@@ -536,6 +698,8 @@ def format_summary(report: dict[str, Any]) -> str:
         f"{queries['total']} queries, {sources['total']} sources, "
         f"{sources['hosts']} hosts, {sources['lineages']} lineages)",
         f"- sources per query: {queries['sources_per_query']}",
+        f"- progress: {queries['attempted']} attempted, {queries['successful']} successful searches, "
+        f"{queries['studied']} studied, {queries['useful']} useful; {report['completion_status']}",
         f"- families used: {', '.join(sorted(queries['by_family'])) or 'none'}",
         f"- challenge coverage: {claims['with_challenge']}/{claims['critical_material_total']}",
         f"- fingerprint coverage: {sources['mutable_verified']}/{sources['mutable_total']} mutable",

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,6 +27,7 @@ from platform_coverage import (
     query_platform,
 )
 from search_support import QUERY_FAMILIES, QUERY_PASSES, next_id, normalize_query
+from search_coverage import reader_questions, source_followups
 
 PLAN_FILE = "query-plan.jsonl"
 MAX_TOPIC_WORDS = 12
@@ -168,6 +170,7 @@ TEMPLATES: dict[str, dict[str, tuple[str, ...]]] = {
             "{topic} переоценен",
             "почему не {topic}",
             "{topic} слабый",
+            "{entity} ограничения",
         ),
         "freshness": ("{topic} {year}", "{topic} {version}"),
         "localized": ("{topic} на русском", "{topic} русское сообщество"),
@@ -254,6 +257,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         metavar="PLATFORM=N",
         help="Breadth goal for --coverage-gaps; default 1 unique inspected material",
     )
+    parser.add_argument("--question-gaps", action="store_true", help="Queue unanswered reader questions and source-grounded followups")
+    parser.add_argument("--max-queries", type=int, help="Total query-attempt budget; also counts outstanding planned queries")
+    parser.add_argument("--search-phrase", action="append", default=[], metavar="LANGUAGE=PHRASE", help="Localized main-topic phrase (use plan.query_localization.topics for sections)")
     return parser.parse_args(argv)
 
 
@@ -311,8 +317,9 @@ def branch_list(
                 "manifest.json has no main_question and no sections were given"
             )
         branches.append((None, question))
-    for _section_id, topic in branches:
-        if len(topic.split()) > MAX_TOPIC_WORDS:
+    localized_topics = (plan or {}).get("query_localization", {}).get("topics", {})
+    for section_id, topic in branches:
+        if len(topic.split()) > MAX_TOPIC_WORDS and not localized_topics.get(section_id or "__all__"):
             raise ValueError(
                 f"branch topic exceeds {MAX_TOPIC_WORDS} words and would produce unusable "
                 f"queries; pass a short --topic label instead: {topic[:60]}..."
@@ -347,6 +354,40 @@ def render(
     return " ".join(text.split())
 
 
+def localized_phrase(phrases: dict[str, Any], language: str, fallback: str = "") -> str:
+    """No translation model is hidden in the template expander."""
+    if not isinstance(phrases, dict):
+        raise ValueError("search_phrases must map languages to phrases")
+    value = phrases.get(language)
+    if not value and fallback:
+        # Explicit legacy adapter: retain a topic only in its source language.
+        detected = "ru" if re.search(r"[А-Яа-яЁё]", fallback) else "en"
+        if detected == language:
+            value = fallback
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"missing {language} search_phrases: supply a real localized phrase in query_localization.topics or --search-phrase")
+    if language == "en" and re.search(r"[А-Яа-яЁё]", value):
+        raise ValueError("English search_phrases must use English names and phrasing, not a Russian title plus a suffix")
+    return " ".join(value.split())
+
+
+def localized_entities(entries: list[dict[str, Any]], language: str) -> list[tuple[str, str]]:
+    result = []
+    for entry in entries:
+        if not isinstance(entry, dict) or not entry.get("entity_id") or not isinstance(entry.get("names"), dict):
+            raise ValueError("query_localization.entities require entity_id and names by language")
+        names = entry["names"].get(language)
+        if isinstance(names, str):
+            names = [names]
+        if not isinstance(names, list) or not names or any(not isinstance(name, str) or not name.strip() for name in names):
+            raise ValueError(f"missing {language} entity names for {entry['entity_id']}")
+        for name in names:
+            if language == "en" and re.search(r"[А-Яа-яЁё]", name):
+                raise ValueError(f"English entity name required for {entry['entity_id']}")
+            result.append((entry["entity_id"], name.strip()))
+    return result
+
+
 def build_plan(
     *,
     branches: list[tuple[str | None, str]],
@@ -358,13 +399,26 @@ def build_plan(
     existing_queries: list[str],
     existing_ids: set[str],
     coverage_enabled: bool,
+    localization: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     seen = {normalize_query(query) for query in existing_queries}
     ids = set(existing_ids)
     records: list[dict[str, Any]] = []
     planned_at = utc_now()
+    localization = localization or {}
+    if not isinstance(localization.get("topics", {}), dict) or not isinstance(localization.get("entities", []), list):
+        raise ValueError("query_localization requires topics object and entities list")
     for section_id, topic in branches:
         for language in languages:
+            phrases = localization.get("topics", {}).get(section_id or "__all__", {})
+            localized_topic = localized_phrase(phrases, language, topic)
+            if len(localized_topic.split()) > MAX_TOPIC_WORDS:
+                raise ValueError(f"search_phrases exceeds {MAX_TOPIC_WORDS} words; supply a concise search phrase")
+            named_entities = localized_entities(localization.get("entities", []), language)
+            if language == "en" and any(re.search(r"[А-Яа-яЁё]", entity) for entity in entities):
+                raise ValueError("English entity name required: use query_localization.entities for localized aliases instead of Cyrillic --entity")
+            named_entities += [("", entity) for entity in entities]
+            entity_ids = {name: entity_id for entity_id, name in named_entities}
             table = TEMPLATES[language]
             for family in families:
                 for template in table.get(family, ()):
@@ -372,13 +426,13 @@ def build_plan(
                         list(markers) if "{version}" in template else [None]
                     )
                     entity_values: list[str | None] = (
-                        list(entities) if "{entity}" in template else [None]
+                        [name for _, name in named_entities] if "{entity}" in template else [None]
                     )
                     for version in version_values:
                         for entity in entity_values:
                             query = render(
                                 template,
-                                topic=topic,
+                                topic=localized_topic,
                                 year=year,
                                 version=version,
                                 entity=entity,
@@ -406,12 +460,82 @@ def build_plan(
                             }
                             if entity:
                                 record["entity"] = entity
+                                if entity_ids[entity]:
+                                    record["entity_id"] = entity_ids[entity]
                             if version:
                                 record["version_marker"] = version
                             if coverage_enabled and section_id:
                                 record["deliverable_section_ids"] = [section_id]
                             records.append(record)
     return records
+
+
+def question_queue(plan: dict[str, Any], executed: list[dict[str, Any]], sources: list[dict[str, Any]],
+                   planned: list[dict[str, Any]], languages: list[str], sections: list[str]) -> list[dict[str, Any]]:
+    """Turn read-source questions into bounded work, never into new evidence."""
+    questions = reader_questions(plan)
+    candidates = []
+    for question in questions + source_followups(executed, sources, questions):
+        if question.get("status", "open") in {"answered", "excluded"}:
+            continue
+        candidates.append({**question, "reader_question_id": question.get("reader_question_id", question["question_id"]),
+                           "queue_reason": question.get("queue_reason") or question.get("gap") or question["question"]})
+    priority = {"critical": 0, "material": 1, "contextual": 2}
+    candidates.sort(key=lambda item: priority.get(item.get("priority", "material"), 1))
+    done = {normalize_query(str(record.get("query", ""))) for record in executed if record.get("status") != "planned"}
+    pending = {normalize_query(str(record.get("query", ""))): record for record in planned if record.get("status") == "planned"}
+    ids = {str(record.get("query_id")) for record in planned + executed}
+    seen_questions = set()
+    seen_queries = set(done)
+    selected = []
+    for candidate in candidates:
+        if sections and candidate.get("section_id") not in sections:
+            continue
+        question_key = (candidate["reader_question_id"], normalize_query(candidate["question"]))
+        if question_key in seen_questions:
+            continue
+        seen_questions.add(question_key)
+        for language in languages:
+            query = localized_phrase(candidate.get("search_phrases", {}), language)
+            key = normalize_query(query)
+            if key in seen_queries:
+                continue
+            seen_queries.add(key)
+            previous = pending.get(key)
+            query_id = previous["query_id"] if previous else next_id("QRY", ids)
+            ids.add(query_id)
+            record = {"query_id": query_id, "status": "planned", "pass": "gap", "family": "general", "target_platform": "web",
+                      "language": language, "query": query, "topic": candidate["question"], "planned_at": previous.get("planned_at") if previous else utc_now(),
+                      "reader_question_id": candidate["reader_question_id"], "queue_reason": candidate["queue_reason"]}
+            for field in ("origin_query_id", "origin_source_ids"):
+                if field in candidate:
+                    record[field] = candidate[field]
+            if candidate.get("section_id"):
+                record["deliverable_section_ids"] = [candidate["section_id"]]
+            selected.append(record)
+    return selected
+
+
+def apply_budget(records: list[dict[str, Any]], executed: list[dict[str, Any]], planned: list[dict[str, Any]], limit: int | None) -> list[dict[str, Any]]:
+    if limit is None:
+        return records
+    if type(limit) is not int or limit < 1:
+        raise ValueError("research_budget.max_queries / --max-queries must be a positive integer")
+    attempted = [record for record in executed if record.get("status") not in {"planned", "skipped"}]
+    done_keys = {normalize_query(str(record.get("query", ""))) for record in attempted}
+    pending_ids = {record.get("query_id") for record in planned if record.get("status") == "planned" and normalize_query(str(record.get("query", ""))) not in done_keys}
+    available = max(0, limit - len(attempted) - len(pending_ids))
+    remaining_attempts = max(0, limit - len(attempted))
+    chosen = []
+    for record in records:
+        if len(chosen) >= remaining_attempts:
+            break
+        if record["query_id"] in pending_ids:
+            chosen.append(record)
+        elif available:
+            chosen.append(record)
+            available -= 1
+    return chosen
 
 
 def summarize(records: list[dict[str, Any]]) -> str:
@@ -476,7 +600,7 @@ def main(argv: list[str] | None = None) -> int:
         plan = load_json(plan_path) if plan_path.is_file() else None
         executed = load_jsonl(root / "queries.jsonl")
         planned = load_jsonl(root / PLAN_FILE)
-        branches = branch_list(manifest, plan, args.section, args.topic)
+        branches = [] if args.question_gaps else branch_list(manifest, plan, args.section, args.topic)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -527,21 +651,28 @@ def main(argv: list[str] | None = None) -> int:
         for record in executed + planned
         if record.get("query")
     ]
-    records = build_plan(
-        branches=branches,
-        families=families,
-        languages=languages,
-        entities=list(
-            dict.fromkeys(entity.strip() for entity in args.entity if entity.strip())
-        ),
-        markers=markers,
-        year=year,
-        existing_queries=existing_queries,
-        existing_ids=existing_ids,
-        coverage_enabled="coverage_contract_version" in manifest,
-    )
-    fresh_ids = {record["query_id"] for record in records}
     try:
+        if args.question_gaps and args.coverage_gaps:
+            raise ValueError("choose --question-gaps or --coverage-gaps, not both")
+        localization = (plan or {}).get("query_localization", {})
+        if not isinstance(localization, dict):
+            raise ValueError("plan.query_localization must be an object")
+        for entry in args.search_phrase:
+            language, separator, phrase = entry.partition("=")
+            if not separator or language not in TEMPLATES or not phrase.strip():
+                raise ValueError("--search-phrase expects en|ru=PHRASE")
+            localization.setdefault("topics", {}).setdefault("__all__", {})[language] = phrase
+        if args.question_gaps:
+            records = question_queue(plan or {}, executed, load_jsonl(root / "sources.jsonl"), planned, languages, args.section)
+        else:
+            records = build_plan(
+                branches=branches, families=families, languages=languages,
+                entities=list(dict.fromkeys(entity.strip() for entity in args.entity if entity.strip())),
+                markers=markers, year=year, existing_queries=existing_queries,
+                existing_ids=existing_ids, coverage_enabled="coverage_contract_version" in manifest,
+                localization=localization,
+            )
+        fresh_ids = {record["query_id"] for record in records if record["query_id"] not in existing_ids}
         targets = inspection_targets(args.min_inspected)
         if targets and not args.coverage_gaps:
             raise ValueError(
@@ -571,6 +702,17 @@ def main(argv: list[str] | None = None) -> int:
             for record in records:
                 if record["query_id"] in fresh_ids:
                     record["pass"] = "gap"
+        budget_config = (plan or {}).get("research_budget", {})
+        if not isinstance(budget_config, dict):
+            raise ValueError("research_budget must be an object")
+        budget = budget_config.get("max_queries")
+        if budget is None and args.question_gaps:
+            budget = {"quick": 10, "deep": 30, "exhaustive": 60}[depth]
+        budget = args.max_queries if args.max_queries is not None else budget
+        uncapped_count = len(records)
+        records = apply_budget(records, executed, planned, budget)
+        if len(records) < uncapped_count:
+            print(f"budget limit: queued {len(records)}/{uncapped_count}; remaining questions stay unresolved", file=sys.stderr)
     except (OSError, ValueError, TypeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

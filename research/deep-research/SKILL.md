@@ -17,6 +17,15 @@ For Chinese Hearthstone questions, load [Chinese Hearthstone intelligence](refer
 
 For deep/exhaustive work, use [broad platform search](references/broad-platform-search.md): separate section-level X, Reddit, YouTube and general-web passes, EN/RU variants, creator searches, practical examples and contrary evidence. Plan queries with scripts/plan_queries.py and audit actual access with scripts/platform_coverage.py. Do not equate query generation with executed searches or platform coverage with independent corroboration.
 
+Use the additive [reader-question and progress contract](references/research-progress.md)
+for decision-heavy work: record audience/task, open questions, explicit RU/EN
+phrases and entity aliases, then queue source-grounded followups with
+`scripts/plan_queries.py RUN --question-gaps --max-queries N --json`.
+Keep simple lookups small. Missing translation is a visible planning gap;
+template suffixes do not translate a title. Preserve source/statistical context,
+conditions and exceptions. Failures and duplicate reads never create saturation;
+`search_exhausted` is not a factual audit or publication approval.
+
 After the first pass, use `scripts/plan_queries.py RUN_DIRECTORY --coverage-gaps --json`
 to queue pending/new queries only for incomplete platform/section/language lanes.
 For a material disputed section, configure relevant `--min-inspected PLATFORM=N`
