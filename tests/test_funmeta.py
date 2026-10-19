@@ -249,10 +249,13 @@ class FunmetaV2Tests(FunmetaFixture, unittest.TestCase):
         )
         self.data["fun_cards"][0]["evidence_ids"] = ["e1"]
 
-    def save_review(self):
+    def save_review(self, material=None):
         selection = self.run / "selection.json"
         selection.write_text(json.dumps(self.data), encoding="utf-8")
-        (self.run / "material.md").write_text("Synthetic reviewed material, with class gaps disclosed.", encoding="utf-8")
+        if material is None:
+            material = ("Synthetic reviewed material, with class gaps disclosed.\n\n"
+                        f"```text\n{self.candidate['deck_code']}\n```\n")
+        (self.run / "material.md").write_text(material, encoding="utf-8", newline="")
         review = dict(review_digests(selection), verdict="pass", checked_on="2026-10-19",
                       facts_checked=True, plan_explained=True, coverage_checked=True,
                       gaps_disclosed=True, findings=[], notes="Synthetic reviewer notes")
@@ -326,8 +329,36 @@ class FunmetaV2Tests(FunmetaFixture, unittest.TestCase):
         result = export_material(selection, self.data, validate(self.data, self.run), output)
         self.assertEqual(result["coverage"], "partial")
         self.assertEqual(output.read_bytes(), (self.run / "material.md").read_bytes())
+        self.assertIn(self.candidate["deck_code"], output.read_text(encoding="utf-8"))
         with self.assertRaises(FileExistsError):
             export_material(selection, self.data, validate(self.data, self.run), output)
+
+    def test_export_requires_verified_codes_even_for_readable_legacy_records(self):
+        self.candidate["deck_code_status"] = "unavailable"
+        self.candidate.pop("deck_code")
+        selection = self.save_review(material="Synthetic full list link only.")
+        output = self.run / "final.md"
+        with self.assertRaisesRegex(ValueError, "verified deck code"):
+            export_material(selection, self.data, validate(self.data, self.run), output)
+        self.assertFalse(output.exists())
+
+    def test_export_requires_the_selected_code_in_a_copyable_block(self):
+        code = self.candidate["deck_code"]
+        for index, material in enumerate(("Synthetic source link only.", f"Inline code: {code}",
+                                          "```text\nAAECAwrongcode\n```\n")):
+            with self.subTest(material=material):
+                selection = self.save_review(material=material)
+                output = self.run / f"final-{index}.md"
+                with self.assertRaisesRegex(ValueError, "copyable code block"):
+                    export_material(selection, self.data, validate(self.data, self.run), output)
+                self.assertFalse(output.exists())
+
+    def test_export_accepts_plain_fences_and_crlf_without_rewriting_the_code(self):
+        material = f"Synthetic material.\r\n\r\n```\r\n{self.candidate['deck_code']}\r\n```\r\n"
+        selection = self.save_review(material=material)
+        output = self.run / "final.md"
+        export_material(selection, self.data, validate(self.data, self.run), output)
+        self.assertIn(f"```\n{self.candidate['deck_code']}\n```", output.read_text(encoding="utf-8"))
 
     def test_material_or_selection_change_invalidates_review(self):
         for field in ("material", "selection"):
