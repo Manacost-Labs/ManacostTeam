@@ -3,12 +3,53 @@ package markdownlint
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
+
+// A portable child test process observes the exact file sent to the CLI.
+func TestSerializedDocumentHelper(t *testing.T) {
+	if os.Getenv("EDITOR_MARKDOWN_TEST_HELPER") != "1" {
+		return
+	}
+	data, err := os.ReadFile(os.Args[len(os.Args)-1])
+	if err != nil {
+		os.Exit(2)
+	}
+	if !strings.HasSuffix(string(data), "\n") {
+		os.Stdout.WriteString(`[{"lineNumber":1,"ruleNames":["MD047"],"errorDetail":"missing newline"}]`)
+	} else {
+		os.Stdout.WriteString(`[]`)
+	}
+	os.Exit(0)
+}
+
+func TestJSONTextIsSerializedAsMarkdownDocument(t *testing.T) {
+	// Build a tiny wrapper because Runner owns the CLI arguments.
+	dir := t.TempDir()
+	source := filepath.Join(dir, "main.go")
+	code := `package main
+import ("os"; "os/exec")
+func main() { args:=append([]string{"-test.run=^TestSerializedDocumentHelper$", "--"},os.Args[1:]...); c:=exec.Command(os.Getenv("EDITOR_TEST_BINARY"),args...); c.Stdout=os.Stdout; c.Stderr=os.Stderr; if c.Run()!=nil {os.Exit(2)} }
+`
+	if err := os.WriteFile(source, []byte(code), 0600); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(dir, "cli.exe")
+	if out, err := exec.Command("go", "build", "-o", bin, source).CombinedOutput(); err != nil {
+		t.Fatalf("%s: %v", out, err)
+	}
+	t.Setenv("EDITOR_MARKDOWN_TEST_HELPER", "1")
+	t.Setenv("EDITOR_TEST_BINARY", os.Args[0])
+	got, err := New(bin, "", 0).Check(context.Background(), "Готовый абзац.")
+	if err != nil || len(got) != 0 {
+		t.Fatalf("transport newline caused editorial repair: %+v %v", got, err)
+	}
+}
 
 func TestCheckParsesJSON(t *testing.T) {
 	if runtime.GOOS == "windows" {

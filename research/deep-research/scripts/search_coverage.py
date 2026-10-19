@@ -95,6 +95,7 @@ def source_followups(queries: list[dict[str, Any]], sources: list[dict[str, Any]
                 continue
             seen.add(key)
             item = {**followup, "question_id": f"{record.get('query_id')}:followup-{index + 1}",
+                    "priority": followup.get("priority", parent.get("priority", "material")),
                     "section_id": parent.get("section_id"), "reader_question_id": parent["question_id"],
                     "origin_query_id": record["query_id"], "origin_source_ids": inspected,
                     "queue_reason": followup["why_it_matters"], "gap": followup.get("gap") or followup["why_it_matters"]}

@@ -68,6 +68,13 @@ python teams/manacost-publish/scripts/publish.py status build/publication-runs/m
 сильные цитаты прошлых ревизий. Автор получает их для сохранения или
 обоснованного изменения.
 
+После research в next есть chapter_brief: порядок «вопрос → claim → evidence»
+для каждой главы. В нём сохраняются condition, exception, confidence, контексты,
+карточки решений и дополнительные claims вне обязательных глав. Он вычисляется
+из принятого handoff при чтении и имеет тот же handoff_sha256; не редактируйте
+его как второй источник. Полные источники доступны по inputs.sources. Пакет
+помогает не потерять границы совета и не заменяет независимую проверку смысла.
+
 | Этап | Что подготовить | Что проверяется |
 | --- | --- | --- |
 | sources | JSON массив полных source candidates | full/public, ID, URL, текст, SHA256, provenance и время доступа |

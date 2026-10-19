@@ -78,6 +78,12 @@ func (r *Runner) Check(parent context.Context, text string) ([]finding.Finding, 
 	}
 	defer os.RemoveAll(dir)
 	path := filepath.Join(dir, "input.md")
+	// JSON prose has no file-ending contract. Supply the serialization newline
+	// here instead of asking the model to fix a transport-only MD047 finding.
+	// Preserve existing blank lines so genuine MD012 findings remain visible.
+	if !strings.HasSuffix(text, "\n") {
+		text += "\n"
+	}
 	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
 		return nil, err
 	}

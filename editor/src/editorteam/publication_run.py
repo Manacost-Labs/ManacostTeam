@@ -8,6 +8,7 @@ import json
 import os
 import uuid
 from contextlib import contextmanager
+from copy import deepcopy
 from pathlib import Path
 
 from .editorial_lab import canonical_url
@@ -36,6 +37,8 @@ INSTRUCTIONS = {
     "Для совета объясни ситуацию, действие, причину, цену выбора и исключение, если они подтверждены. "
     "Если начало слабое, сравни до трёх вариантов и выбери по точности обещания пользы и жанру; не превращай это в обязательный шаблон. "
     "Сохрани силу советов, условия, исключения, ссылки и сильные фрагменты keep_spans. "
+    "Сохраняй явные предметы и адресаты действия: местоимение допустимо при однозначной связи и пользе. "
+    "Повтор названия, условия или статуса исправления в техническом списке может быть полезной навигацией. "
     "Допускается оставить удачный текст без изменений. Правь локально, с понятной пользой и оценкой риска смыслового сдвига. "
     "Не превращай inference в факт, пример illustrative в наблюдение, а выборку или мнение в универсальную рекомендацию. "
     "Не придумывай личный опыт, ограничения или детали для заполнения карточек. "
@@ -58,6 +61,8 @@ INSTRUCTIONS = {
     "Составь paragraph_functions с quote и function; затем проверь чтение всей статьи (whole_article_checked). "
     "В reader_check ответь на action, reason, conditions, alternative; если вопрос неприменим к жанру, объясни почему. "
     "Для замечаний укажи benefit и meaning_risk. Ритм, местоимения и частота слов — диагностика, а не цель. "
+    "Проверь каждую значимую замену: польза грамматической правки не оправдывает соседнюю потерю точности. "
+    "Отличай стилистическую ничью от смысловой ошибки; исправляй точечно, сохраняя полезную редактуру. "
     "Проверь keep_spans: каждую утрату объясни в strength_changes через quote, reason, replacement_quote. "
     "Не требуй переписывания ради изменения; unchanged — допустимый результат. "
     "Дай literary JSON с article_sha256/handoff_sha256 и четырьмя dimensions. "
@@ -313,6 +318,41 @@ def _keep_spans(run: Path, state: dict) -> list[dict]:
     return list(spans.values())
 
 
+def chapter_brief(handoff: dict) -> dict:
+    """Derive a lossless reading order from an already validated handoff.
+
+    No new facts or semantic judgments: keep whole claim/source contexts,
+    including counterevidence, and retain claims outside mandatory chapters.
+    """
+    from .publication_review import handoff_hash
+
+    claims = {row["claim_id"]: row for row in handoff["claims"]}
+    evidence = {row["source_id"]: row for row in handoff["sources"]}
+
+    def bound_claim(cid):
+        row = deepcopy(claims[cid])
+        row["evidence"] = [deepcopy(evidence[ref]) for ref in row["evidence_refs"]]
+        return row
+
+    chapters, used = [], set()
+    for chapter in handoff["chapters"]:
+        row = deepcopy(chapter)
+        row["questions"] = [
+            deepcopy(question)
+            for question in handoff.get("decisions", [])
+            if question["chapter_id"] == chapter["chapter_id"]
+        ]
+        row["claims"] = [bound_claim(cid) for cid in chapter["required_claim_ids"]]
+        used.update(chapter["required_claim_ids"])
+        chapters.append(row)
+    return {
+        "handoff_sha256": handoff_hash(handoff),
+        "editorial_context": deepcopy(handoff.get("editorial_context", {})),
+        "chapters": chapters,
+        "additional_claims": [bound_claim(cid) for cid in claims if cid not in used],
+    }
+
+
 def next_task(run: Path) -> dict:
     from .publication_review import article_hash, handoff_hash
 
@@ -342,7 +382,15 @@ def next_task(run: Path) -> dict:
         },
     }
     if "research" in state["artifacts"]:
-        task["handoff_sha256"] = handoff_hash(_json(_data(run, state, "research")))
+        handoff = _json(_data(run, state, "research"))
+        task["handoff_sha256"] = handoff_hash(handoff)
+        task["chapter_brief"] = chapter_brief(handoff)
+        task["instructions"] += (
+            " chapter_brief — порядок чтения принятого handoff: вопросы → советы → evidence. "
+            "Сохрани condition, exception, confidence и research_context каждого совета. "
+            "Контрдоказательства не являются поддержкой. Полные snapshots доступны через inputs.sources. "
+            "Пакет не подтверждает истинность автоматически; не переноси внутренние IDs в статью."
+        )
     if "draft" in state["artifacts"]:
         task["article_sha256"] = article_hash(_data(run, state, "draft").decode("utf-8"))
     if "research" in state["artifacts"] and "draft" in state["artifacts"]:

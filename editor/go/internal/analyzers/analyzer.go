@@ -91,9 +91,8 @@ func (NativeGoAnalyzer) Analyze(_ context.Context, in Input) (Result, error) {
 		return r, nil
 	}
 	lower := strings.ToLower(in.Text)
-	if strings.Contains(lower, "подарок") || strings.Contains(lower, "подарки") {
-		r.Findings = append(r.Findings, Finding{Analyzer: r.Analyzer, RuleID: "terminology.dark-gifts-generic", Severity: "suggestion", Message: "используйте официальное название «Темные дары» или «Темный дар»"})
-	}
+	// Generic gifts (for example Twitch rewards) do not identify Dark Gifts.
+	// Explicit named aliases are checked by the entity-aware Python analyzer.
 	if strings.Contains(lower, "племя") || strings.Contains(lower, "племени") || strings.Contains(lower, "племен") {
 		r.Findings = append(r.Findings, Finding{Analyzer: r.Analyzer, RuleID: "terminology.minion-type", Severity: "suggestion", Message: "для Battlegrounds используйте «тип существа», а не «племя»"})
 	}

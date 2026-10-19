@@ -488,6 +488,7 @@ def question_queue(plan: dict[str, Any], executed: list[dict[str, Any]], sources
     seen_questions = set()
     seen_queries = set(done)
     selected = []
+    by_query = {}
     for candidate in candidates:
         if sections and candidate.get("section_id") not in sections:
             continue
@@ -499,6 +500,18 @@ def question_queue(plan: dict[str, Any], executed: list[dict[str, Any]], sources
             query = localized_phrase(candidate.get("search_phrases", {}), language)
             key = normalize_query(query)
             if key in seen_queries:
+                # One search may answer several reader questions. Deduplicate
+                # the request, never its question/section/source provenance.
+                previous = by_query.get(key)
+                if previous is not None:
+                    for field, values in (
+                        ("reader_question_ids", [candidate["reader_question_id"]]),
+                        ("deliverable_section_ids", [candidate["section_id"]] if candidate.get("section_id") else []),
+                        ("origin_source_ids", candidate.get("origin_source_ids", [])),
+                        ("origin_query_ids", [candidate["origin_query_id"]] if candidate.get("origin_query_id") else []),
+                    ):
+                        if values:
+                            previous[field] = list(dict.fromkeys(previous.get(field, []) + values))
                 continue
             seen_queries.add(key)
             previous = pending.get(key)
@@ -507,13 +520,36 @@ def question_queue(plan: dict[str, Any], executed: list[dict[str, Any]], sources
             record = {"query_id": query_id, "status": "planned", "pass": "gap", "family": "general", "target_platform": "web",
                       "language": language, "query": query, "topic": candidate["question"], "planned_at": previous.get("planned_at") if previous else utc_now(),
                       "reader_question_id": candidate["reader_question_id"], "queue_reason": candidate["queue_reason"]}
+            record["reader_question_ids"] = [candidate["reader_question_id"]]
+            record["priority"] = candidate.get("priority", "material")
+            if candidate.get("origin_query_id"):
+                record["origin_query_ids"] = [candidate["origin_query_id"]]
             for field in ("origin_query_id", "origin_source_ids"):
                 if field in candidate:
                     record[field] = candidate[field]
             if candidate.get("section_id"):
                 record["deliverable_section_ids"] = [candidate["section_id"]]
+            if previous:
+                current = record
+                record = {**previous, **current}
+                record["priority"] = min(
+                    (previous.get("priority", "material"), current["priority"]),
+                    key=lambda value: priority.get(value, 1),
+                )
+                for plural, singular in (("reader_question_ids", "reader_question_id"),
+                                         ("origin_query_ids", "origin_query_id"),
+                                         ("origin_source_ids", None),
+                                         ("deliverable_section_ids", None)):
+                    old_values = list(previous.get(plural, []))
+                    if singular and previous.get(singular):
+                        old_values = list(dict.fromkeys([previous[singular]] + old_values))
+                        record[singular] = previous[singular]
+                    values = list(dict.fromkeys(old_values + current.get(plural, [])))
+                    if values:
+                        record[plural] = values
             selected.append(record)
-    return selected
+            by_query[key] = record
+    return sorted(selected, key=lambda item: priority.get(item.get("priority", "material"), 1))
 
 
 def apply_budget(records: list[dict[str, Any]], executed: list[dict[str, Any]], planned: list[dict[str, Any]], limit: int | None) -> list[dict[str, Any]]:
@@ -735,7 +771,24 @@ def main(argv: list[str] | None = None) -> int:
         if not markers:
             print("- note: no version markers; version-bound templates were skipped")
     new_records = [record for record in records if record["query_id"] in fresh_ids]
-    if args.apply and new_records:
+    updates = {record["query_id"]: record for record in records
+               if args.question_gaps and record["query_id"] not in fresh_ids}
+    if args.apply and updates:
+        # Pending work is editable; executed evidence remains append-only.
+        # Persist merged question provenance even when no new query was added.
+        from os import replace
+        from tempfile import NamedTemporaryFile
+        revised = [updates.get(record.get("query_id"), record) for record in planned] + new_records
+        with NamedTemporaryFile("w", encoding="utf-8", dir=root, delete=False) as stream:
+            temporary = Path(stream.name)
+            for record in revised:
+                stream.write(json.dumps(record, ensure_ascii=False) + "\n")
+        try:
+            replace(temporary, root / PLAN_FILE)
+        finally:
+            temporary.unlink(missing_ok=True)
+        print(f"Updated pending query provenance; added {len(new_records)} records", file=sys.stderr)
+    elif args.apply and new_records:
         with (root / PLAN_FILE).open("a", encoding="utf-8") as stream:
             for record in new_records:
                 stream.write(json.dumps(record, ensure_ascii=False) + "\n")

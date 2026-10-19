@@ -158,6 +158,62 @@ class ResearchProgressTests(unittest.TestCase):
         self.assertEqual(failed.returncode, 2)
         self.assertIn("inspected", failed.stderr)
 
+    def test_followup_inherits_critical_priority_before_budget(self):
+        questions = [
+            {"question_id": "R-1", "question": "When?", "status": "answered", "priority": "critical"},
+            {"question_id": "R-2", "question": "Background?", "priority": "material", "search_phrases": {"en": "background"}},
+        ]
+        query = executed_query("QRY-0001", "primary", "first", ["SRC-1"])
+        query["observations"] = {"summary": "A limit changes the answer", "followup_questions": [
+            {"question": "What is the limit?", "parent_question_id": "R-1", "why_it_matters": "Changes the action", "search_phrases": {"en": "action limit"}}
+        ]}
+        records = plan_queries.question_queue({"reader_questions": questions}, [query], [source("SRC-1", "https://example.org/a", "L1")], [], ["en"], [])
+        chosen = plan_queries.apply_budget(records, [query], [], 2)
+        self.assertEqual(chosen[0]["query"], "action limit")
+        self.assertEqual(chosen[0]["priority"], "critical")
+        self.assertEqual(chosen[0]["origin_source_ids"], ["SRC-1"])
+
+    def test_shared_query_retains_both_reader_questions(self):
+        questions = [{"question_id": q, "question": q, "section_id": s, "search_phrases": {"en": "same evidence query"}} for q, s in [("R-1", "CH-1"), ("R-2", "CH-2")]]
+        records = plan_queries.question_queue({"reader_questions": questions}, [], [], [], ["en"], [])
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["reader_question_ids"], ["R-1", "R-2"])
+        self.assertEqual(records[0]["deliverable_section_ids"], ["CH-1", "CH-2"])
+        self.assertEqual(records[0]["status"], "planned")
+
+    def test_pending_query_preserves_previous_provenance(self):
+        old = {"query_id": "QRY-0001", "query": "same evidence query", "status": "planned", "planned_at": "earlier", "reader_question_id": "R-old", "deliverable_section_ids": ["CH-old"], "origin_query_id": "QRY-origin", "origin_source_ids": ["SRC-old"]}
+        plan = {"reader_questions": [{"question_id": "R-new", "question": "New?", "section_id": "CH-new", "search_phrases": {"en": old["query"]}}]}
+        row = plan_queries.question_queue(plan, [], [], [old], ["en"], [])[0]
+        self.assertEqual(row["query_id"], old["query_id"])
+        self.assertEqual(row["reader_question_id"], "R-old")
+        self.assertEqual(row["reader_question_ids"], ["R-old", "R-new"])
+        self.assertEqual(row["deliverable_section_ids"], ["CH-old", "CH-new"])
+        self.assertEqual(row["origin_query_ids"], ["QRY-origin"])
+        self.assertEqual(row["origin_source_ids"], ["SRC-old"])
+        self.assertNotIn("reader_question_ids", old)
+
+    def test_pending_critical_priority_survives_new_contextual_question(self):
+        old = {"query_id": "QRY-0001", "query": "critical search", "status": "planned", "priority": "critical", "reader_question_id": "R-old", "planned_at": "earlier"}
+        plan = {"reader_questions": [
+            {"question_id": "R-material", "question": "Background", "search_phrases": {"en": "background"}},
+            {"question_id": "R-new", "question": "Related context", "priority": "contextual", "search_phrases": {"en": old["query"]}},
+        ]}
+        records = plan_queries.question_queue(plan, [], [], [old], ["en"], [])
+        chosen = plan_queries.apply_budget(records, [], [old], 1)
+        self.assertEqual(chosen[0]["priority"], "critical")
+        self.assertEqual(chosen[0]["query_id"], "QRY-0001")
+        self.save("plan.json", plan)
+        write_jsonl(self.root / "query-plan.jsonl", [old])
+        write_jsonl(self.root / "queries.jsonl", [])
+        before = (self.root / "queries.jsonl").read_bytes()
+        result = run(PLAN, str(self.root), "--question-gaps", "--language", "en", "--max-queries", "1", "--json", "--apply")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        persisted = json.loads((self.root / "query-plan.jsonl").read_text())
+        self.assertEqual(persisted["reader_question_ids"], ["R-old", "R-new"])
+        self.assertEqual(persisted["priority"], "critical")
+        self.assertEqual((self.root / "queries.jsonl").read_bytes(), before)
+
     def timeline(self, checked="2026-10-19"):
         value = {"timeline_version": "1.0", "checked_at": checked, "official_checks": [{"checked_at": checked, "source_url": "https://hearthstone.blizzard.com/en-us/news", "modes": ["battlegrounds"], "through": "2026-10-19", "result": "no_later_relevant_changes"}], "patches": [{"version": "36.1", "released": "2026-09-01", "modes": ["battlegrounds"], "source_url": "https://hearthstone.blizzard.com/en-us/news/1"}, {"version": "36.2", "released": "2026-10-01", "modes": ["battlegrounds"], "source_url": "https://hearthstone.blizzard.com/en-us/news/2"}]}
         self.save("timeline.json", value)

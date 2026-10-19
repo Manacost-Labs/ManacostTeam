@@ -56,8 +56,17 @@ func TestPythonAdapterPreservesCorrectionScopeAndDiagnosticSeverity(t *testing.T
 
 func TestNativeAnalyzerFlagsProjectTerminology(t *testing.T) {
 	result, err := (NativeGoAnalyzer{}).Analyze(context.Background(), Input{Text: "Подарки и племя на Полях сражений"})
-	if err != nil || len(result.Findings) != 2 {
+	if err != nil || len(result.Findings) != 1 || result.Findings[0].RuleID != "terminology.minion-type" {
 		t.Fatalf("native: %+v, %v", result, err)
+	}
+}
+
+func TestOrdinaryGiftsAreNotGameMechanics(t *testing.T) {
+	for _, text := range []string{"За просмотр Twitch вы получите подарки.", "Подарок — сезонный пропуск для Полей сражений.", "Темные дары изменились. Стримеры разыграют подарки."} {
+		got, err := (NativeGoAnalyzer{}).Analyze(context.Background(), Input{Text: text, Game: "hearthstone", Profile: "battlegrounds-article"})
+		if err != nil || len(got.Findings) != 0 {
+			t.Fatalf("generic word is not evidence of a named mechanic: %+v %v", got, err)
+		}
 	}
 }
 

@@ -157,6 +157,42 @@ def test_literary_reviewer_does_not_receive_factual_verdict(tmp_path):
     assert {"research", "draft"} <= task["inputs"].keys()
 
 
+def test_writer_packet_keeps_question_conditions_and_source_context(tmp_path):
+    run = prepared(tmp_path)
+    task = next_task(run)
+    packet = task["chapter_brief"]
+    assert packet["handoff_sha256"] == task["handoff_sha256"]
+    chapter = packet["chapters"][0]
+    assert chapter["questions"][0]["question"] == "Когда сохранять ресурс?"
+    claim = chapter["claims"][0]
+    assert claim["condition"] == "при слабой позиции"
+    assert claim["exception"] == "кроме угрозы поражения"
+    assert claim["evidence"][0]["quote"] == TEXT
+    assert claim["evidence"][0]["url"] == "https://example.org/guide"
+    assert "fact_review" not in packet
+    # Derivation is read-only and deterministic, not a second mutable source.
+    snapshot = (run / "state.json").read_bytes()
+    assert next_task(run)["chapter_brief"] == packet
+    assert (run / "state.json").read_bytes() == snapshot
+
+
+def test_packet_preserves_optional_claims_and_research_limits():
+    from editorteam.publication_run import chapter_brief
+
+    bundle = handoff()
+    bundle["claims"][0]["research_context"] = {
+        "limitations": ["маленькая выборка"], "counterevidence": [{"quote": "Исключение"}]
+    }
+    bundle["claims"].append({**bundle["claims"][0], "claim_id": "CLM-2"})
+    bundle["chapters"][0]["decision_cards"] = [{"question": "Альтернатива?", "gaps": []}]
+    packet = chapter_brief(bundle)
+    assert packet["chapters"][0]["claims"][0]["research_context"] == bundle["claims"][0]["research_context"]
+    assert packet["chapters"][0]["decision_cards"] == bundle["chapters"][0]["decision_cards"]
+    assert packet["additional_claims"][0]["claim_id"] == "CLM-2"
+    packet["chapters"][0]["claims"][0]["condition"] = "changed"
+    assert bundle["claims"][0]["condition"] == "при слабой позиции"
+
+
 def test_legacy_run_resumes_without_new_review_fields(tmp_path):
     run = prepared(tmp_path)
     state = status(run)

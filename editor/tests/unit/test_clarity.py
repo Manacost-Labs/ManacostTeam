@@ -31,8 +31,18 @@ def test_dark_gifts_use_official_name() -> None:
         "battlegrounds-article",
     )
     found = ids(findings)
-    assert "terminology.dark-gifts-generic" in found
+    assert "terminology.dark-gifts-generic" not in found
     assert "clarity.entity.dark-gifts.unlocalized" in found
+
+
+def test_ordinary_gifts_are_not_replaced_by_a_mechanic() -> None:
+    for profile in ("analytics-article", "battlegrounds-article"):
+        findings, _ = clarity.analyze(
+            "Темные дары изменились. За просмотр Twitch можно получить подарки: "
+            "комплекты карт и сезонный пропуск для Полей сражений.", profile
+        )
+        assert "terminology.dark-gifts-generic" not in ids(findings)
+        assert "подарки" not in clarity.model_rules(profile)["avoid"]
 
 
 def test_creature_type_replaces_tribe_term() -> None:
@@ -113,10 +123,11 @@ def test_model_rules_expose_player_facing_terms() -> None:
     assert poison["use"] == "существо с ядом"
     dark_gifts = next(item for item in rules["entities"] if item["kind"] == "system")
     assert dark_gifts["use"] == "Темные дары"
-    assert "подарок" in rules["avoid"]
+    assert "подарок" not in rules["avoid"]
+    assert "Dark Gifts" in dark_gifts["avoid"]
     assert "племя" in rules["avoid"]
     preferred = {item["use"] for item in rules["preferred_terms"]}
-    assert "Темные дары / Темный дар" in preferred
+    assert "Темные дары / Темный дар" not in preferred
     assert "тип существа / типы существ" in preferred
 
 

@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v8"
+const PromptVersion = "editorteam-go-v9"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -806,7 +806,11 @@ type criticError struct {
 
 func (e *criticError) Error() string { return e.Kind + ": " + e.Err.Error() }
 
-const criticInstruction = "\nТы critic. Не переписывай текст и не предлагай свою версию статьи. " +
+// Shared across draft, critic and local repair: improvements must not obscure
+// who acts, what the action targets, or the condition under which it applies.
+const precisionInstruction = "\nСохраняй точность отсылок и условий. Повтор названия предмета, части главы или карты может помогать читателю: заменяй его местоимением только при однозначной связи и конкретной пользе. Не убирай уточняющее существительное из названия предмета ради краткости. Условие получения награды, направление действия и область правила сохраняй явно; более длинный синоним точной короткой формулировки сам по себе не улучшение. Повтор начала пунктов технического списка может обозначать их статус: не разнообразь его ради разнообразия и не переноси статус в заключительное «это исправлено». Обычное слово не становится названием игровой механики из-за словарной подсказки. Проверяй каждую существенную замену отдельно: польза одного исправления не оправдывает соседнюю потерю точности. Устраняй такую потерю локально, сохраняя полезную грамматику, абзацы, сноски и авторский голос. "
+
+const criticInstruction = "\nТы critic. Не переписывай текст и не предлагай свою версию статьи. " + precisionInstruction +
 	"Составь обратный план функций абзацев; оцени действие, причину, условия и альтернативу с позиции читателя. Жанр определяет применимость этих вопросов. " +
 	"keep_spans содержат сильные места исходника, а не запрет на полезную редактуру целого абзаца. Сохранение тех же слов с другими пробелами или границами абзацев не означает потерю сильного места. Исправление грамматики, повтора или тяжёлого синтаксиса допустимо при сохранении мысли, условий, уверенности и голоса; для изменения слов нужна конкретная польза и strength_changes. Если при verdict accept такой фрагмент изменён, добавь strength_changes:[{quote,reason,replacement_quote}]: конкретное обоснование и дословную замену; для удаления replacement_quote пустая. " +
 	"В improvements укажи reader_problem, benefit и meaning_risk для существенной правки. Счётчики голоса, ритма и архивных слов диагностические и сами по себе не требуют правки. " +
@@ -984,7 +988,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 	if req.Mode == "proofread" {
 		system += "\nКонтракт proofread: исправь только опечатки, грамматику, пунктуацию и типографику. Не меняй композицию, стиль и порядок абзацев."
 	}
-	return s.complete(ctx, []llm.Message{{Role: "system", Content: system}, {Role: "user", Content: textPayload(req.Text, examples)}})
+	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction}, {Role: "user", Content: textPayload(req.Text, examples)}})
 }
 
 // critic вызывает модель с JSON-данными в user message. Невалидный ответ
@@ -1073,7 +1077,7 @@ func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, c
 		"Сохрани полезные правки candidate вне отмеченной ошибки, включая ясные формулировки и исправления грамматики. Не откатывай весь текст к source и не переписывай его заново. "+
 		"Сохрани удачное разделение длинного абзаца, если оно не меняет связи мыслей. При ошибке literal_footnote восстанови буквальную звёздочку сноски с экранированием, а не пункт списка; оставь полезную редактуру её пояснения. "+
 		"Сохрани ссылки, названия и удачные места keep_spans; конкретная ошибка или обоснованное улучшение ясности допускает точечную правку. Результат снова проверит critic. "+
-		"Верни полный исправленный текст без пояснений.", examples)
+		"Верни полный исправленный текст без пояснений."+precisionInstruction, examples)
 	return s.complete(ctx, []llm.Message{{Role: "system", Content: system}, {Role: "user", Content: string(payload)}})
 }
 

@@ -1,7 +1,7 @@
 extends: existence
-message: "Используйте терминологию EditorTeam: «Темные дары» и «тип существа»."
+message: "Для типа существа используйте терминологию EditorTeam: «тип существа»."
 level: suggestion
 ignorecase: true
 tokens:
-  - "\\b(подар(ок|ка|ки|ков)|плем(я|ени|ен))\\b"
+  - "\\bплем(я|ени|ен)\\b"
 
