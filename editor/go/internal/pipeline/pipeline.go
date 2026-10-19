@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v16"
+const PromptVersion = "editorteam-go-v17"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -1052,10 +1052,9 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	}
 	out, parseErr := parseCritic(text)
 	if parseErr == nil {
-		parseErr = validateStrengthChanges(in, out)
-	}
-	if parseErr == nil {
-		parseErr = validateEditAssessments(in, out)
+		// Report independent evidence failures together within the same retry
+		// budget, instead of fixing one while hiding the other until rejection.
+		parseErr = errors.Join(validateStrengthChanges(in, out), validateEditAssessments(in, out))
 	}
 	if parseErr == nil {
 		s.logStage(ctx, "critic", started, attempt, "")
@@ -1075,10 +1074,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	}
 	out, parseErr = parseCritic(text)
 	if parseErr == nil {
-		parseErr = validateStrengthChanges(in, out)
-	}
-	if parseErr == nil {
-		parseErr = validateEditAssessments(in, out)
+		parseErr = errors.Join(validateStrengthChanges(in, out), validateEditAssessments(in, out))
 	}
 	if parseErr != nil {
 		s.logStage(ctx, "critic_retry", started, attempt, ReasonCriticInvalid)

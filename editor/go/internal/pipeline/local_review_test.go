@@ -38,6 +38,20 @@ func TestMissingLocalReviewRetriesThenFailsClosed(t *testing.T) {
 	}
 }
 
+func TestCriticRetryReportsBothStrengthAndLocalEvidenceErrors(t *testing.T) {
+	source, candidate := "Турнир будет долгим.", "Турнир продлится долго."
+	model := &fakeLLM{omitLocalReview: true, replies: []string{criticJSON("accept")}}
+	s := New(model, nil, "fake")
+	_, err := s.critic(context.Background(), rules.RuleBundle{}, criticInput{Mode: "edit", Source: source, Candidate: candidate, KeepSpans: []StrongSpan{{Quote: source, Reason: "Удачный смысл."}}}, 1)
+	if err == nil || len(model.messages) != 2 {
+		t.Fatal("invalid evidence escaped bounded retry")
+	}
+	message := model.messages[1][len(model.messages[1])-1].Content
+	if !strings.Contains(message, "strength_changes") || !strings.Contains(message, "edit_assessments") {
+		t.Fatalf("retry hides independent error: %s", message)
+	}
+}
+
 func TestLocalReviewDoesNotExpandOtherModes(t *testing.T) {
 	for _, mode := range []string{"proofread", "facts_only", "reconstruct"} {
 		if localReviewInstruction(mode) != "" {
