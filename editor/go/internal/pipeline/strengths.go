@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,7 @@ func validateStrengthChanges(in criticInput, out criticResult) error {
 	if out.Verdict != "accept" {
 		return nil
 	}
+	var invalid []error
 	for _, span := range in.KeepSpans {
 		if strings.Contains(in.Candidate, span.Quote) || proseSpanPreserved(in.Candidate, span.Quote) {
 			continue
@@ -23,10 +25,10 @@ func validateStrengthChanges(in criticInput, out criticResult) error {
 			}
 		}
 		if matches != 1 {
-			return fmt.Errorf("lost keep_span %q requires one concrete strength_changes explanation with the whole exact quote (got %d)", span.Quote, matches)
+			invalid = append(invalid, fmt.Errorf("lost keep_span %q requires one concrete strength_changes explanation with the whole exact quote (got %d)", span.Quote, matches))
 		}
 	}
-	return nil
+	return errors.Join(invalid...)
 }
 
 // Paragraph boundaries do not erase a prose strength. Keep exact wording:

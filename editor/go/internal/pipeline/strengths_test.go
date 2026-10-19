@@ -96,6 +96,37 @@ func TestStrengthRetryNamesWholeMissingSpan(t *testing.T) {
 	}
 }
 
+func TestStrengthRetryReportsAllInvalidSpansTogether(t *testing.T) {
+	first, second := "Первое сильное место.", "Второе сильное место."
+	in := criticInput{Source: first + " " + second, Candidate: "Краткая ясная версия.", Mode: "edit", KeepSpans: []StrongSpan{{Quote: first}, {Quote: second}}}
+	var report map[string]any
+	_ = json.Unmarshal([]byte(criticJSON("accept")), &report)
+	duplicate := StrengthChange{Quote: second, Reason: "Обоснованное сокращение", ReplacementQuote: in.Candidate}
+	report["strength_changes"] = []StrengthChange{duplicate, duplicate}
+	invalid, _ := json.Marshal(report)
+	valid := append([]StrengthChange{{Quote: first, Reason: "Убрана лишняя обвязка", ReplacementQuote: in.Candidate}}, duplicate)
+	report["strength_changes"] = valid
+	corrected, _ := json.Marshal(report)
+	model := &fakeLLM{replies: []string{string(invalid), string(corrected)}}
+	s := New(model, nil, "fake")
+	s.Reviewer = model
+	_, err := s.critic(context.Background(), rules.Build(nil, "GUIDE", "обычная", "ru-RU", nil), in, 1)
+	if err != nil || len(model.messages) != 2 {
+		t.Fatalf("both explanations must be corrected in the existing single retry: %v, calls=%d", err, len(model.messages))
+	}
+	retry := model.messages[1]
+	feedback := retry[len(retry)-1].Content
+	for _, expected := range []string{first, second, "got 0", "got 2"} {
+		if !strings.Contains(feedback, expected) {
+			t.Fatalf("retry omitted %q: %s", expected, feedback)
+		}
+	}
+	// A correct first explanation must not conceal an unresolved duplicate.
+	if err := validateStrengthChanges(in, criticResult{Verdict: "accept", StrengthChanges: append(valid, duplicate)}); err == nil || !strings.Contains(err.Error(), second) {
+		t.Fatalf("unresolved duplicate accepted: %v", err)
+	}
+}
+
 func TestStrongParagraphMayBeSplitWithoutLosingItsWords(t *testing.T) {
 	quote := "Мета остаётся разнообразной. Мы продолжим следить за ситуацией."
 	in := criticInput{Source: quote, Candidate: "Мета остаётся разнообразной.\n\nМы продолжим следить за ситуацией.", KeepSpans: []StrongSpan{{Quote: quote, Reason: "Спокойный голос автора"}}}
