@@ -8,6 +8,47 @@ import base64
 import binascii
 
 
+def encode(value):
+    """Serialize an independently verified list; makes no legality claim."""
+    deck = normalize_deck(value)
+    raw = bytearray([0])
+
+    def number(value):
+        if value > 2**31 - 1:
+            raise ValueError("deck_list: integer exceeds 2^31-1")
+        while value >= 128:
+            raw.append((value & 127) | 128)
+            value >>= 7
+        raw.append(value)
+
+    def group(rows, sideboard=False):
+        for fixed in (1, 2, None):
+            selected = [row for row in rows if (row[1] == fixed if fixed else row[1] > 2)]
+            if len(selected) > 1000:
+                raise ValueError("deck_list: oversized array")
+            number(len(selected))
+            for row in selected:
+                number(row[0])
+                if fixed is None:
+                    number(row[1])
+                if sideboard:
+                    number(row[2])
+
+    number(1)
+    number(deck["format"])
+    number(len(deck["heroes"]))
+    for hero in deck["heroes"]:
+        number(hero)
+    group(deck["cards"])
+    raw.append(1 if deck["sideboards"] else 0)
+    if deck["sideboards"]:
+        group(deck["sideboards"], sideboard=True)
+    code = base64.b64encode(raw).decode("ascii")
+    if decode(code) != deck:
+        raise ValueError("deck_list: serialization mismatch")
+    return code
+
+
 def normalize_deck(value):
     """Normalize an independently transcribed DBF list for exact comparison."""
     if not isinstance(value, dict) or type(value.get("format")) is not int:

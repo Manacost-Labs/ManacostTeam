@@ -25,6 +25,7 @@ class FunmetaFixture:
         self.run = Path(self.temporary.name) / "run"
         selection = initialize(self.run, "2026-10-19", "standard")
         self.data = json.loads(selection.read_text(encoding="utf-8"))
+        self.data.pop("discovery_policy")  # Explicit legacy fixtures, including pre-0.4 v2.
         self.data["schema_version"] = 1  # Keep the legacy contract covered explicitly.
         self.data.update(patch="synthetic-patch", patch_source_id="official",
                          meta_source_ids=["meta-a", "meta-b"])
@@ -225,7 +226,7 @@ class DeckCodeTests(unittest.TestCase):
             normalize_deck(deck)
 
 
-class FunmetaV2Tests(FunmetaFixture, unittest.TestCase):
+class FunmetaV2Fixture(FunmetaFixture):
     def setUp(self):
         super().setUp()
         self.data["schema_version"] = 2
@@ -262,6 +263,8 @@ class FunmetaV2Tests(FunmetaFixture, unittest.TestCase):
         (self.run / "review.json").write_text(json.dumps(review), encoding="utf-8")
         return selection
 
+
+class FunmetaV2Tests(FunmetaV2Fixture, unittest.TestCase):
     def test_v2_tracks_failures_without_counting_them_as_inspected(self):
         result = validate(self.data, self.run)
         self.assertEqual(result["inspected_searches"], 2)

@@ -11,7 +11,8 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from deck_code import decode
+from deck_code import decode, encode
+from discovery import plan
 from quality import export_material, next_actions, review_digests, validate_v2
 
 CLASSES = (
@@ -63,7 +64,7 @@ def initialize(directory: Path, as_of: str, game_format: str) -> Path:
     directory.mkdir(parents=True, exist_ok=False)
     (directory / "sources").mkdir()
     selection = {
-        "schema_version": 2, "as_of": as_of, "format": game_format,
+        "schema_version": 2, "discovery_policy": 1, "as_of": as_of, "format": game_format,
         "patch": "", "patch_source_id": "", "meta_source_ids": [],
         "sources": [], "candidates": [], "fun_cards": [],
         "evidence": [], "search_log": [],
@@ -218,6 +219,9 @@ def main(argv: list[str] | None = None) -> int:
     next_cmd = commands.add_parser("next", help="Suggest unfinished searches without changing a run")
     next_cmd.add_argument("selection", type=Path)
     next_cmd.add_argument("--limit", type=int, choices=range(1, 23), default=6)
+    plan_cmd = commands.add_parser("plan", help="Plan source-aware discovery, including old v2 runs")
+    plan_cmd.add_argument("selection", type=Path)
+    plan_cmd.add_argument("--limit", type=int, choices=range(1, 23), default=6)
     digests = commands.add_parser("review-digests", help="Hash current files; never create a passing review")
     digests.add_argument("selection", type=Path)
     export = commands.add_parser("export", help="Copy material only after current recorded review")
@@ -225,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
     export.add_argument("--output", type=Path, required=True)
     deck = commands.add_parser("decode", help="Decode one deck code; does not prove legality")
     deck.add_argument("code")
+    encoder = commands.add_parser("encode", help="Serialize an independently read DBF list; no legality claim")
+    encoder.add_argument("deck_list", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.command == "init":
@@ -232,12 +238,18 @@ def main(argv: list[str] | None = None) -> int:
             result = {"status": "initialized", "selection": str(path.resolve())}
         elif args.command == "decode":
             result = {"deck_list": decode(args.code), "legality_verified": False}
+        elif args.command == "encode":
+            code = encode(json.loads(args.deck_list.read_text(encoding="utf-8-sig")))
+            result = {"deck_code": code, "deck_list": decode(code),
+                      "origin": "reconstructed-list", "legality_verified": False,
+                      "notice": "Verify independently read source, current legality and all zones before inclusion."}
         elif args.command == "review-digests":
             result = review_digests(args.selection)
         else:
             data = json.loads(args.selection.read_text(encoding="utf-8-sig"))
-            if args.command == "next":
-                result = next_actions(data, args.limit)
+            if args.command in ("next", "plan"):
+                result = (plan(data, args.limit) if args.command == "plan"
+                          else next_actions(data, args.limit))
             else:
                 result = validate(data, args.selection.parent)
                 if args.command == "export":

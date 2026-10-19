@@ -58,6 +58,18 @@ def search_rows(data, sources):
 
 
 def validate_v2(data, directory, sources):
+    if "discovery_policy" in data:
+        from discovery import plan, provenance
+        discovery = plan(data)
+        for candidate in data["candidates"]:
+            if candidate["decision"] == "include":
+                require(candidate.get("deck_code_status") == "verified",
+                        "include: verified deck code required; unresolved code stays pending")
+                provenance(candidate, sources)
+        for row in discovery["coverage"]:
+            if row["class"] in data["gaps"]:
+                require(row["gap_search_complete"],
+                        f"gap {row['class']}: broaden source channels and record a focused card/mechanic search")
     root = Path(directory)
     rows = search_rows(data, sources)
     evidence = {}
@@ -121,6 +133,9 @@ def validate_v2(data, directory, sources):
 
 
 def next_actions(data, limit=6):
+    if isinstance(data, dict) and "discovery_policy" in data:
+        from discovery import plan
+        return plan(data, limit)
     require(isinstance(data, dict) and data.get("schema_version") == 2,
             "next requires a v2 run; old runs remain readable with check")
     require(data.get("format") in ("standard", "wild"), "unsupported format")
