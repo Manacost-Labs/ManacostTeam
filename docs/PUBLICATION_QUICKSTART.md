@@ -62,6 +62,11 @@ python teams/manacost-publish/scripts/publish.py status build/publication-runs/m
 
 `next` возвращает роль, инструкции, пути к сохранённым входам и хеши. Это
 задание для Codex, а не свидетельство выполненного поиска или генерации.
+Новый init устанавливает review_contract_version=2; старый run без этого поля
+остаётся v1. Не редактируйте state.json для смены режима или обхода проверки.
+В заданиях reviewer inputs нет чужих отзывов; keep_spans отдельно содержат
+сильные цитаты прошлых ревизий. Автор получает их для сохранения или
+обоснованного изменения.
 
 | Этап | Что подготовить | Что проверяется |
 | --- | --- | --- |
@@ -69,7 +74,7 @@ python teams/manacost-publish/scripts/publish.py status build/publication-runs/m
 | research | publication-handoff.json | патч, статус, вопросы/claims, цитаты из уже сохранённых источников |
 | draft | UTF-8 article.md | непустой текст; далее проверяют два reviewer |
 | fact_review | factual.json | хеши, цитаты, советы/условия/уверенность, источники, отсутствие новых неподтверждённых сущностей |
-| literary_review | literary.json | хеши, польза, цельность, русский язык, голос и отсутствие неисправленных замечаний |
+| literary_review | literary.json | хеши, польза, цельность, русский язык, голос; в v2 также strengths, функции абзацев, reader_check и объяснения потерь keep_spans |
 | ready | новый final.md | обе проверки относятся к текущему тексту и handoff |
 
 Пример сохранения этапа:
@@ -108,6 +113,13 @@ python research/deep-research/scripts/editorial_handoff.py RUN --plan editorial-
 В portable skill compiler лежит в scripts/editorial_handoff.py. Включены и
 обычные scripts/references ResearchTeam для применимых bundle validators.
 Не присваивайте ready неподтверждённому пакету и не выдумывайте результаты поиска.
+
+Handoff сохраняет дополнительные контексты evidence/источников/утверждений и
+контрдоказательства. Decision_cards необязательны: каждое заполненное поле
+связано с claims/evidence главы, а случай, вывод и условный пример помечены
+раздельно. При карточках factual reviewer после проверки всех полей явно
+подтверждает decision_cards_checked. Старые v1 handoff без этих расширений
+по-прежнему читаются.
 
 ## Исправления и экспорт
 
@@ -148,6 +160,11 @@ Approval содержит human_confirmed, reviewer и reviewed_at ISO с timezo
 реальными цитатами. Экспорт не создаёт исследование или research_handoff.
 Promptfoo cases дополняются проверенным handoff по прежнему publication contract.
 Числа времени/ошибок отражают только реальные заполненные парные оценки.
+
+План и фактические ограничения сравнительной проверки находятся в
+[docs/RESEARCH_EDITOR_PILOT.md](https://github.com/Manacost-Labs/ManacostTeam/blob/main/docs/RESEARCH_EDITOR_PILOT.md).
+Синтетический контроль повреждённых чисел не измеряет улучшение статьи;
+незаполненные человеческие оценки остаются pending, не ничьей.
 
 Источники, отзывы, ключ вариантов и разметка остаются локальными. Ready по
 модельным проверкам не равняется человеческому одобрению или публикации.

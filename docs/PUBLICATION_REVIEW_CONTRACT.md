@@ -4,6 +4,16 @@
 получает полный candidate, handoff и сохранённые source snapshots. Литературный
 получает candidate, brief/жанр, голос и необходимые исследовательские ограничения.
 Не сообщайте ожидаемый verdict и не передавайте self-review автора.
+`next` не включает отчёт одного reviewer во входы другого. Сильные цитаты
+прошлых литературных проверок передаются отдельно как keep_spans с причиной,
+без прежнего verdict. Это не утверждение, что разные модели независимы
+статистически: речь об отдельных контекстах и отсутствии подсказанного ответа.
+
+Новые runs имеют `state.review_contract_version=2`, при `state.schema_version=1`.
+Старые runs без поля review_contract_version читаются как v1 и не требуют
+перезаписи артефактов. Схема handoff также остаётся 1: research_context,
+source_context/evidence_context, decision_cards и editorial_context —
+необязательные расширения. Проверка хешей и смысловые обязанности сохраняются.
 
 ## Привязка к версии
 
@@ -23,6 +33,7 @@ editorteam.publication_review задают точный контракт; next �
   "confidence_preserved": true,
   "candidate_checked": true,
   "patch_matches": true,
+  "decision_cards_checked": true,
   "unsupported_claims": [],
   "conflicts": [],
   "claims": [{
@@ -59,6 +70,19 @@ status=repair/blocked, false для нарушенного confidence_preserved/
 Проверь смысл подсказок по evidence и занеси выдуманные советы в unsupported_claims.
 Семантическую истину программа не доказывает.
 
+Если хотя бы одна глава содержит decision_cards, требуется
+`decision_cards_checked=true`. Его ставит reviewer после проверки смысла
+каждого заполненного поля, его claim_ids/evidence_refs, причинного вывода и
+статуса примера. Без карточек это поле необязательно. Наблюдаемый эпизод,
+вывод и условный illustrative пример не взаимозаменяемы. Неизвестное и
+спорное из gaps не становится поддержанным советом.
+
+Проверяйте provenance, confidence_basis, inference_steps, ограничения выборки
+и периода в research_context/source_context/evidence_context. Отдельные
+research_context.counterevidence содержат цитаты, locators и хеши возражений;
+не интерпретируйте их как положительное подтверждение. Новые сохранённые
+поля доступны reviewer, но их наличие не является автоматической проверкой.
+
 ## Literary
 
 ```json
@@ -72,17 +96,51 @@ status=repair/blocked, false для нарушенного confidence_preserved/
     "natural_russian": "pass",
     "author_voice": "pass"
   },
+  "strengths": [{"quote": "точная удачная цитата из candidate", "reason": "чем она полезна читателю"}],
+  "paragraph_functions": [{"quote": "точная цитата абзаца из candidate", "function": "объясняет условие выбора"}],
+  "whole_article_checked": true,
+  "reader_check": {
+    "action": "что предлагается делать, либо почему вопрос неприменим",
+    "reason": "почему это обосновано, либо пояснение по жанру",
+    "conditions": "при каких условиях, либо пояснение по жанру",
+    "alternative": "когда выбрать иначе, либо пояснение по жанру"
+  },
+  "strength_changes": [],
   "findings": []
 }
 ```
 
 Для ошибки dimension получает fail, status=repair/blocked; finding содержит
 category, severity (info/warning/error/blocker), quote, reason, suggestion.
-Quote дословно из candidate. Проверяйте практические вопросы читателя,
+В v2 также нужны benefit и meaning_risk для каждого finding: ожидаемая
+читательская польза и риск смыслового сдвига. Quote дословно из candidate.
+Проверяйте практические вопросы читателя,
 последовательность объяснений и причин, повторы/противоречия между главами,
 штампованные связки, ритм и естественность языка. Предпочтение одного вкусового
 варианта не является ошибкой без конкретной причины. Info не блокирует,
 а неисправленные warning/error/blocker требуют ревизии.
+
+V2 требует strengths (список может быть пустым: не выдумывайте достоинства),
+непустой paragraph_functions, whole_article_checked=true и четыре непустых
+ответа reader_check. Quote в strengths/paragraph_functions должен присутствовать
+в candidate; reason/function непустые. Обратный план проверяет функции абзацев
+и цельность материала. Ответ «неприменимо» нужно объяснить жанром; это не повод
+добавлять к новости искусственную стратегическую рекомендацию.
+
+Keep_spans — точные удачные фрагменты и причины их сохранения. Если цитата
+исчезла, strength_changes должен ровно один раз назвать её в quote, дать
+конкретную reason и replacement_quote, присутствующую в новой версии. Для
+обоснованного удаления replacement_quote может быть пустой. Сохранённые цитаты
+не требуют записи об изменении. Хорошая причина может позволять исправить
+ошибку или связность; эта проверка не запрещает полезную редактуру.
+
+V1 не требует новые strengths/paragraph_functions/reader_check/whole_article_checked,
+но проверяет присутствующие strengths, paragraph_functions и strength_changes.
+Требование объяснить потерю реально
+переданного keep_span действует независимо от версии. Ни одна версия не
+требует заданного числа замечаний, обращений, союзов, скобок или коротких фраз.
+Сильный спокойный текст и результат unchanged допустимы. Голос, ритм и
+лексическое сходство служат диагностикой; отказ обосновывается содержанием.
 
 Обе схемы отражают фактически проведённую модельную проверку. Человек может
 не согласиться с выводом. Human gold и разрешение на публикацию — отдельные

@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.8.0",
+      "version": "1.9.0",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -95,6 +95,10 @@
         {
           "source": "docs/FACTUAL_BOUNDARY.md",
           "destination": "references/factual-boundary.md"
+        },
+        {
+          "source": "docs/RESEARCH_EDITOR_PILOT.md",
+          "destination": "references/research-editor-pilot.md"
         }
       ]
     },
@@ -102,7 +106,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.3.1",
+      "version": "1.4.0",
       "source": "teams/research-team",
       "resources": [
         {
@@ -124,6 +128,10 @@
         {
           "source": "docs/FACTUAL_BOUNDARY.md",
           "destination": "references/factual-boundary.md"
+        },
+        {
+          "source": "docs/RESEARCH_EDITOR_PILOT.md",
+          "destination": "references/research-editor-pilot.md"
         }
       ]
     },
@@ -309,7 +317,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -371,9 +379,13 @@
         {
           "source": "docs/FACTUAL_BOUNDARY.md",
           "destination": "references/factual-boundary.md"
+        },
+        {
+          "source": "docs/RESEARCH_EDITOR_PILOT.md",
+          "destination": "references/research-editor-pilot.md"
         }
       ]
     }
   ],
-  "release_version": "1.8.0"
+  "release_version": "1.9.0"
 }

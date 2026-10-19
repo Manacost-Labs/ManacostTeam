@@ -4,11 +4,13 @@
 
 ## Состав
 
-Актуальный выпуск: [ManacostTeam 1.8.0](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.8.0).
+Последний опубликованный GitHub release: [ManacostTeam 1.8.0](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.8.0).
 [Аудит качества, изменения и проверки](docs/QUALITY_AUDIT.md).
 [Повторная проверка 23 утверждений и сравнение 12 текстов](docs/CORPUS_RECHECK_2026_10_15.md).
 
-Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). Готовые ZIP/.skill для ChatGPT и Claude: [release/team-skills/1.8.0](release/team-skills/1.8.0/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
+В репозитории подготовлены пакеты 1.9.0; отдельная публикация GitHub release и развёртывание не выполнялись.
+
+Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). Готовые ZIP/.skill для ChatGPT и Claude: [release/team-skills/1.9.0](release/team-skills/1.9.0/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
 
 [Улучшения EditorTeam и ResearchTeam в 1.1.0](docs/EDITOR_RESEARCH_QUALITY.md):
 защита смысла при редактуре, очередь поиска по пробелам и передача полезных
