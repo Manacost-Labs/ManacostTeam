@@ -23,7 +23,7 @@ func validateStrengthChanges(in criticInput, out criticResult) error {
 			}
 		}
 		if matches != 1 {
-			return fmt.Errorf("lost keep_span requires one concrete strength_changes explanation")
+			return fmt.Errorf("lost keep_span %q requires one concrete strength_changes explanation with the whole exact quote (got %d)", span.Quote, matches)
 		}
 	}
 	return nil

@@ -73,6 +73,29 @@ func TestAnalysisPreservesOnlyRealStrongSpans(t *testing.T) {
 	}
 }
 
+func TestStrengthRetryNamesWholeMissingSpan(t *testing.T) {
+	quote := "Всем участникам будут выданы награды после завершения турнира."
+	candidate := "Всем участникам выдадут награды после завершения турнира."
+	in := criticInput{Source: quote, Candidate: candidate, Mode: "edit", KeepSpans: []StrongSpan{{Quote: quote, Reason: "Условие выдачи рядом с наградой"}}}
+	var report map[string]any
+	_ = json.Unmarshal([]byte(criticJSON("accept")), &report)
+	report["strength_changes"] = []any{map[string]any{"quote": "будут выданы награды", "reason": "Убрана тяжёлая конструкция", "replacement_quote": "выдадут награды"}}
+	partial, _ := json.Marshal(report)
+	report["strength_changes"] = []any{map[string]any{"quote": quote, "reason": "Условие и адресат сохранены, сокращён пассив", "replacement_quote": candidate}}
+	complete, _ := json.Marshal(report)
+	model := &fakeLLM{replies: []string{string(partial), string(complete)}}
+	s := New(model, nil, "fake")
+	s.Reviewer = model
+	_, err := s.critic(context.Background(), rules.Build(nil, "GUIDE", "обычная", "ru-RU", nil), in, 1)
+	if err != nil || len(model.messages) != 2 {
+		t.Fatalf("partial quote must use the existing retry: %v, calls=%d", err, len(model.messages))
+	}
+	retry := model.messages[1]
+	if !strings.Contains(retry[len(retry)-1].Content, quote) {
+		t.Fatal("retry did not name the whole missing keep_span")
+	}
+}
+
 func TestStrongParagraphMayBeSplitWithoutLosingItsWords(t *testing.T) {
 	quote := "Мета остаётся разнообразной. Мы продолжим следить за ситуацией."
 	in := criticInput{Source: quote, Candidate: "Мета остаётся разнообразной.\n\nМы продолжим следить за ситуацией.", KeepSpans: []StrongSpan{{Quote: quote, Reason: "Спокойный голос автора"}}}
