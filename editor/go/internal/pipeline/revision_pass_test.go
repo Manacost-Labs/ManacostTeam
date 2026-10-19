@@ -31,8 +31,8 @@ func TestAutomaticRevisionEditsCurrentDraftAgainstSourceAndKeepsParagraph(t *tes
 	analysis := lastUserJSON(t, model.messages[0])
 	writer := lastUserJSON(t, model.messages[1])
 	critic := lastUserJSON(t, model.messages[2])
-	if analysis["text"] != source || analysis["candidate"] != candidate || writer["source"] != source || writer["text"] != candidate {
-		t.Fatal("source and previous wording were not separate at analysis/writer boundary")
+	if analysis["text"] != source || analysis["candidate"] != nil || writer["source"] != source || writer["text"] != candidate {
+		t.Fatal("source analysis was primed by the prior edit, or writer lost the current draft/source boundary")
 	}
 	if critic["source"] != source || critic["candidate"] != want || critic["revision_base"] != candidate || critic["analysis"].(map[string]any)["thesis"] != "" {
 		t.Fatal("critic lacks factual source, previous form, or independence")

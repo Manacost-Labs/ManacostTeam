@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v30"
+const PromptVersion = "editorteam-go-v31"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -1036,14 +1036,14 @@ func (s *Service) editorialAnalysis(ctx context.Context, req Request, bundle rul
 		return out
 	}
 	payloadData := map[string]any{"text": req.Text, "style_examples": promptExamples(examples), "tool_observations": observations}
-	if req.ReviseCandidate {
-		payloadData["candidate"] = req.CandidateText
-	}
+	// Diagnose source functions and obligations before seeing prior editorial
+	// choices. Otherwise analysis tends to justify inherited omissions as gains.
+	// The writer and critic still receive both versions in separate fields.
 	if req.RevisionBrief != "" {
 		payloadData["revision_brief"] = req.RevisionBrief
 	}
 	payload, _ := json.Marshal(payloadData)
-	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Выделяй конкретную удачную формулировку, а не весь длинный абзац: достоинство мысли не делает соседние повторы или тяжёлый синтаксис неприкосновенными. В weak_spots называй конкретную трудность для читателя и её место; не считай длину абзаца самостоятельным дефектом. Не требуй обязательного числа замечаний. Верни только JSON: thesis, audience, genre — строки; paragraphs, weak_spots, repetitions, unclear, template_phrases, missing_links, factual_risks — массивы строк; strengths — массив объектов {quote,reason}. paragraphs описывает функции и нужные границы мыслей, включая сохраняемые удачные абзацы. tool_observations — диагностические подсказки: проверяй их в контексте, не предлагай замену ради счётчика."+craftInstruction+proseInstruction(req.Mode)+formEditingInstruction(req.Mode)+candidateRevisionInstruction(req.ReviseCandidate)+revisionBriefInstruction(req.RevisionBrief), examples)}, {Role: "user", Content: string(payload)}})
+	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Выделяй конкретную удачную формулировку, а не весь длинный абзац: достоинство мысли не делает соседние повторы или тяжёлый синтаксис неприкосновенными. В weak_spots называй конкретную трудность для читателя и её место; не считай длину абзаца самостоятельным дефектом. Не требуй обязательного числа замечаний. Верни только JSON: thesis, audience, genre — строки; paragraphs, weak_spots, repetitions, unclear, template_phrases, missing_links, factual_risks — массивы строк; strengths — массив объектов {quote,reason}. paragraphs описывает функции и нужные границы мыслей, включая сохраняемые удачные абзацы. tool_observations — диагностические подсказки: проверяй их в контексте, не предлагай замену ради счётчика."+craftInstruction+proseInstruction(req.Mode)+formEditingInstruction(req.Mode)+revisionBriefInstruction(req.RevisionBrief), examples)}, {Role: "user", Content: string(payload)}})
 	if err != nil {
 		return Analysis{FactualRisks: []string{"анализ не разобран: " + err.Error()}, ToolObservations: observations}
 	}
