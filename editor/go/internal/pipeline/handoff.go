@@ -359,8 +359,35 @@ func (h *ResearchHandoff) VerifiedText() string {
 	return strings.Join(parts, "\n")
 }
 
+// sourceNameForms permits exact source spellings in new prose, not new claims.
+// Keep these separate from VerifiedText: source-only numbers/links must not
+// become either required facts or approved additions. Full fact review remains
+// mandatory even when a name occurs in one of these cited source excerpts.
+func (h *ResearchHandoff) sourceNameForms() []string {
+	used := map[string]bool{}
+	for _, claim := range h.requiredClaims() {
+		for _, id := range claim.EvidenceRefs {
+			used[id] = true
+		}
+	}
+	seen := map[string]bool{}
+	var forms []string
+	for _, source := range h.Sources {
+		if !used[source.ID] {
+			continue
+		}
+		for _, entity := range guards.Extract(source.Quote) {
+			if entity.Kind == "named_entity" && !seen[entity.Value] {
+				seen[entity.Value] = true
+				forms = append(forms, entity.Value)
+			}
+		}
+	}
+	return forms
+}
+
 // Reconstruction allows composition changes and paraphrase but no unapproved entities.
-func reconstructionGuard(before, after string) guards.Report {
+func reconstructionGuard(before, after string, sourceNameForms ...string) guards.Report {
 	r := guards.Report{}
 	wants := guards.Extract(before)
 	for _, entity := range guards.Extract(after) {
@@ -368,6 +395,14 @@ func reconstructionGuard(before, after string) guards.Report {
 			continue
 		}
 		found := false
+		if entity.Kind == "named_entity" {
+			for _, form := range sourceNameForms {
+				if entity.Value == form {
+					found = true
+					break
+				}
+			}
+		}
 		if entity.Kind == "link" {
 			linkRE := regexp.MustCompile(`https?://[^\s)]+`)
 			link := linkRE.FindString(entity.Value)
