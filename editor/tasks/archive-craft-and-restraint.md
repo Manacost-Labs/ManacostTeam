@@ -35,3 +35,10 @@ Gate B GPT-6 Luna: ранний возврат анализа исправлен
 сборки полный повтор прошёл. Native routing smoke на замороженных реальных
 источниках сохраняет chapter_brief; это не новая генерация/фактическая проверка.
 Чужая работа funmeta завершилась отдельным 04dfccd и сохранена.
+
+Первый полный v10 опыт сохранён: 20 full checks, 62→33 calls, 16→1 repairs,
+13→0 soft-only repairs after accept; blind 4 new/4 tie/2 disagreement.
+Оба reviewer нашли streams хуже source. Корректирующий v11 всегда очищает
+авторский Analysis перед critic, сохраняя независимые evidence/keep_spans;
+RED/GREEN и Go test/vet/build пройдены. Затем новый полный v9/v11 опыт,
+без выбора ответов из первого опыта. Skills ZIP не содержат Go и не меняются.

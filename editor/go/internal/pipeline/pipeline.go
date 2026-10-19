@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v10"
+const PromptVersion = "editorteam-go-v11"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -831,13 +831,14 @@ func (e *criticError) Error() string { return e.Kind + ": " + e.Err.Error() }
 const precisionInstruction = "\nСохраняй точность отсылок и условий. Повтор названия предмета, части главы или карты может помогать читателю: заменяй его местоимением только при однозначной связи и конкретной пользе. Не убирай уточняющее существительное из названия предмета ради краткости. Условие получения награды, направление действия и область правила сохраняй явно; более длинный синоним точной короткой формулировки сам по себе не улучшение. Повтор начала пунктов технического списка может обозначать их статус: не разнообразь его ради разнообразия и не переноси статус в заключительное «это исправлено». Обычное слово не становится названием игровой механики из-за словарной подсказки. Проверяй каждую существенную замену отдельно: польза одного исправления не оправдывает соседнюю потерю точности. Устраняй такую потерю локально, сохраняя полезную грамматику, абзацы, сноски и авторский голос. "
 
 const criticInstruction = "\nТы critic. Не переписывай текст и не предлагай свою версию статьи. " + precisionInstruction + craftInstruction +
+	"Оцени текст независимо, без обоснований автора. Краткость или более активный глагол сами по себе не доказывают пользу: сравни точность, естественность соседних слов и ясность отсылок до и после. Нейтральный оборот не становится ошибкой только по ярлыку «канцелярит». Если рядом с полезной правкой есть лишняя или ухудшающая замена, запроси её локальный возврат, сохраняя полезную часть и абзацы. " +
 	"Мягкие tool_findings — наблюдения, не обязательные замены. Для требующей исправления опечатки или конкретной трудности читателя верни repair с адресным finding; не требуй repair из-за одной частоты слов или равноценного варианта. " +
 	"Составь обратный план функций абзацев; оцени действие, причину, условия и альтернативу с позиции читателя. Жанр определяет применимость этих вопросов. " +
 	"keep_spans содержат сильные места исходника, а не запрет на полезную редактуру целого абзаца. Сохранение тех же слов с другими пробелами или границами абзацев не означает потерю сильного места. Исправление грамматики, повтора или тяжёлого синтаксиса допустимо при сохранении мысли, условий, уверенности и голоса; для изменения слов нужна конкретная польза и strength_changes. Если при verdict accept такой фрагмент изменён, добавь strength_changes:[{quote,reason,replacement_quote}]: конкретное обоснование и дословную замену; для удаления replacement_quote пустая. " +
 	"В improvements укажи reader_problem, benefit и meaning_risk для существенной правки. Счётчики голоса, ритма и архивных слов диагностические и сами по себе не требуют правки. " +
 	"В сообщении пользователя JSON с полями source, candidate, diff, mode, analysis, source_claims, protected_entities и tool_findings: " +
 	"оцени именно изменение candidate относительно source. Верни только JSON вида " +
-	`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept|repair|reject","scores":{"factual_preservation":0,"meaning_preservation":0,"clarity":0,"structure":0,"usefulness":0,"natural_russian":0,"author_voice":0,"terminology":0},"improvements":[{"category":"clarity","before":"","after":"","reason":""}],"regressions":[],"findings":[{"rule_id":"","severity":"info|warning|error|blocker","message":"","line":0}],"repair_required":false}` +
+	`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept|repair|reject","scores":{"factual_preservation":0,"meaning_preservation":0,"clarity":0,"structure":0,"usefulness":0,"natural_russian":0,"author_voice":0,"terminology":0},"improvements":[{"category":"clarity","before":"","after":"","reason":"","reader_problem":"","benefit":"","meaning_risk":""}],"regressions":[],"findings":[{"rule_id":"","severity":"info|warning|error|blocker","message":"","line":0}],"repair_required":false}` +
 	"Поля no_new_facts и unsupported_additions обязательны. Проверь каждое новое описание, механику, имя, причинное объяснение, пример, численное значение и совет. " +
 	"Основание — только source и проверенный research_handoff, а не память модели, анализ черновика или стиль корпуса. Если подтверждения нет или смысл неясен, no_new_facts=false и перечисли добавления дословными фрагментами candidate в unsupported_additions. " +
 	"Не превращай проверку в исправление исходных фактов по памяти. Неподтверждённое утверждение не становится допустимым из-за красивого объяснения или высокой оценки текста. " +
@@ -1019,9 +1020,10 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 // critic_unavailable. Во всех случаях pipeline возвращает исходник без
 // HTTP-ошибки.
 func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in criticInput, attempt int) (criticResult, *criticError) {
-	if s.Reviewer != nil {
-		in.Analysis = Analysis{}
-	}
+	// Independence is a context boundary, not a different model identifier.
+	// Keep source evidence and exact preservation spans, not the writer's
+	// suggested substitutions or justification for making them.
+	in.Analysis = Analysis{}
 	payload, err := json.Marshal(in)
 	if err != nil {
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}

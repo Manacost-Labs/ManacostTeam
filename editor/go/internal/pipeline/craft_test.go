@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -24,6 +25,24 @@ func TestAcceptedParagraphEditIsNotRewrittenForWordFrequency(t *testing.T) {
 	}
 	if len(result.QAFindings) == 0 {
 		t.Fatal("advisory findings must stay visible to the client")
+	}
+}
+
+func TestCriticDoesNotReceiveWriterRationaleOnSameModel(t *testing.T) {
+	model := &fakeLLM{replies: []string{criticJSONNoImprovement()}}
+	svc := New(model, nil, "fake")
+	in := criticInput{Source: "Ясный текст.", Candidate: "Ясный текст.", Mode: "edit", Analysis: Analysis{WeakSpots: []string{"WRITER_PRIVATE_RATIONALE"}}, KeepSpans: []StrongSpan{{Quote: "Ясный текст.", Reason: "Точная формулировка"}}, ToolFindings: []analyzers.Finding{warning("Repeat", "повтор")}}
+	_, err := svc.critic(context.Background(), rules.Build(nil, "GUIDE", "обычная", "ru-RU", nil), in, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := lastUserJSON(t, model.messages[0])
+	raw, _ := json.Marshal(payload)
+	if strings.Contains(string(raw), "WRITER_PRIVATE_RATIONALE") {
+		t.Fatal("critic received the writer's proposed justification")
+	}
+	if payload["source"] != in.Source || payload["candidate"] != in.Candidate || !containsRule(findingsOf(t, payload, "tool_findings"), "Repeat") || len(payload["keep_spans"].([]any)) != 1 {
+		t.Fatalf("independent critic lost source or preservation evidence: %+v", payload)
 	}
 }
 
