@@ -261,6 +261,9 @@ func TestWritingQuestionAndNonRedundantExplanationReachAllWritingStages(t *testi
 			if !strings.Contains(instruction, "сквозной вопрос") || !strings.Contains(instruction, "одно и то же действие или оговорку") || !strings.Contains(instruction, "дополняющие условия") {
 				t.Fatal("writing stage lacks the question, repetition and condition boundaries", stage)
 			}
+			if !strings.Contains(instruction, "исходной модальностью") || !strings.Contains(instruction, "confidence, status, claim_id и evidence_refs — служебные поля") {
+				t.Fatal("writing stage can turn permission or metadata into reader instructions", stage)
+			}
 		})
 	}
 }
