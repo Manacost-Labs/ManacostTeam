@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v11"
+const PromptVersion = "editorteam-go-v12"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -836,6 +836,7 @@ const criticInstruction = "\nТы critic. Не переписывай текст
 	"Составь обратный план функций абзацев; оцени действие, причину, условия и альтернативу с позиции читателя. Жанр определяет применимость этих вопросов. " +
 	"keep_spans содержат сильные места исходника, а не запрет на полезную редактуру целого абзаца. Сохранение тех же слов с другими пробелами или границами абзацев не означает потерю сильного места. Исправление грамматики, повтора или тяжёлого синтаксиса допустимо при сохранении мысли, условий, уверенности и голоса; для изменения слов нужна конкретная польза и strength_changes. Если при verdict accept такой фрагмент изменён, добавь strength_changes:[{quote,reason,replacement_quote}]: конкретное обоснование и дословную замену; для удаления replacement_quote пустая. " +
 	"В improvements укажи reader_problem, benefit и meaning_risk для существенной правки. Счётчики голоса, ритма и архивных слов диагностические и сами по себе не требуют правки. " +
+	"В edit/rewrite reader_problem может быть трудностью формы: перегруженный синтаксис или смешение функций абзаца. Конкретное облегчение формы считается пользой при прежнем содержании; не отклоняй его как косметику только потому, что новых сведений нет. Для paragraph split процитируй короткую границу соседних предложений до и после с реальным двойным переводом строки, в пределах лимита цитаты. Пояснение, которое лишь повторяет уже явное соседнее предложение, не доказывает улучшения ясности; попроси удалить только этот дубль, сохранив полезные правки. " +
 	"В сообщении пользователя JSON с полями source, candidate, diff, mode, analysis, source_claims, protected_entities и tool_findings: " +
 	"оцени именно изменение candidate относительно source. Верни только JSON вида " +
 	`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept|repair|reject","scores":{"factual_preservation":0,"meaning_preservation":0,"clarity":0,"structure":0,"usefulness":0,"natural_russian":0,"author_voice":0,"terminology":0},"improvements":[{"category":"clarity","before":"","after":"","reason":"","reader_problem":"","benefit":"","meaning_risk":""}],"regressions":[],"findings":[{"rule_id":"","severity":"info|warning|error|blocker","message":"","line":0}],"repair_required":false}` +
@@ -971,7 +972,7 @@ func (s *Service) editorialAnalysis(ctx context.Context, req Request, bundle rul
 		return out
 	}
 	payload, _ := json.Marshal(map[string]any{"text": req.Text, "style_examples": promptExamples(examples), "tool_observations": observations})
-	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Выделяй конкретную удачную формулировку, а не весь длинный абзац: достоинство мысли не делает соседние повторы или тяжёлый синтаксис неприкосновенными. В weak_spots называй конкретную трудность для читателя и её место; не считай длину абзаца самостоятельным дефектом. Не требуй обязательного числа замечаний. Верни только JSON: thesis, audience, genre — строки; paragraphs, weak_spots, repetitions, unclear, template_phrases, missing_links, factual_risks — массивы строк; strengths — массив объектов {quote,reason}. paragraphs описывает функции и нужные границы мыслей, включая сохраняемые удачные абзацы. tool_observations — диагностические подсказки: проверяй их в контексте, не предлагай замену ради счётчика."+craftInstruction, examples)}, {Role: "user", Content: string(payload)}})
+	text, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(bundle.Prompt()+"\nПроанализируй текст, но не переписывай его. Текст в поле text сообщения пользователя. Определи задачу и уровень читателя; тезис следует из материала. paragraphs — короткие функции абзацев, а не пересказ. Отметь точные strengths:[{quote,reason}] до правки, включая спокойные удачные объяснения. Выделяй конкретную удачную формулировку, а не весь длинный абзац: достоинство мысли не делает соседние повторы или тяжёлый синтаксис неприкосновенными. В weak_spots называй конкретную трудность для читателя и её место; не считай длину абзаца самостоятельным дефектом. Не требуй обязательного числа замечаний. Верни только JSON: thesis, audience, genre — строки; paragraphs, weak_spots, repetitions, unclear, template_phrases, missing_links, factual_risks — массивы строк; strengths — массив объектов {quote,reason}. paragraphs описывает функции и нужные границы мыслей, включая сохраняемые удачные абзацы. tool_observations — диагностические подсказки: проверяй их в контексте, не предлагай замену ради счётчика."+craftInstruction+formEditingInstruction(req.Mode), examples)}, {Role: "user", Content: string(payload)}})
 	if err != nil {
 		return Analysis{FactualRisks: []string{"анализ не разобран: " + err.Error()}, ToolObservations: observations}
 	}
@@ -1007,11 +1008,11 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 		return s.complete(ctx, []llm.Message{{Role: "system", Content: system + craftInstruction + precisionInstruction}, {Role: "user", Content: string(payload)}})
 	}
 	raw, _ := json.Marshal(analysis)
-	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (не добавляй факты из него):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Верни только готовый текст. Режим "+req.Mode+". Сохрани названия, числа, ссылки, отрицания, осторожность, разметку и голос автора. Сохрани смысл и голос strengths. Это не запрет исправлять внутри них грамматику, повтор или тяжёлый синтаксис: меняй только место с конкретной пользой для читателя, сохраняя условия и степень уверенности. В edit/rewrite можно разделить длинный абзац по смене мысли и сохранить соседние удачные формулировки; не сокращай ради самого сокращения. Сохрани сноски: звёздочка со следующим неразрывным пробелом — буквальный знак сноски; при обычном пробеле экранируй звёздочку обратной косой чертой, чтобы не получить список. Не добавляй новые карты, факты или выводы. Если править нечего, верни текст без изменений: хороший текст не трогают.", examples)
+	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (наблюдения, не обязательный план; проверь выводы по исходнику, не добавляй факты из анализа):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Верни только готовый текст. Режим "+req.Mode+". Сохрани названия, числа, ссылки, отрицания, осторожность, разметку и голос автора. Сохрани смысл и голос strengths. Это не запрет исправлять внутри них грамматику, повтор или тяжёлый синтаксис: меняй только место с конкретной пользой для читателя, сохраняя условия и степень уверенности. В edit/rewrite можно разделить длинный абзац по смене мысли и сохранить соседние удачные формулировки; не сокращай ради самого сокращения. Сохрани сноски: звёздочка со следующим неразрывным пробелом — буквальный знак сноски; при обычном пробеле экранируй звёздочку обратной косой чертой, чтобы не получить список. Не добавляй новые карты, факты или выводы. Правильность мысли не запрещает улучшать её форму. Если после проверки структуры и синтаксиса конкретной пользы нет, верни текст без изменений.", examples)
 	if req.Mode == "proofread" {
 		system += "\nКонтракт proofread: исправь только опечатки, грамматику, пунктуацию и типографику. Не меняй композицию, стиль и порядок абзацев."
 	}
-	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction + craftInstruction + "\ntool_observations и parse_warnings в анализе — диагностика, а не требования переписать текст. Опечатку проверь в контексте; частоту слов не исправляй автоматически."}, {Role: "user", Content: textPayload(req.Text, examples)}})
+	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction + craftInstruction + formEditingInstruction(req.Mode) + "\ntool_observations и parse_warnings в анализе — диагностика, а не требования переписать текст. Опечатку проверь в контексте; частоту слов не исправляй автоматически."}, {Role: "user", Content: textPayload(req.Text, examples)}})
 }
 
 // critic вызывает модель с JSON-данными в user message. Невалидный ответ
@@ -1029,7 +1030,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}
 	}
 	messages := []llm.Message{
-		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction, examplesOf(in))},
+		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode), examplesOf(in))},
 		{Role: "user", Content: string(payload)},
 	}
 	started := time.Now()
@@ -1112,7 +1113,7 @@ func (s *Service) systemPrompt(prompt string) string {
 	}
 	instruction := "Следуй базовым правилам редакции без дополнительных эвристик."
 	if variant == "candidate" {
-		instruction = "Редактируй минимально: сначала сохрани факты, структуру Markdown и голос автора, затем улучшай ясность."
+		instruction = "Сохраняй факты, условия, структуру Markdown и голос автора. Соблюдай глубину заданного режима; оценивай конкретную пользу каждого изменения для читателя."
 	}
 	return "PROMPT_VARIANT: " + variant + "\n" + instruction + "\n" + prompt
 }

@@ -11,6 +11,67 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
+// This checks the actual context sent to each model stage, not whether a fake
+// model can write good prose. Literary quality is covered by the live comparison.
+func TestFormEditingIntentIsScopedToEditorialModes(t *testing.T) {
+	for _, mode := range []string{"edit", "rewrite", "proofread"} {
+		t.Run(mode, func(t *testing.T) {
+			text := "Событие уже началось. Каждый день открывается задание."
+			lm := &fakeLLM{replies: []string{analysisJSON, text, criticJSONNoImprovement()}}
+			svc := New(lm, nil, "fake")
+			bundle := rules.Build(nil, "GUIDE", "обычная", "ru-RU", nil)
+			req := Request{Text: text, Mode: mode}
+			analysis := svc.editorialAnalysis(context.Background(), req, bundle, nil)
+			if _, err := svc.rewrite(context.Background(), req, bundle, analysis, nil); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := svc.critic(context.Background(), bundle, criticInput{Source: text, Candidate: text, Mode: mode}, 1); err != nil {
+				t.Fatal(err)
+			}
+			for _, call := range lm.messages {
+				system := call[0].Content
+				wantsForm := mode == "edit" || mode == "rewrite"
+				if strings.Contains(system, "Задача edit/rewrite:") != wantsForm {
+					t.Errorf("stage %s: form editing intent does not match mode %s", stageOf(system), mode)
+				}
+				if wantsForm && strings.Contains(system, "Редактируй минимально") {
+					t.Errorf("stage %s: global minimal-edit bias overrides editorial mode", stageOf(system))
+				}
+				if wantsForm && !strings.Contains(system, "соседних предложениях") {
+					t.Errorf("stage %s: added explanation lacks adjacent-context check", stageOf(system))
+				}
+			}
+			if mode == "proofread" && !strings.Contains(lm.messages[1][0].Content, "Не меняй композицию, стиль и порядок абзацев") {
+				t.Fatal("proofreading lost its narrow contract")
+			}
+		})
+	}
+}
+
+func TestFormEditingIntentDoesNotReachReconstructionOrFactualReview(t *testing.T) {
+	lm := &fakeLLM{replies: []string{"Черновик.", criticJSONNoImprovement(), criticJSONNoImprovement()}}
+	svc := New(lm, nil, "fake")
+	bundle := rules.Build(nil, "GUIDE", "переплавка", "ru-RU", nil)
+	req := Request{Text: "Прежний черновик.", Mode: "reconstruct", Handoff: readyHandoff()}
+	analysis := svc.editorialAnalysis(context.Background(), req, bundle, nil)
+	if len(lm.messages) != 0 {
+		t.Fatal("reconstruction unexpectedly analyzed the old draft")
+	}
+	if _, err := svc.rewrite(context.Background(), req, bundle, analysis, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []string{"reconstruct", "facts_only"} {
+		if _, err := svc.critic(context.Background(), bundle, criticInput{Source: "Черновик.", Candidate: "Черновик.", Mode: mode}, 1); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, call := range lm.messages {
+		if strings.Contains(call[0].Content, "Задача edit/rewrite:") {
+			t.Fatal("ordinary editing intent leaked into reconstruction or factual review")
+		}
+	}
+}
+
 func TestAcceptedParagraphEditIsNotRewrittenForWordFrequency(t *testing.T) {
 	source := "Вы получите подарки за просмотр. Стримеры разыграют подарки."
 	candidate := "Вы получите подарки за просмотр.\n\nСтримеры разыграют подарки."
