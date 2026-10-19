@@ -1,0 +1,182 @@
+[
+  {
+    "id": "research-editor-pilot-01",
+    "url": "https://example.org/research-editor-pilot/1",
+    "title": "Когда менять план?",
+    "text": "Сохраняйте запас, если путь открыт. Это оставляет возможность вернуться. При закрытом пути выбирайте обход. Не спешите.",
+    "access": "full",
+    "sha256": "f99c50a75bc062274a43619c9945fdf5cd46a63e842cddf23b397e21a39ec292",
+    "genre": "guide",
+    "question": "Когда менять план?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  },
+  {
+    "id": "research-editor-pilot-02",
+    "url": "https://example.org/research-editor-pilot/2",
+    "title": "Что именно изменилось?",
+    "text": "В учебном обновлении окно настройки перенесли в меню. Название осталось прежним. Это описание условного интерфейса, а не новости игры.",
+    "access": "full",
+    "sha256": "fa551fb1e97cfd139d15747b59eec385ab3d3000aff6bfae78a785bb735ef890",
+    "genre": "news",
+    "question": "Что именно изменилось?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  },
+  {
+    "id": "research-editor-pilot-03",
+    "url": "https://example.org/research-editor-pilot/3",
+    "title": "Где заканчивается наблюдение?",
+    "text": "В учебной выборке 12 записей; в 3 отмечен отказ. Выборка описывает только эти записи. Причину отказов мы не проверяли.",
+    "access": "full",
+    "sha256": "fc49ca8ff455a18d2b36bab076298316e36807f3bb9d7b418f3c9ae7b8b81b4a",
+    "genre": "analysis",
+    "question": "Где заканчивается наблюдение?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  },
+  {
+    "id": "research-editor-pilot-04",
+    "url": "https://example.org/research-editor-pilot/4",
+    "title": "Кому подходит этот вариант?",
+    "text": "Спокойный вариант подходит, если важна предсказуемость. Но при жестком сроке удобнее короткий маршрут. Выбор зависит от задачи.",
+    "access": "full",
+    "sha256": "f41495892265a562696d5cead027351e7ca1c66e3461e93ac4a983518e1676d5",
+    "genre": "review",
+    "question": "Кому подходит этот вариант?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  },
+  {
+    "id": "research-editor-pilot-05",
+    "url": "https://example.org/research-editor-pilot/5",
+    "title": "Нужно ли начинать заново?",
+    "text": "Нет, если сохранена копия. Откройте копию и проверьте последний шаг. Если копии нет, сначала уточните, что осталось.",
+    "access": "full",
+    "sha256": "f0d06e5f7c06c10c45ed5a9b786dcbd2456f0372cbabc9ffcd3ef2c0ccf04092",
+    "genre": "faq",
+    "question": "Нужно ли начинать заново?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  },
+  {
+    "id": "research-editor-pilot-06",
+    "url": "https://example.org/research-editor-pilot/6",
+    "title": "Как проверить результат?",
+    "text": "Сначала сохраните исходник. Затем сравните заголовки. Если заголовок пропал, верните его: без него сложнее найти нужный раздел.",
+    "access": "full",
+    "sha256": "d775335f5116cd0a4d2df01f36d78cc4d51f3f8cfc1a786640b11c5ddf70174b",
+    "genre": "tutorial",
+    "question": "Как проверить результат?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  },
+  {
+    "id": "research-editor-pilot-07",
+    "url": "https://example.org/research-editor-pilot/7",
+    "title": "Почему автор выбирает паузу?",
+    "text": "Я бы сделал паузу. Данных пока мало, и уверенный совет здесь только запутает. Это позиция автора условного примера.",
+    "access": "full",
+    "sha256": "08d5db803d6b80745f0b93a73733f8ae17b2d61447d81711f019a0a603f89f10",
+    "genre": "opinion",
+    "question": "Почему автор выбирает паузу?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  },
+  {
+    "id": "research-editor-pilot-08",
+    "url": "https://example.org/research-editor-pilot/8",
+    "title": "Как выбрать между вариантами?",
+    "text": "Короткий вариант быстрее читается, а полный сохраняет пояснения. Выбирайте короткий, если пояснения уже известны; иначе начните с полного.",
+    "access": "full",
+    "sha256": "38025821a41a1466164ff92edf22478dcceddfed6795a35de65c925b0ba5e190",
+    "genre": "comparison",
+    "question": "Как выбрать между вариантами?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  },
+  {
+    "id": "research-editor-pilot-09",
+    "url": "https://example.org/research-editor-pilot/9",
+    "title": "Что означают числа?",
+    "text": "Проверка учебного набора заняла 8 минут, исправление — 3 минуты. Эти роли чисел нельзя менять местами. Обобщать результат пока рано.",
+    "access": "full",
+    "sha256": "30ce026e24435649d9b91f430f4e9b0a361015f570a1d22b796616d31fdacbb0",
+    "genre": "report",
+    "question": "Что означают числа?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  },
+  {
+    "id": "research-editor-pilot-10",
+    "url": "https://example.org/research-editor-pilot/10",
+    "title": "Зачем нужно исключение?",
+    "text": "Совет работает при открытом доступе. При ограниченном доступе сначала запросите разрешение. Поэтому условие нельзя вычеркнуть ради короткой фразы.",
+    "access": "full",
+    "sha256": "ac382a28e13fbe61fd60bc333e537841804e5074e1e6c1f41ed978e861d7e74a",
+    "genre": "explainer",
+    "question": "Зачем нужно исключение?",
+    "synthetic": true,
+    "provenance": "new controlled synthetic fixture; not real game facts",
+    "split": "development",
+    "resource_budget": {
+      "queries": 3,
+      "tokens": 4000,
+      "seconds": 120
+    }
+  }
+]

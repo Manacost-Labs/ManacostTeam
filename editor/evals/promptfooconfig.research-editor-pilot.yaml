@@ -1,0 +1,20 @@
+# New synthetic development cases, not real articles or independent holdout.
+# Run with separately configured baseline and candidate gateways.
+description: "Research/editor controlled pilot: same inputs, edit mode"
+prompts:
+  - id: file://prompts/baseline.txt
+    label: baseline
+  - id: file://prompts/candidate.txt
+    label: candidate
+providers:
+  - id: file://providers/pipeline-e2e.js
+    config:
+      comparison: prompt
+      mode: edit
+      retrieval: off
+tests: file://cases/research-editor-pilot.js
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions/deterministic.js
+      metric: deterministic-guardrails

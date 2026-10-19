@@ -1,0 +1,27 @@
+{
+  "scope": "controlled synthetic workflow smoke; not a quality comparison",
+  "cases": 10,
+  "unchanged_pass": 10,
+  "number_damage_rejected": 10,
+  "blind_presentations": 20,
+  "human_review_status": "pending",
+  "human_rated": 0,
+  "human_preferences": {},
+  "live_model_report": {
+    "status": "real model evaluation not executed"
+  },
+  "quality_improvement_confirmed": false,
+  "baseline_pending_template_replay": {
+    "baseline_commit": "4ebfd16d848615f59db7711777eae81c0ecb9568",
+    "rated": 20,
+    "preferences": {
+      "tie": 20
+    }
+  },
+  "verification": {
+    "python_benchmark_tests": 19,
+    "node_eval_tests": 29,
+    "ruff_check": "passed",
+    "ruff_format_check": "passed"
+  }
+}

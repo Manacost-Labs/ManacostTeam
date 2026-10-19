@@ -162,3 +162,58 @@ def test_summary_rejects_duplicate_and_resolves_blind_key():
     assert paired_summary(rows, key)["complete_pairs"] == 1
     with pytest.raises(ValueError):
         paired_summary(rows, key + key[:1])
+
+
+def test_optional_metrics_are_paired_and_missing_costs_are_not_zero():
+    rows = [reviewed("one", "baseline", 10), reviewed("one", "candidate", 5)]
+    rows[0].update(answer_seconds=30, answer_errors=2, tokens=400, unnecessary_edits=2)
+    rows[1].update(answer_seconds=20, answer_errors=0, unnecessary_edits=0)
+    result = paired_summary(rows)
+    assert result["measured_metrics"]["answer_seconds"] == {
+        "pairs": 1,
+        "baseline": 30,
+        "candidate": 20,
+    }
+    assert result["measured_metrics"]["tokens"] == {
+        "pairs": 0,
+        "baseline": None,
+        "candidate": None,
+    }
+    assert result["quality_improvement_confirmed"] is False
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("cost_usd", -1),
+        ("tokens", 1.5),
+        ("answer_seconds", True),
+        ("lost_conditions", float("nan")),
+    ],
+)
+def test_optional_metrics_reject_invalid_measurements(field, value):
+    rows = [reviewed("one", "baseline", 10), reviewed("one", "candidate", 5)]
+    rows[1][field] = value
+    with pytest.raises(ValueError, match="measurement"):
+        paired_summary(rows)
+
+
+def test_sequential_same_editor_measurements_are_excluded_but_legacy_is_flagged():
+    rows = [reviewed("one", "baseline", 10), reviewed("one", "candidate", 5)]
+    legacy = paired_summary(rows)
+    assert legacy["timing_design_unverified"] == ["one"]
+    rows[1]["exposure"] = "same_case_second_version"
+    result = paired_summary(rows)
+    assert result["complete_pairs"] == 1
+    assert result["editor_minutes_reduction_percent"] is None
+    assert result["timing_excluded_cases"] == ["one"]
+
+
+def test_research_editing_and_full_process_are_not_pooled():
+    rows = [reviewed("one", "baseline", 10), reviewed("one", "candidate", 5)]
+    rows[0]["phase"] = "research"
+    rows[1]["phase"] = "full_process"
+    with pytest.raises(ValueError, match="phase"):
+        paired_summary(rows)
+    rows[1]["phase"] = "research"
+    assert paired_summary(rows)["phase"] == "research"

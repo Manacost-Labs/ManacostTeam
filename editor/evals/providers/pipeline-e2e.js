@@ -52,6 +52,7 @@ class PipelineE2EProvider {
   }
 
   async callApi(prompt, context = {}) {
+    const started = performance.now();
     const vars = context.vars || {};
     const input = String(vars.text || '');
     if (!input.trim()) throw new Error('Eval case variable "text" is required');
@@ -92,6 +93,8 @@ class PipelineE2EProvider {
     const styleExampleTexts = !retrievalOff && retrieval.status === 'ok' && retrieval.examples_used > 0
       ? await exampleTexts(payload)
       : [];
+    const measured = (value, integer = false) => typeof value === 'number' && Number.isFinite(value) && value >= 0
+      && (!integer || Number.isInteger(value)) ? value : null;
     return {
       output,
       metadata: {
@@ -100,12 +103,22 @@ class PipelineE2EProvider {
         provider: result.provider,
         model: result.model,
         prompt_version: result.prompt_variant,
+        comparison_variant: this.config.comparison === 'prompt' ? promptVersion
+          : this.config.mode ? `${promptVersion}:${payload.mode}:${retrievalOff ? 'no-retrieval' : 'retrieval'}`
+            : this.config.retrieval ? (retrievalOff ? 'no-retrieval' : 'retrieval') : promptVersion,
         pipeline_prompt_version: result.prompt_version,
         accepted,
         status: result.status,
         rejection_reasons: result.rejection_reasons || [],
         checks_complete: checksComplete,
         attempts: result.attempts,
+        resource_usage: {
+          elapsed_seconds: (performance.now() - started) / 1000,
+          tokens: measured(result.usage?.total_tokens, true),
+          cost_usd: measured(result.cost_usd),
+          queries: measured(result.queries, true),
+          measurement_scope: 'wall time includes gateway, health and optional example fetch; other values are provider-reported',
+        },
         editorial_mode: payload.mode,
         reviewer_model: result.reviewer_model,
         fact_review: result.fact_review || null,

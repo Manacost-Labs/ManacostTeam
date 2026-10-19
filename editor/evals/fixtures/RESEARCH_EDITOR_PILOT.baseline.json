@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "4ebfd16d848615f59db7711777eae81c0ecb9568",
+  "frozen_at": "2026-10-19T08:35:20.113492+00:00",
+  "scope": "10 controlled synthetic development fixtures; no human-approved holdout or live model generation",
+  "fixture_sha256": "89b6006f9d0a9c1399f8a985805043c60757a593fd4c5e15faedc402ba76317f",
+  "source_hashes": {
+    "editor/src/editorteam/publication_benchmark.py": "b9be0d1741d28ef4f80bb4580fb0509fc57a7e1b9147382b7af0a6438f7ea80b",
+    "editor/evals/blind_review.js": "cfa8833983d654306c2891f2e37e017056de63b1de597ac8ed7c3aeffae5bd5b",
+    "editor/src/editorteam/editorial_tools.py": "a956c2203335d98cc520d097967eb20eb699fdb5e7ed19abba6c0de7e3b61e9c",
+    "editor/evals/assertions/publication.js": "7781c4b59fc8c6d9738bbeb220d09559485b9ccab04d4e33857e08952dd25242"
+  },
+  "model_run": false,
+  "human_review": "pending",
+  "quality_improvement_claim": false,
+  "fixture_lf_sha256": "4294cfa39751d17128523e79743f7d16254f4f6ee4af37f59611d8f205eccb8e",
+  "hash_policy": "original raw-byte hash retained; LF-normalized hash verifies portable Git checkouts without changing frozen input content"
+}

@@ -12,6 +12,23 @@ from pathlib import Path
 
 from .editorial_lab import canonical_url, write_new
 
+# Optional measured diagnostics. Missing values are unknown, never zero.
+COUNT_METRICS = {
+    "answer_errors",
+    "unsupported_advice",
+    "lost_conditions",
+    "lost_exceptions",
+    "confidence_errors",
+    "unnecessary_edits",
+    "queries",
+    "tokens",
+    "closed_questions",
+    "new_conditions",
+    "independent_sources",
+    "remaining_gaps",
+}
+MEASURED_METRICS = COUNT_METRICS | {"answer_seconds", "elapsed_seconds", "cost_usd"}
+
 
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -229,6 +246,9 @@ def paired_summary(rows: list[dict], key: list[dict] | None = None) -> dict:
     """Compute improvements only on identical reviewed case/patch pairs."""
     if not isinstance(rows, list):
         raise ValueError("ratings array required")
+    phases = {row.get("phase", "editorial") for row in rows}
+    if len(phases) > 1 or not phases <= {"research", "editorial", "full_process"}:
+        raise ValueError("one research, editorial or full_process phase per report required")
     mapping = {}
     if key is not None:
         for item in key:
@@ -271,7 +291,21 @@ def paired_summary(rows: list[dict], key: list[dict] | None = None) -> dict:
                 or errors < 0
             ):
                 raise ValueError("finite nonnegative measured minutes and integer errors required")
-        elif any(row.get(field) is not None for field in ("editor_minutes", "critical_errors")):
+            for field in MEASURED_METRICS:
+                value = row.get(field)
+                if value is not None and (
+                    type(value) not in {int, float}
+                    or not math.isfinite(value)
+                    or value < 0
+                    or (field in COUNT_METRICS and type(value) is not int)
+                ):
+                    raise ValueError(f"invalid measured {field} measurement")
+            if row.get("exposure") not in {None, "first_exposure", "same_case_second_version"}:
+                raise ValueError("invalid exposure protocol")
+        elif any(
+            row.get(field) is not None
+            for field in {"editor_minutes", "critical_errors"} | MEASURED_METRICS
+        ):
             raise ValueError("pending ratings must not contain invented measurements")
         cases[case_id][variant] = row
     complete = [
@@ -287,6 +321,41 @@ def paired_summary(rows: list[dict], key: list[dict] | None = None) -> dict:
         }
         for variant in ("baseline", "candidate")
     }
+    timing_excluded = [
+        cid
+        for cid in complete
+        if any(row.get("exposure") == "same_case_second_version" for row in cases[cid].values())
+        or (
+            all(row.get("exposure") == "first_exposure" for row in cases[cid].values())
+            and len({row["reviewer"] for row in cases[cid].values()}) < 2
+        )
+    ]
+    timing_unverified = [
+        cid
+        for cid in complete
+        if cid not in timing_excluded
+        and any(row.get("exposure") is None for row in cases[cid].values())
+    ]
+    timed = [cid for cid in complete if cid not in timing_excluded]
+    for variant in totals:
+        totals[variant]["editor_minutes"] = (
+            sum(cases[cid][variant]["editor_minutes"] for cid in timed) if timed else None
+        )
+    measured = {}
+    for field in sorted(MEASURED_METRICS):
+        matched = [
+            cid
+            for cid in complete
+            if all(row.get(field) is not None for row in cases[cid].values())
+            and (field != "answer_seconds" or cid not in timing_excluded)
+        ]
+        measured[field] = {
+            "pairs": len(matched),
+            **{
+                variant: sum(cases[cid][variant][field] for cid in matched) if matched else None
+                for variant in ("baseline", "candidate")
+            },
+        }
 
     def reduction(field: str) -> float | None:
         baseline = totals["baseline"][field]
@@ -296,10 +365,15 @@ def paired_summary(rows: list[dict], key: list[dict] | None = None) -> dict:
 
     return {
         "cases": len(cases),
+        "phase": next(iter(phases), "editorial"),
         "complete_pairs": len(complete),
         "incomplete_cases": len(cases) - len(complete),
         "paired_case_ids": sorted(complete),
         "variants": totals,
+        "measured_metrics": measured,
+        "timing_excluded_cases": sorted(timing_excluded),
+        "timing_design_unverified": sorted(timing_unverified),
+        "quality_improvement_confirmed": False,
         "editor_minutes_reduction_percent": reduction("editor_minutes"),
         "critical_errors_reduction_percent": reduction("critical_errors"),
         "publication_approved": False,

@@ -116,6 +116,8 @@ function judgeScores(result) {
 
 function variantOf(result) {
   const metadata = result.response?.metadata || {};
+  if (metadata.comparison_variant) return metadata.comparison_variant;
+  if (metadata.editorial_mode) return `${metadata.prompt_version || 'pipeline'}:${metadata.editorial_mode}:${metadata.retrieval_variant || 'unknown'}`;
   if (metadata.retrieval_variant) return metadata.retrieval_variant;
   const label = String(result.provider?.label || result.provider?.id || '');
   if (/без retrieval|no-retrieval/i.test(label)) return 'no-retrieval';
@@ -142,12 +144,16 @@ function isRealRun(results) {
 function candidateVariant(variants) {
   if (variants.includes('retrieval')) return 'retrieval';
   if (variants.includes('candidate')) return 'candidate';
+  const candidates = variants.filter(value => value.startsWith('candidate:'));
+  if (candidates.length === 1) return candidates[0];
   return variants[variants.length - 1];
 }
 
 function baselineVariant(variants) {
   if (variants.includes('no-retrieval')) return 'no-retrieval';
   if (variants.includes('baseline')) return 'baseline';
+  const baselines = variants.filter(value => value.startsWith('baseline:'));
+  if (baselines.length === 1) return baselines[0];
   return variants[0];
 }
 
@@ -159,7 +165,7 @@ function summarize(results) {
     groups.get(variant).push(result);
   }
   const variants = [...groups.keys()];
-  const summary = { variants: {} };
+  const summary = { variants: {}, quality_improvement_confirmed: false, evidence_kind: 'automated_diagnostics' };
   for (const [variant, items] of groups) {
     const metadataOf = (item) => item.response?.metadata || {};
     const accepted = items.filter((item) => metadataOf(item).accepted === true).length;
@@ -216,6 +222,12 @@ function summarize(results) {
     }
     const judgeAverages = {};
     for (const [name, total] of Object.entries(judgeTotals)) judgeAverages[name] = Number((total.sum / total.count).toFixed(3));
+    const resourceUsage = {};
+    for (const field of ['tokens', 'queries', 'elapsed_seconds', 'cost_usd']) {
+      const values = items.map(item => metadataOf(item).resource_usage?.[field])
+        .filter(value => typeof value === 'number' && Number.isFinite(value) && value >= 0);
+      resourceUsage[field] = {measured_cases: values.length, total: values.length ? values.reduce((sum, value) => sum + value, 0) : null};
+    }
     summary.variants[variant] = {
       cases: items.length,
       accepted_rate: rate(accepted, items.length),
@@ -233,6 +245,7 @@ function summarize(results) {
       edit_to_unchanged: { count: editToUnchanged, expected_edit: expectedEdit },
       unchanged_to_edit: { count: unchangedToEdit, expected_unchanged: expectedUnchanged, false_edit_rate: rate(unchangedToEdit, expectedUnchanged) },
       judge_averages: judgeAverages,
+      resource_usage: resourceUsage,
       by_profile: byKey('profile'),
       by_game: byKey('game'),
     };

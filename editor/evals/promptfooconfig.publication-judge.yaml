@@ -1,0 +1,42 @@
+# Optional companion to publication eval: requires a configured judge.
+# Every model judgement is diagnostic (weight 0); factual checks remain a gate.
+description: "Publication quality diagnostics; human comparison remains separate"
+prompts:
+  - id: file://prompts/baseline.txt
+    label: baseline
+  - id: file://prompts/candidate.txt
+    label: candidate
+providers:
+  - id: file://providers/pipeline-e2e.js
+    config:
+      comparison: prompt
+      mode: reconstruct
+      retrieval: off
+tests: file://cases/publication.js
+defaultTest:
+  options:
+    provider: "{{ env.EDITOR_EVAL_JUDGE_PROVIDER }}"
+  assert:
+    - type: javascript
+      value: file://assertions/publication.js
+      metric: advice-preservation
+    - type: llm-rubric
+      value: file://assertions/judge/usefulness.txt
+      metric: judge-usefulness
+      weight: 0
+    - type: llm-rubric
+      value: file://assertions/judge/conditions.txt
+      metric: judge-conditions
+      weight: 0
+    - type: llm-rubric
+      value: file://assertions/judge/naturalness.txt
+      metric: judge-naturalness
+      weight: 0
+    - type: llm-rubric
+      value: file://assertions/judge/voice.txt
+      metric: judge-voice
+      weight: 0
+    - type: llm-rubric
+      value: file://assertions/judge/restraint.txt
+      metric: judge-restraint
+      weight: 0
