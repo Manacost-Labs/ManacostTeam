@@ -32,7 +32,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v6"
+const PromptVersion = "editorteam-go-v7"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -454,14 +454,10 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			factsPassed := critic.NoNewFacts && len(critic.UnsupportedAdditions) == 0
 			result.FactCheckPassed = &factsPassed
 			result.UnsupportedAdditions = append([]string{}, critic.UnsupportedAdditions...)
-			if !factsPassed {
-				reasons = append(reasons, ReasonUnsupportedFacts)
-				result.FactualRisks = append(result.FactualRisks, critic.UnsupportedAdditions...)
-				result.FactualRisks = append(result.FactualRisks, "Не подтверждено отсутствие новых фактов, механик или советов")
-				break
-			}
-			if critic.Verdict == "reject" {
-				reasons = append(reasons, ReasonCriticRejected)
+			// A failed draft may have a local fix. Only concrete critic findings
+			// authorize that repair; an unexplained rejection stays fail-closed.
+			// Final reasons belong to the last reviewed candidate, not this draft.
+			if (!factsPassed || critic.Verdict == "reject") && len(repairable(critic.Findings)) == 0 {
 				break
 			}
 		}
@@ -506,13 +502,18 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		result.FactualRisks = append(result.FactualRisks, "появилось новое "+item)
 	}
 	if s.LLM != nil && criticOK {
+		if !critic.NoNewFacts || len(critic.UnsupportedAdditions) > 0 {
+			reasons = append(reasons, ReasonUnsupportedFacts)
+			result.FactualRisks = append(result.FactualRisks, critic.UnsupportedAdditions...)
+			result.FactualRisks = append(result.FactualRisks, "Не подтверждено отсутствие новых фактов, механик или советов")
+		}
 		result.Scores = critic.Scores
 		result.ScoresValid = true
 		result.CriticVerdict = critic.Verdict
 		// Улучшения принимаются только с доказательствами из текста.
 		result.Improvements = ValidateImprovements(verifiedText, candidate, critic.Improvements)
 		result.Regressions = critic.Regressions
-		if hasHardFinding(critic.Findings) {
+		if critic.Verdict == "reject" || hasHardFinding(critic.Findings) {
 			reasons = append(reasons, ReasonCriticRejected)
 		}
 		// Принимается только последний verdict accept без repair_required.
@@ -1068,8 +1069,9 @@ func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, c
 	}
 	system := s.styleSystem(bundle.WithQA(messagesOf(findings)).Prompt()+
 		"\nИсправь в candidate только места из QA_FINDINGS: они переданы в поле findings JSON в сообщении пользователя. "+
-		"Не переписывай весь текст и не меняй факты, числа, ссылки, отрицания и названия; source дан только для сверки. "+
-		"Сохрани keep_spans, кроме конкретного исправления ошибки или связи; результат проверит независимый critic. "+
+		"Исправляй указанный смысловой сдвиг по source: восстанавливай его факты, количество, условия, отрицания и степень уверенности. Не добавляй сведения из памяти. "+
+		"Сохрани полезные правки candidate вне отмеченной ошибки, включая ясные формулировки и исправления грамматики. Не откатывай весь текст к source и не переписывай его заново. "+
+		"Сохрани ссылки, названия и удачные места keep_spans; конкретная ошибка или обоснованное улучшение ясности допускает точечную правку. Результат снова проверит critic. "+
 		"Верни полный исправленный текст без пояснений.", examples)
 	return s.complete(ctx, []llm.Message{{Role: "system", Content: system}, {Role: "user", Content: string(payload)}})
 }
