@@ -115,3 +115,16 @@ func TestWritingFactualVetoStillBlocksLiteraryAcceptance(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicationProjectionPreservesExactSemanticNumbers(t *testing.T) {
+	h := readyHandoff()
+	h.Claims[0].ResearchContext = map[string]any{"sample": map[string]any{"exact_total": json.Number("9007199254740993")}}
+	out, err := publicationHandoff(h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(out)
+	if !strings.Contains(string(raw), `"exact_total":9007199254740993`) {
+		t.Fatal("semantic number rounded during audit projection", string(raw))
+	}
+}
