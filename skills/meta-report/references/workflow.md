@@ -68,7 +68,10 @@ python research/deep-research/scripts/editorial_handoff.py RUN/research --plan R
 
 ## Дополнительный JSON
 
-`init` создает schema_version=1. Заполняются следующие поля.
+`init` создает schema_version=2. В дополнение к полям ниже обязательны
+`archetypes` и `dominance`/`dominance_gap` по
+[аналитическому протоколу](archetype-analysis.md). Сохраненные v1 запуски
+читаются по прежнему контракту; принятый handoff не обновляется молча.
 
 | Поле | Контракт |
 | --- | --- |
@@ -77,7 +80,9 @@ python research/deep-research/scripts/editorial_handoff.py RUN/research --plan R
 | `official_checks` | Проверка patch и нужных hotfix: kind, claim_id, evidence_ref, checked_on, effective_on. Ссылка evidence ведет на Blizzard, дата действия не позже as_of. |
 | `trend_claim_ids` | Непустые ссылки на поддержанные claims общей картины. |
 | `classes` | Ровно 11 ключей из init. status=covered/gap, chapter_id, assessment_claim_ids, deck_ids, gap. У класса без списка нужен объясненный gap и подтвержденная оценка в собственной главе. |
-| `decks` | Опубликованные выбранные составы; несколько на класс допустимы. |
+| `decks` | Все проверенные кандидаты; publish=true у публикуемых, false у исследованных альтернатив. |
+| `archetypes` | Сравнение кандидатов и выбор версии для конкретных условий. |
+| `dominance`, `dominance_gap` | Наблюдаемое лидерство, объяснения и контрдоводы либо явный пробел. |
 | `statistics`, `statistics_gap` | Метрики либо честное объяснение, почему точной статистики нет. |
 | `rankings` | Отдельные сопоставимые рейтинги. Нет статистики — нет численного топа. |
 | `assessments` | Необязательные оценки underrated/overrated/emerging с subject, claim_ids и scope_note. |
@@ -91,6 +96,7 @@ python research/deep-research/scripts/editorial_handoff.py RUN/research --plan R
   "class": "mage",
   "name": "Точное название сборки",
   "archetype": "Название архетипа",
+  "publish": true,
   "plan_claim_ids": ["CLM-plan"],
   "limitation_claim_ids": ["CLM-limit"],
   "legality_claim_ids": ["CLM-legality"],
@@ -115,6 +121,10 @@ python research/deep-research/scripts/editorial_handoff.py RUN/research --plan R
 `reconstructed-list` требует `reconstruction_note` и пометки читателю под кодом:
 «Код восстановлен из опубликованного состава». Для encode/decode доступен
 `python skills/funmeta/scripts/funmeta.py --help`. Неполный список остается gap.
+В v2 publish=true означает отдельную публикуемую сборку с кодом, false —
+проверенную исследовательскую альтернативу. Оба вида входят в сравнение;
+проверка состава и легальности одинакова. Класс без публикуемых списков
+сохраняет объясненный gap, даже если исследовательские кандидаты найдены.
 
 Запись `statistics`:
 
@@ -143,6 +153,12 @@ python research/deep-research/scripts/editorial_handoff.py RUN/research --plan R
 Это синтетический пример полей, не подтвержденная цифра. metric=winrate/popularity;
 grain=deck/archetype. У архетипа subject_id задает его однозначную идентичность,
 а не произвольно выбранный лист. Процент должен быть в дословной цитате evidence.
+Поле `opponent` содержит ID конкретного соперника либо null для общего
+результата. `filters` — объект остальных фильтров источника (например,
+очередность хода, тип игроков). При сравнении/рейтинге они должны совпадать.
+Если источник их не раскрывает, это ограничение исследования; пустой объект
+не доказывает отсутствие скрытых различий. Совпавшие метки среза не доказывают
+случайное распределение игроков по сборкам.
 sample_games — положительное целое либо null с объяснением. Отсутствие выборки
 не означает нулевую выборку. При малом/неизвестном числе партий сохраняй
 осторожность. Не вычисляй процент без подтвержденных числителя/знаменателя.
@@ -160,6 +176,16 @@ format, rank, region, периоду и population. `universe=selected-decks` о
 поддержку утверждения. Это ограничение всех структурных проверок helper.
 
 ## Передача и независимые отзывы
+
+До handoff можно сравнить точные списки командой
+`compare RUN --left DECK-ID-A --right DECK-ID-B`. После заполнения исследования
+`analysis RUN` возвращает структурированный пакет: различия карт, наблюдаемые
+разницы процентов, причины, оговорки, альтернативы и разбор доминирования.
+`next` передает этот же analysis_brief автору и reviewer. Производные числа
+не становятся новым доказательством: утверждения статьи проходят handoff/audit.
+В v2 фактологический отзыв также требует `meta_analysis` из аналитического
+протокола с цитатами из текущей статьи. Это дополняет стандартный review с
+текущими article_sha256/handoff_sha256 и не заменяет его.
 
 ```powershell
 python skills/meta-report/scripts/meta_report.py check RUN
