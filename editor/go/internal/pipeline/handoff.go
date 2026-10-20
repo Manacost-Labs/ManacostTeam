@@ -389,8 +389,8 @@ func (h *ResearchHandoff) sourceNameForms() []string {
 // Reconstruction allows composition changes and paraphrase but no unapproved entities.
 func reconstructionGuard(before, after string, sourceNameForms ...string) guards.Report {
 	r := guards.Report{}
-	wants := guards.Extract(before)
-	for _, entity := range guards.Extract(after) {
+	wants := guards.Extract(maskReconstructionOrdinals(before))
+	for _, entity := range guards.Extract(maskReconstructionOrdinals(after)) {
 		if entity.Kind == "markdown" || entity.Kind == "html" || entity.Kind == "quote" {
 			continue
 		}
