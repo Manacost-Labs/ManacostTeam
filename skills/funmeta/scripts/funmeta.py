@@ -64,9 +64,10 @@ def initialize(directory: Path, as_of: str, game_format: str) -> Path:
     directory.mkdir(parents=True, exist_ok=False)
     (directory / "sources").mkdir()
     selection = {
-        "schema_version": 2, "discovery_policy": 1, "material_policy": 1,
+        "schema_version": 2, "discovery_policy": 1, "material_policy": 1, "readiness_policy": 1,
         "as_of": as_of, "format": game_format,
         "patch": "", "patch_source_id": "", "meta_source_ids": [],
+        "meta_context": {"effective_at": None, "source_id": None, "reason": ""},
         "sources": [], "candidates": [], "fun_cards": [],
         "evidence": [], "search_log": [],
         "catalog_leads": [], "catalog_captures": [],
@@ -124,6 +125,10 @@ def validate(data: object, directory: Path) -> dict:
     require(official["kind"] == "official" and official.get("patch") == patch
             and official["checked_on"] == data["as_of"],
             "patch: official source must confirm patch and be checked on as_of")
+
+    from readiness import meta_issues
+    timing = meta_issues(data, sources)
+    require(not timing, "meta timing: " + "; ".join(item["code"] for item in timing))
 
     meta_ids = references(data.get("meta_source_ids"), sources, "meta_source_ids")
     hosts = set()
@@ -238,7 +243,8 @@ def main(argv: list[str] | None = None) -> int:
     catalog = commands.add_parser("catalog", help="Import saved actual MCP request/response as unverified leads")
     catalog.add_argument("selection", type=Path)
     catalog.add_argument("capture", type=Path)
-    for name, help_text in (("outline", "Plan the editorial issue from selected research; no prose or approval"),
+    for name, help_text in (("assess", "Read-only source, meta timing and candidate diagnostics; never approve or select"),
+                            ("outline", "Plan the editorial issue from selected research; no prose or approval"),
                             ("audit", "Read-only Markdown structure/code audit; independent of incomplete meta research")):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("selection", type=Path)
@@ -261,13 +267,19 @@ def main(argv: list[str] | None = None) -> int:
             result = ingest(args.selection, args.capture)
         else:
             data = json.loads(args.selection.read_text(encoding="utf-8-sig"))
-            if args.command in ("outline", "audit"):
+            if args.command == "assess":
+                from readiness import assess
+                result = assess(data, args.selection.parent)
+            elif args.command in ("outline", "audit"):
                 from material import audit, outline
                 result = (outline(data) if args.command == "outline" else
                           audit(data, (args.selection.parent / "material.md").read_text(encoding="utf-8-sig")))
             elif args.command in ("next", "plan"):
                 result = (plan(data, args.limit) if args.command == "plan"
                           else next_actions(data, args.limit))
+                if "readiness_policy" in data:
+                    from readiness import assess
+                    result["readiness"] = assess(data, args.selection.parent)
             else:
                 result = validate(data, args.selection.parent)
                 if args.command == "export":

@@ -26,6 +26,38 @@ def attempt(class_name, channel, language="en", **extra):
 
 
 class DiscoveryTests(unittest.TestCase):
+    def test_current_patch_guides_creator_queries_without_narrowing_catalog(self):
+        data = run_data()
+        data["patch"] = "synthetic-current-patch"
+        first = plan(data, 11)["suggested_queries"]
+        self.assertTrue(all("query" not in task["arguments"] for task in first))
+        data["search_log"] = [attempt(task["class"], "catalog") for task in first]
+        tasks = plan(data, 11)["suggested_queries"]
+        self.assertTrue(all(task["query"].endswith("synthetic-current-patch") for task in tasks))
+
+    def test_two_lists_from_one_publisher_keep_independent_creator_search_open(self):
+        data = run_data()
+        data["readiness_policy"] = 1
+        data["sources"] = [{"id": "author", "kind": "deck", "access": "full",
+                            "publisher": "One Collection", "url": "https://example.com/one"}]
+        data["sources"].append({**data["sources"][0], "id": "author-two", "url": "https://example.com/two"})
+        data["candidates"] = [{"id": str(card), "class": "mage", "decision": "pending",
+            "source_ids": ["author" if card == 1 else "author-two"], "deck_list": {"format": 2, "heroes": [7],
+                "cards": [[card, 1]], "sideboards": []}} for card in (1, 2)]
+        # Keep the test's search frontier at Mage without fabricating completed searches.
+        data["candidates"].extend({"id": key, "class": key, "decision": "include"}
+                                 for key in ("death-knight", "demon-hunter", "druid", "hunter", "paladin",
+                                             "priest", "rogue", "shaman", "warlock", "warrior"))
+        result = plan(data, 22)
+        self.assertEqual(next(row for row in result["coverage"] if row["class"] == "mage")["distinct_full_source_leads"], 2)
+        creators = [task for task in result["suggested_queries"] if task["class"] == "mage" and task["channel"] == "creators"]
+        self.assertEqual(len(creators), 1)
+        self.assertIn("independent author", creators[0]["instruction"])
+        self.assertEqual([row["decision"] for row in data["candidates"][:2]], ["pending", "pending"])
+        data["search_log"] = [attempt("mage", "creators", id=str(n)) for n in (1, 2)]
+        self.assertFalse(any(task["class"] == "mage" and task["channel"] == "creators"
+                             for task in plan(data, 22)["suggested_queries"]))
+
     def test_catalog_calls_cover_all_classes_without_restrictive_query(self):
         tasks = plan(run_data(), 11)["suggested_queries"]
         self.assertEqual(len(tasks), 11)

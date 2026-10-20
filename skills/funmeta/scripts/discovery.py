@@ -103,6 +103,11 @@ def plan(data, limit=6):
         active = [c for c in candidates if c["class"] == class_name and c["decision"] != "reject"]
         leads = shortlist_count(active, sources)
         selected = any(c["decision"] == "include" for c in active)
+        publishers = {sources[key]["publisher"].strip().casefold() for c in active
+                      for key in full_refs(c, sources) if text(sources[key].get("publisher"))}
+        # Two lists from one collection should not end independent creator discovery.
+        seek_creator = (data.get("readiness_policy") == 1 and not selected
+                        and leads >= 2 and len(publishers) <= 1)
         channels = {row.get("channel") for row in class_rows}
         focused = any(row.get("channel") == "build-around" and text(row.get("focus"))
                       for row in class_rows)
@@ -137,7 +142,8 @@ def plan(data, limit=6):
         for channel, language in (("catalog", "en"), ("creators", "en"),
                                   ("community", "ru"), ("community", "en"),
                                   ("build-around", "ru"), ("build-around", "en")):
-            if (selected or leads >= 2) and (channel != "community" or language not in missing_languages):
+            if ((selected or leads >= 2) and (channel != "community" or language not in missing_languages)
+                    and not (seek_creator and channel == "creators")):
                 continue
             previous = [r for r in class_rows if r.get("channel") == channel and r["language"] == language]
             continuation = previous[-1].get("next_offset") if previous else None
@@ -164,6 +170,10 @@ def plan(data, limit=6):
                 if previous:
                     task["query"] = None
                     task["instruction"] = "Use a different site/author and a targeted query from prior findings; blocked sites do not exhaust other channels."
+            if channel != "catalog" and task["query"] and text(data.get("patch")):
+                task["query"] += f" {data['patch']}"
+            if seek_creator and channel == "creators":
+                task["instruction"] += " Compare an independent author: current full lists come from one or unknown publisher. No author quota or automatic acceptance."
             tasks.append(task)
     # All untouched channels/classes before retries; missing classes before second leads.
     counts = {row["class"]: row["distinct_full_source_leads"] for row in coverage}
