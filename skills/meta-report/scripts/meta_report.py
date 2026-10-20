@@ -18,8 +18,10 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from collections import Counter
 from datetime import date, datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -33,6 +35,15 @@ CLASSES = {
 INPUTS = ("meta-report.json", "sources.json", "publication-handoff.json")
 
 
+@lru_cache(maxsize=2)
+def component(name):
+    require(name in {"meta_statistics", "meta_matchups"}, "unknown meta-report component")
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(name + ".py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def read_json(path):
     def invalid(value):
         raise ValueError(f"non-finite JSON number: {value}")
@@ -40,9 +51,23 @@ def read_json(path):
 
 
 def write_json(path, value):
-    with Path(path).open("x", encoding="utf-8", newline="\n") as stream:
-        json.dump(value, stream, ensure_ascii=False, indent=2, allow_nan=False)
-        stream.write("\n")
+    path = Path(path)
+    # Publish a fully flushed receipt without replacing an existing run/file.
+    content = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=path.parent, prefix=".meta-", delete=False) as stream:
+        temporary = Path(stream.name)
+        try:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        except BaseException:
+            stream.close()
+            temporary.unlink()
+            raise
+    try:
+        os.link(temporary, path)
+    finally:
+        temporary.unlink()
 
 
 def digest(path):
@@ -103,7 +128,7 @@ def initialize(run, *, as_of, game_format="standard", rank="all-ranks", region="
     require(type(window_hours) is int and window_hours > 0, "positive window_hours required")
     require(not run.exists(), "run directory already exists")
     report = {
-        "schema_version": 2, "as_of": as_of, "format": game_format, "patch": None,
+        "schema_version": 3, "as_of": as_of, "format": game_format, "patch": None,
         "rank": rank, "region": region, "window_hours": window_hours, "scope_note": "",
         "official_checks": [], "trend_claim_ids": [],
         "classes": {key: {"status": "pending", "chapter_id": key, "assessment_claim_ids": [],
@@ -111,6 +136,7 @@ def initialize(run, *, as_of, game_format="standard", rank="all-ranks", region="
         "decks": [], "statistics": [], "statistics_gap": "", "rankings": [],
         "assessments": [], "gaps": [],
         "archetypes": [], "dominance": [], "dominance_gap": "",
+        "matchup_profiles": [], "matchup_profile_gap": "",
     }
     command = [sys.executable, str(ROOT / "research/deep-research/scripts/init_research_run.py"),
                str(run / "research"), "--question", "Мета-отчет Hearthstone: что выбрать для ладдера и почему",
@@ -126,7 +152,7 @@ def cohort_key(row):
     """A matchup filter is part of the population, never an aggregate rate."""
     fields = ("metric", "grain", "source_id", "patch", "format", "rank", "region", "population", "opponent")
     period = tuple(timestamp(row[field]).astimezone(timezone.utc).isoformat() for field in ("start", "end"))
-    return (*[row.get(key) for key in fields], *period, json.dumps(row.get("filters", {}), sort_keys=True, allow_nan=False))
+    return (*[row.get(key) for key in fields], row.get("source_period"), *period, json.dumps(row.get("filters", {}), sort_keys=True, allow_nan=False))
 
 
 def published_decks(report):
@@ -143,6 +169,8 @@ def scope_mismatches(report):
             differences["window_hours"] = {"requested": report["window_hours"], "observed": hours}
         if timestamp(row["end"]).date().isoformat() != report["as_of"]:
             differences["end_date"] = {"requested": report["as_of"], "observed": timestamp(row["end"]).date().isoformat()}
+        if row.get("period_note"):
+            differences["source_period"] = {"observed": row.get("source_period"), "limitation": row["period_note"]}
         if differences:
             warnings.append({"stat_id": row["id"], "differences": differences})
     return warnings
@@ -372,7 +400,15 @@ def analysis_brief(report, sources, handoff):
             "dominance": [{**item, "claims": details(item), "observed_metrics": [stats[mid] for mid in item["metric_ids"]],
                            "matchups": [stats[mid] for mid in item.get("matchup_metric_ids", [])],
                            "opponent_shares": [stats[mid] for mid in item.get("opponent_share_ids", [])]} for item in report["dominance"]],
-            "dominance_gap": report.get("dominance_gap", "")}
+            "dominance_gap": report.get("dominance_gap", ""),
+            "matchup_profiles": component("meta_matchups").profiles(report, sources, handoff) if report["schema_version"] >= 3 else [],
+            "source_contexts": source_contexts(report, sources)}
+
+
+def source_contexts(report, sources):
+    used = {row["source_id"] for row in report["statistics"] if "value_pointer" in row}
+    return [{"source_id": source["id"], **component("meta_statistics").inspect_payload(json.loads(source["text"]))}
+            for source in sources if source["id"] in used]
 
 
 def validate_analysis_review(report, article, review):
@@ -385,7 +421,10 @@ def validate_analysis_review(report, article, review):
         return ["factual review needs meta_analysis with actual article quotes"]
     if scope_mismatches(report) and (not text(assessment.get("scope_quote")) or assessment["scope_quote"] not in article):
         errors.append("meta_analysis/scope_quote: disclose requested versus observed statistical scope in article")
-    for field, expected in (("archetypes", report["archetypes"]), ("dominance", report["dominance"])):
+    sections = [("archetypes", report["archetypes"]), ("dominance", report["dominance"])]
+    if report["schema_version"] >= 3:
+        sections.append(("matchup_profiles", report["matchup_profiles"]))
+    for field, expected in sections:
         rows = assessment.get(field)
         if not isinstance(rows, list) or any(not isinstance(row, dict) or not text(row.get("id")) for row in rows):
             errors.append(f"meta_analysis/{field}: invalid review rows")
@@ -396,6 +435,8 @@ def validate_analysis_review(report, article, review):
         for item in expected:
             row = by_id.get(item["id"], {})
             required = ["selection_quote", "limitation_quote"] if field == "archetypes" else ["observation_quote", "explanation_quote", "limitation_quote"]
+            if field == "matchup_profiles":
+                required = ["model_quote", "limitation_quote"]
             if field == "archetypes" and item["comparisons"]:
                 required.append("comparison_quote")
             for key in required:
@@ -407,7 +448,7 @@ def validate_analysis_review(report, article, review):
 def validate_package(report, sources, handoff):
     """Check evidence links and comparability, never the semantic truth of prose."""
     require(isinstance(report, dict) and type(report.get("schema_version")) is int
-            and report["schema_version"] in {1, 2}, "meta report schema_version must be 1 or 2")
+            and report["schema_version"] in {1, 2, 3}, "meta report schema_version must be 1, 2 or 3")
     as_of = iso_date(report.get("as_of"))
     require(report.get("format") in {"standard", "wild"} and text(report.get("patch")), "patch/format required")
     require(all(text(report.get(key)) for key in ("rank", "region", "scope_note")), "scope, rank and region required")
@@ -537,8 +578,12 @@ def validate_package(report, sources, handoff):
         require(source is not None, f"{sid}: source required")
         proof = linked(row.get("claim_id"), row.get("evidence_ref"), sid)
         require(proof["url"] == source["url"], f"{sid}: evidence/source mismatch")
-        percentages = {float(n.replace(",", ".")) for n in re.findall(r"(?<![\w.,])([0-9]+(?:[.,][0-9]+)?)\s*%", proof["quote"])}
-        require(value in percentages, f"{sid}: percentage absent from evidence quote")
+        if "value_pointer" in row:
+            subject = by_deck.get(row["subject_id"]) if row["grain"] == "deck" else next((g for g in report.get("archetypes", []) if g["id"] == row["subject_id"]), None)
+            component("meta_statistics").validate_numeric(row, source["text"], proof["quote"], subject)
+        else:
+            percentages = {float(n.replace(",", ".")) for n in re.findall(r"(?<![\w.,])([0-9]+(?:[.,][0-9]+)?)\s*%", proof["quote"])}
+            require(value in percentages, f"{sid}: percentage absent from evidence quote")
         stats[sid] = row
     rankings = report.get("rankings")
     require(isinstance(rankings, list), "rankings array required")
@@ -562,14 +607,16 @@ def validate_package(report, sources, handoff):
                 and text(row.get("subject")) and text(row.get("scope_note")), "invalid editorial assessment")
         claim_ids(row.get("claim_ids"), "assessment")
     require(isinstance(report.get("gaps"), list) and all(text(g) for g in report["gaps"]), "gaps must be strings")
-    analysis = validate_analysis(report, sources, handoff, stats) if report["schema_version"] == 2 else {}
+    analysis = validate_analysis(report, sources, handoff, stats) if report["schema_version"] >= 2 else {}
+    if report["schema_version"] >= 3:
+        analysis["matchup_profiles"] = len(component("meta_matchups").profiles(report, sources, handoff))
     return {"status": "structure_valid", "mechanical_checks_only": True, "class_gaps": gaps,
             "selected_decks": len(published_decks(report)), "inspected_decks": len(decks),
             "statistics": len(stats), "statistics_with_unknown_sample": unknown,
-            "scope_warnings": scope_mismatches(report), **analysis}
+            "scope_warnings": scope_mismatches(report), "source_contexts": source_contexts(report, sources), **analysis}
 
 
-def audit_material(report, material):
+def audit_material(report, material, derived_percentages=()):
     """Check required class sections and copyable codes, not prose quality."""
     errors, sections = [], {}
     headings = list(re.finditer(r"^## ([^\n]+)\s*$", material, re.MULTILINE))
@@ -611,7 +658,7 @@ def audit_material(report, material):
     for block in re.findall(r"^```(?:text)?\n([A-Za-z0-9+/=]+)\n```\s*$", material, re.MULTILINE):
         if block not in expected:
             errors.append("unselected deck code in material")
-    allowed = {float(row["value"]) for row in report["statistics"]}
+    allowed = {float(row["value"]) for row in report["statistics"]} | set(derived_percentages)
     for value in re.findall(r"(?<![\w.,])([0-9]+(?:[.,][0-9]+)?)\s*%", material):
         if float(value.replace(",", ".")) not in allowed:
             errors.append("percentage absent from research statistics: " + value)
@@ -628,15 +675,44 @@ def accepted(run):
 
 def prepare(run):
     run = Path(run)
+    pub, _, _ = runtimes()
+    if (run / "accepted.json").exists():
+        accepted(run)
+        return pub.status(run / "publication")
+    hashes = {name: digest(run / name) for name in INPUTS}
+    pending = run / "preparing.json"
+    if pending.exists():
+        require(read_json(pending).get("sha256") == hashes, "input changed after interrupted prepare; start a new research run")
+    else:
+        require(not (run / "publication").exists(), "unowned publication already exists; cannot resume without preparing receipt")
     report, sources, handoff = (read_json(run / name) for name in INPUTS)
     result = validate_package(report, sources, handoff)
-    require(not (run / "publication").exists() and not (run / "accepted.json").exists(), "publication already exists")
-    pub, _, _ = runtimes()
-    pub.init_run(run / "publication", brief=handoff["brief"], patch=report["patch"], profile="meta-report", shortcodes="off")
-    pub.submit(run / "publication", stage="sources", artifact=run / "sources.json")
-    state = pub.submit(run / "publication", stage="research", artifact=run / "publication-handoff.json")
+    if not pending.exists():
+        write_json(pending, {"schema_version": 1, "sha256": hashes})
+    publication = run / "publication"
+    if publication.exists() and not (publication / "state.json").exists():
+        # Only recover our empty init skeleton. Unknown files are preserved.
+        require(not publication.is_symlink(), "unsafe interrupted publication directory")
+        children = list(publication.iterdir())
+        require(not children or (len(children) == 1 and children[0].name == "artifacts" and children[0].is_dir()
+                                and not children[0].is_symlink() and not list(children[0].iterdir())), "interrupted publication has unknown files; inspect before retry")
+        if children:
+            children[0].rmdir()
+        publication.rmdir()
+    if not (run / "publication").exists():
+        pub.init_run(run / "publication", brief=handoff["brief"], patch=report["patch"], profile="meta-report", shortcodes="off")
+    state = pub.status(run / "publication")
+    require(state["patch"] == report["patch"] and state["profile"] == "meta-report" and state["brief"] == handoff["brief"]
+            and state["shortcodes"] == "off", "publication identity differs from prepare receipt")
+    for stage, filename in (("sources", "sources.json"), ("research", "publication-handoff.json")):
+        receipt = state["artifacts"].get(stage)
+        if receipt:
+            require(receipt["accepted"] and receipt["sha256"] == hashes[filename], f"saved {stage} does not match prepare receipt")
+        else:
+            state = pub.submit(run / "publication", stage=stage, artifact=run / filename)
     require(state["stage"] == "draft" and not state["blocked"], "publication research was blocked: " + str(state["blocked"]))
-    write_json(run / "accepted.json", {"schema_version": 1, "sha256": {name: digest(run / name) for name in INPUTS}, "validation": result})
+    require(hashes == {name: digest(run / name) for name in INPUTS}, "input changed during prepare")
+    write_json(run / "accepted.json", {"schema_version": 1, "sha256": hashes, "validation": result})
     return state
 
 
@@ -652,7 +728,7 @@ def next_task(run):
     task = pub.next_task(run / "publication")
     task.setdefault("inputs", {})["meta_report"] = str((run / "meta-report.json").resolve())
     report = read_json(run / "meta-report.json")
-    if report["schema_version"] == 2:
+    if report["schema_version"] >= 2:
         task["analysis_brief"] = analysis_brief(report, read_json(run / "sources.json"), read_json(run / "publication-handoff.json"))
     if task["stage"] == "draft":
         task["instructions"] += " Read teams/editor-team/SKILL.md and skills/meta-report/references/workflow.md. Cover all classes using ## Russian class and ### exact deck name headings. Explain plan, key cards, conditions and limitations in connected prose. Copy each accepted code below its own deck. Preserve statistical scope and unknown sample sizes."
@@ -660,13 +736,29 @@ def next_task(run):
         task["instructions"] += " Check every number's subject, source, grain, ranks, period, region and sample; distinguish popularity, performance and editorial judgement. Check current legality, runes, independent list provenance and all gameplay explanations. Inspect the entire article for contradictory recommendations and causal overclaims."
     elif task["stage"] == "literary_review":
         task["instructions"] += " Review the whole meta report for a clear ladder story, useful class choices, distinctive deck explanations and readable limits. Preserve author rhythm and strong passages; do not force identical paragraphs or introduce game facts."
-    if report["schema_version"] == 2:
+    if report["schema_version"] >= 2:
         task["instructions"] += " Read skills/meta-report/references/archetype-analysis.md. Use analysis_brief for exact list changes, conditional selection, matchup evidence, competing explanations and dominance hypotheses. Publish codes only for publish=true lists."
         if task["analysis_brief"]["scope_warnings"]:
             task["instructions"] += " target_scope differs from observed statistics: disclose these limits in the article and do not project all-rank/older data onto the requested ladder. Factual meta_analysis needs scope_quote from the article."
         if task["stage"] == "fact_review":
             task["instructions"] += " Add meta_analysis to factual JSON: archetypes [{id,selection_quote,comparison_quote,limitation_quote}], dominance [{id,observation_quote,explanation_quote,limitation_quote}]. Quote the actual article; verify the substantive explanation and uncertainty, not just quote presence. Do not treat selected research conclusions as a predetermined verdict."
+        if report["schema_version"] >= 3:
+            task["instructions"] += " Matchup profiles are models on common opponent coverage, never observed overall winrates. Report coverage, missing mass, sample limits and original source_contexts. Prioritize missing cells by field share. Factual meta_analysis also needs matchup_profiles [{id,model_quote,limitation_quote}]. Bounds concern unknown mass, not statistical confidence."
     return task
+
+
+def model_percentages(run, report):
+    if report["schema_version"] < 3:
+        return set()
+    profiles = component("meta_matchups").profiles(report, read_json(run / "sources.json"), read_json(run / "publication-handoff.json"))
+    values = set()
+    for profile in profiles:
+        values.update((profile["coverage_percent"], profile["unknown_field_percent"]))
+        for deck in profile["decks"].values():
+            values.update(deck["overall_bounds_percent"])
+            if deck["covered_estimate_percent"] is not None:
+                values.add(deck["covered_estimate_percent"])
+    return values
 
 
 def submit(run, *, stage, artifact, retry_review=False):
@@ -674,10 +766,10 @@ def submit(run, *, stage, artifact, retry_review=False):
     report = accepted(run)
     require(stage in {"draft", "fact_review", "literary_review"}, "sources/research are accepted together by prepare")
     if stage == "draft":
-        errors = audit_material(report, Path(artifact).read_text(encoding="utf-8-sig"))
+        errors = audit_material(report, Path(artifact).read_text(encoding="utf-8-sig"), model_percentages(run, report))
         require(not errors, "; ".join(errors))
     pub, _, _ = runtimes()
-    if stage == "fact_review" and report["schema_version"] == 2:
+    if stage == "fact_review" and report["schema_version"] >= 2:
         state = pub.status(run / "publication")
         draft = run / "publication" / state["artifacts"]["draft"]["path"]
         payload = read_json(artifact)
@@ -692,7 +784,7 @@ def submit(run, *, stage, artifact, retry_review=False):
 def revise(run, artifact):
     run = Path(run)
     report = accepted(run)
-    errors = audit_material(report, Path(artifact).read_text(encoding="utf-8-sig"))
+    errors = audit_material(report, Path(artifact).read_text(encoding="utf-8-sig"), model_percentages(run, report))
     require(not errors, "; ".join(errors))
     return runtimes()[0].revise(run / "publication", artifact=Path(artifact))
 
@@ -710,7 +802,7 @@ def main(argv=None):
             stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("init", "check", "prepare", "next", "status", "compare", "analysis", "submit", "revise", "export"):
+    for name in ("init", "check", "prepare", "next", "status", "compare", "analysis", "inspect-statistics", "submit", "revise", "export"):
         command = sub.add_parser(name)
         command.add_argument("run", type=Path)
         if name == "init":
@@ -732,7 +824,9 @@ def main(argv=None):
     args = vars(parser.parse_args(argv))
     command, run = args.pop("command"), args.pop("run")
     try:
-        if command == "init":
+        if command == "inspect-statistics":
+            result = component("meta_statistics").inspect_payload(read_json(run))
+        elif command == "init":
             result = initialize(run, **args)
         elif command == "check":
             result = validate_package(*(read_json(run / name) for name in INPUTS))

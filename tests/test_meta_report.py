@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "skills/meta-report/scripts/meta_report.py"
@@ -131,7 +132,7 @@ class MetaReportTests(unittest.TestCase):
         other = Path(self.temp.name) / "other"
         report = meta.initialize(other, as_of="2025-03-29", game_format="wild")
         self.assertIsNone(report["patch"])
-        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["schema_version"], 3)
         self.assertEqual(report["format"], "wild")
         self.assertEqual(set(report["classes"]), set(meta.CLASSES))
         self.assertEqual(meta.read_json(other / "research/manifest.json")["as_of"], "2025-03-29")
@@ -280,7 +281,8 @@ class MetaReportTests(unittest.TestCase):
         for key, value, expected in (("subject_id", "mage-list", "subject"),
                                      ("rank", "legend", "cohort"),
                                      ("opponent", "another-archetype", "cohort"),
-                                     ("filters", {"coin": "first"}, "cohort")):
+                                     ("filters", {"coin": "first"}, "cohort"),
+                                     ("source_period", "patch_synthetic-patch", "cohort")):
             with self.subTest(key=key):
                 original = copy.deepcopy(second)
                 second[key] = value
@@ -462,6 +464,223 @@ class MetaReportTests(unittest.TestCase):
         revised = meta.revise(self.run, draft)
         self.assertIsNone(revised["blocked"])
         self.assertEqual(revised["stage"], "fact_review")
+
+    def enable_matchups(self):
+        self.enable_analysis()
+        self.report.update(schema_version=3, matchup_profiles=[], matchup_profile_gap="")
+        for identity, value, extra in (
+            ("share-fast", 60, {"metric": "popularity", "grain": "archetype", "subject_id": "fast"}),
+            ("share-slow", 30, {"metric": "popularity", "grain": "archetype", "subject_id": "slow"}),
+            ("a-fast", 70, {"opponent": "fast"}),
+            ("a-slow", 40, {"opponent": "slow"}),
+            ("b-fast", 50, {"opponent": "fast", "subject_id": "mage-alt"}),
+            ("b-slow", 80, {"opponent": "slow", "subject_id": "mage-alt"}),
+        ):
+            self.add_stat(identity, value=value, **extra)
+            self.sources[0]["text"] += f" {value}%"
+        self.sources[0]["sha256"] = hashlib.sha256(self.sources[0]["text"].encode()).hexdigest()
+        self.handoff["sources"][0]["quote"] = self.sources[0]["text"]
+        profile = {"id": "field", "archetype_id": "mage-arch", "deck_ids": ["mage-list", "mage-alt"],
+                   "opponent_share_ids": ["share-fast", "share-slow"],
+                   "matchup_ids": ["a-fast", "a-slow", "b-fast", "b-slow"],
+                   "scope_claim_ids": ["C-mage"], "limitation_claim_ids": ["C-mage"]}
+        self.report["matchup_profiles"] = [profile]
+        return profile
+
+    def test_matchup_profile_uses_common_coverage_without_filling_unknown_field(self):
+        self.enable_matchups()
+        brief = meta.analysis_brief(self.report, self.sources, self.handoff)["matchup_profiles"][0]
+        self.assertEqual(brief["coverage_percent"], 90)
+        self.assertEqual(brief["unknown_field_percent"], 10)
+        self.assertAlmostEqual(brief["decks"]["mage-list"]["covered_estimate_percent"], 60)
+        self.assertAlmostEqual(brief["decks"]["mage-alt"]["covered_estimate_percent"], 60)
+        self.assertEqual(brief["decks"]["mage-list"]["overall_bounds_percent"], [54, 64])
+        self.assertTrue(brief["model_only"])
+
+    def test_missing_matchup_restricts_both_candidates_and_queues_research(self):
+        profile = self.enable_matchups()
+        profile["matchup_ids"].remove("b-slow")
+        brief = meta.analysis_brief(self.report, self.sources, self.handoff)["matchup_profiles"][0]
+        self.assertEqual(brief["coverage_percent"], 60)
+        self.assertEqual(brief["unknown_field_percent"], 40)
+        self.assertEqual(brief["decks"]["mage-list"]["covered_estimate_percent"], 70)
+        self.assertEqual(brief["decks"]["mage-alt"]["covered_estimate_percent"], 50)
+        self.assertEqual(brief["research_tasks"][0]["deck_id"], "mage-alt")
+        self.assertEqual(brief["research_tasks"][0]["opponent_id"], "slow")
+
+    def test_zero_common_coverage_does_not_manufacture_a_winner(self):
+        profile = self.enable_matchups()
+        profile["matchup_ids"] = ["a-fast", "b-slow"]
+        brief = meta.analysis_brief(self.report, self.sources, self.handoff)["matchup_profiles"][0]
+        self.assertEqual(brief["coverage_percent"], 0)
+        self.assertEqual(brief["unknown_field_percent"], 100)
+        for deck in brief["decks"].values():
+            self.assertIsNone(deck["covered_estimate_percent"])
+            self.assertEqual(deck["overall_bounds_percent"], [0, 100])
+
+    def test_model_percentages_reach_draft_but_do_not_replace_factual_review(self):
+        self.enable_matchups()
+        self.save()
+        meta.prepare(self.run)
+        draft = self.run / "model.md"
+        draft.write_text(self.material() + "\n\nModel coverage 90%, unknown 10%; estimate 60%, bounds 54% to 64%.\n", encoding="utf-8")
+        state = meta.submit(self.run, stage="draft", artifact=draft)
+        self.assertEqual(state["stage"], "fact_review")
+        self.assertIn("both reviews", str(self.assert_export_blocked()))
+        errors = meta.validate_analysis_review(self.report, draft.read_text(encoding="utf-8"), {"meta_analysis": {"archetypes": [], "dominance": []}})
+        self.assertTrue(any("matchup_profiles" in error for error in errors))
+        draft.write_text(self.material() + "\nInvented 91%\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "percentage absent"):
+            meta.revise(self.run, draft)
+
+    def assert_export_blocked(self):
+        try:
+            meta.export(self.run, self.run / "blocked.md")
+        except ValueError as error:
+            return error
+        self.fail("export unexpectedly succeeded")
+
+    def test_profile_rejects_overcounted_shares_and_mixed_populations(self):
+        profile = self.enable_matchups()
+        for mutate, message in (
+            (lambda: profile["opponent_share_ids"].append("share-fast"), "duplicate"),
+            (lambda: self.report["statistics"][-1].update(rank="legend"), "population"),
+            (lambda: self.report["statistics"][-1].update(source_period="patch_synthetic-patch"), "population"),
+            (lambda: self.report["statistics"][-1].update(opponent="unknown"), "opponent"),
+        ):
+            with self.subTest(message=message):
+                original = copy.deepcopy(self.report)
+                mutate()
+                with self.assertRaisesRegex(ValueError, message):
+                    meta.validate_package(self.report, self.sources, self.handoff)
+                self.report = original
+                profile = self.report["matchup_profiles"][0]
+        self.report["statistics"][2]["value"] = 80
+        self.sources[0]["text"] += " 80%"
+        self.sources[0]["sha256"] = hashlib.sha256(self.sources[0]["text"].encode()).hexdigest()
+        self.handoff["sources"][0]["quote"] = self.sources[0]["text"]
+        with self.assertRaisesRegex(ValueError, "100"):
+            meta.validate_package(self.report, self.sources, self.handoff)
+
+    def test_json_statistics_bind_value_sample_and_original_rank(self):
+        row = self.add_stat(value=59.1, sample_games=500)
+        payload = {"data": {"sourceUrl": self.sources[0]["url"], "data": {
+            "data": [{"deckId": "id", "metrics": {"winratePercent": 59.1, "games": 500},
+                      "sample": {"rank": "all", "period": "patch_synthetic-patch"}}],
+            "meta": {"format": "standard", "patch": "synthetic-patch", "dataStatus": "fresh"}},
+            "retrievedAt": "2026-10-20T12:00:00Z"}}
+        body = json.dumps(payload)
+        self.sources[0].update(id="json", text=body, sha256=hashlib.sha256(body.encode()).hexdigest())
+        self.handoff["sources"][0]["quote"] = body
+        self.report["decks"][0].update(code_provenance="reconstructed-list", reconstruction_note="Synthetic list")
+        row.update(source_id="json", value_pointer="/data/data/data/0/metrics/winratePercent", value_unit="percent",
+                   sample_games_pointer="/data/data/data/0/metrics/games", quote_pointer="",
+                   source_period="patch_synthetic-patch", period_note="Bounds not explicitly published", source_subject_id="id")
+        self.assertEqual(meta.validate_package(self.report, self.sources, self.handoff)["statistics"], 1)
+        row["sample_games"] = 999
+        with self.assertRaisesRegex(ValueError, "sample"):
+            meta.validate_package(self.report, self.sources, self.handoff)
+        row.update(sample_games=500, rank="legend")
+        with self.assertRaisesRegex(ValueError, "rank"):
+            meta.validate_package(self.report, self.sources, self.handoff)
+        row.update(rank="all-ranks", opponent="invented-opponent")
+        with self.assertRaisesRegex(ValueError, "opponent"):
+            meta.validate_package(self.report, self.sources, self.handoff)
+        row.update(opponent=None, source_subject_id="wrong-source-id")
+        with self.assertRaisesRegex(ValueError, "source_subject_id"):
+            meta.validate_package(self.report, self.sources, self.handoff)
+        row.update(source_subject_id="id", source_period="1d")
+        with self.assertRaisesRegex(ValueError, "source_period"):
+            meta.validate_package(self.report, self.sources, self.handoff)
+        row.update(source_period="patch_synthetic-patch", metric="popularity")
+        with self.assertRaisesRegex(ValueError, "metric/unit"):
+            meta.validate_package(self.report, self.sources, self.handoff)
+
+    def test_json_numeric_unit_and_quote_subtree_are_explicit(self):
+        validator = meta.component("meta_statistics")
+        row = {"value": 59.1, "sample_games": None, "value_pointer": "/item/wr", "value_unit": "fraction", "quote_pointer": "/item"}
+        body = '{"item": {"wr": 0.591}}'
+        validator.validate_numeric(row, body, '{"wr": 0.591}')
+        row["value_unit"] = "percent"
+        with self.assertRaisesRegex(ValueError, "value mismatch"):
+            validator.validate_numeric(row, body, '{"wr": 0.591}')
+        with self.assertRaisesRegex(ValueError, "subtree"):
+            validator.validate_numeric(row, body, '{"wr": 0.5}')
+
+    def test_statistics_inspector_preserves_stale_and_missing_patch(self):
+        payload = {"data": {"sourceUrl": "https://example.test/meta", "data": {"data": [],
+                   "pagination": {"hasMore": True}, "meta": {"format": "standard", "rank": {"id": "legend"},
+                   "period": {"id": "1d", "patch": None}, "dataStatus": "stale", "datasetVersion": "fixture"}},
+                   "retrievedAt": "2026-10-20T12:00:00Z"}}
+        result = meta.component("meta_statistics").inspect_payload(payload)
+        self.assertEqual(result["source_context"]["rank"], "legend")
+        self.assertIn("stale", result["warnings"])
+        self.assertIn("patch-unspecified", result["warnings"])
+        self.assertTrue(result["has_more"])
+        self.assertFalse(result["research_ready"])
+
+    def test_prepare_resumes_interruption_without_replacing_accepted_sources(self):
+        original = meta.runtimes()[0].submit
+        def interrupt(run, **kwargs):
+            if kwargs["stage"] == "research":
+                raise OSError("Synthetic interruption")
+            return original(run, **kwargs)
+        with patch.object(meta.runtimes()[0], "submit", side_effect=interrupt):
+            with self.assertRaisesRegex(OSError, "interruption"):
+                meta.prepare(self.run)
+        state = meta.prepare(self.run)
+        self.assertEqual(state["stage"], "draft")
+        self.assertEqual([row["stage"] for row in state["history"]], ["sources", "research"])
+        self.assertEqual(meta.prepare(self.run)["stage"], "draft")
+
+    def test_prepare_refuses_changed_input_after_interrupted_acceptance(self):
+        original = meta.runtimes()[0].submit
+        def interrupt(run, **kwargs):
+            if kwargs["stage"] == "research":
+                raise OSError("Synthetic interruption")
+            return original(run, **kwargs)
+        with patch.object(meta.runtimes()[0], "submit", side_effect=interrupt):
+            with self.assertRaises(OSError):
+                meta.prepare(self.run)
+        self.report["scope_note"] = "Changed after interruption"
+        self.save()
+        with self.assertRaisesRegex(ValueError, "changed"):
+            meta.prepare(self.run)
+
+    def test_prepare_recovers_owned_empty_init_but_preserves_unknown_files(self):
+        pub = meta.runtimes()[0]
+        with patch.object(pub, "_atomic_json", side_effect=OSError("Synthetic init interruption")):
+            with self.assertRaises(OSError):
+                meta.prepare(self.run)
+        unknown = self.run / "publication" / "keep.txt"
+        unknown.write_text("Preserve", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "unknown files"):
+            meta.prepare(self.run)
+        self.assertEqual(unknown.read_text(encoding="utf-8"), "Preserve")
+        unknown.unlink()
+        self.assertEqual(meta.prepare(self.run)["stage"], "draft")
+
+    def test_invalid_prepare_does_not_freeze_repairable_inputs(self):
+        self.report["patch"] = None
+        self.save()
+        with self.assertRaises(ValueError):
+            meta.prepare(self.run)
+        self.assertFalse((self.run / "preparing.json").exists())
+        self.report["patch"] = "synthetic-patch"
+        self.save()
+        self.assertEqual(meta.prepare(self.run)["stage"], "draft")
+
+    def test_receipt_write_is_atomic_and_never_replaces_existing_file(self):
+        receipt = self.run / "receipt-test.json"
+        with patch.object(meta.os, "fsync", side_effect=OSError("Synthetic flush failure")):
+            with self.assertRaises(OSError):
+                meta.write_json(receipt, {"complete": False})
+        self.assertFalse(receipt.exists())
+        self.assertEqual(list(self.run.glob(".meta-*")), [])
+        meta.write_json(receipt, {"complete": True})
+        with self.assertRaises(FileExistsError):
+            meta.write_json(receipt, {"complete": False})
+        self.assertEqual(meta.read_json(receipt), {"complete": True})
 
 
 if __name__ == "__main__":
