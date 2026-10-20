@@ -58,6 +58,8 @@ def search_rows(data, sources):
 
 
 def validate_v2(data, directory, sources):
+    from catalog import audit_captures
+    audit_captures(data, directory)
     if "discovery_policy" in data:
         from discovery import plan, provenance
         discovery = plan(data)

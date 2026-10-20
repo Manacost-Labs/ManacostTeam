@@ -68,6 +68,7 @@ def initialize(directory: Path, as_of: str, game_format: str) -> Path:
         "patch": "", "patch_source_id": "", "meta_source_ids": [],
         "sources": [], "candidates": [], "fun_cards": [],
         "evidence": [], "search_log": [],
+        "catalog_leads": [], "catalog_captures": [],
         "gaps": {name: "Поиск ещё не выполнен." for name in CLASSES},
     }
     path = directory / "selection.json"
@@ -231,6 +232,9 @@ def main(argv: list[str] | None = None) -> int:
     deck.add_argument("code")
     encoder = commands.add_parser("encode", help="Serialize an independently read DBF list; no legality claim")
     encoder.add_argument("deck_list", type=Path)
+    catalog = commands.add_parser("catalog", help="Import saved actual MCP request/response as unverified leads")
+    catalog.add_argument("selection", type=Path)
+    catalog.add_argument("capture", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.command == "init":
@@ -245,6 +249,9 @@ def main(argv: list[str] | None = None) -> int:
                       "notice": "Verify independently read source, current legality and all zones before inclusion."}
         elif args.command == "review-digests":
             result = review_digests(args.selection)
+        elif args.command == "catalog":
+            from catalog import ingest
+            result = ingest(args.selection, args.capture)
         else:
             data = json.loads(args.selection.read_text(encoding="utf-8-sig"))
             if args.command in ("next", "plan"):

@@ -68,6 +68,7 @@ def identity(candidate):
 
 
 def plan(data, limit=6):
+    from catalog import inspection_queue
     require(isinstance(data, dict) and data.get("schema_version") == 2,
             "plan requires a v2 run")
     require(data.get("format") in ("standard", "wild"), "unsupported format")
@@ -169,6 +170,7 @@ def plan(data, limit=6):
     tasks.sort(key=lambda row: (row["attempt"] > 1, counts[row["class"]],
                                CHANNELS.index(row["channel"]), row["language"] == "en" and row["channel"] == "community"))
     return {"status": "research_in_progress", "suggested_queries": tasks[:limit],
+            **inspection_queue(data, limit),
             "remaining_search_lanes": len(tasks), "candidate_tasks": checks, "coverage": coverage,
             "meta_tasks": ["Read two independent current meta tables; do not stop discovery if one is blocked."],
             "notice": "Read-only suggestions, not executed searches or proof of fun, legality or meta absence."}
