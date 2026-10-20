@@ -28,6 +28,24 @@ class BattlegroundsHeroGuideValidatorTests(unittest.TestCase):
     def test_accepts_copy_ready_guide(self):
         self.assertEqual(validator.validate(VALID_GUIDE), [])
 
+    def test_accepts_editorial_strength_label(self):
+        guide = VALID_GUIDE.replace("**Сила:** 3 из 5", "**Сила:** 3 из 5, оценка редакции")
+        self.assertEqual(validator.validate(guide), [])
+
+    def test_rejects_out_of_range_or_ambiguous_ratings(self):
+        for field, value in (
+            ("Сила", "0 из 5"),
+            ("Сила", "6 из 5"),
+            ("Сила", "3 из 10"),
+            ("Сила", "3,5 из 5"),
+            ("Сложность", "сложно"),
+        ):
+            with self.subTest(field=field, value=value):
+                original = "3 из 5" if field == "Сила" else "2 из 5"
+                guide = VALID_GUIDE.replace(f"**{field}:** {original}", f"**{field}:** {value}")
+                issues = validator.validate(guide)
+                self.assertTrue(any(f"«{field}» должна" in issue for issue in issues), issues)
+
     def test_requires_four_fields_in_order_at_the_start(self):
         switched = VALID_GUIDE.replace(
             "**Сила:** 3 из 5\n**Сложность:** 2 из 5",

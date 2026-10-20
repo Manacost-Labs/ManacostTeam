@@ -9,6 +9,8 @@ from pathlib import Path
 
 
 FIELDS = ("Сила", "Сложность", "Бан типов существ", "Стартовая кривая")
+RATING_FIELDS = ("Сила", "Сложность")
+RATING_VALUE = re.compile(r"[1-5] из 5(?:, оценка редакции)?")
 LINK_OR_CITATION = re.compile(
     r"https?://|www\.|\b[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b|"
     r"\]\([^)]*\)|\[\^\d+\]|\[cite[:\]]|cite|【\d+†",
@@ -53,6 +55,10 @@ def validate(source: str) -> list[str]:
             matches = re.findall(rf"^\*\*{re.escape(field)}:\*\*[ \t]*[^\s\r\n].*$", section, re.MULTILINE)
             if len(matches) != 1:
                 issues.append(f"{name}: поле «{field}» должно встретиться ровно один раз.")
+            elif field in RATING_FIELDS:
+                value = matches[0].split("**", 2)[-1].strip()
+                if not RATING_VALUE.fullmatch(value):
+                    issues.append(f"{name}: «{field}» должна быть целым числом от 1 до 5 в формате «N из 5».")
         nonblank = [(index, line.strip()) for index, line in enumerate(lines[1:], 1) if line.strip()]
         for position, field in enumerate(FIELDS):
             if position >= len(nonblank) or not re.fullmatch(
@@ -83,7 +89,7 @@ def main() -> int:
         for issue in issues:
             print(f"ERROR: {issue}", file=sys.stderr)
         return 1
-    print("OK: структура, терминология и отсутствие ссылок проверены; игровые факты требуют ручной проверки.")
+    print("OK: структура, диапазон оценок, терминология и отсутствие ссылок проверены; игровые факты требуют ручной проверки.")
     return 0
 
 
