@@ -33,7 +33,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v45"
+const PromptVersion = "editorteam-go-v46"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -1110,7 +1110,11 @@ func (s *Service) editorialAnalysis(ctx context.Context, req Request, bundle rul
 
 func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBundle, analysis Analysis, examples []retrieval.StyleExample) (string, error) {
 	if req.Mode == "reconstruct" {
-		payload, err := json.Marshal(map[string]any{"draft": req.Text, "research_handoff": req.Handoff, "style_examples": promptExamples(examples), "editorial_rules": map[string]any{"style": bundle.StyleRules, "terminology": bundle.TerminologyRules, "language": bundle.Language, "corrections": bundle.Corrections, "sections_required": bundle.SectionsRequired}})
+		authorEvidence, err := publicationHandoff(req.Handoff)
+		if err != nil {
+			return "", err
+		}
+		payload, err := json.Marshal(map[string]any{"draft": req.Text, "research_handoff": authorEvidence, "style_examples": promptExamples(examples), "editorial_rules": map[string]any{"style": bundle.StyleRules, "terminology": bundle.TerminologyRules, "language": bundle.Language, "corrections": bundle.Corrections, "sections_required": bundle.SectionsRequired}})
 		if err != nil {
 			return "", err
 		}
@@ -1121,11 +1125,11 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 			"Оформи sections_required естественными Markdown-заголовками; если для раздела нет подтверждённого материала, прямо обозначь пробел, не выдумывай наполнение. Источники из evidence_refs процитируй прямыми ссылками в готовом тексте. " +
 			"Не выводи обратное утверждение из условия: обещанная награда за действие сама по себе не доказывает, что других способов получить её нет. Убирай неподтверждённый вывод, а не прячь его за оговоркой. " +
 			"Объясняй практические решения, причины, цену выбора и исключения; используй decision_cards и прежние decision_examples/counterexamples. Фактические поля карточек связаны с claim_ids/evidence_refs; unknown/disputed и gaps не заполняй от себя. Иллюстративный пример обозначай условным, observed эпизод не обобщай до типичной ситуации. Не придумывай недостающие знания и не усиливай LOW/MEDIUM до категорического совета. " +
-			"Сохраняй ограничения выборки, времени, происхождения и вывода из research_context/source_context/evidence_context. Полезные детали должны менять понимание или решение; не увеличивай объём ради насыщенности. " +
+			"Сохраняй значимые для совета ограничения выборки, времени и вывода из research_context/source_context/evidence_context; provenance проверки не является готовой прозой. Полезные детали должны менять понимание или решение; не увеличивай объём ради насыщенности. " +
 			"После черновика проверь функцию каждого абзаца, порядок объяснения и повторы. Конкретность, шутки, обращения и длина фраз зависят от задачи; одинаковая структура абзацев не нужна. Не заявляй личный опыт или тестирование без источника. " +
 			"Построй связный русский текст, убери повторы между главами, выдержи жанр и единый голос; соблюдай editorial_rules. Corrections.required — применимая норма, advisory — контекстный пример, не запрет. Fact corrections не доказывают текущий игровой факт. " +
 			"style_examples показывают только форму; факты бери исключительно из handoff. Верни только готовый материал."
-		return s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+craftInstruction+precisionInstruction+proseInstruction("reconstruct")+reconstructionReviewInstruction("reconstruct"), examples)}, {Role: "user", Content: string(payload)}})
+		return s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+craftInstruction+precisionInstruction+proseInstruction("reconstruct")+reconstructionReviewInstruction("reconstruct")+publicationAuthorInstruction, examples)}, {Role: "user", Content: string(payload)}})
 	}
 	raw, _ := json.Marshal(analysis)
 	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (наблюдения, не обязательный план; проверь выводы по исходнику, не добавляй факты из анализа):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Верни только готовый текст. Режим "+req.Mode+". Сохрани названия, числа, ссылки, отрицания, осторожность, разметку и голос автора. Сохрани смысл и голос strengths. Это не запрет исправлять внутри них грамматику, повтор или тяжёлый синтаксис: меняй только место с конкретной пользой для читателя, сохраняя условия и степень уверенности. В edit/rewrite можно разделить длинный абзац по смене мысли и сохранить соседние удачные формулировки; не сокращай ради самого сокращения. Сохрани сноски: звёздочка со следующим неразрывным пробелом — буквальный знак сноски; при обычном пробеле экранируй звёздочку обратной косой чертой, чтобы не получить список. Не добавляй новые карты, факты или выводы. Правильность мысли не запрещает улучшать её форму. Если после проверки структуры и синтаксиса конкретной пользы нет, верни текст без изменений.", examples)
@@ -1162,7 +1166,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}
 	}
 	messages := []llm.Message{
-		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief)+revisionBaseInstruction(in.RevisionBase)+reconstructionReviewInstruction(in.Mode), examplesOf(in))},
+		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief)+revisionBaseInstruction(in.RevisionBase)+reconstructionReviewInstruction(in.Mode)+publicationCriticInstruction(in.Mode), examplesOf(in))},
 		{Role: "user", Content: string(payload)},
 	}
 	started := time.Now()

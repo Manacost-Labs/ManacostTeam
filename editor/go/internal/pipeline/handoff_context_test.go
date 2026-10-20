@@ -95,11 +95,14 @@ func TestRichHandoffReachesWriterAndFactReviewer(t *testing.T) {
 	_, _ = s.rewrite(context.Background(), Request{Mode: "reconstruct", Handoff: &h}, rules.Build(nil, "GUIDE", "переплавка", "ru-RU", nil), Analysis{}, nil)
 	_, _ = s.factReview(context.Background(), &h, "draft")
 	for _, messages := range []string{writer.messages[0][1].Content, reviewer.messages[0][1].Content} {
-		for _, value := range []string{"original-lineage", "expert_analysis", "confidence_basis", "CARD-1", "claim_hashes"} {
+		for _, value := range []string{"original-lineage", "expert_analysis", "confidence_basis", "CARD-1"} {
 			if !strings.Contains(messages, value) {
 				t.Errorf("lost %s in consumer payload", value)
 			}
 		}
+	}
+	if strings.Contains(writer.messages[0][1].Content, "claim_hashes") || !strings.Contains(reviewer.messages[0][1].Content, "claim_hashes") {
+		t.Fatal("audit hashes must remain with the fact reviewer, not the author")
 	}
 }
 
