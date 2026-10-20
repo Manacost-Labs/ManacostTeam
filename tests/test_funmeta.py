@@ -26,6 +26,7 @@ class FunmetaFixture:
         selection = initialize(self.run, "2026-10-19", "standard")
         self.data = json.loads(selection.read_text(encoding="utf-8"))
         self.data.pop("discovery_policy")  # Explicit legacy fixtures, including pre-0.4 v2.
+        self.data.pop("material_policy")  # Preserve pre-0.6 material/export behavior.
         self.data["schema_version"] = 1  # Keep the legacy contract covered explicitly.
         self.data.update(patch="synthetic-patch", patch_source_id="official",
                          meta_source_ids=["meta-a", "meta-b"])

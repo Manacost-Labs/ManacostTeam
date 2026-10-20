@@ -211,6 +211,11 @@ def export_material(selection_path, data, validation, output):
             "review: resolve findings and record a substantive review note")
     material = (directory / "material.md").read_text(encoding="utf-8")
     require(bool(material.strip()), "export: empty material")
+    from material import audit, policy
+    strict_material = policy(data)
+    if strict_material:
+        result = audit(data, material)
+        require(result["errors"] == 0, "export: material audit failed; run audit for all findings")
     code_blocks = re.findall(r"(?ms)^```(?:text|plaintext)?[ \t]*\n(.*?)^```[ \t]*$", material)
     printed_codes = {line.strip() for block in code_blocks for line in block.splitlines()}
     for candidate in data["candidates"]:
@@ -218,7 +223,7 @@ def export_material(selection_path, data, validation, output):
             continue
         require(candidate.get("deck_code_status") == "verified",
                 f"export {candidate['id']}: verified deck code required; keep unresolved decks pending")
-        require(candidate.get("deck_code") in printed_codes,
+        require(strict_material or candidate.get("deck_code") in printed_codes,
                 f"export {candidate['id']}: selected deck code missing from a copyable code block")
     if validation["coverage"] == "partial":
         require(review.get("gaps_disclosed") is True, "review: disclose partial coverage")

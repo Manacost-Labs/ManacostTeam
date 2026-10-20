@@ -64,7 +64,8 @@ def initialize(directory: Path, as_of: str, game_format: str) -> Path:
     directory.mkdir(parents=True, exist_ok=False)
     (directory / "sources").mkdir()
     selection = {
-        "schema_version": 2, "discovery_policy": 1, "as_of": as_of, "format": game_format,
+        "schema_version": 2, "discovery_policy": 1, "material_policy": 1,
+        "as_of": as_of, "format": game_format,
         "patch": "", "patch_source_id": "", "meta_source_ids": [],
         "sources": [], "candidates": [], "fun_cards": [],
         "evidence": [], "search_log": [],
@@ -83,6 +84,8 @@ def initialize(directory: Path, as_of: str, game_format: str) -> Path:
 
 def validate(data: object, directory: Path) -> dict:
     require(isinstance(data, dict), "selection must be an object")
+    from material import policy
+    policy(data)
     require(type(data.get("schema_version")) is int and data["schema_version"] in (1, 2),
             "schema_version must be 1 or 2")
     as_of = iso_date(data.get("as_of"))
@@ -235,6 +238,10 @@ def main(argv: list[str] | None = None) -> int:
     catalog = commands.add_parser("catalog", help="Import saved actual MCP request/response as unverified leads")
     catalog.add_argument("selection", type=Path)
     catalog.add_argument("capture", type=Path)
+    for name, help_text in (("outline", "Plan the editorial issue from selected research; no prose or approval"),
+                            ("audit", "Read-only Markdown structure/code audit; independent of incomplete meta research")):
+        command = commands.add_parser(name, help=help_text)
+        command.add_argument("selection", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.command == "init":
@@ -254,7 +261,11 @@ def main(argv: list[str] | None = None) -> int:
             result = ingest(args.selection, args.capture)
         else:
             data = json.loads(args.selection.read_text(encoding="utf-8-sig"))
-            if args.command in ("next", "plan"):
+            if args.command in ("outline", "audit"):
+                from material import audit, outline
+                result = (outline(data) if args.command == "outline" else
+                          audit(data, (args.selection.parent / "material.md").read_text(encoding="utf-8-sig")))
+            elif args.command in ("next", "plan"):
                 result = (plan(data, args.limit) if args.command == "plan"
                           else next_actions(data, args.limit))
             else:
@@ -262,7 +273,7 @@ def main(argv: list[str] | None = None) -> int:
                 if args.command == "export":
                     result = export_material(args.selection, data, result, args.output)
         print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 0
+        return 1 if args.command == "audit" and result["errors"] else 0
     except (OSError, ValueError) as exc:
         print(json.dumps({"status": "invalid", "error": str(exc)}, ensure_ascii=False),
               file=sys.stderr)
