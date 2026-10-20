@@ -92,6 +92,20 @@ def classify_failure(output: str, code: int | None) -> str:
     return f"cli завершился с кодом {code}"
 
 
+def claude_system_prompt_args(system: str, scratch: str) -> list[str]:
+    """Keep system authority without putting unbounded text in process argv.
+
+    The caller owns a per-call temporary directory and keeps it alive until
+    the CLI has exited, including timeout/error cleanup.
+    """
+    if not system:
+        return []
+    path = os.path.join(scratch, "system-prompt.txt")
+    with open(path, "wb") as handle:
+        handle.write(system.encode("utf-8"))
+    return ["--system-prompt-file", path]
+
+
 class Backend:
     """Сборка команды для конкретного CLI. Prompt всегда идёт через stdin,
     чтобы не упираться в длину аргументов и не светить текст в списке
@@ -149,8 +163,7 @@ class Backend:
                 "--bare",
                 "--no-session-persistence",
             ]
-            if system:
-                argv += ["--system-prompt", system]
+            argv += claude_system_prompt_args(system, scratch)
             if self.model:
                 argv += ["--model", self.model]
             return argv + self.extra, prompt
