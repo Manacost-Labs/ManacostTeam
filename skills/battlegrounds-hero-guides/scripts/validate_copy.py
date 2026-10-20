@@ -13,12 +13,20 @@ LINK_OR_CITATION = re.compile(
     r"https?://|www\.|\]\([^)]*\)|\[\^\d+\]|\[cite[:\]]|cite",
     re.IGNORECASE,
 )
+NON_PREFERRED_TERMS = {
+    "подарок вместо тёмного дара": re.compile(r"\bподар(?:ок|к[а-яё]*)\b", re.IGNORECASE),
+    "доска вместо стола": re.compile(r"\bдоск\w*\b", re.IGNORECASE),
+    "магазин вместо таверны": re.compile(r"\bмагазин\w*\b", re.IGNORECASE),
+}
 
 
 def validate(source: str) -> list[str]:
     issues: list[str] = []
     if LINK_OR_CITATION.search(source):
         issues.append("В тексте есть ссылка или маркер цитирования.")
+    for label, pattern in NON_PREFERRED_TERMS.items():
+        if pattern.search(source):
+            issues.append(f"Нежелательный термин: {label}.")
 
     sections = re.split(r"(?=^###\s+\S)", source, flags=re.MULTILINE)
     if sections[0].strip():
@@ -56,7 +64,7 @@ def main() -> int:
         for issue in issues:
             print(f"ERROR: {issue}", file=sys.stderr)
         return 1
-    print("OK: структура и отсутствие ссылок проверены; игровые факты требуют ручной проверки.")
+    print("OK: структура, терминология и отсутствие ссылок проверены; игровые факты требуют ручной проверки.")
     return 0
 
 
