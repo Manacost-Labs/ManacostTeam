@@ -81,6 +81,28 @@ def test_rhetorical_clause_does_not_hide_a_factual_negation():
     assert any(item["field"] == "negation" for item in semantic_diff.compare(before, after))
 
 
+def test_url_destination_is_not_a_fact_for_negation_alignment():
+    url = "https://example.org/" + "/".join(f"segment{n}" for n in range(40))
+    after = f"Архивное описание из [публикации]({url}) не призывает играть сейчас."
+    assert semantic_diff.negation_flips(url, after) == []
+    assert semantic_diff.negation_flips(after, url) == []
+    assert semantic_diff.link_drift(url, after) == []
+    assert semantic_diff.link_drift(url, after.replace("/segment39", "/other"))
+
+
+def test_url_path_negation_is_not_a_prose_negation():
+    url = "https://example.org/not/never"
+    assert semantic_diff.negation_flips(f"Читайте {url}.", "Читайте описание.") == []
+
+
+@pytest.mark.parametrize("wrapper", ["{}", "[{}](https://example.org/not/never)"])
+def test_real_negation_beside_a_link_or_in_its_label_still_blocks(wrapper):
+    before = wrapper.format("Бранн не удваивает боевой клич Мастера брони.")
+    after = wrapper.format("Бранн удваивает боевой клич Мастера брони.")
+    assert semantic_diff.negation_flips(before, after)
+    assert semantic_diff.negation_flips(after, before)
+
+
 def test_same_numbers_cannot_be_swapped_between_facts():
     before = "Мастер брони стоит 3 маны. Боевой якорррь стоит 5 маны."
     after = "Мастер брони стоит 5 маны. Боевой якорррь стоит 3 маны."

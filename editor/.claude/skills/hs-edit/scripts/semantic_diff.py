@@ -12,6 +12,7 @@ from html import unescape
 from pathlib import Path
 
 NEGATION = re.compile(r"\b(?:не|нельзя|никогда|not|never|don't|do\s+not)\b", re.IGNORECASE)
+URL_TARGET = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
 TOKENS = re.compile(r"[a-zа-яёа-я0-9]+", re.IGNORECASE)
 NUMBERS = re.compile(r"(?<!\w)\d+(?:[.,]\d+)?%?(?!\w)")
 CONTRACT_FIELDS = (
@@ -74,7 +75,8 @@ def _sentences(text: str) -> list[str]:
 
 
 def _semantic_tokens(text: str) -> set[str]:
-    without_negation = NEGATION.sub(" ", text.casefold())
+    # Destinations are checked by link_drift, not prose similarity. Keep labels.
+    without_negation = NEGATION.sub(" ", URL_TARGET.sub(" ", text.casefold()))
     return set(TOKENS.findall(without_negation))
 
 
@@ -110,7 +112,8 @@ def negation_flips(before: str, after: str) -> list[dict]:
             if (
                 similarity < 0.6
                 or not best
-                or bool(NEGATION.search(source)) == bool(NEGATION.search(best))
+                or bool(NEGATION.search(URL_TARGET.sub(" ", source)))
+                == bool(NEGATION.search(URL_TARGET.sub(" ", best)))
             ):
                 continue
             left, right = (best, source) if reverse else (source, best)
