@@ -593,6 +593,10 @@ func factRepairFindings(h *ResearchHandoff, candidate string, review FactReview,
 		}
 	}
 	seen := map[string]bool{}
+	sanitized := review
+	sanitized.Claims = make([]FactAttestation, 0, len(review.Claims))
+	var omittedSupported []string
+	groundedNegative := len(review.UnsupportedClaims) > 0
 	for _, item := range review.Claims {
 		if seen[item.ClaimID] || (item.Status != "supported" && item.Status != "insufficient" && item.Status != "contradicted") {
 			return nil
@@ -628,18 +632,38 @@ func factRepairFindings(h *ResearchHandoff, candidate string, review FactReview,
 				return nil
 			}
 		}
+		quoted := true
 		for _, quote := range []string{item.ActionQuote, item.ConditionQuote, item.ExceptionQuote, item.ConfidenceQuote} {
 			if quote != "" && !strings.Contains(candidate, quote) {
-				return nil
+				quoted = false
 			}
 		}
+		if !quoted {
+			// A faulty positive bookkeeping row cannot erase an independently
+			// grounded negative quote. Omit it from repair-only feedback; a
+			// fresh full review is still required before any acceptance.
+			if item.Status != "supported" {
+				return nil
+			}
+			omittedSupported = append(omittedSupported, item.ClaimID)
+			continue
+		}
+		sanitized.Claims = append(sanitized.Claims, item)
+		groundedNegative = groundedNegative || item.Status != "supported"
 	}
 	for _, quote := range review.UnsupportedClaims {
 		if strings.TrimSpace(quote) == "" || !strings.Contains(candidate, quote) {
 			return nil
 		}
 	}
-	raw, _ := json.Marshal(review)
+	var evidence any = review
+	if len(omittedSupported) > 0 {
+		if !groundedNegative {
+			return nil
+		}
+		evidence = map[string]any{"repair_only": true, "sanitized_review": sanitized, "omitted_supported_claim_ids": omittedSupported}
+	}
+	raw, _ := json.Marshal(evidence)
 	return []analyzers.Finding{{Analyzer: "fact-review", RuleID: "handoff_fact_review", Severity: "error", Message: cause.Error() + ". Исправь отмеченные утверждения по research_handoff и сохрани остальные полезные фразы; положительная повторная проверка обязательна.", Evidence: string(raw)}}
 }
 
