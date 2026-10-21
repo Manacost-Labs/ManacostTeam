@@ -1,7 +1,7 @@
 {
   "registry_version": "1.0",
   "domain": "hearthstone",
-  "updated_at": "2026-09-02",
+  "updated_at": "2026-10-21",
   "_comment": "Known source venues for Hearthstone research. Entries seed direct opens through registry_seed.py and let search_coverage.py report how much of a run came from known venues. Presence here is not an endorsement of any claim: inspect method, filters, patch window, and access limits for every use. Creator qualification is recorded as observed, never assumed.",
   "hosts": [
     {
@@ -9,9 +9,16 @@
       "host": "hearthstone.blizzard.com",
       "class": "official",
       "authority": 5,
-      "modes": ["all"],
-      "use_for": ["primary", "freshness"],
-      "entry_urls": ["https://hearthstone.blizzard.com/en-us/news"],
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "primary",
+        "freshness"
+      ],
+      "entry_urls": [
+        "https://hearthstone.blizzard.com/en-us/news"
+      ],
       "notes": "Patch notes, balance updates, season announcements. Patch-note articles live under /en-us/news/<article_id>; the slug is optional."
     },
     {
@@ -19,9 +26,16 @@
       "host": "us.forums.blizzard.com",
       "class": "official",
       "authority": 5,
-      "modes": ["all"],
-      "use_for": ["primary", "freshness"],
-      "entry_urls": ["https://us.forums.blizzard.com/en/hearthstone/c/announcements/8"],
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "primary",
+        "freshness"
+      ],
+      "entry_urls": [
+        "https://us.forums.blizzard.com/en/hearthstone/c/announcements/8"
+      ],
       "notes": "Developer insights and hotfix threads that never reach the news site, for example 36.2.1."
     },
     {
@@ -29,9 +43,15 @@
       "host": "news.blizzard.com",
       "class": "official",
       "authority": 4,
-      "modes": ["all"],
-      "use_for": ["primary"],
-      "entry_urls": ["https://news.blizzard.com/en-us/hearthstone"],
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "primary"
+      ],
+      "entry_urls": [
+        "https://news.blizzard.com/en-us/hearthstone"
+      ],
       "notes": "Cross-franchise mirror of Hearthstone announcements; prefer hearthstone.blizzard.com as the canonical lineage."
     },
     {
@@ -39,19 +59,40 @@
       "host": "hs.blizzard.cn",
       "class": "official",
       "authority": 5,
-      "modes": ["all"],
-      "use_for": ["primary", "localized"],
-      "entry_urls": ["https://hs.blizzard.cn/"],
-      "notes": "Chinese official announcements; dates and content can differ from the global site."
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "primary",
+        "localized"
+      ],
+      "entry_urls": [
+        "https://hs.blizzard.cn/"
+      ],
+      "notes": "Chinese official announcements; dates and content can differ from the global site.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://hs.blizzard.cn/"
+      ],
+      "language": "zh-CN",
+      "source_kind": "official",
+      "extraction_notes": "CN announcements; distinguish CN availability from global rules."
     },
     {
       "id": "playhearthstone-x",
       "host": "x.com",
       "class": "official_social",
       "authority": 4,
-      "modes": ["all"],
-      "use_for": ["x", "freshness"],
-      "entry_urls": ["https://x.com/PlayHearthstone"],
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "x",
+        "freshness"
+      ],
+      "entry_urls": [
+        "https://x.com/PlayHearthstone"
+      ],
       "notes": "Balance teasers and dates appear here before patch notes. Inspect the direct post."
     },
     {
@@ -59,9 +100,16 @@
       "host": "api.kolodahearthstone.com",
       "class": "statistics",
       "authority": 4,
-      "modes": ["all"],
-      "use_for": ["statistics", "primary"],
-      "entry_urls": ["https://api.kolodahearthstone.com/v1"],
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "statistics",
+        "primary"
+      ],
+      "entry_urls": [
+        "https://api.kolodahearthstone.com/v1"
+      ],
       "notes": "First-party cached statistics and official RU/EN names by DBF. Check meta.fetched_at and meta.stale; statistics do not establish causation."
     },
     {
@@ -69,9 +117,17 @@
       "host": "hsreplay.net",
       "class": "statistics",
       "authority": 4,
-      "modes": ["constructed", "battlegrounds"],
-      "use_for": ["statistics"],
-      "entry_urls": ["https://hsreplay.net/meta/", "https://hsreplay.net/battlegrounds/heroes/"],
+      "modes": [
+        "constructed",
+        "battlegrounds"
+      ],
+      "use_for": [
+        "statistics"
+      ],
+      "entry_urls": [
+        "https://hsreplay.net/meta/",
+        "https://hsreplay.net/battlegrounds/heroes/"
+      ],
       "notes": "Large-sample deck, archetype, hero, and minion statistics. Record rank filter, region, time window, and patch filter for every number."
     },
     {
@@ -79,9 +135,15 @@
       "host": "www.hsguru.com",
       "class": "statistics",
       "authority": 4,
-      "modes": ["constructed"],
-      "use_for": ["statistics"],
-      "entry_urls": ["https://www.hsguru.com/meta"],
+      "modes": [
+        "constructed"
+      ],
+      "use_for": [
+        "statistics"
+      ],
+      "entry_urls": [
+        "https://www.hsguru.com/meta"
+      ],
       "notes": "Constructed meta and archetype analyses with rank and period filters; record min_games."
     },
     {
@@ -89,9 +151,15 @@
       "host": "api.hearthstonejson.com",
       "class": "structured_data",
       "authority": 4,
-      "modes": ["all"],
-      "use_for": ["primary"],
-      "entry_urls": ["https://api.hearthstonejson.com/v1/latest/enUS/cards.json"],
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "primary"
+      ],
+      "entry_urls": [
+        "https://api.hearthstonejson.com/v1/latest/enUS/cards.json"
+      ],
       "notes": "Structured card database extracted from the client; use for exact card text and DBF IDs."
     },
     {
@@ -99,9 +167,15 @@
       "host": "hearthstone.wiki.gg",
       "class": "community_reference",
       "authority": 3,
-      "modes": ["all"],
-      "use_for": ["general"],
-      "entry_urls": ["https://hearthstone.wiki.gg/"],
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "general"
+      ],
+      "entry_urls": [
+        "https://hearthstone.wiki.gg/"
+      ],
       "notes": "Community-maintained reference; useful for terminology and history, not a primary source for current rules."
     },
     {
@@ -109,8 +183,12 @@
       "host": "www.reddit.com",
       "class": "community",
       "authority": 2,
-      "modes": ["all"],
-      "use_for": ["reddit"],
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "reddit"
+      ],
       "entry_urls": [
         "https://www.reddit.com/r/BobsTavern/",
         "https://www.reddit.com/r/CompetitiveHS/",
@@ -123,8 +201,13 @@
       "host": "www.youtube.com",
       "class": "community",
       "authority": 2,
-      "modes": ["all"],
-      "use_for": ["youtube", "experts"],
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
       "entry_urls": [],
       "notes": "Authority depends on the creator; see creators. Verify gameplay patch separately from upload date."
     },
@@ -133,9 +216,16 @@
       "host": "www.amalgadon.com",
       "class": "specialist_secondary",
       "authority": 3,
-      "modes": ["battlegrounds"],
-      "use_for": ["general", "freshness"],
-      "entry_urls": ["https://www.amalgadon.com/"],
+      "modes": [
+        "battlegrounds"
+      ],
+      "use_for": [
+        "general",
+        "freshness"
+      ],
+      "entry_urls": [
+        "https://www.amalgadon.com/"
+      ],
       "notes": "Battlegrounds patch digests and minion reference; secondary to Blizzard patch notes."
     },
     {
@@ -143,40 +233,1076 @@
       "host": "hsbg.cards",
       "class": "specialist_secondary",
       "authority": 3,
-      "modes": ["battlegrounds"],
-      "use_for": ["general"],
-      "entry_urls": ["https://hsbg.cards/"],
+      "modes": [
+        "battlegrounds"
+      ],
+      "use_for": [
+        "general"
+      ],
+      "entry_urls": [
+        "https://hsbg.cards/"
+      ],
       "notes": "Battlegrounds card and pool browser; confirm pool state against the current patch."
+    },
+    {
+      "id": "hearthstone-decks",
+      "host": "www.hearthstone-decks.com",
+      "class": "decks",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://www.hearthstone-decks.com/"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.hearthstone-decks.com/"
+      ],
+      "language": "fr",
+      "source_kind": "decks",
+      "extraction_notes": "List, code, author, format, patch; votes are not win rates."
+    },
+    {
+      "id": "judgehype",
+      "host": "hearthstone.judgehype.com",
+      "class": "media",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://hearthstone.judgehype.com/"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://hearthstone.judgehype.com/"
+      ],
+      "language": "fr",
+      "source_kind": "media",
+      "extraction_notes": "News and guides; follow primary announcement links."
+    },
+    {
+      "id": "ptt-hearthstone",
+      "host": "www.ptt.cc",
+      "class": "forum",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://www.ptt.cc/bbs/Hearthstone/index.html"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.ptt.cc/bbs/Hearthstone/index.html"
+      ],
+      "language": "zh-TW",
+      "source_kind": "forum",
+      "extraction_notes": "Read thread and replies; retain local date and original Traditional Chinese."
+    },
+    {
+      "id": "gamer-hearthstone",
+      "host": "forum.gamer.com.tw",
+      "class": "forum",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://forum.gamer.com.tw/B.php?bsn=24044"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://forum.gamer.com.tw/B.php?bsn=24044"
+      ],
+      "language": "zh-TW",
+      "source_kind": "forum",
+      "extraction_notes": "Read opening post and substantive replies; distinguish quoted reposts."
+    },
+    {
+      "id": "outofgames",
+      "host": "outof.games",
+      "class": "media",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "general"
+      ],
+      "entry_urls": [
+        "https://outof.games/realms/hearthstone/"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://outof.games/realms/hearthstone/"
+      ],
+      "language": "en",
+      "source_kind": "media",
+      "extraction_notes": "News, decks and guides; inspect dates and original sources."
+    },
+    {
+      "id": "hearthpwn-decks",
+      "host": "www.hearthpwn.com",
+      "class": "decks",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "general"
+      ],
+      "entry_urls": [
+        "https://www.hearthpwn.com/decks"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.hearthpwn.com/decks"
+      ],
+      "language": "en",
+      "source_kind": "decks",
+      "extraction_notes": "Full list, code, author and updates; check legality independently."
+    },
+    {
+      "id": "hearthpwn-forums",
+      "host": "www.hearthpwn.com",
+      "class": "forum",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "general"
+      ],
+      "entry_urls": [
+        "https://www.hearthpwn.com/forums"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.hearthpwn.com/forums"
+      ],
+      "language": "en",
+      "source_kind": "forum",
+      "extraction_notes": "Original thread plus replies and contrary cases."
+    },
+    {
+      "id": "note-hearthstone",
+      "host": "note.com",
+      "class": "community",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://note.com/"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://note.com/"
+      ],
+      "language": "ja",
+      "source_kind": "community",
+      "extraction_notes": "Topic-scoped Japanese author search; home feed is not Hearthstone evidence."
+    },
+    {
+      "id": "coin-concede",
+      "host": "coinconcede.com",
+      "class": "podcast",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "experts"
+      ],
+      "entry_urls": [
+        "https://coinconcede.com/episodes/"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://coinconcede.com/episodes/"
+      ],
+      "language": "en",
+      "source_kind": "podcast",
+      "extraction_notes": "Show notes, episode date, original audio/GUID and YouTube mirror; archive once.",
+      "feed_urls": [
+        "https://feeds.libsyn.com/70241/rss"
+      ],
+      "feed_verified_at": "2026-10-21"
+    },
+    {
+      "id": "born-to-be-wild",
+      "host": "www.borntobewildhs.com",
+      "class": "podcast",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "experts"
+      ],
+      "entry_urls": [
+        "https://www.borntobewildhs.com/podcast"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.borntobewildhs.com/podcast"
+      ],
+      "language": "en",
+      "source_kind": "podcast",
+      "extraction_notes": "Wild format podcast; keep format context and archive original-language segments.",
+      "feed_urls": [
+        "https://anchor.fm/s/14c0b64c/podcast/rss"
+      ],
+      "feed_verified_at": "2026-10-21"
+    },
+    {
+      "id": "beerbrick",
+      "host": "beerbrick.com",
+      "class": "decks",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://beerbrick.com/category/deck/"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://beerbrick.com/category/deck/"
+      ],
+      "language": "ja",
+      "source_kind": "decks",
+      "extraction_notes": "Ranked lists with player, region, date and code; author results are not aggregate statistics."
+    },
+    {
+      "id": "inven",
+      "host": "hs.inven.co.kr",
+      "class": "community",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://hs.inven.co.kr/"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://hs.inven.co.kr/"
+      ],
+      "language": "ko",
+      "source_kind": "community",
+      "extraction_notes": "Korean deck and forum search; retain author, date, deck code and original text."
+    },
+    {
+      "id": "vs-podcast",
+      "host": "www.vicioussyndicate.com",
+      "class": "podcast",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "experts"
+      ],
+      "entry_urls": [
+        "https://www.vicioussyndicate.com/data-reaper-podcast/"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.vicioussyndicate.com/data-reaper-podcast/"
+      ],
+      "language": "en",
+      "source_kind": "podcast",
+      "extraction_notes": "Distinguish spoken analysis from published Data Reaper tables and sample filters.",
+      "feed_urls": [
+        "https://anchor.fm/s/e47aa0/podcast/rss"
+      ],
+      "feed_verified_at": "2026-10-21"
     }
   ],
   "datasets": [
-    {"id": "koloda-battlegrounds-heroes", "host": "api.kolodahearthstone.com", "operation": "battlegrounds-heroes", "modes": ["battlegrounds"], "use_for": ["statistics"], "command": "python3 scripts/community_sources.py stats-api --operation battlegrounds-heroes"},
-    {"id": "koloda-battlegrounds-minions", "host": "api.kolodahearthstone.com", "operation": "battlegrounds-minions", "modes": ["battlegrounds"], "use_for": ["statistics"], "command": "python3 scripts/community_sources.py stats-api --operation battlegrounds-minions"},
-    {"id": "koloda-constructed-archetypes", "host": "api.kolodahearthstone.com", "operation": "constructed-archetypes", "modes": ["constructed"], "use_for": ["statistics"], "command": "python3 scripts/community_sources.py stats-api --operation constructed-archetypes"},
-    {"id": "koloda-constructed-decks", "host": "api.kolodahearthstone.com", "operation": "constructed-decks", "modes": ["constructed"], "use_for": ["statistics"], "command": "python3 scripts/community_sources.py stats-api --operation constructed-decks"},
-    {"id": "koloda-hsguru-meta", "host": "api.kolodahearthstone.com", "operation": "hsguru-meta", "modes": ["constructed"], "use_for": ["statistics"], "command": "python3 scripts/community_sources.py stats-api --operation hsguru-meta"},
-    {"id": "koloda-arena-classes", "host": "api.kolodahearthstone.com", "operation": "arena-classes", "modes": ["arena"], "use_for": ["statistics"], "command": "python3 scripts/community_sources.py stats-api --operation arena-classes"},
-    {"id": "koloda-parsing-reliability", "host": "api.kolodahearthstone.com", "operation": "parsing-reliability", "modes": ["all"], "use_for": ["statistics"], "command": "python3 scripts/community_sources.py stats-api --operation parsing-reliability", "notes": "Check before trusting any cached dataset."}
+    {
+      "id": "koloda-battlegrounds-heroes",
+      "host": "api.kolodahearthstone.com",
+      "operation": "battlegrounds-heroes",
+      "modes": [
+        "battlegrounds"
+      ],
+      "use_for": [
+        "statistics"
+      ],
+      "command": "python3 scripts/community_sources.py stats-api --operation battlegrounds-heroes"
+    },
+    {
+      "id": "koloda-battlegrounds-minions",
+      "host": "api.kolodahearthstone.com",
+      "operation": "battlegrounds-minions",
+      "modes": [
+        "battlegrounds"
+      ],
+      "use_for": [
+        "statistics"
+      ],
+      "command": "python3 scripts/community_sources.py stats-api --operation battlegrounds-minions"
+    },
+    {
+      "id": "koloda-constructed-archetypes",
+      "host": "api.kolodahearthstone.com",
+      "operation": "constructed-archetypes",
+      "modes": [
+        "constructed"
+      ],
+      "use_for": [
+        "statistics"
+      ],
+      "command": "python3 scripts/community_sources.py stats-api --operation constructed-archetypes"
+    },
+    {
+      "id": "koloda-constructed-decks",
+      "host": "api.kolodahearthstone.com",
+      "operation": "constructed-decks",
+      "modes": [
+        "constructed"
+      ],
+      "use_for": [
+        "statistics"
+      ],
+      "command": "python3 scripts/community_sources.py stats-api --operation constructed-decks"
+    },
+    {
+      "id": "koloda-hsguru-meta",
+      "host": "api.kolodahearthstone.com",
+      "operation": "hsguru-meta",
+      "modes": [
+        "constructed"
+      ],
+      "use_for": [
+        "statistics"
+      ],
+      "command": "python3 scripts/community_sources.py stats-api --operation hsguru-meta"
+    },
+    {
+      "id": "koloda-arena-classes",
+      "host": "api.kolodahearthstone.com",
+      "operation": "arena-classes",
+      "modes": [
+        "arena"
+      ],
+      "use_for": [
+        "statistics"
+      ],
+      "command": "python3 scripts/community_sources.py stats-api --operation arena-classes"
+    },
+    {
+      "id": "koloda-parsing-reliability",
+      "host": "api.kolodahearthstone.com",
+      "operation": "parsing-reliability",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "statistics"
+      ],
+      "command": "python3 scripts/community_sources.py stats-api --operation parsing-reliability",
+      "notes": "Check before trusting any cached dataset."
+    }
   ],
   "creators": [
-    {"id": "jeefhs", "name": "JeefHS", "platform": "youtube", "modes": ["battlegrounds"], "use_for": ["youtube", "experts"], "observed_urls": ["https://www.youtube.com/watch?v=qvhwVb1NSOw", "https://www.youtube.com/watch?v=hyXzLcNXtfE"], "qualification": "observed in prior bundles as a Battlegrounds creator; rank not verified in the registry"},
-    {"id": "shadybunny", "name": "Shadybunny", "platform": "youtube", "modes": ["battlegrounds"], "use_for": ["youtube", "experts"], "observed_urls": ["https://www.youtube.com/watch?v=K_HzsX8ZAo4"], "qualification": "observed in prior bundles as Battlegrounds commentary; rank not verified in the registry"},
-    {"id": "xqn", "name": "XQN", "platform": "youtube", "modes": ["battlegrounds"], "use_for": ["youtube", "experts"], "observed_urls": ["https://www.youtube.com/watch?v=K-33wFhEMVI"], "qualification": "observed in prior bundles; rank not verified in the registry"},
-    {"id": "kris-o-five", "name": "Hearthstone Tips by Kris O Five", "platform": "youtube", "modes": ["constructed"], "use_for": ["youtube", "experts"], "observed_urls": ["https://www.youtube.com/watch?v=SOB_J8oyA50"], "qualification": "observed in prior bundles; rank not verified in the registry"},
-    {"id": "zeddy", "name": "Zeddy Hearthstone", "platform": "youtube", "modes": ["constructed"], "use_for": ["youtube", "experts"], "observed_urls": ["https://www.youtube.com/watch?v=LvwahdU46og"], "qualification": "observed in prior bundles; commentary channel, treat as community reasoning unless rank evidence is attached"},
-    {"id": "clarkhellscream", "name": "ClarkHELLSCREAM", "platform": "x", "modes": ["constructed"], "use_for": ["x"], "observed_urls": ["https://x.com/ClarkHELLSCREAM"], "qualification": "observed in prior bundles; rank not verified in the registry"}
+    {
+      "id": "jeefhs",
+      "name": "JeefHS",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@JeefHS",
+        "https://www.youtube.com/watch?v=qvhwVb1NSOw",
+        "https://www.youtube.com/watch?v=hyXzLcNXtfE"
+      ],
+      "qualification": "observed in prior bundles as a Battlegrounds creator; rank not verified in the registry",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@JeefHS"
+      ],
+      "channel_url": "https://www.youtube.com/@JeefHS",
+      "language": "und"
+    },
+    {
+      "id": "shadybunny",
+      "name": "Shadybunny",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@Shadybunny",
+        "https://www.youtube.com/watch?v=K_HzsX8ZAo4"
+      ],
+      "qualification": "observed in prior bundles as Battlegrounds commentary; rank not verified in the registry",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@Shadybunny"
+      ],
+      "channel_url": "https://www.youtube.com/@Shadybunny",
+      "language": "und"
+    },
+    {
+      "id": "xqn",
+      "name": "XQN",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@xqn_thesad",
+        "https://www.youtube.com/watch?v=K-33wFhEMVI"
+      ],
+      "qualification": "observed in prior bundles; rank not verified in the registry",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@xqn_thesad"
+      ],
+      "channel_url": "https://www.youtube.com/@xqn_thesad",
+      "language": "und"
+    },
+    {
+      "id": "kris-o-five",
+      "name": "Hearthstone Tips by Kris O Five",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@KrisOFiveHearthstone",
+        "https://www.youtube.com/watch?v=SOB_J8oyA50"
+      ],
+      "qualification": "observed in prior bundles; rank not verified in the registry",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@KrisOFiveHearthstone"
+      ],
+      "channel_url": "https://www.youtube.com/@KrisOFiveHearthstone",
+      "language": "und"
+    },
+    {
+      "id": "zeddy",
+      "name": "Zeddy Hearthstone",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@ZeddyHearthstone",
+        "https://www.youtube.com/watch?v=LvwahdU46og"
+      ],
+      "qualification": "observed in prior bundles; commentary channel, treat as community reasoning unless rank evidence is attached",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@ZeddyHearthstone"
+      ],
+      "channel_url": "https://www.youtube.com/@ZeddyHearthstone",
+      "language": "und"
+    },
+    {
+      "id": "clarkhellscream",
+      "name": "ClarkHELLSCREAM",
+      "platform": "x",
+      "modes": [
+        "constructed"
+      ],
+      "use_for": [
+        "x"
+      ],
+      "observed_urls": [
+        "https://x.com/ClarkHELLSCREAM"
+      ],
+      "qualification": "observed in prior bundles; rank not verified in the registry"
+    },
+    {
+      "id": "youtube-hearthtech7354",
+      "name": "HearthTech7354",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@HearthTech7354"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@HearthTech7354"
+      ],
+      "channel_url": "https://www.youtube.com/@HearthTech7354",
+      "language": "und"
+    },
+    {
+      "id": "youtube-breadandbutterhs",
+      "name": "BreadandButterHs",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@BreadandButterHs"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@BreadandButterHs"
+      ],
+      "channel_url": "https://www.youtube.com/@BreadandButterHs",
+      "language": "und"
+    },
+    {
+      "id": "youtube-guddumpog",
+      "name": "guddumpog",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@guddumpog"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@guddumpog"
+      ],
+      "channel_url": "https://www.youtube.com/@guddumpog",
+      "language": "und"
+    },
+    {
+      "id": "youtube-shadybunny2",
+      "name": "Shadybunny2",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@Shadybunny2"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@Shadybunny2"
+      ],
+      "channel_url": "https://www.youtube.com/@Shadybunny2",
+      "language": "und"
+    },
+    {
+      "id": "youtube-rduhs",
+      "name": "RduHS",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@RduHS"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@RduHS"
+      ],
+      "channel_url": "https://www.youtube.com/@RduHS",
+      "language": "und"
+    },
+    {
+      "id": "youtube-slyders_hs",
+      "name": "Slyders_HS",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@Slyders_HS"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@Slyders_HS"
+      ],
+      "channel_url": "https://www.youtube.com/@Slyders_HS",
+      "language": "und"
+    },
+    {
+      "id": "youtube-dogdogtwitch",
+      "name": "dogdogtwitch",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@dogdogtwitch"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@dogdogtwitch"
+      ],
+      "channel_url": "https://www.youtube.com/@dogdogtwitch",
+      "language": "und"
+    },
+    {
+      "id": "youtube-sevel07",
+      "name": "Sevel07",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@Sevel07"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@Sevel07"
+      ],
+      "channel_url": "https://www.youtube.com/@Sevel07",
+      "language": "und"
+    },
+    {
+      "id": "youtube-guddummit",
+      "name": "guddummit",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@guddummit"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@guddummit"
+      ],
+      "channel_url": "https://www.youtube.com/@guddummit",
+      "language": "und"
+    },
+    {
+      "id": "youtube-asmodaitv",
+      "name": "AsmodaiTV",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@AsmodaiTV"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@AsmodaiTV"
+      ],
+      "channel_url": "https://www.youtube.com/@AsmodaiTV",
+      "language": "und"
+    },
+    {
+      "id": "youtube-rechotgames",
+      "name": "RechotGames",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@RechotGames/videos"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@RechotGames/videos"
+      ],
+      "channel_url": "https://www.youtube.com/@RechotGames/videos",
+      "language": "und"
+    },
+    {
+      "id": "youtube-markmckz",
+      "name": "MarkMcKz",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@MarkMcKz"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@MarkMcKz"
+      ],
+      "channel_url": "https://www.youtube.com/@MarkMcKz",
+      "language": "und"
+    },
+    {
+      "id": "youtube-thijstcg",
+      "name": "ThijsTCG",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@ThijsTCG"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@ThijsTCG"
+      ],
+      "channel_url": "https://www.youtube.com/@ThijsTCG",
+      "language": "und"
+    },
+    {
+      "id": "youtube-funkimonki",
+      "name": "FunkiMonki",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@FunkiMonki"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@FunkiMonki"
+      ],
+      "channel_url": "https://www.youtube.com/@FunkiMonki",
+      "language": "und"
+    },
+    {
+      "id": "youtube-hearthstonemathematics",
+      "name": "HearthstoneMathematics",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@HearthstoneMathematics"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@HearthstoneMathematics"
+      ],
+      "channel_url": "https://www.youtube.com/@HearthstoneMathematics",
+      "language": "und"
+    },
+    {
+      "id": "youtube-chumphs",
+      "name": "ChumpHS",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@ChumpHS"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@ChumpHS"
+      ],
+      "channel_url": "https://www.youtube.com/@ChumpHS",
+      "language": "und"
+    },
+    {
+      "id": "youtube-regishearthbin",
+      "name": "RegisHearthbin",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@RegisHearthbin"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@RegisHearthbin"
+      ],
+      "channel_url": "https://www.youtube.com/@RegisHearthbin",
+      "language": "und"
+    },
+    {
+      "id": "youtube-warshack",
+      "name": "Warshack",
+      "platform": "youtube",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "youtube",
+        "experts"
+      ],
+      "observed_urls": [
+        "https://www.youtube.com/@Warshack"
+      ],
+      "qualification": "Owner-selected channel; current identity, mode, role and rank must be verified.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.youtube.com/@Warshack"
+      ],
+      "channel_url": "https://www.youtube.com/@Warshack",
+      "language": "und"
+    }
   ],
   "communities": [
-    {"id": "r-bobstavern", "platform": "reddit", "url": "https://www.reddit.com/r/BobsTavern/", "modes": ["battlegrounds"], "use_for": ["reddit"], "subreddit": "BobsTavern"},
-    {"id": "r-competitivehs", "platform": "reddit", "url": "https://www.reddit.com/r/CompetitiveHS/", "modes": ["constructed"], "use_for": ["reddit"], "subreddit": "CompetitiveHS"},
-    {"id": "r-hearthstone", "platform": "reddit", "url": "https://www.reddit.com/r/hearthstone/", "modes": ["all"], "use_for": ["reddit"], "subreddit": "hearthstone"},
-    {"id": "r-hearthstonearena", "platform": "reddit", "url": "https://www.reddit.com/r/ArenaHS/", "modes": ["arena"], "use_for": ["reddit"], "subreddit": "ArenaHS"}
+    {
+      "id": "r-bobstavern",
+      "platform": "reddit",
+      "url": "https://www.reddit.com/r/BobsTavern/",
+      "modes": [
+        "battlegrounds"
+      ],
+      "use_for": [
+        "reddit"
+      ],
+      "subreddit": "BobsTavern"
+    },
+    {
+      "id": "r-competitivehs",
+      "platform": "reddit",
+      "url": "https://www.reddit.com/r/CompetitiveHS/",
+      "modes": [
+        "constructed"
+      ],
+      "use_for": [
+        "reddit"
+      ],
+      "subreddit": "CompetitiveHS"
+    },
+    {
+      "id": "r-hearthstone",
+      "platform": "reddit",
+      "url": "https://www.reddit.com/r/hearthstone/",
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "reddit"
+      ],
+      "subreddit": "hearthstone"
+    },
+    {
+      "id": "r-hearthstonearena",
+      "platform": "reddit",
+      "url": "https://www.reddit.com/r/ArenaHS/",
+      "modes": [
+        "arena"
+      ],
+      "use_for": [
+        "reddit"
+      ],
+      "subreddit": "ArenaHS"
+    }
   ],
   "chinese": [
-    {"id": "iyingdi", "host": "www.iyingdi.com", "class": "community_media", "authority": 3, "modes": ["all"], "use_for": ["localized"], "entry_urls": ["https://www.iyingdi.com/"], "notes": "Decks, interviews, tournament reports; ingest through chinese_hearthstone.py."},
-    {"id": "bilibili", "host": "www.bilibili.com", "class": "community", "authority": 2, "modes": ["all"], "use_for": ["localized", "youtube"], "entry_urls": ["https://www.bilibili.com/"], "notes": "Chinese video guides; ingest through chinese_hearthstone.py."},
-    {"id": "nga", "host": "bbs.nga.cn", "class": "community", "authority": 2, "modes": ["all"], "use_for": ["localized", "reddit"], "entry_urls": ["https://bbs.nga.cn/"], "notes": "Chinese forum; ingest through chinese_hearthstone.py."},
-    {"id": "gamersky", "host": "www.gamersky.com", "class": "media", "authority": 2, "modes": ["all"], "use_for": ["localized"], "entry_urls": ["https://www.gamersky.com/"], "notes": "Frequently reposts; track lineage."},
-    {"id": "17173", "host": "hs.17173.com", "class": "media", "authority": 2, "modes": ["all"], "use_for": ["localized"], "entry_urls": ["https://hs.17173.com/"], "notes": "Compilations of multiple decks; bind each deck to its own statistics."}
-  ]
+    {
+      "id": "iyingdi",
+      "host": "www.iyingdi.com",
+      "class": "community_media",
+      "authority": 3,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://www.iyingdi.com/"
+      ],
+      "notes": "Decks, interviews, tournament reports; ingest through chinese_hearthstone.py."
+    },
+    {
+      "id": "bilibili",
+      "host": "www.bilibili.com",
+      "class": "community",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized",
+        "youtube"
+      ],
+      "entry_urls": [
+        "https://www.bilibili.com/"
+      ],
+      "notes": "Chinese video guides; ingest through chinese_hearthstone.py.",
+      "owner_required": true,
+      "owner_urls": [
+        "https://www.bilibili.com/"
+      ],
+      "language": "zh-CN",
+      "source_kind": "video",
+      "extraction_notes": "Search Hearthstone topic, preserve BV/av ID, part and subtitle timing. TranscriptAPI is YouTube-only."
+    },
+    {
+      "id": "nga",
+      "host": "bbs.nga.cn",
+      "class": "community",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized",
+        "reddit"
+      ],
+      "entry_urls": [
+        "https://bbs.nga.cn/"
+      ],
+      "notes": "Chinese forum; ingest through chinese_hearthstone.py."
+    },
+    {
+      "id": "gamersky",
+      "host": "www.gamersky.com",
+      "class": "media",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://www.gamersky.com/"
+      ],
+      "notes": "Frequently reposts; track lineage."
+    },
+    {
+      "id": "17173",
+      "host": "hs.17173.com",
+      "class": "media",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "localized"
+      ],
+      "entry_urls": [
+        "https://hs.17173.com/"
+      ],
+      "notes": "Compilations of multiple decks; bind each deck to its own statistics."
+    }
+  ],
+  "owner_policy": {
+    "required_every_hearthstone_research": true,
+    "source_count": 38,
+    "scope": "Discovery attempt for every owner URL; inspect relevant items; explicitly record blocked, no relevant results or exclusions. No invented coverage."
+  }
 }

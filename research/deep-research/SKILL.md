@@ -5,6 +5,12 @@ description: Conduct evidence-first internet research, source discovery, fact-ch
 
 # Deep Research
 
+For every Hearthstone research run, load [the owner's permanent source library](references/hearthstone-source-library.md).
+Attempt topic discovery across all 38 owner-required sources and retain actual
+per-source outcomes; never infer completed coverage from registry seeds. Reuse
+the project's durable podcast/video transcript archive before any provider call
+or ASR; preserve original-language timed segments for subsequent research.
+
 Produce an auditable research result whose conclusions follow from validated evidence. Accuracy, freshness, and traceability are non-negotiable; the delivered output must also be understandable and easy to edit. Keep research depth inside the evidence workflow instead of exposing internal complexity to the reader.
 
 Never invent descriptions, mechanics, names, causes, examples, or advice to fill a section. Record the gap instead. Before editorial handoff, verify quotes against hashed local source snapshots and obtain a current exact semantic review bound to the claim, evidence, and source record hashes. Partial support requires narrowing and a new review. `editorial_handoff.py --review-digests` computes hashes only; it is not a review or approval.

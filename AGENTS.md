@@ -24,6 +24,16 @@
 
 ## Локальные пайплайны
 
+Во всех исследованиях Hearthstone обязателен обход всех 38 источников владельца:
+`research/deep-research/references/hearthstone-source-library.md` и записи
+`owner_required` в `references/domains/hearthstone-sources.json` этого модуля.
+Веди `owner-source-coverage.json`: реальные попытки, прочитанные материалы и
+явные пробелы. Подкасты/видео сначала ищи в постоянном локальном архиве
+`research/library/transcripts/`; используй TranscriptAPI для YouTube и
+faster-whisper для доступного локального аудио при необходимости. Сохраняй
+расшифровки, не повторяй обработку сохранённых выпусков и не очищай библиотеку
+вместе с `build/`. Полный порядок, метаданные и команды заданы в reference выше.
+
 Сообщение `/meta-report` или `$meta-report` с необязательными аргументами
 запускает `skills/meta-report/SKILL.md`: ResearchTeam собирает текущую мету,
 составы и статистику, EditorTeam пишет отчет по всем классам; независимые

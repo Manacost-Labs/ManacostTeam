@@ -5,6 +5,10 @@
 
 # Shared packaging/test scratch state; source and versioned releases stay tracked.
 /build/
+# Durable local source material; retain between research runs, never package/push.
+/research/library/transcripts/
+/research/library/audio/
+/research/library/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/

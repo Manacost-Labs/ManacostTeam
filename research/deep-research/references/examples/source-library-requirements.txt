@@ -1,0 +1,5 @@
+# Optional local transcription/caption runtime, validated 2026-10-21.
+faster-whisper==1.2.1
+# faster-whisper 1.2.1 still passes metadata_errors, removed in PyAV 19.
+av==15.1.0
+youtube-transcript-api==1.2.4

@@ -143,7 +143,7 @@ def seed_records(
                 "query_id": query_id,
                 "pass": "discovery",
                 "family": family,
-                "language": "zh" if section == "chinese" else "en",
+                "language": entry.get("language", "zh" if section == "chinese" else "en"),
                 "query": f"open registry {section[:-1] if section.endswith('s') else section}: {name}",
                 "status": "planned",
                 "planned_at": planned_at,
