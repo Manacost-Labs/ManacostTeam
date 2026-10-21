@@ -25,7 +25,9 @@ claim that all capabilities of those frameworks have been integrated.
 ParsesUnix's default cheap-first provider order is deliberately not adopted:
 the owner explicitly selected Scrape.do first for web/HSGuru and RedditAPI
 first for Reddit. Public RSS and the first-party Koloda JSON API use native
-HTTP. No browser, account login, scheduler or production parser is installed.
+HTTP. Browser access is an optional extension; account login, a scheduler and
+a production parser are not deployed. See [browser access and the complete
+owner-source audit](browser-source-access.md).
 
 ## Contract before network access
 
@@ -71,7 +73,8 @@ expected patch is `PATCH_MISMATCH`.
 
 ## Retry, cost and route memory
 
-The normal web route is Scrape.do super, then public direct HTTP if useful.
+The normal web route is Scrape.do super, then public direct HTTP if useful,
+then the optional local browser when `--browser` is enabled.
 A single extra Scrape.do render request is allowed only after an actual block
 and a failed native alternative; a bare CSR shell alone does not authorize it.
 There are at most two Scrape.do calls per URL collection. Reddit uses RedditAPI

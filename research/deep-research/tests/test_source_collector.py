@@ -495,6 +495,140 @@ class SourceCollectorTests(unittest.TestCase):
             self.assertEqual(access.main(["collect", "--health"]), 0)
         cli.assert_called_once_with(["--health"])
 
+    def test_public_guest_bootstrap_is_csr_but_permission_denial_stays_terminal(self):
+        raw = {
+            "status": 403,
+            "body": "<title>访客不能直接访问</title><script>guestJs; 如不能自动跳转</script>",
+            "final_url": "https://bbs.nga.cn/thread.php?fid=422",
+        }
+        self.assertEqual(collector.validate(raw, CONTRACT)["verdict"], "CSR_REQUIRED")
+        raw["final_url"] = "https://unrelated.example/"
+        raw["body"] = "<h1>Permission denied</h1>"
+        self.assertEqual(collector.validate(raw, CONTRACT)["verdict"], "ACCESS_DENIED")
+
+    def test_browser_resolves_csr_after_http_routes_and_keeps_one_paid_call(self):
+        pool = Mock(engine="playwright")
+        pool.fetch.return_value = {
+            **html(),
+            "rendered_text": "Hearthstone useful advice",
+        }
+        client = collector.Collector(self.store, now=lambda: self.at, browser=pool)
+        shell = html(text="<div id='app'></div>")
+        with (
+            patch.object(collector, "scrape", return_value=shell) as paid,
+            patch.object(collector, "direct", return_value=shell),
+        ):
+            result = client.collect(URL, CONTRACT)
+        self.assertEqual(result["provider"], "browser")
+        pool.fetch.assert_called_once_with(URL)
+        paid.assert_called_once()
+
+    def test_browser_does_not_follow_genuine_access_denial(self):
+        pool = Mock(engine="playwright")
+        client = collector.Collector(self.store, now=lambda: self.at, browser=pool)
+        with patch.object(
+            collector, "scrape", return_value=html(403, "<h1>Access denied</h1>")
+        ):
+            self.assertEqual(client.collect(URL, CONTRACT)["verdict"], "ACCESS_DENIED")
+        pool.fetch.assert_not_called()
+
+    def test_explicit_browser_probe_uses_separate_identity_and_no_paid_route(self):
+        pool = Mock(engine="playwright")
+        pool.fetch.return_value = html()
+        client = collector.Collector(self.store, now=lambda: self.at, browser=pool)
+        with patch.object(
+            collector, "scrape", return_value=html(403, "<h1>Access denied</h1>")
+        ) as paid:
+            client.collect(URL, CONTRACT)
+            result = client.collect(URL, CONTRACT, browser_only=True)
+        self.assertEqual(result["provider"], "browser")
+        paid.assert_called_once()
+        with self.assertRaisesRegex(ValueError, "BROWSER_ROUTE_REQUIRED"):
+            self.client.collect(URL, CONTRACT, browser_only=True)
+
+    def test_missing_browser_runtime_is_visible_without_extra_paid_csr_retry(self):
+        pool = Mock(engine="playwright")
+        pool.fetch.side_effect = access.AccessError("BROWSER_UNAVAILABLE")
+        client = collector.Collector(self.store, now=lambda: self.at, browser=pool)
+        shell = html(text="<div id='app'></div>")
+        with (
+            patch.object(collector, "scrape", return_value=shell) as paid,
+            patch.object(collector, "direct", return_value=shell),
+        ):
+            self.assertEqual(
+                client.collect(URL, CONTRACT)["verdict"], "BROWSER_UNAVAILABLE"
+            )
+        paid.assert_called_once()
+
+    def test_browser_contract_requires_canary_in_visible_rendered_text(self):
+        raw = {**html(), "rendered_text": "Different visible topic"}
+        self.assertEqual(collector.validate(raw, CONTRACT)["verdict"], "PARSE_FAIL")
+
+    def test_channel_route_returns_metadata_without_opening_or_transcribing_video(self):
+        url = "https://www.youtube.com/@HearthTech7354/videos"
+        payload = {
+            "title": "Hearth Tech",
+            "videos": [{"id": "video123", "title": "Guide"}],
+        }
+        with (
+            patch.object(
+                collector,
+                "youtube_channel",
+                return_value={"status": 200, "body": json.dumps(payload)},
+            ) as channel,
+            patch.object(collector, "scrape") as paid,
+        ):
+            result = self.client.collect(url)
+        self.assertEqual(result["provider"], "transcriptapi-channel")
+        self.assertFalse(result["evidence_validated"])
+        channel.assert_called_once()
+        paid.assert_not_called()
+        self.assertIsNone(
+            collector.youtube_channel_id(
+                "https://youtube.com.attacker.example/@HearthTech7354"
+            )
+        )
+
+    def test_browser_pause_preserves_paid_render_reserve_after_proven_block(self):
+        pool = Mock(engine="playwright", channel="chrome")
+        client = collector.Collector(self.store, now=lambda: self.at, browser=pool)
+        self.store.record(
+            "www.ptt.cc:browser:playwright:chrome",
+            URL,
+            "browser",
+            "BLOCKED",
+            self.at,
+            300,
+        )
+        block = html(403, "<h1>Verify you are human</h1>")
+        with (
+            patch.object(collector, "scrape", side_effect=[block, html()]) as paid,
+            patch.object(collector, "direct", return_value=block),
+        ):
+            result = client.collect(URL, CONTRACT)
+        self.assertEqual(result["provider"], "scrape-super-render")
+        self.assertEqual(paid.call_count, 2)
+        pool.fetch.assert_not_called()
+
+    def test_browser_cooldown_is_scoped_to_engine_and_channel(self):
+        first = Mock(engine="playwright", channel="chrome")
+        first.fetch.side_effect = access.AccessError("BROWSER_UNAVAILABLE")
+        second = Mock(engine="patchright", channel="chrome")
+        second.fetch.return_value = html()
+        self.store.record(
+            "www.ptt.cc:browser:playwright:chrome",
+            URL,
+            "browser",
+            "BLOCKED",
+            self.at,
+            300,
+        )
+        client = collector.Collector(self.store, now=lambda: self.at, browser=second)
+        self.assertEqual(
+            client.collect(URL, CONTRACT, browser_only=True)["provider"], "browser"
+        )
+        second.fetch.assert_called_once()
+
     def test_new_collector_process_reuses_durable_snapshot_and_health(self):
         with patch.object(collector, "scrape", return_value=html()):
             self.client.collect(URL, CONTRACT)

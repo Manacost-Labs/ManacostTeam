@@ -31,7 +31,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 import source_access as access
 
-POLICY_VERSION = "source-collector/1"
+POLICY_VERSION = "source-collector/2"
 BLOCK_TEXT = (
     "just a moment",
     "verify you are human",
@@ -53,6 +53,13 @@ CANARIES = {
     "hearthstone-decks.com": "Hearthstone",
     "hearthstone.judgehype.com": "Hearthstone",
     "beerbrick.com": "Hearthstone",
+    "outof.games": "Hearthstone",
+    "hearthpwn.com": "Hearthstone",
+    "note.com": "ハースストーン",
+    "coinconcede.com": "Coin Concede",
+    "borntobewildhs.com": "Born",
+    "hs.inven.co.kr": "하스스톤",
+    "bilibili.com": "炉石",
 }
 
 
@@ -94,6 +101,8 @@ def default_contract(url: str) -> Contract:
         return Contract("rss", min_chars=0)
     if reddit_id(url):
         return Contract("json", json_paths=("results.0.text",), min_chars=0)
+    if youtube_channel_id(url):
+        return Contract("json", json_paths=("videos.0.id", "title"), min_chars=0)
     for domain, canary in CANARIES.items():
         if host == domain or host.endswith("." + domain):
             return Contract(canaries=(canary,))
@@ -131,6 +140,14 @@ def validate(raw: dict[str, Any], contract: Contract) -> dict[str, Any]:
     if any(x in sample for x in BLOCK_TEXT) and len(visible) < 1500:
         return {**result, "verdict": "BLOCKED" if status == 403 else "SOFT_BLOCK"}
     if status == 403:
+        host = urlsplit(raw.get("final_url", "")).hostname or ""
+        if (
+            host in {"bbs.nga.cn", "ngabbs.com", "nga.178.com"}
+            and "访客不能直接访问" in str(title)
+            and "guestJs" in body
+            and "如不能自动跳转" in body
+        ):
+            return {**result, "verdict": "CSR_REQUIRED"}
         denied = any(
             x in sample
             for x in (
@@ -165,6 +182,11 @@ def validate(raw: dict[str, Any], contract: Contract) -> dict[str, Any]:
         if len(visible) < contract.min_chars:
             return {**result, "verdict": "THIN_CONTENT"}
         if not all(x.casefold() in visible.casefold() for x in contract.canaries):
+            return result
+        rendered = raw.get("rendered_text")
+        if rendered is not None and not all(
+            x.casefold() in rendered.casefold() for x in contract.canaries
+        ):
             return result
         result.update(text=visible, title=title)
     elif contract.kind == "json":
@@ -345,6 +367,29 @@ def reddit(url: str) -> dict[str, Any]:
     }
 
 
+def youtube_channel_id(url: str) -> str | None:
+    parts = urlsplit(url)
+    if (parts.hostname or "").removeprefix("www.") != "youtube.com":
+        return None
+    match = re.fullmatch(r"/(@[A-Za-z0-9_.-]{1,100})(?:/videos)?/?", parts.path)
+    return match[1] if match else None
+
+
+def youtube_channel(url: str) -> dict[str, Any]:
+    from community_sources import transcriptapi_get_json
+
+    payload = transcriptapi_get_json(
+        "/channel/videos",
+        {"channel_id": youtube_channel_id(url), "limit": 3},
+        max_attempts=1,
+    )
+    return {
+        "status": 200,
+        "body": json.dumps(payload, ensure_ascii=False),
+        "final_url": url,
+    }
+
+
 def reddit_reserve(
     url: str, *, native: bool = False, render: bool = False
 ) -> dict[str, Any]:
@@ -471,8 +516,9 @@ class Store:
 
 
 class Collector:
-    def __init__(self, store: Store | None = None, *, now=time.time):
+    def __init__(self, store: Store | None = None, *, now=time.time, browser=None):
         self.store, self.now = store or Store(), now
+        self.browser = browser
 
     def collect(
         self,
@@ -482,6 +528,7 @@ class Collector:
         ttl: float = 21600,
         refresh: bool = False,
         allow_stale: bool = False,
+        browser_only: bool = False,
     ) -> dict[str, Any]:
         from community_sources import ProviderError
 
@@ -490,7 +537,17 @@ class Collector:
         if not math.isfinite(ttl) or not 0 <= ttl <= 86400:
             raise ValueError("INVALID_CACHE_TTL")
         contract = contract or default_contract(url)
-        key = hashlib.sha256((POLICY_VERSION + url + contract.key).encode()).hexdigest()
+        if browser_only and self.browser is None:
+            raise ValueError("BROWSER_ROUTE_REQUIRED")
+        browser_identity = (
+            str(getattr(self.browser, "engine", "none"))
+            + ":"
+            + str(getattr(self.browser, "channel", "default"))
+        )
+        profile = ("browser-only:" if browser_only else "normal:") + browser_identity
+        key = hashlib.sha256(
+            (POLICY_VERSION + profile + url + contract.key).encode()
+        ).hexdigest()
         old = self.store.snapshot(key)
         now = self.now()
         age = max(0.0, now - old[0]) if old else None
@@ -513,7 +570,11 @@ class Collector:
             contract.kind == "rss"
             or urlsplit(url).hostname == "api.kolodahearthstone.com"
         )
-        if is_reddit:
+        if browser_only:
+            routes = [("browser", lambda: self.browser.fetch(url))]
+        elif youtube_channel_id(url):
+            routes = [("transcriptapi-channel", lambda: youtube_channel(url))]
+        elif is_reddit:
             routes = [
                 ("redditapi", lambda: reddit(url)),
                 ("scrape-super", lambda: reddit_reserve(url)),
@@ -531,6 +592,8 @@ class Collector:
         final = "UNAVAILABLE"
         for route, acquire in routes:
             route_key = (urlsplit(url).hostname or "") + ":" + route
+            if route == "browser":
+                route_key += ":" + browser_identity
             provider_key = "provider:" + (
                 "scrape.do" if route.startswith("scrape") else route
             )
@@ -555,6 +618,23 @@ class Collector:
                     and last in {"BLOCKED", "SOFT_BLOCK"}
                 )
                 final = "COOLDOWN"
+                if (
+                    route == "browser"
+                    and not browser_only
+                    and blocked
+                    and last
+                    in {"BLOCKED", "SOFT_BLOCK", "BROWSER_ERROR", "BROWSER_UNAVAILABLE"}
+                ):
+                    routes.append(
+                        (
+                            "scrape-super-render",
+                            lambda: (
+                                reddit_reserve(url, render=True)
+                                if is_reddit
+                                else scrape(url, render=True)
+                            ),
+                        )
+                    )
                 continue
             raw: dict[str, Any] = {}
             try:
@@ -579,6 +659,12 @@ class Collector:
                         if code in {"DIRECT_NETWORK_ERROR", "DNS_UNAVAILABLE"}
                         or isinstance(exc, (OSError, HTTPException))
                         else "PARSE_FAIL"
+                    )
+                if route == "browser":
+                    checked["verdict"] = (
+                        "BROWSER_UNAVAILABLE"
+                        if getattr(exc, "code", "") == "BROWSER_UNAVAILABLE"
+                        else "BROWSER_ERROR"
                     )
             now = self.now()
             final = checked["verdict"]
@@ -608,6 +694,8 @@ class Collector:
                 "retry_after_seconds": delay,
                 "diagnostics": raw.get("diagnostics", {}),
             }
+            if "source_freshness" in checked:
+                attempt["source_freshness"] = checked["source_freshness"]
             attempts.append(attempt)
             if final == "OK":
                 result = {
@@ -620,6 +708,7 @@ class Collector:
                     "cache": "MISS",
                     "age_seconds": 0,
                     "attempts": attempts,
+                    "content_links": raw.get("content_links", []),
                     "evidence_validated": False,
                 }
                 self.store.promote(key, result, now)
@@ -639,7 +728,7 @@ class Collector:
                 blocked = True
             if (
                 route == "direct"
-                and blocked
+                and (blocked or final == "CSR_REQUIRED")
                 and final
                 in {
                     "BLOCKED",
@@ -649,16 +738,33 @@ class Collector:
                     "PROVIDER_ERROR",
                 }
             ):
-                routes.append(
-                    (
-                        "scrape-super-render",
-                        lambda: (
-                            reddit_reserve(url, render=True)
-                            if is_reddit
-                            else scrape(url, render=True)
-                        ),
+                if self.browser is not None:
+                    routes.append(("browser", lambda: self.browser.fetch(url)))
+                elif blocked:
+                    routes.append(
+                        (
+                            "scrape-super-render",
+                            lambda: (
+                                reddit_reserve(url, render=True)
+                                if is_reddit
+                                else scrape(url, render=True)
+                            ),
+                        )
                     )
-                )
+            if (
+                route == "browser"
+                and not browser_only
+                and blocked
+                and final
+                in {
+                    "BLOCKED",
+                    "SOFT_BLOCK",
+                    "CSR_REQUIRED",
+                    "BROWSER_UNAVAILABLE",
+                    "BROWSER_ERROR",
+                }
+            ):
+                routes.append(("scrape-super-render", lambda: scrape(url, render=True)))
         failure = {
             "verdict": final,
             "url": url,
@@ -742,12 +848,25 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--ttl", type=float, default=21600)
     p.add_argument("--refresh", action="store_true")
     p.add_argument("--allow-stale", action="store_true")
+    p.add_argument("--browser", action="store_true")
+    p.add_argument("--browser-only", action="store_true")
+    p.add_argument(
+        "--browser-engine", choices=("playwright", "patchright"), default="playwright"
+    )
+    p.add_argument("--browser-channel")
     p.add_argument("--health", action="store_true")
     p.add_argument("--state", type=Path)
     p.add_argument("--output", type=Path)
     args = p.parse_args(argv)
+    browser = None
     try:
-        collector = Collector(Store(args.state))
+        if args.browser or args.browser_only:
+            from source_browser import BrowserPool
+
+            browser = BrowserPool(
+                engine=args.browser_engine, channel=args.browser_channel
+            )
+        collector = Collector(Store(args.state), browser=browser)
         if args.expected_patch and args.kind != "json":
             raise ValueError("PATCH_REQUIRES_JSON_METADATA")
         contract = (
@@ -770,6 +889,7 @@ def main(argv: list[str] | None = None) -> int:
                 ttl=args.ttl,
                 refresh=args.refresh,
                 allow_stale=args.allow_stale,
+                browser_only=args.browser_only,
             )
         )
         if args.output:
@@ -790,6 +910,9 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    finally:
+        if browser is not None:
+            browser.close()
 
 
 if __name__ == "__main__":

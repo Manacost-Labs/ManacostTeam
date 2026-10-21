@@ -22,6 +22,11 @@ For repeatable reads, use `scripts/source_access.py collect` following
 [durable source acquisition](references/source-acquisition.md): require body
 proof, reuse validated snapshots, honor persisted pauses and keep explicit
 stale fallback separate from current evidence. `fetch` is the low-level probe.
+For a full access audit or difficult rendered sources, load
+[browser access and the owner audit](references/browser-source-access.md).
+`audit_owner_sources.py` accounts for all 39 through Collector, distinguishing
+channel discovery, RSS catalogues and read pages. It does not replace topical
+searches, actual video/caption inspection or semantic evidence review.
 
 Produce an auditable research result whose conclusions follow from validated evidence. Accuracy, freshness, and traceability are non-negotiable; the delivered output must also be understandable and easy to edit. Keep research depth inside the evidence workflow instead of exposing internal complexity to the reader.
 
