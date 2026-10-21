@@ -42,6 +42,91 @@ LOGIN_HINTS = (
     "sign in",
 )
 RATE_HINTS = ("rate limit", "too many requests", "429", "quota", "usage limit")
+CODEX_CAPACITY = "Selected model is at capacity. Please try a different model."
+
+
+def _codex_events(raw):
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8")
+    events = [json.loads(line) for line in raw.splitlines() if line.strip()]
+    if not all(isinstance(event, dict) for event in events):
+        raise ValueError("CLI stream event must be an object")
+    return events
+
+
+def _config_warning(item):
+    message = item.get("message", "")
+    return (item.get("type") == "error" and isinstance(message, str)
+            and message.startswith("Codex is ignoring ")
+            and "unrecognized configuration settings" in message.splitlines()[0])
+
+
+def _codex_capacity_failure(proc, last_message):
+    if proc.returncode == 0 or (os.path.exists(last_message) and os.path.getsize(last_message)):
+        return False
+    try:
+        events = _codex_events(proc.stdout)
+        if not events or events[-1].get("type") != "turn.failed":
+            return False
+        for event in events:
+            kind = event.get("type")
+            if kind in {"thread.started", "turn.started"}:
+                continue
+            if kind == "item.completed" and _config_warning(event.get("item", {})):
+                continue
+            if kind == "error" and event.get("message") == CODEX_CAPACITY:
+                continue
+            if kind == "turn.failed" and event.get("error", {}).get("message") == CODEX_CAPACITY:
+                continue
+            return False
+        return True
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
+def run_codex_with_capacity_retry(run, *, timeout, last_message):
+    """At most three identical transport attempts within one total deadline.
+
+    Only the explicit failed capacity stream without assistant output can be
+    retried. Completed content, partial replies, other failures and timeouts
+    retain their original outcome. The callback owns per-attempt artifacts.
+    """
+    deadline = time.monotonic() + timeout
+    for attempt in range(3):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired("codex", timeout)
+        proc = run(remaining, attempt)
+        if attempt == 2 or not _codex_capacity_failure(proc, last_message):
+            return proc
+        delay = 5 * (attempt + 1)
+        if deadline - time.monotonic() <= delay:
+            return proc
+        log(event="cli_capacity_retry", failed_attempt=attempt + 1, max_attempts=3, delay_seconds=delay)
+        time.sleep(delay)
+
+
+def parse_codex_stream(raw, last_reply):
+    events = _codex_events(raw)
+    if not events or events[-1].get("type") != "turn.completed":
+        raise ValueError("CLI response is incomplete or failed")
+    replies = []
+    for event in events[:-1]:
+        kind = event.get("type")
+        if kind in {"thread.started", "turn.started"}:
+            continue
+        if kind not in {"item.started", "item.updated", "item.completed"}:
+            raise ValueError("unexpected CLI stream event")
+        item = event.get("item", {})
+        if kind == "item.completed" and _config_warning(item):
+            continue
+        if item.get("type") not in {"reasoning", "agent_message"}:
+            raise ValueError("unexpected CLI tool or error in text-only transport")
+        if kind == "item.completed" and item.get("type") == "agent_message":
+            replies.append(item.get("text"))
+    if len(replies) != 1 or not isinstance(replies[0], str) or not last_reply.strip() or replies[0].strip() != last_reply.strip():
+        raise ValueError("CLI stream and final result disagree")
+    return last_reply
 
 
 def build_prompt(messages: list[dict[str, Any]]) -> tuple[str, str]:
@@ -175,24 +260,31 @@ class Backend:
             if self.name == "claude":
                 env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = str(max_tokens)
             try:
-                proc = subprocess.run(
-                    argv,
-                    input=stdin_text.encode("utf-8"),
-                    capture_output=True,
-                    timeout=timeout,
-                    cwd=self.workdir or scratch,
-                    check=False,
-                    env=env,
-                )
+                def run(remaining, attempt):
+                    return subprocess.run(
+                        argv, input=stdin_text.encode("utf-8"), capture_output=True,
+                        timeout=remaining, cwd=self.workdir or scratch, check=False, env=env,
+                    )
+
+                proc = (run_codex_with_capacity_retry(run, timeout=timeout, last_message=last_message)
+                        if self.name == "codex" else run(timeout, 0))
             except subprocess.TimeoutExpired:
                 return "", None, "timeout"
             except FileNotFoundError as error:
                 return "", 127, f"команда не найдена: {error.filename}"
             try:
                 diagnostic = proc.stderr.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
-                if self.name == "codex" and os.path.exists(last_message):
-                    with open(last_message, encoding="utf-8") as handle:
-                        reply = handle.read()
+                if self.name == "codex":
+                    reply = ""
+                    if os.path.exists(last_message):
+                        with open(last_message, encoding="utf-8") as handle:
+                            reply = handle.read()
+                    if proc.returncode:
+                        return "", proc.returncode, diagnostic[-2000:]
+                    try:
+                        reply = parse_codex_stream(proc.stdout, reply)
+                    except (ValueError, KeyError, TypeError, AttributeError) as error:
+                        return "", 1, str(error)
                 else:
                     reply = proc.stdout.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
             except UnicodeDecodeError:
@@ -245,6 +337,8 @@ class Backend:
             ]
             if self.model:
                 argv += ["-m", self.model]
+            if "--json" not in self.extra:
+                argv.append("--json")
             return argv + self.extra + ["-"], join_system(system, prompt)
         if self.name == "gemini":
             # Gemini CLI: prompt через stdin, системная часть склеивается сверху.

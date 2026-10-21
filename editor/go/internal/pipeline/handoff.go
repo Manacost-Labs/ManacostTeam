@@ -474,13 +474,7 @@ func reconstructionGuard(before, after string, sourceNameForms ...string) guards
 			// A sentence-start preposition/imperative is not part of a card
 			// name. Permit only an exact, already verified remainder; never
 			// let an arbitrary new adjective authorize a new named entity.
-			prefix, name, split := strings.Cut(entity.Value, " ")
-			if split && sentenceStartNamePrefix(prefix) {
-				found = knownNameInflection(name, knownNames)
-				for _, form := range sourceNameForms {
-					found = found || form == name
-				}
-			}
+			found = found || knownNameContext(entity.Value, knownNames)
 			for _, form := range sourceNameForms {
 				if entity.Value == form {
 					found = true
@@ -514,13 +508,34 @@ func reconstructionGuard(before, after string, sourceNameForms ...string) guards
 }
 
 type FactAttestation struct {
-	ClaimID         string   `json:"claim_id"`
-	Status          string   `json:"status"`
-	ActionQuote     string   `json:"action_quote"`
-	ConditionQuote  string   `json:"condition_quote"`
-	ExceptionQuote  string   `json:"exception_quote"`
-	ConfidenceQuote string   `json:"confidence_quote"`
-	EvidenceRefs    []string `json:"evidence_refs"`
+	quoteFieldsPresent bool
+	ClaimID            string   `json:"claim_id"`
+	Status             string   `json:"status"`
+	ActionQuote        string   `json:"action_quote"`
+	ConditionQuote     string   `json:"condition_quote"`
+	ExceptionQuote     string   `json:"exception_quote"`
+	ConfidenceQuote    string   `json:"confidence_quote"`
+	EvidenceRefs       []string `json:"evidence_refs"`
+}
+
+func (a *FactAttestation) UnmarshalJSON(data []byte) error {
+	type plain FactAttestation
+	var value plain
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	*a = FactAttestation(value)
+	a.quoteFieldsPresent = true
+	for _, key := range []string{"action_quote", "condition_quote", "exception_quote", "confidence_quote"} {
+		if raw, ok := fields[key]; !ok || strings.TrimSpace(string(raw)) == "null" {
+			a.quoteFieldsPresent = false
+		}
+	}
+	return nil
 }
 
 type FactReview struct {
@@ -629,7 +644,7 @@ const temporalEvidenceInstruction = "Сохраняй временной ста�
 
 const sourceScopeInstruction = "В утверждениях статьи сохраняй границы evidence: отсутствие сведений в выбранном источнике или handoff не доказывает, что они нигде не опубликованы, что чего-либо не существует, что оно недоступно или невозможно. Для такого общего вывода нужны отдельные подтверждения именно этого масштаба. Не перечисляй в статье незаданные пробелы и не добирай ими объём; сохраняй оговорку, если она прямо нужна по brief или для ответа на обязательный вопрос читателя. Это ограничение читательского текста, а не запрет отмечать пробелы во внутреннем review. "
 
-const conditionConsistencyInstruction = "Условие и исключение должны сохраняться в каждом повторе совета по всей статье, включая лид, вывод, списки и другие главы: одна верная цитата не оправдывает соседнее безусловное обобщение. Проверь, кому принадлежит действие: владелец карты, ее разыгравший и читатель могут быть разными игроками; местоимения и «следующий ход» сохраняют эту перспективу. Различай достаточное условие и единственный возможный путь, базовую комбинацию и все способы победы, сложность победы в матче и сложность уничтожения существа. Не исправляй ошибку удалением подтвержденного действия: восстанови его условие и сохрани полезное объяснение и абзацы. Название архетипа и дополнения в заголовке разделяй строчной связкой или пунктуацией, чтобы не склеивать их в новое имя. "
+const conditionConsistencyInstruction = "Meaning не заменяет Action: отдельно сохрани объект, последовательность и момент действия из Action, даже если этих деталей нет в Meaning. «До начала хода» и «до начала комбинации» задают разные границы времени; не подменяй одну другой. Условие и исключение должны сохраняться в каждом повторе совета по всей статье, включая лид, вывод, списки и другие главы: одна верная цитата не оправдывает соседнее безусловное обобщение. Проверь, кому принадлежит действие: владелец карты, ее разыгравший и читатель могут быть разными игроками; местоимения и «следующий ход» сохраняют эту перспективу. Различай достаточное условие и единственный возможный путь, базовую комбинацию и все способы победы, сложность победы в матче и сложность уничтожения существа. Не исправляй ошибку удалением подтвержденного действия: восстанови его условие и сохрани полезное объяснение и абзацы. Название архетипа и дополнения в заголовке разделяй строчной связкой или пунктуацией, чтобы не склеивать их в новое имя. "
 
 func conditionLedger(h *ResearchHandoff) []map[string]any {
 	var rows []map[string]any
@@ -652,7 +667,11 @@ func factReviewRequirements(h *ResearchHandoff) []map[string]any {
 		if strings.ToLower(claim.Confidence) != "high" {
 			fields = append(fields, "confidence_quote")
 		}
-		rows = append(rows, map[string]any{"claim_id": claim.ID, "required_quote_fields": fields, "allowed_evidence_refs": claim.EvidenceRefs})
+		rows = append(rows, map[string]any{
+			"claim_id": claim.ID, "required_quote_fields": fields, "allowed_evidence_refs": claim.EvidenceRefs,
+			"required_meaning": claim.Meaning, "required_action": claim.Action,
+			"required_condition": claim.Condition, "required_exception": claim.Exception, "required_confidence": claim.Confidence,
+		})
 	}
 	return rows
 }
@@ -669,7 +688,7 @@ func (s *Service) factReview(ctx context.Context, h *ResearchHandoff, candidate 
 		temporalEvidenceInstruction +
 		sourceScopeInstruction +
 		conditionConsistencyInstruction + canonicalNameInstruction +
-		"Используй короткие дословные цитаты, достаточные для подтверждения поля; не повторяй целые главы в JSON. Отсутствующий совет или условие — insufficient, а не supported с выдуманной цитатой. " +
+		"Используй короткие дословные цитаты, достаточные для подтверждения поля; не повторяй целые главы в JSON. Отсутствующий совет или условие — insufficient, а не supported с выдуманной цитатой. Если обязательный тезис отсутствует целиком, поставь insufficient с пустыми четырьмя quote-полями и допустимыми evidence_refs этого claim; не выдумывай якорь. При частичной потере цитируй имеющуюся часть, а поле отсутствующего смысла оставь пустым. " +
 		"Если есть decision_cards, отдельно сверь смысл каждого поля с его claim_ids/evidence_refs, включая причинность и условные примеры; ссылки сами по себе не доказывают смысл. Добавь decision_cards_checked=true только после этой проверки. unknown/disputed и gaps не являются готовыми советами. " +
 		"Для каждого обязательного claim из глав проверь точность совета, условия, исключения, уровень уверенности, патч, цитирование и отсутствие новых неподтвержденных советов. " +
 		"Проверь ВСЕ утверждения candidate по evidence, включая не совпадающие с обязательными claims; если обнаружены новые неподтвержденные советы, пометь хотя бы один claim insufficient. " +
@@ -727,6 +746,7 @@ func factRepairFindings(h *ResearchHandoff, candidate string, review FactReview,
 	sanitized := review
 	sanitized.Claims = make([]FactAttestation, 0, len(review.Claims))
 	var omittedSupported []string
+	var missingClaims []ResearchClaim
 	groundedNegative := len(review.UnsupportedClaims) > 0
 	for _, item := range review.Claims {
 		if seen[item.ClaimID] || (item.Status != "supported" && item.Status != "insufficient" && item.Status != "contradicted") {
@@ -744,9 +764,11 @@ func factRepairFindings(h *ResearchHandoff, candidate string, review FactReview,
 		if claim == nil || len(item.EvidenceRefs) == 0 {
 			return nil
 		}
-		if item.Status != "supported" && strings.TrimSpace(item.ActionQuote+item.ConditionQuote+item.ExceptionQuote+item.ConfidenceQuote) == "" {
-			// Repair an omitted qualifier of a grounded passage, not a row
-			// with no quotation tying its negative judgment to this draft.
+		missing := strings.TrimSpace(item.ActionQuote+item.ConditionQuote+item.ExceptionQuote+item.ConfidenceQuote) == "" && item.Status == "insufficient"
+		if missing && !item.quoteFieldsPresent {
+			return nil
+		}
+		if item.Status == "contradicted" && strings.TrimSpace(item.ActionQuote+item.ConditionQuote+item.ExceptionQuote+item.ConfidenceQuote) == "" {
 			return nil
 		}
 		for _, pair := range [][2]string{{claim.Meaning, item.ActionQuote}, {claim.Condition, item.ConditionQuote}, {claim.Exception, item.ExceptionQuote}} {
@@ -784,6 +806,10 @@ func factRepairFindings(h *ResearchHandoff, candidate string, review FactReview,
 			omittedSupported = append(omittedSupported, item.ClaimID)
 			continue
 		}
+		if missing {
+			missingClaims = append(missingClaims, *claim)
+			continue
+		}
 		sanitized.Claims = append(sanitized.Claims, item)
 		groundedNegative = groundedNegative || item.Status != "supported"
 	}
@@ -794,13 +820,23 @@ func factRepairFindings(h *ResearchHandoff, candidate string, review FactReview,
 	}
 	var evidence any = review
 	if len(omittedSupported) > 0 {
-		if !groundedNegative {
+		if !groundedNegative && len(missingClaims) == 0 {
 			return nil
 		}
 		evidence = map[string]any{"repair_only": true, "sanitized_review": sanitized, "omitted_supported_claim_ids": omittedSupported}
 	}
 	raw, _ := json.Marshal(evidence)
-	return []analyzers.Finding{{Analyzer: "fact-review", RuleID: "handoff_fact_review", Severity: "error", Message: cause.Error() + ". Исправь отмеченные утверждения по research_handoff и сохрани остальные полезные фразы; положительная повторная проверка обязательна.", Evidence: string(raw)}}
+	var findings []analyzers.Finding
+	if len(missingClaims) == 0 || groundedNegative {
+		findings = append(findings, analyzers.Finding{Analyzer: "fact-review", RuleID: "handoff_fact_review", Severity: "error", Message: cause.Error() + ". Исправь отмеченные утверждения по research_handoff и сохрани остальные полезные фразы; положительная повторная проверка обязательна.", Evidence: string(raw)})
+	}
+	for _, claim := range missingClaims {
+		// Absence has no candidate quote. This separate, explicitly repair-only
+		// target cannot authorize acceptance or borrow a neighbouring quote.
+		data, _ := json.Marshal(map[string]any{"repair_only": true, "claim_id": claim.ID, "missing_claim": claim, "omitted_supported_claim_ids": omittedSupported})
+		findings = append(findings, analyzers.Finding{Analyzer: "fact-review", RuleID: "handoff_missing_claim", Severity: "error", Message: "Проверяющий не нашел обязательный тезис " + claim.ID + ". Восстанови полный смысл, условия и исключения по research_handoff в подходящем месте; сохрани полезные фразы и абзацы. Этот отзыв не подтверждает статью: обязательна новая полная положительная проверка.", Evidence: string(data)})
+	}
+	return findings
 }
 
 func (s *Service) repairReconstruction(ctx context.Context, bundle rules.RuleBundle, h *ResearchHandoff, candidate string, findings, previous []analyzers.Finding, examples []retrieval.StyleExample) (string, error) {

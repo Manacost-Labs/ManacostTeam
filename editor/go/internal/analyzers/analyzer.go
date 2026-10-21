@@ -91,6 +91,10 @@ func (NativeGoAnalyzer) Analyze(_ context.Context, in Input) (Result, error) {
 		return r, nil
 	}
 	lower := strings.ToLower(in.Text)
+	if in.Language == "" || strings.HasPrefix(strings.ToLower(in.Language), "ru") {
+		r.Findings = append(r.Findings, copyNumberGrammar(in.Text)...)
+		r.Findings = append(r.Findings, cardNameGrammar(in.Text)...)
+	}
 	// Generic gifts (for example Twitch rewards) do not identify Dark Gifts.
 	// Explicit named aliases are checked by the entity-aware Python analyzer.
 	if strings.Contains(lower, "племя") || strings.Contains(lower, "племени") || strings.Contains(lower, "племен") {

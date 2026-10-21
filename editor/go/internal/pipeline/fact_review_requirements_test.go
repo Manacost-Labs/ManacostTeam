@@ -37,9 +37,12 @@ func TestFactReviewerReceivesEachRequiredQuoteFieldAndItsOwnSources(t *testing.T
 		t.Fatalf("checklist changed the factual input: %s", after)
 	}
 	expected := []map[string]any{
-		{"claim_id": "CLM-1", "required_quote_fields": []string{"action_quote", "condition_quote", "exception_quote", "confidence_quote"}, "allowed_evidence_refs": []string{"SRC-1"}},
-		{"claim_id": "CLM-2", "required_quote_fields": []string{"action_quote", "exception_quote"}, "allowed_evidence_refs": []string{"SRC-2"}},
-		{"claim_id": "CLM-3", "required_quote_fields": []string{"action_quote", "condition_quote", "confidence_quote"}, "allowed_evidence_refs": []string{"SRC-1", "SRC-2"}},
+		{"claim_id": "CLM-1", "required_quote_fields": []string{"action_quote", "condition_quote", "exception_quote", "confidence_quote"}, "allowed_evidence_refs": []string{"SRC-1"},
+			"required_meaning": "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения.", "required_action": "Сохраняйте ресурс", "required_condition": "при слабой позиции", "required_exception": "кроме угрозы поражения", "required_confidence": "medium"},
+		{"claim_id": "CLM-2", "required_quote_fields": []string{"action_quote", "exception_quote"}, "allowed_evidence_refs": []string{"SRC-2"},
+			"required_meaning": "Получите награду", "required_action": "", "required_condition": "", "required_exception": "кроме повторного захода", "required_confidence": "HIGH"},
+		{"claim_id": "CLM-3", "required_quote_fields": []string{"action_quote", "condition_quote", "confidence_quote"}, "allowed_evidence_refs": []string{"SRC-1", "SRC-2"},
+			"required_meaning": "Дополнительный ресурс иногда доступен", "required_action": "", "required_condition": "при победе", "required_exception": "", "required_confidence": "low"},
 	}
 	wantJSON, _ := json.Marshal(expected)
 	var want any

@@ -30,11 +30,13 @@ rhythm = _load("rhythm")
 soul = _load("soul")
 
 
-def protected_lost(a, b, *, game="hearthstone", protected=None):
+def protected_lost(a, b, *, game="hearthstone", protected=None, preserve_repetitions=True):
     """Защищённые элементы, исчезнувшие при правке.
 
     Числа, статы и коды колод править нельзя. Если они пропали, это
-    важнее любой стилистики, поэтому проверяется отдельно.
+    важнее любой стилистики, поэтому проверяется отдельно. При реконструкции
+    проверяем наличие термина, а не число его повторов; числовые элементы
+    и коды сохраняют проверку количества в любом режиме.
     """
     pats = {
         "числа": r"\b\d+(?:[.,]\d+)?%?\b",
@@ -51,6 +53,8 @@ def protected_lost(a, b, *, game="hearthstone", protected=None):
     for name, pat in pats.items():
         was = Counter(re.findall(pat, a, re.I))
         now = Counter(re.findall(pat, b, re.I))
+        if not preserve_repetitions and name not in {"числа", "статы", "коды колод"} and now:
+            continue
         gone = was - now
         if gone:
             lost[name] = gone

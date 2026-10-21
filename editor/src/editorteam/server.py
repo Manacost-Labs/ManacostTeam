@@ -299,7 +299,9 @@ def validate(
     sa, wa = soul.measure(before)
     sb, wb = soul.measure(after)
     ra, rb = rhythm.measure(before), rhythm.measure(after)
-    gone = report_mod.protected_lost(before, after, game=g.id, protected=g.protected)
+    gone = report_mod.protected_lost(
+        before, after, game=g.id, protected=g.protected, preserve_repetitions=not rewrite
+    )
 
     violations = []
     warnings = []
