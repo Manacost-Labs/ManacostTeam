@@ -8,6 +8,47 @@ All adapters are read-only. This package intentionally exposes no login, cookie,
 
 ## Routing
 
+Owner preference in ManacostTeam: general-web and HSGuru search/reads
+start with Scrape.do through `scripts/source_access.py`. This explicit choice
+overrides the generic defaults in the table below for this project. A failed
+route is recorded before an alternative is used. Site-scoped SERP responses
+are filtered by actual destination host; foreign results and rewritten queries
+do not establish source coverage. `doctor` reports credential presence only.
+For protected forums, Reddit, HSGuru and the configured Chinese venues,
+public-page reads default to `super=true`. Add `--render --wait-ms 5000` for
+JavaScript content and `--country us` or an appropriate public-source region
+when needed. `--no-super-proxy` is an explicit cheap-route override. The
+structured Google Search plugin is a separate provider endpoint; its success
+does not prove that a target page was read through a super proxy.
+
+Reddit is the explicit exception: use RedditAPI first and Scrape.do only as a
+reserve. In a substantial Hearthstone guide/meta study, inspect several
+independent threads across the relevant communities (CompetitiveHS,
+hearthstone, BobsTavern or ArenaHS), read strategy-bearing comments and contrary
+cases, and revisit named gaps after the first pass. Do not stop at the first
+confirming thread or inflate coverage with duplicate posts. Plan a visible
+Reddit lane for each material player-decision topic; use coverage targets such
+as `--min-inspected reddit=3` only where relevant and available. A target is not
+proof, a quota or permission to fabricate access. Reddit opinions remain
+community evidence rather than ladder statistics.
+
+```text
+python scripts/source_access.py doctor
+python scripts/source_access.py search --query "Hearthstone deck" --site reddit.com --output RUN/reddit-search.json
+python scripts/source_access.py search --query "decks" --site hsguru.com --output RUN/hsguru-search.json
+python scripts/source_access.py search --query "爐石 牌組" --site ptt.cc --language zh-TW --country tw --output RUN/ptt-search.json
+python scripts/source_access.py fetch --url PUBLIC_HTTPS_URL --output RUN/page.json
+```
+
+The optional machine-local credential file is
+`%LOCALAPPDATA%/Manacost/secrets/source-providers.json` (Windows), outside the
+checkout. `MANACOST_SOURCE_CREDENTIALS` overrides its location; process
+environment values take precedence. Only `SCRAPE_DO_API_TOKEN`,
+`TRANSCRIPTAPI_TOKEN` and `REDDITAPIS_KEY` are loaded. Keep the file restricted to the current user;
+never copy it into a bundle, ZIP, prompt, test fixture or Git. Tests point the
+override at an absent/temporary file so they cannot consume a real account.
+The loader is shared by the existing Chinese and TranscriptAPI adapters.
+
 For section-level discovery, follow [broad platform search](broad-platform-search.md). Use public indexed searches before treating an unconfigured specialist adapter as a blocker. Report actual inspected coverage with scripts/platform_coverage.py; missing access remains partial rather than being silently replaced by another platform.
 
 | Need | Preferred route | Fallback and limitation |

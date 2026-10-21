@@ -541,6 +541,32 @@
         "https://anchor.fm/s/e47aa0/podcast/rss"
       ],
       "feed_verified_at": "2026-10-21"
+    },
+    {
+      "id": "hearthstone-commute",
+      "host": "hearthstonecommute.libsyn.com",
+      "class": "podcast",
+      "authority": 2,
+      "modes": [
+        "all"
+      ],
+      "use_for": [
+        "experts"
+      ],
+      "entry_urls": [
+        "https://hearthstonecommute.libsyn.com/"
+      ],
+      "owner_required": true,
+      "owner_urls": [
+        "https://hearthstonecommute.libsyn.com/"
+      ],
+      "language": "en",
+      "source_kind": "podcast",
+      "feed_urls": [
+        "https://hearthstonecommute.libsyn.com/rss"
+      ],
+      "feed_verified_at": "2026-10-21",
+      "extraction_notes": "Walk to Work - A Mobile Hearthstone Podcast (blisterguy). Preserve episode GUID, date, game context and timestamped transcript. Libsyn homepage is a SPA; use verified RSS for discovery."
     }
   ],
   "datasets": [
@@ -1302,7 +1328,7 @@
   ],
   "owner_policy": {
     "required_every_hearthstone_research": true,
-    "source_count": 38,
+    "source_count": 39,
     "scope": "Discovery attempt for every owner URL; inspect relevant items; explicitly record blocked, no relevant results or exclusions. No invented coverage."
   }
 }

@@ -15,6 +15,7 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
 FIXTURES = ROOT / "tests/fixtures/chinese"
 MODULE_PATH = ROOT / "scripts/chinese_hearthstone.py"
 SPEC = importlib.util.spec_from_file_location("chinese_hearthstone", MODULE_PATH)

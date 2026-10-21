@@ -1,0 +1,5 @@
+# Optional Windows GPU runtime verified with large-v3, float16, batch 8.
+-r source-library-requirements.txt
+nvidia-cublas-cu12==12.9.2.10; platform_system == "Windows"
+nvidia-cudnn-cu12==9.27.0.42; platform_system == "Windows"
+nvidia-cuda-nvrtc-cu12==12.9.86; platform_system == "Windows"

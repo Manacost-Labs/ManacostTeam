@@ -2,12 +2,12 @@
 name: manacost-publish
 description: "Готовит статью Hearthstone в Codex: источники Manacost MCP, проверенные советы, авторский текст и независимые отзывы. Сохраняет запуск для продолжения."
 metadata:
-  version: "1.6.0"
+  version: "1.7.0"
 ---
 
 # Manacost Publish
 
-Для Hearthstone research обязательно загружай [38 постоянных источников и архив подкастов](references/hearthstone-source-library.md). Веди реальный обход всех площадок, проверяй архив до TranscriptAPI/ASR и сохраняй оригинальные timed segments для повторного использования.
+Для Hearthstone research обязательно загружай [39 постоянных источников и архив подкастов](references/hearthstone-source-library.md). Веди реальный обход всех площадок, проверяй архив до TranscriptAPI/ASR и сохраняй оригинальные timed segments для повторного использования.
 
 
 Проверка первоисточника и сохранение его утверждения — разные задачи.

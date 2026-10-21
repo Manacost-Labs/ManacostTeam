@@ -170,6 +170,8 @@ def envelope(
 
 
 def require_key(name: str, provider: str) -> str:
+    from source_access import load_credentials
+    load_credentials()
     value = os.environ.get(name, "").strip()
     if not value:
         raise ProviderError(
@@ -1268,6 +1270,8 @@ def flatten_tinyfish_text(value: Any) -> str:
 
 
 def doctor() -> dict[str, Any]:
+    from source_access import load_credentials
+    load_credentials()
     return {
         "schema_version": SCHEMA_VERSION,
         "built_in_search_web": {"role": "default", "available_in_host": "host_managed"},

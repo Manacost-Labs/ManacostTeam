@@ -9,6 +9,7 @@
 /research/library/transcripts/
 /research/library/audio/
 /research/library/.venv/
+/research/library/notes/
 __pycache__/
 *.pyc
 .pytest_cache/

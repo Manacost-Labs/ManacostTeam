@@ -2,13 +2,13 @@
 name: research-team
 description: "Широкие исследования с проверкой источников, противоречий и охвата X, Reddit, YouTube и веба."
 metadata:
-  version: "1.7.0"
+  version: "1.8.0"
 ---
 
 # ResearchTeam
 
 Для каждого исследования Hearthstone обязателен
-[обход 38 постоянных источников и архив подкастов](references/hearthstone-source-library.md).
+[обход 39 постоянных источников и архив подкастов](references/hearthstone-source-library.md).
 Проверяй все площадки по теме, сохраняй реальные результаты/блокировки в
 `owner-source-coverage.json`. Расшифровки сначала ищи в постоянном архиве
 проекта; повторно не вызывай TranscriptAPI и не распознавай сохранённый выпуск.

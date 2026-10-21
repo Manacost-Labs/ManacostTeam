@@ -6,10 +6,18 @@ description: Conduct evidence-first internet research, source discovery, fact-ch
 # Deep Research
 
 For every Hearthstone research run, load [the owner's permanent source library](references/hearthstone-source-library.md).
-Attempt topic discovery across all 38 owner-required sources and retain actual
+Attempt topic discovery across all 39 owner-required sources and retain actual
 per-source outcomes; never infer completed coverage from registry seeds. Reuse
 the project's durable podcast/video transcript archive before any provider call
 or ASR; preserve original-language timed segments for subsequent research.
+
+Owner routing preference: use `scripts/source_access.py` and Scrape.do first
+for general-web and HSGuru discovery/reads. Reddit uses RedditAPI first,
+Scrape.do as a reserve. Routinely inspect several independent relevant threads
+and substantive comments, including counterexamples, instead of stopping at
+the first convenient post. Keep site-scope exclusions,
+blocks and fallback provenance visible. Public RSS and native APIs remain useful
+when a site shell or block cannot provide the requested evidence.
 
 Produce an auditable research result whose conclusions follow from validated evidence. Accuracy, freshness, and traceability are non-negotiable; the delivered output must also be understandable and easy to edit. Keep research depth inside the evidence workflow instead of exposing internal complexity to the reader.
 

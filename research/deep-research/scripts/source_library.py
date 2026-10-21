@@ -11,6 +11,7 @@ import math
 import os
 import re
 import sys
+import sysconfig
 import tempfile
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
@@ -28,6 +29,7 @@ from community_sources import (
     youtube_url,
     youtube_video_id,
 )
+from source_access import load_credentials
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = SKILL_ROOT / "references/domains/hearthstone-sources.json"
@@ -356,17 +358,32 @@ def local_transcription(
 ) -> dict[str, Any]:
     if not audio.is_file():
         raise ValueError("Local audio file not found.")
-    from faster_whisper import WhisperModel
+    # Windows CUDA wheels bundle DLLs outside the default loader search path.
+    dll_handles = []
+    if device == "cuda" and os.name == "nt":
+        dll_dirs = list(
+            (Path(sysconfig.get_paths()["purelib"]) / "nvidia").glob("*/bin")
+        )
+        dll_handles = [os.add_dll_directory(str(p)) for p in dll_dirs]
+        os.environ["PATH"] = (
+            os.pathsep.join(str(p) for p in dll_dirs)
+            + os.pathsep
+            + os.environ.get("PATH", "")
+        )
+    from faster_whisper import BatchedInferencePipeline, WhisperModel
 
     engine = WhisperModel(
         model, device=device, compute_type="int8" if device == "cpu" else "float16"
     )
-    segments, info = engine.transcribe(
+    transcriber = BatchedInferencePipeline(engine) if device == "cuda" else engine
+    options = {"batch_size": 8} if device == "cuda" else {}
+    segments, info = transcriber.transcribe(
         str(audio),
         language=None if language == "original" else language,
         vad_filter=True,
         beam_size=5,
         condition_on_previous_text=False,
+        **options,
     )
     timed = [
         {"start": s.start, "end": s.end, "text": s.text}
@@ -375,6 +392,8 @@ def local_transcription(
     ]
     with audio.open("rb") as stream:
         audio_hash = hashlib.file_digest(stream, "sha256").hexdigest()
+    for handle in dll_handles:
+        handle.close()
     return {
         "provider": "faster-whisper",
         "model": model,
@@ -451,7 +470,41 @@ def search_archive(root: Path, query: str) -> list[dict[str, Any]]:
     return results
 
 
+def export_readable(root: Path, record: dict[str, Any]) -> Path:
+    """Stable readable copy; never rewrite an existing export on a cache hit."""
+    path = root / f"{record['archive_key']}.md"
+    if path.exists():
+        return path
+    meta = record.get("metadata", {})
+
+    def clock(value: float) -> str:
+        seconds = int(value)
+        return f"{seconds // 3600:02}:{seconds // 60 % 60:02}:{seconds % 60:02}"
+
+    lines = [
+        f"# {meta.get('title') or record['episode_id']}",
+        "",
+        f"Source: {meta.get('source_url')}",
+        "",
+        f"Published: {meta.get('published_at') or 'unknown'}",
+        "",
+        f"Provider: {record['provider']}. Original ASR/captions; verify names and speakers.",
+        "",
+    ]
+    for segment in record["segments"]:
+        lines.extend(
+            [
+                f"[{clock(segment['start'])}–{clock(segment['end'])}] {segment['text'].strip()}",
+                "",
+            ]
+        )
+    with path.open("x", encoding="utf-8") as output:
+        output.write("\n".join(lines))
+    return path
+
+
 def main(argv: list[str] | None = None) -> int:
+    load_credentials()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--library", type=Path)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -562,11 +615,13 @@ def main(argv: list[str] | None = None) -> int:
                         metadata={**metadata, "source_url": args.source_url},
                     )
                 # Full copyrighted text stays in the local archive, not terminal logs.
+                readable = export_readable(root, result["record"])
                 result = {
                     "cache": result["cache"],
                     "path": result["path"],
                     "archive_key": result["record"]["archive_key"],
                     "segments": len(result["record"]["segments"]),
+                    "readable_path": str(readable),
                 }
         print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         if args.command == "coverage" and not result["checklist_complete"]:

@@ -234,11 +234,15 @@ class CleanHTMLParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.depth_to_skip = 0
+        self.skip_root_tag: str | None = None
         self.parts: list[str] = []
         self.title_parts: list[str] = []
         self.in_title = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        # HTML void elements have no closing tag. Counting them inside a dropped
+        # navigation/form would otherwise suppress the rest of the article.
+        is_void = tag in {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
         attrs_map = {key.lower(): (value or "").lower() for key, value in attrs}
         marker = " ".join((attrs_map.get("class", ""), attrs_map.get("id", "")))
         should_drop = tag in {
@@ -252,17 +256,25 @@ class CleanHTMLParser(HTMLParser):
         }
         should_drop = should_drop or any(hint in marker for hint in DROP_HINTS)
         if self.depth_to_skip:
-            self.depth_to_skip += 1
+            if tag == self.skip_root_tag and not is_void:
+                self.depth_to_skip += 1
         elif should_drop:
-            self.depth_to_skip = 1
+            if not is_void:
+                self.depth_to_skip = 1
+                self.skip_root_tag = tag
         elif tag == "title":
             self.in_title = True
         elif tag in {"p", "br", "li", "h1", "h2", "h3", "blockquote", "tr"}:
             self.parts.append("\n")
 
     def handle_endtag(self, tag: str) -> None:
+        if tag in {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}:
+            return
         if self.depth_to_skip:
-            self.depth_to_skip -= 1
+            if tag == self.skip_root_tag:
+                self.depth_to_skip -= 1
+                if not self.depth_to_skip:
+                    self.skip_root_tag = None
             return
         if tag == "title":
             self.in_title = False
@@ -808,6 +820,8 @@ class ScrapeDoClient:
         cache_ttl_seconds: float | None = None,
         refresh: bool = False,
     ) -> None:
+        from source_access import load_credentials
+        load_credentials()
         self._token = (token or os.environ.get(SCRAPE_DO_TOKEN_ENV, "")).strip()
         self.timeout = timeout
         self.max_attempts_per_level = max(1, min(max_attempts_per_level, 3))
@@ -2278,6 +2292,8 @@ def load_config(path: Path | None) -> dict[str, Any]:
 
 
 def doctor() -> dict[str, Any]:
+    from source_access import load_credentials
+    load_credentials()
     return {
         "schema_version": SCHEMA_VERSION,
         "scrape_do": {

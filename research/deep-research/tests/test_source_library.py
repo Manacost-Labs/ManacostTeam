@@ -40,10 +40,10 @@ class SourceLibraryTests(unittest.TestCase):
             **kwargs,
         )
 
-    def test_owner_registry_contains_all_38_exact_urls(self):
+    def test_owner_registry_contains_all_39_exact_urls(self):
         records = library.required_sources()
         urls = {u for item in records for u in item["owner_urls"]}
-        self.assertEqual(len(records), 38)
+        self.assertEqual(len(records), 39)
         expected_handles = {
             "HearthTech7354",
             "BreadandButterHs",
@@ -84,6 +84,7 @@ class SourceLibraryTests(unittest.TestCase):
             "https://www.borntobewildhs.com/podcast",
             "https://beerbrick.com/category/deck/",
             "https://hs.inven.co.kr/",
+            "https://hearthstonecommute.libsyn.com/",
             "https://www.vicioussyndicate.com/data-reaper-podcast/",
         }
         self.assertEqual(
@@ -95,7 +96,7 @@ class SourceLibraryTests(unittest.TestCase):
     def test_planned_or_missing_attempts_never_count_as_completed(self):
         plan = library.checklist()
         report = library.coverage(plan)
-        self.assertEqual(len(report["pending"]), 38)
+        self.assertEqual(len(report["pending"]), 39)
         self.assertFalse(report["checklist_complete"])
         plan["sources"][0]["status"] = "inspected"
         report = library.coverage(plan)

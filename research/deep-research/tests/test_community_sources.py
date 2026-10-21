@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,7 @@ from urllib.parse import parse_qs, urlparse, urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
 MODULE_PATH = ROOT / "scripts/community_sources.py"
 SPEC = importlib.util.spec_from_file_location("community_sources", MODULE_PATH)
 assert SPEC and SPEC.loader
