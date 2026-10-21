@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.11.1",
+      "version": "1.11.2",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -99,6 +99,10 @@
         {
           "source": "docs/RESEARCH_EDITOR_PILOT.md",
           "destination": "references/research-editor-pilot.md"
+        },
+        {
+          "source": "docs/PLAYER_EDITORIAL_STANDARD.md",
+          "destination": "references/player-editorial-standard.md"
         }
       ]
     },
@@ -106,7 +110,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.10.0",
+      "version": "1.10.1",
       "source": "teams/research-team",
       "resources": [
         {
@@ -132,6 +136,10 @@
         {
           "source": "docs/RESEARCH_EDITOR_PILOT.md",
           "destination": "references/research-editor-pilot.md"
+        },
+        {
+          "source": "docs/PLAYER_EDITORIAL_STANDARD.md",
+          "destination": "references/player-editorial-standard.md"
         }
       ]
     },
@@ -317,7 +325,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.9.0",
+      "version": "1.9.1",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -383,9 +391,13 @@
         {
           "source": "docs/RESEARCH_EDITOR_PILOT.md",
           "destination": "references/research-editor-pilot.md"
+        },
+        {
+          "source": "docs/PLAYER_EDITORIAL_STANDARD.md",
+          "destination": "references/player-editorial-standard.md"
         }
       ]
     }
   ],
-  "release_version": "1.15.0"
+  "release_version": "1.16.0"
 }

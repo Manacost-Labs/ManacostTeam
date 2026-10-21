@@ -185,6 +185,24 @@ def test_craft_guidance_reaches_applicable_stages_without_changing_evidence(tmp_
     assert craft_guidance("ready") is None
 
 
+@pytest.mark.parametrize(
+    "stage, expected",
+    [("sources", ["research"]), ("research", ["research"]),
+     ("draft", ["author", "prose"]), ("literary_review", ["author", "prose"])],
+)
+def test_editorial_passes_are_role_scoped_fresh_guidance(stage, expected):
+    from editorteam.publication_run import craft_guidance
+
+    guidance = craft_guidance(stage)
+    assert [item["id"] for item in guidance["editorial_passes"]] == expected
+    assert all(item["task"].strip() for item in guidance["editorial_passes"])
+    assert guidance["is_factual_evidence"] is False
+    guidance["editorial_passes"][0]["task"] = "changed by caller"
+    assert craft_guidance(stage)["editorial_passes"][0]["task"] != "changed by caller"
+    assert craft_guidance("fact_review") is None
+    assert craft_guidance("ready") is None
+
+
 def test_writer_packet_keeps_question_conditions_and_source_context(tmp_path):
     run = prepared(tmp_path)
     task = next_task(run)
