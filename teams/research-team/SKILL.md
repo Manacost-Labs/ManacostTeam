@@ -2,7 +2,7 @@
 name: research-team
 description: "Широкие исследования с проверкой источников, противоречий и охвата X, Reddit, YouTube и веба."
 metadata:
-  version: "1.10.1"
+  version: "1.10.2"
 ---
 
 # ResearchTeam
