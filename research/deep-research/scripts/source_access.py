@@ -49,8 +49,11 @@ def load_credentials() -> dict[str, bool]:
 
 
 class AccessError(RuntimeError):
-    def __init__(self, code: str, status: int | None = None):
+    def __init__(
+        self, code: str, status: int | None = None, retry_after: str | None = None
+    ):
         self.code, self.status = code, status
+        self.retry_after = retry_after
         super().__init__(code)
 
 
@@ -119,7 +122,9 @@ def request(
             data = exc.read(MAX_BYTES + 1)
             headers, status = exc.headers, exc.code
         else:
-            raise AccessError("PROVIDER_HTTP_ERROR", exc.code) from None
+            raise AccessError(
+                "PROVIDER_HTTP_ERROR", exc.code, exc.headers.get("Retry-After")
+            ) from None
     except (URLError, OSError, TimeoutError):
         raise AccessError("PROVIDER_NETWORK_ERROR") from None
     if len(data) > MAX_BYTES:
@@ -137,6 +142,7 @@ def request(
         "credits": headers.get("Scrape.do-Request-Cost"),
         "remaining_credits": headers.get("Scrape.do-Remaining-Credits"),
         "content_type": headers.get("Content-Type", ""),
+        "retry_after": headers.get("Retry-After"),
         "collected_at": datetime.now(UTC).isoformat(),
     }
     return data, meta
@@ -288,9 +294,19 @@ def fetch(
 
 
 def main(argv: list[str] | None = None) -> int:
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments[:1] == ["collect"]:
+        from source_collector import main as collect_main
+
+        return collect_main(arguments[1:])
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("doctor")
+    sub.add_parser(
+        "collect",
+        add_help=False,
+        help="Validated durable acquisition; collect --help for options.",
+    )
     s = sub.add_parser("search")
     s.add_argument("--query", required=True)
     s.add_argument("--site")

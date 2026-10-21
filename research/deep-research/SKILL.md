@@ -18,6 +18,10 @@ and substantive comments, including counterexamples, instead of stopping at
 the first convenient post. Keep site-scope exclusions,
 blocks and fallback provenance visible. Public RSS and native APIs remain useful
 when a site shell or block cannot provide the requested evidence.
+For repeatable reads, use `scripts/source_access.py collect` following
+[durable source acquisition](references/source-acquisition.md): require body
+proof, reuse validated snapshots, honor persisted pauses and keep explicit
+stale fallback separate from current evidence. `fetch` is the low-level probe.
 
 Produce an auditable research result whose conclusions follow from validated evidence. Accuracy, freshness, and traceability are non-negotiable; the delivered output must also be understandable and easy to edit. Keep research depth inside the evidence workflow instead of exposing internal complexity to the reader.
 

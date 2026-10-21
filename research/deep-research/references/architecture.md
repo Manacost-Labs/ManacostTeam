@@ -41,6 +41,14 @@ For Chinese Hearthstone sources, `scripts/chinese_hearthstone.py` adds a depende
 
 ## Layers and responsibilities
 
+The owner-selected read path is `source_access.py collect` →
+`source_collector.py`: response contract → selected provider/native route →
+cause-specific triage → transactional local snapshot / explicit failed outcome.
+Its durable state is outside the checkout and separate from the permanent
+podcast transcript library. See [source acquisition](source-acquisition.md)
+for the inspected ParsesUnix/Koloda practices and their deliberate scope limits.
+The collector does not schedule work, run a browser, or approve factual claims.
+
 | Layer | Owns | Does not own |
 |---|---|---|
 | `SKILL.md` | activation, depth, output-profile routing, phase order, completion | detailed domain/source rules |

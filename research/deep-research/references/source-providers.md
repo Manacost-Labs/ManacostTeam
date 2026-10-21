@@ -8,6 +8,12 @@ All adapters are read-only. This package intentionally exposes no login, cookie,
 
 ## Routing
 
+For repeatable acquisition, use [durable source acquisition](source-acquisition.md)
+and `scripts/source_access.py collect`. It adds response contracts, durable
+success-only snapshots, route pauses, explicit stale fallback and URL accounting.
+Keep `fetch` for an intentional single transport probe; do not build retry loops
+around it or equate a collector `OK` with validated research evidence.
+
 Owner preference in ManacostTeam: general-web and HSGuru search/reads
 start with Scrape.do through `scripts/source_access.py`. This explicit choice
 overrides the generic defaults in the table below for this project. A failed

@@ -60,17 +60,21 @@ python scripts/source_library.py coverage RUN/owner-source-coverage.json
 материал не превращается в текущее подтверждение из-за удобного сниппета.
 
 Интерактивный веб-поиск и доступные страницы остаются способом discovery.
-Для сложного публичного HTML используй существующий bounded Scrape.do transport
-через `fetch` (включая французские, тайваньские, японские и корейские площадки):
+Для повторяемого чтения публичных страниц используй `collect` по
+[контракту получения источников](source-acquisition.md): сохранённые валидные
+ответы, реальные паузы после отказов и явные ограничения актуальности.
+Одноразовый `fetch` оставь для адресной транспортной диагностики.
 
 ```text
 python scripts/source_library.py doctor
-python scripts/source_library.py fetch --source hearthpwn-decks --url https://www.hearthpwn.com/decks --output RUN/hearthpwn.json
+python scripts/source_access.py collect --url https://www.hearthpwn.com/decks --canary Hearthstone --output RUN/hearthpwn.json
 ```
 
-Нужен `SCRAPE_DO_API_TOKEN` в окружении. Код повторно использует проверку тела,
-статусов, лимит и учёт стоимости из `chinese_hearthstone.py`, но не применяет
-к некитайским страницам классификацию CN. Успешное извлечение HTML не означает
+Ключ `SCRAPE_DO_API_TOKEN` загружается из окружения или закрытого локального
+хранилища. Коллектор использует транспорт `source_access.py`, проверяет
+контракт ответа и сохраняет фактические diagnostics стоимости провайдера,
+когда они доступны. Некитайские страницы не становятся CN-записями.
+Успешное извлечение HTML не означает
 полноту комментариев или расшифровку видео. Для китайских deck/statistics
 records используй также [специализированный маршрут](chinese-hearthstone.md).
 Не обходи вход/платный доступ. Не считай CAPTCHA и пустой SPA успешной страницей.
