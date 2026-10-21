@@ -24,6 +24,56 @@ bridge_module = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
 SPEC.loader.exec_module(bridge_module)
 
+
+def claude_stream(texts, *, stop="end_turn", error=False):
+    events = []
+    for i, text in enumerate(texts):
+        events.append({"type": "assistant", "uuid": str(i), "parent_tool_use_id": None,
+                       "message": {"id": f"msg{i}", "content": [{"type": "text", "text": text}]}})
+    events.append({"type": "result", "subtype": "success", "is_error": error,
+                   "stop_reason": stop, "result": texts[-1] if texts else ""})
+    return "\n".join(json.dumps(e) for e in events)
+
+
+def test_claude_stream_keeps_prefix_before_automatic_continuation():
+    raw = claude_stream(['{"numbers":[1,2,', '3,4]}'])
+    assert json.loads(bridge_module.parse_claude_stream(raw)) == {"numbers": [1, 2, 3, 4]}
+
+
+@pytest.mark.parametrize("raw", [
+    claude_stream(["fragment"], stop="max_tokens"),
+    claude_stream(["API Error"], error=True),
+    '{"type":"assistant","message":{"content":[{"type":"text","text":"partial"}]}}',
+    claude_stream([]),
+])
+def test_claude_stream_refuses_incomplete_or_failed_output(raw):
+    with pytest.raises(ValueError):
+        bridge_module.parse_claude_stream(raw)
+
+
+def test_claude_stream_ignores_thinking_and_repeated_event_uuid():
+    raw = claude_stream(["Полный текст"])
+    first, result = raw.splitlines()
+    thinking = json.dumps({"type":"assistant", "uuid":"thought", "message":{"content":[{"type":"thinking","thinking":"private"}]}})
+    assert bridge_module.parse_claude_stream("\n".join([thinking, first, first, result])) == "Полный текст"
+
+
+@pytest.mark.parametrize("raw", ['[]', 'null', '{"type":"assistant","message":null}', '{"type":"assistant","message":{"content":[null]}}'])
+def test_claude_stream_rejects_malformed_event_shape(raw):
+    with pytest.raises(ValueError):
+        bridge_module.parse_claude_stream(raw)
+
+
+@pytest.mark.parametrize("value,expected", [(0,400),(False,400),(True,400),(-1,400),("100",400),(128001,400),(1,200),(128000,200),(None,200)])
+def test_bridge_validates_explicit_token_budget(value, expected):
+    class Stub(bridge_module.Backend):
+        def run(self, system, prompt, timeout, max_tokens=64000):
+            assert max_tokens == (64000 if value is None else value)
+            return "ok", 0, ""
+    instance = bridge_module.Bridge(Stub("claude","model","",[],""),1,1)
+    code, _ = instance.complete({"messages":[{"role":"user","content":"x"}],"max_tokens":value})
+    assert code == expected
+
 ECHO = f"{shlex.quote(sys.executable)} -X utf8 -c \"import sys; print('```json\\n' + sys.stdin.read().upper() + '\\n```')\""
 FAIL = f"{shlex.quote(sys.executable)} -c \"import sys; sys.stderr.write('Not logged in - Please run /login'); sys.exit(2)\""
 SLOW = f"{shlex.quote(sys.executable)} -c \"import time; time.sleep(5); print('late')\""
@@ -187,9 +237,10 @@ def test_bridge_times_out_with_504() -> None:
 def test_backend_argv_uses_documented_non_interactive_flags(tmp_path: Path) -> None:
     claude = bridge_module.Backend("claude", "sonnet", "", ["--effort", "low"], "")
     argv, stdin = claude.argv("сис", "текст", str(tmp_path), str(tmp_path / "last"))
-    assert argv[:4] == ["claude", "-p", "--output-format", "text"]
+    assert argv[:4] == ["claude", "-p", "--output-format", "stream-json"]
     assert "--tools" in argv and argv[argv.index("--tools") + 1] == ""
-    assert "--bare" in argv and "--no-session-persistence" in argv
+    assert "--bare" not in argv and "--no-session-persistence" in argv
+    assert "--max-turns" not in argv and "--strict-mcp-config" in argv
     assert "--system-prompt" not in argv
     assert Path(argv[argv.index("--system-prompt-file") + 1]).read_bytes() == "сис".encode("utf-8")
     assert argv[argv.index("--model") + 1] == "sonnet" and argv[-2:] == ["--effort", "low"]
@@ -224,7 +275,7 @@ def test_claude_large_system_stays_out_of_argv_and_temp_file_is_cleaned(
         if outcome == "timeout":
             raise subprocess.TimeoutExpired(argv, kwargs["timeout"])
         return subprocess.CompletedProcess(
-            argv, 0 if outcome == "success" else 2, b"ok", b"diagnostic"
+            argv, 0 if outcome == "success" else 2, claude_stream(["ok"]).encode(), b"diagnostic"
         )
 
     monkeypatch.setattr(bridge_module.subprocess, "run", invoke)
@@ -236,7 +287,7 @@ def test_claude_large_system_stays_out_of_argv_and_temp_file_is_cleaned(
         assert (reply, code, diagnostic) == ("", None, "timeout")
     else:
         assert (reply, code, diagnostic) == (
-            "ok", 0 if outcome == "success" else 2, "diagnostic"
+            "ok" if outcome == "success" else "", 0 if outcome == "success" else 2, "diagnostic"
         )
 
 
@@ -261,7 +312,9 @@ def test_claude_file_transport_launches_real_child_and_cleans_up(
         "'argv_chars':len(subprocess.list2cmdline(sys.argv))}\n"
         "pathlib.Path(sys.argv[2]).write_text(json.dumps(body),encoding='utf-8')\n"
         "if sys.argv[1]=='timeout':time.sleep(10)\n"
-        "print(json.dumps(body))\n"
+        "text=json.dumps(body)\n"
+        "print(json.dumps({'type':'assistant','uuid':'a','message':{'content':[{'type':'text','text':text}]}}))\n"
+        "print(json.dumps({'type':'result','subtype':'success','is_error':False,'stop_reason':'end_turn','result':text}))\n"
         "sys.exit(2 if sys.argv[1]=='nonzero' else 0)\n",
         encoding="utf-8",
     )
@@ -283,8 +336,10 @@ def test_claude_file_transport_launches_real_child_and_cleans_up(
     assert not system_path.exists() and not system_path.parent.exists()
     if outcome == "timeout":
         assert reply == "" and code is None
+    elif outcome == "nonzero":
+        assert reply == "" and code == 2
     else:
-        assert json.loads(reply) == packet and code == (2 if outcome == "nonzero" else 0)
+        assert json.loads(reply) == packet and code == 0
 
 
 def test_custom_backend_requires_command() -> None:

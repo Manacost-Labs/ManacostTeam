@@ -66,6 +66,16 @@ def test_low_confidence_cannot_become_mandatory() -> None:
     assert "CERTAINTY_DRIFT" in _kinds(result)
 
 
+def test_unlocated_claim_cannot_borrow_certainty_from_another_chapter():
+    from editorteam.server import _scripts
+
+    guard = _scripts().sibling("certainty_guard")
+    claim = {"claim_id":"c1", "meaning":"Условный совет о доборе", "confidence":"MEDIUM"}
+    issues = guard.scan("Обычно можно добирать.", "Для победы нужно нанести урон.\n\nИногда можно добирать при свободной руке.", [claim])
+    assert not any(i.get("claim_id")=="c1" and i["severity"]=="error" for i in issues)
+    assert any(i.get("claim_id")=="c1" and i["kind"]=="CERTAINTY_SCOPE_UNRESOLVED" and i["severity"]=="review" for i in issues)
+
+
 def test_negation_flip_is_hard_semantic_error() -> None:
     result = validate(
         "Не оставляйте X.",

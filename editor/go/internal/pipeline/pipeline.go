@@ -33,7 +33,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v50"
+const PromptVersion = "editorteam-go-v56"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -305,6 +305,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		if err := req.Handoff.Validate(); err != nil {
 			return nil, err
 		}
+		req.Handoff = req.Handoff.withEvidenceContext()
 		if req.CurrentPatch != "" && req.CurrentPatch != req.Handoff.Patch {
 			return nil, &RequestError{Message: "current_patch не совпадает с research_handoff.patch"}
 		}
@@ -463,7 +464,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			guard = guards.CompareWithTerms(req.Text, candidate, pyRules.Protected)
 		}
 		if mode == "reconstruct" {
-			guard = reconstructionGuard(verifiedText, candidate, req.Handoff.sourceNameForms()...)
+			guard = reconstructionGuard(verifiedText+"\n"+req.Handoff.scopeText(), candidate, req.Handoff.sourceNameForms()...)
 		}
 		leaks = corpusLeaks(verifiedText, candidate, examples)
 		copies = DetectCorpusCopy(verifiedText, candidate, examples)
@@ -507,7 +508,8 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 				var cerr *criticError
 				critic, cerr = s.critic(ctx, bundle, criticInput{
 					Source: verifiedText, Candidate: candidate, Diff: diff(verifiedText, candidate), Mode: mode, RevisionBrief: req.RevisionBrief, RevisionBase: revisionBase,
-					Analysis: analysis, Handoff: req.Handoff, SourceClaims: bundle.SourceClaims, ProtectedEntities: bundle.ProtectedEntities,
+					NewArticle: mode == "reconstruct" && req.Text == "" && req.CandidateText == "",
+					Analysis:   analysis, Handoff: req.Handoff, SourceClaims: bundle.SourceClaims, ProtectedEntities: bundle.ProtectedEntities,
 					KeepSpans:    analysis.Strengths,
 					ToolFindings: repairable(findings), StyleExamples: promptExamples(examples),
 				}, result.Attempts)
@@ -606,7 +608,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			reasons = append(reasons, ReasonRepairExhausted)
 		}
 		// Изменённый текст без названного улучшения — не улучшение.
-		if candidate != req.Text && len(result.Improvements) == 0 {
+		if candidate != req.Text && len(result.Improvements) == 0 && !(mode == "reconstruct" && req.Text == "" && req.CandidateText == "") {
 			reasons = append(reasons, ReasonNoImprovement)
 		}
 	}
@@ -890,6 +892,7 @@ func appendUnique(values []string, more ...string) []string {
 // criticInput — данные для critic. Они уходят JSON-ом в user message, а не
 // инструкциями в system prompt.
 type criticInput struct {
+	NewArticle        bool                `json:"new_article,omitempty"`
 	LocalEdits        []LocalEdit         `json:"local_edits,omitempty"`
 	Source            string              `json:"source"`
 	Candidate         string              `json:"candidate"`
@@ -934,6 +937,8 @@ func (e *criticError) Error() string { return e.Kind + ": " + e.Err.Error() }
 const precisionInstruction = "\nСохраняй точность отсылок и условий. Повтор названия предмета, части главы или карты может помогать читателю: заменяй его местоимением только при однозначной связи и конкретной пользе. Не убирай уточняющее существительное из названия предмета ради краткости. Условие получения награды, направление действия и область правила сохраняй явно; более длинный синоним точной короткой формулировки сам по себе не улучшение. Повтор начала пунктов технического списка может обозначать их статус: не разнообразь его ради разнообразия и не переноси статус в заключительное «это исправлено». Обычное слово не становится названием игровой механики из-за словарной подсказки. Проверяй каждую существенную замену отдельно: польза одного исправления не оправдывает соседнюю потерю точности. Устраняй такую потерю локально, сохраняя полезную грамматику, абзацы, сноски и авторский голос. "
 
 const criticInstruction = "\nТы critic. Не переписывай текст и не предлагай свою версию статьи. " + precisionInstruction + craftInstruction +
+	"При new_article=true source — рабочий реестр фактов, готового авторского черновика нет. Проверяй полноту и точность research_handoff, ответы на вопросы читателя, связность и стиль всей новой статьи; improvements может быть пустым, доказательства редактуры формулировок реестра не нужны. " +
+	"Решение: если все восемь оценок не ниже 8, факты и условия сохранены и существенная трудность чтения не найдена, верни accept. Мелкие необязательные улучшения оформляй как info при accept; не превращай возможность еще отшлифовать фразу в обязательный repair. Потеря условия, неподтвержденный совет или конкретная существенная ошибка требуют repair/reject независимо от средних оценок. " +
 	"Оцени текст независимо, без обоснований автора. Краткость или более активный глагол сами по себе не доказывают пользу: сравни точность, естественность соседних слов и ясность отсылок до и после. Нейтральный оборот не становится ошибкой только по ярлыку «канцелярит». Если рядом с полезной правкой есть лишняя или ухудшающая замена, запроси её локальный возврат, сохраняя полезную часть и абзацы. " +
 	"Мягкие tool_findings — наблюдения, не обязательные замены. Для требующей исправления опечатки или конкретной трудности читателя верни repair с адресным finding; не требуй repair из-за одной частоты слов или равноценного варианта. " +
 	"Составь обратный план функций абзацев; оцени действие, причину, условия и альтернативу с позиции читателя. Жанр определяет применимость этих вопросов. " +
@@ -951,7 +956,7 @@ const criticInstruction = "\nТы critic. Не переписывай текст
 	". Каждая оценка — целое число от 0 до 10. improvements — конкретные места, где candidate лучше source: category из списка clarity, structure, usefulness, natural_russian, author_voice, conciseness, terminology; " +
 	"before должен быть дословной выдержкой из source. after должен быть дословной выдержкой из candidate. Не описывай улучшение общими словами. Не выдумывай отсутствующие фрагменты. " +
 	"Каждый фрагмент не длиннее 300 символов, reason — конкретное объяснение, что стало лучше и почему. Недоказанные улучшения отбрасываются; " +
-	"если текст изменён, но назвать улучшение нечем, оставь improvements пустым: такой candidate не примут. regressions — массив строк с цитатой и причиной ухудшения, не массив объектов. Для чтения цитируй candidate, утраченную степень цитируй отдельно из source в scope_quote. " +
+	"если существующий черновик изменен (new_article=false), но назвать улучшение нечем, оставь improvements пустым: такой candidate не примут. regressions — массив строк с цитатой и причиной ухудшения, не массив объектов. Для чтения цитируй candidate, утраченную степень цитируй отдельно из source в scope_quote. " +
 	"Правила согласованности: verdict accept требует repair_required=false и не допускает error или blocker; verdict repair требует repair_required=true и хотя бы одно исправимое finding; verdict reject — когда изменение нельзя принять. " +
 	"В findings указывай только конкретные исправимые места; error и blocker — только для потери смысла, факта или защищённой сущности. Хороший текст не трогают: для него verdict accept с пустыми findings. " +
 	"Проверь статью целиком: повторы между главами, противоречащие советы, последовательность объяснения и единообразие терминов. Не требуй одинакового шаблона абзацев. " +
@@ -1114,7 +1119,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 		if err != nil {
 			return "", err
 		}
-		payload, err := json.Marshal(map[string]any{"draft": req.Text, "research_handoff": authorEvidence, "style_examples": promptExamples(examples), "editorial_rules": map[string]any{"style": bundle.StyleRules, "terminology": bundle.TerminologyRules, "language": bundle.Language, "corrections": bundle.Corrections, "sections_required": bundle.SectionsRequired}})
+		payload, err := json.Marshal(map[string]any{"draft": req.Text, "research_handoff": authorEvidence, "condition_ledger": conditionLedger(req.Handoff), "canonical_names": sourceCardNames(req.Handoff), "style_examples": promptExamples(examples), "editorial_rules": map[string]any{"style": bundle.StyleRules, "terminology": bundle.TerminologyRules, "language": bundle.Language, "corrections": bundle.Corrections, "sections_required": bundle.SectionsRequired}})
 		if err != nil {
 			return "", err
 		}

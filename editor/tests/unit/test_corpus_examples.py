@@ -43,6 +43,21 @@ def test_examples_come_from_the_same_game_and_profile_family(has_corpus: None) -
     assert len({item["excerpt"] for item in examples}) == len(examples)
 
 
+def test_voice_analysis_runs_only_for_final_selected_examples(monkeypatch, has_corpus):
+    seen = []
+    monkeypatch.setattr(server, "_voice_features", lambda text: seen.append(text) or ["voice"])
+    result = server.corpus_examples("\n\n".join([QUERY, QUERY + " Поэтому нужен ресурс."]), "hearthstone", "constructed-guide")
+    assert seen == [item["excerpt"] for item in result["examples"]]
+    assert all(item["voice_features"] == ["voice"] for item in result["examples"])
+
+
+def test_plain_manacost_rules_load_house_style_without_task_context():
+    rules = server.rules_for("hearthstone", "game-guide", text="", depth="обычная")
+    text = "\n".join(rules.get("style_rules", []))
+    assert (ROOT / "СТИЛЬ.md").read_text(encoding="utf-8").strip() in text
+    assert server.voice_signature() in text and server.voice_signature()
+
+
 def test_other_game_and_news_profile_get_nothing(has_corpus: None) -> None:
     assert server.corpus_examples(QUERY, "wow", "wow-guide")["examples"] == []
     assert server.corpus_examples(QUERY, "hearthstone", "news")["examples"] == []

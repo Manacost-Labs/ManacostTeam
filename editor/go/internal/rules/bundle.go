@@ -48,11 +48,11 @@ func Build(r *analyzer.Rules, mode, depth, language string, claims []map[string]
 		Task:              taskFor(mode, depth), EditorialGoal: goalFor(mode, depth)}
 	if r != nil {
 		b.SectionsRequired = append([]string(nil), r.SectionsRequired...)
+		if len(r.StyleRules) > 0 {
+			b.StyleRules = append([]string{}, r.StyleRules...)
+		}
 		if len(r.TaskContext) > 0 {
 			b.AuthorProfile = "manacost"
-			if len(r.StyleRules) > 0 {
-				b.StyleRules = append([]string{}, r.StyleRules...)
-			}
 			if r.Game != "hearthstone" {
 				b.ProtectedEntities = []string{"названия способностей, талантов, предметов и персонажей", "числа, проценты, характеристики и длительности", "ссылки и Markdown-разметка", "цитаты, отрицания и осторожные условия"}
 				b.TerminologyRules = []string{"используй подтверждённые названия только выбранной игры и сборки", "не придумывай официальную локализацию; неподтверждённое имя оставь на проверку"}

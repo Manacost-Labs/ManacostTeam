@@ -23,6 +23,8 @@ import (
 var ErrNotInstalled = errors.New("Hunspell не установлен или не найден в PATH")
 var ErrDictionaryUnavailable = errors.New("русский словарь Hunspell не задан")
 
+const DefaultTimeout = 30 * time.Second
+
 type Runner struct {
 	Binary     string
 	Dictionary string
@@ -36,7 +38,7 @@ func New(binary, dictionary string, allowlist []string, timeout time.Duration) *
 		binary = "hunspell"
 	}
 	if timeout <= 0 {
-		timeout = 8 * time.Second
+		timeout = DefaultTimeout
 	}
 	return &Runner{Binary: binary, Dictionary: dictionary, Allowlist: allowlist, Timeout: timeout, MaxBytes: 2 << 20}
 }

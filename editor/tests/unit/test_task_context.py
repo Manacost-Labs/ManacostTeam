@@ -137,6 +137,8 @@ def sidecar():
 
 
 def test_http_context_routes_apply_game_and_preserve_legacy_rules(sidecar):
+    from editorteam.server import house_style_rules
+
     status, wow = sidecar("/rules", {"task_context": context()})
     assert status == 200
     assert wow["game"] == "wow"
@@ -148,7 +150,10 @@ def test_http_context_routes_apply_game_and_preserve_legacy_rules(sidecar):
     assert status == 200
     shared.pop("task_context")
     shared.pop("author_profile")
-    shared.pop("style_rules")
+    shared_style = shared.pop("style_rules")
+    legacy_style = legacy.pop("style_rules")
+    assert legacy_style == house_style_rules()
+    assert shared_style[-len(legacy_style):] == legacy_style
     assert shared == legacy
 
 

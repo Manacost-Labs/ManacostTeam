@@ -106,6 +106,54 @@ def claude_system_prompt_args(system: str, scratch: str) -> list[str]:
     return ["--system-prompt-file", path]
 
 
+def parse_claude_stream(raw: str) -> str:
+    """Collect text blocks, including automatic max-token continuations.
+
+    Claude's result.result contains only the last continuation. Thinking,
+    partial deltas and subagent output are never part of the delivered text.
+    A successful final result is required even if earlier text was received.
+    """
+    parts: list[str] = []
+    seen: set[str] = set()
+    result = None
+    for line in raw.splitlines():
+        if not line.strip():
+            continue
+        event = json.loads(line)
+        if not isinstance(event, dict):
+            raise ValueError("CLI stream event must be an object")
+        if result is not None:
+            raise ValueError("CLI emitted data after its final result")
+        if event.get("type") == "result":
+            result = event
+        elif event.get("type") == "assistant" and not event.get("parent_tool_use_id"):
+            key = event.get("uuid")
+            if key and key in seen:
+                continue
+            if key:
+                seen.add(key)
+            message = event.get("message")
+            if not isinstance(message, dict) or not isinstance(message.get("content"), list):
+                raise ValueError("CLI assistant message has invalid content")
+            for block in message["content"]:
+                if not isinstance(block, dict):
+                    raise ValueError("CLI content block must be an object")
+                if block.get("type") == "tool_use":
+                    raise ValueError("unexpected CLI tool call in text-only transport")
+                if block.get("type") == "text":
+                    if not isinstance(block.get("text"), str):
+                        raise ValueError("CLI text block must contain a string")
+                    parts.append(block["text"])
+    if (not result or result.get("is_error") is not False
+            or result.get("subtype") != "success" or result.get("stop_reason") != "end_turn"):
+        raise ValueError("CLI response is incomplete or failed")
+    reply = "".join(parts)
+    tail = result.get("result")
+    if not reply.strip() or not isinstance(tail, str) or not tail or not reply.endswith(tail):
+        raise ValueError("CLI stream and final result disagree")
+    return reply
+
+
 class Backend:
     """Сборка команды для конкретного CLI. Prompt всегда идёт через stdin,
     чтобы не упираться в длину аргументов и не светить текст в списке
@@ -118,11 +166,14 @@ class Backend:
         self.extra = extra
         self.workdir = workdir
 
-    def run(self, system: str, prompt: str, timeout: float) -> tuple[str, int | None, str]:
+    def run(self, system: str, prompt: str, timeout: float, max_tokens: int = 64000) -> tuple[str, int | None, str]:
         """Возвращает (ответ, код возврата, служебный вывод). Код None — таймаут."""
         with tempfile.TemporaryDirectory(prefix="cli-bridge-") as scratch:
             last_message = os.path.join(scratch, "last.txt")
             argv, stdin_text = self.argv(system, prompt, scratch, last_message)
+            env = os.environ.copy()
+            if self.name == "claude":
+                env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = str(max_tokens)
             try:
                 proc = subprocess.run(
                     argv,
@@ -131,6 +182,7 @@ class Backend:
                     timeout=timeout,
                     cwd=self.workdir or scratch,
                     check=False,
+                    env=env,
                 )
             except subprocess.TimeoutExpired:
                 return "", None, "timeout"
@@ -145,6 +197,13 @@ class Backend:
                     reply = proc.stdout.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
             except UnicodeDecodeError:
                 return "", 1, "invalid UTF-8 in CLI output"
+            if self.name == "claude":
+                if proc.returncode:
+                    return "", proc.returncode, diagnostic[-2000:]
+                try:
+                    reply = parse_claude_stream(reply)
+                except (ValueError, KeyError, TypeError) as error:
+                    return "", 1, str(error)
             return strip_fence(reply), proc.returncode, diagnostic[-2000:]
 
     def argv(
@@ -155,12 +214,16 @@ class Backend:
                 "claude",
                 "-p",
                 "--output-format",
-                "text",
-                "--max-turns",
-                "1",
+                "stream-json",
+                "--verbose",
                 "--tools",
                 "",
-                "--bare",
+                "--strict-mcp-config",
+                "--mcp-config",
+                '{"mcpServers":{}}',
+                "--setting-sources",
+                "",
+                "--disable-slash-commands",
                 "--no-session-persistence",
             ]
             argv += claude_system_prompt_args(system, scratch)
@@ -212,10 +275,15 @@ class Bridge:
         if not isinstance(messages, list) or not messages:
             return 400, {"error": {"message": "нужен непустой список messages"}}
         system, prompt = build_prompt(messages)
+        max_tokens = payload.get("max_tokens")
+        if max_tokens is None:
+            max_tokens = 64000
+        if isinstance(max_tokens, bool) or not isinstance(max_tokens, int) or not 1 <= max_tokens <= 128000:
+            return 400, {"error": {"message": "max_tokens must be an integer from 1 to 128000"}}
         model = str(payload.get("model") or self.backend.model or self.backend.name)
         started = time.time()
         with self.gate:
-            reply, code, stderr = self.backend.run(system, prompt, self.timeout)
+            reply, code, stderr = self.backend.run(system, prompt, self.timeout, max_tokens)
         duration = int((time.time() - started) * 1000)
         with self.lock:
             self.calls += 1
@@ -347,7 +415,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8790)
-    parser.add_argument("--timeout", type=float, default=180.0, help="секунд на один вызов CLI")
+    parser.add_argument("--timeout", type=float, default=900.0, help="секунд на один вызов CLI")
     parser.add_argument(
         "--parallel", type=int, default=1, help="сколько вызовов CLI выполнять одновременно"
     )

@@ -425,7 +425,7 @@ def validate(
         # Документная проверка сравнивает самый сильный маркер во всём тексте.
         # При переплавке текст пишется заново, и «должна» в новом абзаце — ещё
         # не усиление совета; жёстким остаётся только контракт конкретного claim.
-        if rewrite and not item.get("claim_id"):
+        if item.get("severity") == "review" or (rewrite and not item.get("claim_id")):
             warnings.append({**item, "severity": "review"})
         else:
             violations.append(item)
@@ -674,6 +674,14 @@ def voice_signature() -> str:
 
 
 @lru_cache(maxsize=1)
+def house_style_rules() -> list[str]:
+    """Load the canonical house rules for writer, repair and critic alike."""
+    path = ROOT / "СТИЛЬ.md"
+    style = path.read_text(encoding="utf-8").strip() if path.exists() else ""
+    return [part for part in (style, voice_signature()) if part]
+
+
+@lru_cache(maxsize=1)
 def _exemplars() -> dict:
     C = _scripts()
     path = C.ASSETS / "exemplars.json"
@@ -858,7 +866,6 @@ def corpus_examples(
                 "profile": doc_profile,
                 "author": doc_author,
                 "excerpt": para[:RETRIEVAL_EXCERPT_MAX],
-                "voice_features": _voice_features(para),
                 "editorial_functions": functions,
                 "reader_level": level,
                 "why_relevant": (
@@ -884,6 +891,9 @@ def corpus_examples(
             break
         if total + len(item["excerpt"]) > RETRIEVAL_TOTAL_MAX:
             continue
+        # This analysis was previously repeated for every matching paragraph
+        # of every query, even though only three excerpts can be returned.
+        item["voice_features"] = _voice_features(item["excerpt"])
         out["examples"].append(item)
         total += len(item["excerpt"])
     return out
@@ -1078,6 +1088,8 @@ def rules_for(
     if task_context is not None:
         style = manacost_style()
         out.update({"author_profile": "manacost", "style_rules": style["style_rules"]})
+    if author.strip().lower() == "manacost":
+        out["style_rules"] = [*out.get("style_rules", []), *house_style_rules()]
     if task_context is not None and g.id != "hearthstone":
         # Hearthstone terminology/corpus examples have no authority over other games.
         out.update({"replace": [], "keep": []})

@@ -7,7 +7,25 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 )
+
+func TestLongArticleBudgetAndExplicitTimeout(t *testing.T) {
+	if New("", "", nil, 0).Timeout < 30*time.Second {
+		t.Fatal("the measured 13-second long-article check needs a 30-second default budget")
+	}
+	if New("", "", nil, time.Millisecond).Timeout != time.Millisecond {
+		t.Fatal("explicit timeout must not be silently increased")
+	}
+	dict := filepath.Join(t.TempDir(), "ru_RU.dic")
+	if err := os.WriteFile(dict, []byte("0\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	r := New(os.Args[0], dict, nil, time.Nanosecond)
+	if _, err := r.Check(context.Background(), "длинный текст"); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("timed out process must fail explicitly: %v", err)
+	}
+}
 
 func TestCheckParsesSuggestionsAndAllowlist(t *testing.T) {
 	if runtime.GOOS == "windows" {

@@ -213,6 +213,27 @@ def fact_numbers(text):
 _UNKNOWN_INDEX = {}
 
 
+def _explicit_card_identity(sentence, name):
+    """A dictionary match alone cannot turn ordinary lowercase prose into a card."""
+    words = list(re.finditer(r"[А-Яа-яЁёA-Za-z'’-]+", sentence))
+    expected = [C.lemmas(w.lower()) for w in name.split()]
+    cues = {"карта", "карты", "карту", "картой", "заклинание", "заклинания",
+            "разыграйте", "разыграть", "используйте", "сыграйте"}
+    for i, token in enumerate(words):
+        span = words[i:i + len(expected)]
+        if len(span) != len(expected) or not all(
+            set(C.lemmas(w.group().lower())) & set(need)
+            for w, need in zip(span, expected, strict=True)
+        ):
+            continue
+        previous = words[i - 1].group().lower() if i else ""
+        quoted = token.start() > 0 and sentence[token.start() - 1] in '«"“*['
+        # Sentence-initial capitalization is grammatical, not name evidence.
+        if (i > 0 and token.group()[0].isupper()) or quoted or previous in cues:
+            return True
+    return False
+
+
 def unknown_cards(text):
     """Counter возможных новых карт (см. cards.unknown_names); без справочника — пусто."""
     cards = C.sibling("cards")
@@ -242,17 +263,18 @@ def extract(text, *, profile="constructed-guide"):
     cand = consistency.card_candidates(text)
     cards = []
     for name, need in cand:
-        mentions, first_line, first_pos = 0, None, None
+        mentions, first_line, explicit = 0, None, False
         for pos, s, sl in sent_lemmas:
-            if all(any(l in sl for l in C.lemmas(w)) for w in need):
+            if all(any(lemma in sl for lemma in C.lemmas(w)) for w in need):
                 mentions += 1
+                explicit = explicit or _explicit_card_identity(s, name)
                 if first_line is None:
-                    first_line, first_pos = _line_of(text, pos), pos
+                    first_line = _line_of(text, pos)
         if not mentions:
             continue
         cards.append({"name": name, "lemmas": sorted(need), "mentions": mentions,
                       "line": first_line, "section": _section_at(first_line, spans),
-                      "source": "db"})
+                      "source": "db" if explicit else "ambiguous"})
 
     # Имена, которых в справочнике нет: карта из нового дополнения — тоже
     # утверждение источника, переплавка не имеет права её потерять
@@ -281,7 +303,7 @@ def extract(text, *, profile="constructed-guide"):
         line = _line_of(text, pos)
         anchors = []
         for name, need in cand:
-            if all(any(l in sl for l in C.lemmas(w)) for w in need):
+            if all(any(lemma in sl for lemma in C.lemmas(w)) for w in need):
                 anchors.append(("card", name))
         for cls in _classes_in(s):
             anchors.append(("class", cls))
@@ -322,7 +344,7 @@ def extract(text, *, profile="constructed-guide"):
 
 
 def _card_present(need_lemmas, doc_lemmas):
-    return all(any(l in doc_lemmas for l in C.lemmas(w)) for w in need_lemmas)
+    return all(any(lemma in doc_lemmas for lemma in C.lemmas(w)) for w in need_lemmas)
 
 
 def _anchor_sentences(kind, anchor, sent_lemmas, structure):
@@ -330,7 +352,7 @@ def _anchor_sentences(kind, anchor, sent_lemmas, structure):
     for pos, s, sl in sent_lemmas:
         if kind == "card":
             need = [w for w in re.findall(r"[А-Яа-яЁёA-Za-z'’-]{3,}", anchor)]
-            if all(any(l in sl for l in C.lemmas(w.lower())) for w in need):
+            if all(any(lemma in sl for lemma in C.lemmas(w.lower())) for w in need):
                 out.append(s)
         elif kind == "class":
             if re.search(rf"\b{structure.CLASS_PATTERNS[anchor]}\b", s, re.I):
@@ -349,7 +371,7 @@ def coverage(source, after, *, declared_missing=None):
     """
     consistency = C.sibling("consistency")
     structure = C.sibling("structure")
-    guide_voice = C.sibling("guide_voice")
+    _guide_voice = C.sibling("guide_voice")
     declared = set(declared_missing or [])
     drop_re = re.compile(consistency.DROP, re.I)
 
@@ -370,6 +392,10 @@ def coverage(source, after, *, declared_missing=None):
         if card.get("section") in declared:
             warnings.append({"kind": "claim_coverage_review", "field": "card", "claim": card["name"],
                              "message": message + " — раздел объявлен отсутствующим",
+                             "severity": "review"})
+        elif card.get("source") == "ambiguous":
+            warnings.append({"kind": "claim_coverage_review", "field": "card", "claim": card["name"],
+                             "message": message + " — строчное словосочетание без явного указания на карту; проверить смысл",
                              "severity": "review"})
         elif card.get("source") == "unknown":
             warnings.append({"kind": "claim_coverage_review", "field": "card", "claim": card["name"],

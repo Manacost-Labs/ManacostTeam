@@ -33,14 +33,13 @@ def _sentences(text: str) -> list[str]:
     return [item.strip() for item in re.split(r"(?<=[.!?…])\s+|\n+", text) if item.strip()]
 
 
-def _claim_sentence(text: str, claim: dict) -> str:
+def _claim_sentence(text: str, claim: dict) -> str | None:
     meaning = claim.get("meaning") if isinstance(claim.get("meaning"), dict) else {}
     card = str(meaning.get("card", "")).strip()
     if card:
-        for sentence in _sentences(text):
-            if card.casefold() in sentence.casefold():
-                return sentence
-    return text
+        matches = [s for s in _sentences(text) if card.casefold() in s.casefold()]
+        return matches[0] if len(matches) == 1 else None
+    return None
 
 
 def scan(before: str, after: str, claims: list[dict] | None = None) -> list[dict]:
@@ -63,6 +62,11 @@ def scan(before: str, after: str, claims: list[dict] | None = None) -> list[dict
         if not allowed:
             continue
         sentence = _claim_sentence(after, claim)
+        if sentence is None:
+            issues.append({"kind":"CERTAINTY_SCOPE_UNRESOLVED", "claim_id":claim.get("claim_id"),
+                           "message":"нужна смысловая проверка уверенности: нет однозначной привязки к предложению",
+                           "severity":"review"})
+            continue
         rank, label, marker = certainty(sentence)
         if rank > allowed:
             issues.append(

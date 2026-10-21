@@ -12,6 +12,23 @@ def fields(items):
     return {(i["kind"], i.get("field")) for i in items}
 
 
+def test_lowercase_common_phrase_is_not_a_proven_card_identity():
+    source = claims.extract("Сфера отправляет ненужную карту на самое дно колоды.")
+    violations, warnings, _ = claims.coverage(source, "Сфера отправляет ненужную карту вниз колоды.")
+    assert not any(v.get("claim") == "Самое дно" for v in violations)
+    assert any(v.get("claim") == "Самое дно" for v in warnings)
+    for text in ("Разыграйте Самое дно.", "Разыграйте карту самое дно."):
+        violations, _, _ = claims.coverage(claims.extract(text), "Передайте ход.")
+        assert any(v.get("claim") == "Самое дно" for v in violations)
+
+
+def test_sentence_initial_capital_is_not_a_card_identity_cue():
+    source = claims.extract("Самое дно колоды заняла ненужная карта.")
+    violations, warnings, _ = claims.coverage(source, "Ненужная карта оказалась внизу колоды.")
+    assert not any(v.get("claim") == "Самое дно" for v in violations)
+    assert any(v.get("claim") == "Самое дно" for v in warnings)
+
+
 def test_extract_finds_cards_stances_classes_and_archetype():
     src = claims.extract(CLEAN)
     names = {c["name"] for c in src["cards"]}

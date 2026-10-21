@@ -96,7 +96,7 @@ func Load() (*Config, error) {
 		NatashaTimeout:      time.Duration(envInt("NATASHA_TIMEOUT_SEC", 8)) * time.Second,
 		HunspellBinary:      env("HUNSPELL_BIN", "hunspell"),
 		RussianDictionary:   os.Getenv("RU_DICT_PATH"),
-		HunspellTimeout:     time.Duration(envInt("HUNSPELL_TIMEOUT_SEC", 8)) * time.Second,
+		HunspellTimeout:     time.Duration(envInt("HUNSPELL_TIMEOUT_SEC", 30)) * time.Second,
 		MarkdownlintBinary:  env("MARKDOWNLINT_BIN", "markdownlint-cli2"),
 		MarkdownlintConfig:  os.Getenv("MARKDOWNLINT_CONFIG"),
 		MarkdownlintTimeout: time.Duration(envInt("MARKDOWNLINT_TIMEOUT_SEC", 8)) * time.Second,
@@ -111,7 +111,7 @@ func Load() (*Config, error) {
 		PythonTimeout:       time.Duration(envInt("EDITOR_PYTHON_TIMEOUT_SEC", 20)) * time.Second,
 		MaxProcessOutput:    int64(envInt("EDITOR_PROCESS_MAX_OUTPUT", 4*1024*1024)),
 		RetrievalMode:       strings.ToLower(strings.TrimSpace(env("EDITOR_RETRIEVAL", "auto"))),
-		RetrievalTimeout:    time.Duration(envInt("EDITOR_RETRIEVAL_TIMEOUT_SEC", 5)) * time.Second,
+		RetrievalTimeout:    time.Duration(envInt("EDITOR_RETRIEVAL_TIMEOUT_SEC", 15)) * time.Second,
 	}
 
 	switch c.RetrievalMode {

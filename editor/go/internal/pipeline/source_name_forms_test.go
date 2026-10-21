@@ -19,6 +19,71 @@ func nameFormHandoff() *ResearchHandoff {
 	return h
 }
 
+func TestReconstructionDoesNotTreatSentenceVerbAsPartOfKnownName(t *testing.T) {
+	before := "Эффект Сферы. Найдите Полкелта и Ученицу. Полкелт и Ученица. Скидка Ученицы. Северная Империя."
+	for _, after := range []string{"Без Сферы", "После Полкелта", "Выставьте Ученицу", "Перед Северная Империя", "Пока Ученицу", "Если Сферы", "Играть Полкелта", "Текст Сферы", "Отсутствие Полкелта", "Ранний Полкелт", "Разыгрывать Полкелта", "Иногда Ученица", "Скидка Ученицы", "Поздний Полкелт", "Наличие Сферы", "Усиление Ученицы"} {
+		if reconstructionGuard(before, after).HasHardChanges() {
+			t.Errorf("sentence prefix invented a name: %s", after)
+		}
+	}
+	for _, after := range []string{"Без Неизвестной Сферы", "После Неизвестного Полкелта", "Западная Империя", "Ранний Неизвестный Полкелт", "Текст Неизвестной Сферы", "Сверхсильная Ученицу"} {
+		if !reconstructionGuard(before, after).HasHardChanges() {
+			t.Errorf("new name admitted: %s", after)
+		}
+	}
+}
+
+func TestNameWrapperCannotPromoteLowercaseCommonPhrase(t *testing.T) {
+	for _, before := range []string{"старый ход", "Старый ход", "суперПолкелт"} {
+		for _, candidate := range []string{"Текст Старый Ход", "Текст Полкелт"} {
+			if !reconstructionGuard(before, candidate).HasHardChanges() {
+				t.Fatalf("lowercase phrase or partial word promoted to name: %q => %q", before, candidate)
+			}
+		}
+	}
+}
+
+func TestReconstructionScopeAllowsOnlyDeclaredHistoricalFrame(t *testing.T) {
+	h := readyHandoff()
+	h.Patch = "18.0-2020-08-12"
+	baseline := h.VerifiedText() + "\n" + h.scopeText()
+	if reconstructionGuard(baseline, "На 12.08.2020, патч 18.0.").HasHardChanges() {
+		t.Fatal("declared historical frame treated as invented numeric fact")
+	}
+	if reconstructionGuard(baseline, "На 12 августа 2020 года, патч 18.0.").HasHardChanges() {
+		t.Fatal("same declared calendar date in prose rejected")
+	}
+	for _, candidate := range []string{"17 урона", "100 урона", "13.08.2020", "13 августа 2020 года", "12 урона"} {
+		if !reconstructionGuard(baseline, candidate).HasHardChanges() {
+			t.Fatal("scope authorized a different number", candidate)
+		}
+	}
+}
+
+func TestReconstructionRecognizesBoundedKnownRussianNameDeclensions(t *testing.T) {
+	before := "Фриз Маг. Звездочет Солариан. Малигос Друид."
+	for _, candidate := range []string{"Фриз Маге", "Фриз Магов", "Звездочетом Соларианом", "Малигос Друида"} {
+		if reconstructionGuard(before, candidate).HasHardChanges() {
+			t.Errorf("ordinary name inflection rejected: %s", candidate)
+		}
+	}
+	for _, candidate := range []string{"Фриз Магистр", "Звездочет Салариан", "Великий Фриз Маг", "Малигос Жрец", "Фриз Маг Солариан"} {
+		if !reconstructionGuard(before, candidate).HasHardChanges() {
+			t.Errorf("unapproved identity admitted: %s", candidate)
+		}
+	}
+}
+
+func TestReconstructionScopeRejectsUnrecognizedPatchPayload(t *testing.T) {
+	for _, patch := range []string{"18.0 17 100", "18.0-2020-08-12 17", "18.0-2020-99-99", "2020-08-12", "arbitrary 100"} {
+		h := readyHandoff()
+		h.Patch = patch
+		if h.scopeText() != "" {
+			t.Errorf("malformed patch became numeric authority: %q", patch)
+		}
+	}
+}
+
 func TestWritingAllowsExactReferencedSourceNamesWithoutAuthorizingNumbersOrLinks(t *testing.T) {
 	h := nameFormHandoff()
 	if err := h.Validate(); err != nil {
@@ -39,6 +104,22 @@ func TestWritingAllowsExactReferencedSourceNamesWithoutAuthorizingNumbersOrLinks
 	}
 	if before != h.VerifiedText() {
 		t.Fatal("source names changed factual baseline")
+	}
+}
+
+func TestSourceAdjacentLowercasePhraseMayStartSentence(t *testing.T) {
+	h := nameFormHandoff()
+	h.Sources[0].Quote += " Классический пример: классический Фриз Маг. Еще скидка Потока."
+	for _, candidate := range []string{"Классический Фриз Маг", "Скидка Потока"} {
+		if reconstructionGuard(h.VerifiedText()+" Маг", candidate, h.sourceNameForms()...).HasHardChanges() {
+			t.Fatalf("exact adjacent source phrase rejected: %s", candidate)
+		}
+	}
+	if !reconstructionGuard(h.VerifiedText(), "Огромная Потока", h.sourceNameForms()...).HasHardChanges() {
+		t.Fatal("arbitrary modifier admitted")
+	}
+	if !reconstructionGuard(h.VerifiedText()+" Маг", "Риз Маг", h.sourceNameForms()...).HasHardChanges() {
+		t.Fatal("suffix of a capitalized source word became a new approved name")
 	}
 }
 

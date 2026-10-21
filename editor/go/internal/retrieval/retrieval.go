@@ -23,7 +23,7 @@ const (
 	MaxExamples    = 3
 	MaxExcerptLen  = 1200
 	MaxTotalLen    = 3000
-	DefaultTimeout = 5 * time.Second
+	DefaultTimeout = 15 * time.Second
 )
 
 var ErrUnavailable = errors.New("корпус недоступен")

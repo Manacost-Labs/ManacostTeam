@@ -12,6 +12,37 @@ func factWithFaultySupportedQuote() string {
 	return strings.Replace(negative, `"action_quote":"Сохраняйте ресурс"`, `"action_quote":"Сохраняйте весь ресурс"`, 1)
 }
 
+func TestWritingRestoresMissingConditionFromCompleteNegativeReview(t *testing.T) {
+	bad := strings.Replace(publicationCandidate, " при слабой позиции", "", 1)
+	negative := strings.Replace(publicationFact, `"status":"supported"`, `"status":"insufficient"`, 1)
+	negative = strings.Replace(negative, `"condition_quote":"при слабой позиции"`, `"condition_quote":""`, 1)
+	writer := &fakeLLM{replies: []string{bad, publicationCandidate}}
+	reviewer := &fakeLLM{replies: []string{negative, criticJSON("accept"), publicationFact, criticJSON("accept")}}
+	s := New(writer, nil, "fake")
+	s.Reviewer = reviewer
+	r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: readyHandoff()})
+	if err != nil || !r.Accepted || r.Text != publicationCandidate || r.Attempts != 2 || len(writer.messages) != 2 || len(reviewer.messages) != 4 {
+		t.Fatalf("missing condition never reached automatic repair and fresh review: %+v %v", r, err)
+	}
+	if _, err := validateFactReview(negative, readyHandoff(), bad); err == nil {
+		t.Fatal("negative omission review cannot authorize acceptance")
+	}
+}
+
+func TestMissingConditionRepairCannotBypassFreshNegativeReview(t *testing.T) {
+	bad := strings.Replace(publicationCandidate, " при слабой позиции", "", 1)
+	negative := strings.Replace(publicationFact, `"status":"supported"`, `"status":"insufficient"`, 1)
+	negative = strings.Replace(negative, `"condition_quote":"при слабой позиции"`, `"condition_quote":""`, 1)
+	writer := &fakeLLM{replies: []string{bad, publicationCandidate, publicationCandidate}}
+	reviewer := &fakeLLM{replies: []string{negative, criticJSON("accept"), negative, criticJSON("accept"), negative}}
+	s := New(writer, nil, "fake")
+	s.Reviewer = reviewer
+	r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: readyHandoff()})
+	if err != nil || r.Accepted || r.Text != "" || r.FactReview != nil || r.Attempts != MaxRepairs+1 || len(reviewer.messages) != 5 {
+		t.Fatalf("repair without a fresh positive factual review was accepted: %+v %v", r, err)
+	}
+}
+
 func TestWritingRepairsGroundedNegativeDespiteFaultySupportedQuote(t *testing.T) {
 	bad := publicationCandidate + " Это гарантирует победу."
 	writer := &fakeLLM{replies: []string{bad, publicationCandidate}}
@@ -84,11 +115,15 @@ func TestWritingPartialFactFeedbackKeepsUnreliableCasesClosed(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			writer := &fakeLLM{replies: []string{publicationCandidate + " Это гарантирует победу."}}
-			reviewer := &fakeLLM{replies: []string{tc.review}}
+			replies := []string{tc.review}
+			if tc.name == "no_grounded_negative" {
+				replies = append(replies, tc.review)
+			}
+			reviewer := &fakeLLM{replies: replies}
 			s := New(writer, nil, "fake")
 			s.Reviewer = reviewer
 			r, err := s.Run(context.Background(), Request{Mode: "write", Handoff: readyHandoff()})
-			if err != nil || r.Accepted || r.Text != "" || r.ChecksComplete || len(writer.messages) != 1 || len(reviewer.messages) != 1 {
+			if err != nil || r.Accepted || r.Text != "" || r.ChecksComplete || len(writer.messages) != 1 || len(reviewer.messages) != len(replies) {
 				t.Fatalf("ungrounded or incomplete review authorized repair/acceptance: %+v %v", r, err)
 			}
 		})

@@ -38,6 +38,18 @@ func TestAdviceConditionsAndEvidenceSurvivePromptFiltering(t *testing.T) {
 	}
 }
 
+func TestHouseStyleReachesBundleWithoutTaskContext(t *testing.T) {
+	r := &analyzer.Rules{Game: "hearthstone", Profile: "game-guide", StyleRules: []string{"Диапазон через дефис", "Голос редакции"}}
+	b := Build(r, "GUIDE", "переплавка", "ru-RU", nil)
+	if !reflect.DeepEqual(b.StyleRules, r.StyleRules) || !strings.Contains(b.Prompt(), "Голос редакции") {
+		t.Fatal("plain API lost house style", b.StyleRules)
+	}
+	b.StyleRules[0] = "changed"
+	if r.StyleRules[0] != "Диапазон через дефис" {
+		t.Fatal("bundle aliases source rules")
+	}
+}
+
 func TestBuildIsCompactAndKeepsClaimContract(t *testing.T) {
 	r := &analyzer.Rules{Game: "hearthstone", Profile: "analytics-article", Keep: []string{"винрейт"}, Replace: []map[string]string{{"from": "дека", "to": "колода"}}}
 	b := Build(r, "GUIDE", "обычная", "ru-RU", []map[string]any{{"claim_id": "c1", "meaning": "fact", "source": "secret"}})
