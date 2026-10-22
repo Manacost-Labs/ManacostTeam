@@ -44,8 +44,9 @@ structure:
   sections_missing_in_input: []
   placeholder_allowed: false
 input_must_fail:
-- markers_remove
 - sections_missing
+input_must_review:
+- markers_remove
 input_must_pass: false
 thresholds: {}
 notes: Жирный в каждой фразе, списки «**Ярлык:** пояснение», тройки, эмодзи в заголовках.

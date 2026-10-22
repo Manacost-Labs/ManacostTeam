@@ -2,8 +2,6 @@
   "evals_schema_version": "1.0",
   "accepted": false,
   "failed": [
-    "markers_high",
-    "markers_remove",
     "rhythm_flat",
     "sections_missing",
     "short_pct_low",
@@ -11,6 +9,8 @@
     "soul_low"
   ],
   "warnings": [
+    "markers_high",
+    "markers_remove",
     "min_words",
     "opening",
     "soul_signal_low"

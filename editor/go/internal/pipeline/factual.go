@@ -20,7 +20,7 @@ func ReviewFactualEdit(ctx context.Context, model llm.Completer, source, candida
 	service := New(model, nil, "")
 	verdict, err := service.critic(ctx, rules.RuleBundle{}, criticInput{
 		Source: source, Candidate: candidate, Diff: diff(source, candidate),
-		Mode: "facts_only", SourceClaims: claims,
+		Mode: "facts_only", SourceClaims: claims, ReviewScope: "preservation_only", SourceVerification: "not_performed",
 	}, 1)
 	if err != nil {
 		return err

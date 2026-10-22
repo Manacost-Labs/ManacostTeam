@@ -1,9 +1,9 @@
 """Набор эвалов переплавки: детерминированная часть.
 
 Модель здесь не вызывается. Проверяется, что кейсы описаны честно (карты,
-числа и классы буквально есть во входе), что входы-слоп ПРОВАЛИВАЮТ пороги
-(иначе затвор не отличает слоп от автора), а контрольный текст в манере
-автора их ПРОХОДИТ.
+числа и классы буквально есть во входе). Формальные дефекты блокируют,
+маркеры назначают контекстную проверку. Прохождение счётчиков не доказывает
+качество прозы или её авторство.
 """
 
 import json
@@ -84,9 +84,13 @@ def test_slop_inputs_fail_and_control_passes(case_dir):
     if case["input_must_pass"]:
         assert result["accepted"], f"контроль должен проходить: {result['failed']}"
     else:
-        assert not result["accepted"], "слоп не должен проходить пороги"
+        if case["input_must_fail"]:
+            assert not result["accepted"], "формальные дефекты должны блокировать"
         missing = set(case["input_must_fail"]) - set(result["failed"])
         assert not missing, f"ожидались проверки {missing}, провалено {result['failed']}"
+        reviews = set(case.get("input_must_review", []))
+        assert reviews <= set(result["warnings"])
+        assert not reviews & set(result["failed"]), "маркеры не являются автоматическими запретами"
 
 
 def test_gate_itself_passes_control_and_rejects_rhetoric():

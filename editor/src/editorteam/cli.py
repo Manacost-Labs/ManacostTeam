@@ -115,7 +115,7 @@ def audit(args) -> int:
     if profile.enabled("markers"):
         markers = C.sibling("markers")
         for hit in markers.scan(text, markers.load_patterns()):
-            sev = {"remove": "likely", "rewrite": "likely", "review": "review"}[hit["action"]]
+            sev = "review"
             report.add(
                 Finding(
                     id=f"markers.{hit['id']}",
@@ -125,7 +125,7 @@ def audit(args) -> int:
                     confidence=0.6 if sev == "review" else 0.8,
                     message=hit["name"],
                     evidence=hit["text"],
-                    suggestion=hit["fix"],
+                    suggestion="Проверить функцию в контексте; сохранить уместное. Возможная правка: " + hit["fix"],
                     line=hit["line"],
                     profile=profile.id,
                 )
@@ -450,7 +450,7 @@ CHECK_HINTS = {
     "CLAIM_COVERAGE_LOST": "вернуть карту, совет или отрицание из исходника",
     "voice_below_norm": "проверить авторскую функцию фрагмента; квоты сигналов нет",
     "rhythm_below_norm": "прочитать в контексте; снижение счётчика не требует правки",
-    "markers_remove_present": "вырезать шаблонные фразы без замены",
+    "markers_remove_present": "проверить конкретную пользу фразы в контексте; сохранить уместную",
     "markers_above_norm": "переписать от смысла: назвать факт вместо рамки",
     "structure_missing": "добавить раздел из материала исходника или объявить его отсутствующим",
     "term_replace": "заменить по словарю автора; ранги по локализации",
@@ -1093,6 +1093,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="editor-team", parents=[common], description="Редактура материалов по Hearthstone"
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("editorial-review", help="prepare/validate: содержательность, логика, источники и голос (отдельный --help)")
 
     a = sub.add_parser("audit", help="полный разбор материала", parents=[common])
     a.add_argument("file")
@@ -1373,6 +1374,11 @@ def _ensure_utf8_stdio() -> None:
 
 def main(argv=None) -> int:
     _ensure_utf8_stdio()
+    selected = list(sys.argv[1:] if argv is None else argv)
+    if selected and selected[0] == "editorial-review":
+        from editorteam.editorial_practices import main as review_main
+
+        return review_main(selected[1:])
     parser = build_parser()
     args = parser.parse_args(argv)
     # флаг мог стоять и до подкоманды, и после — берём то, что задано

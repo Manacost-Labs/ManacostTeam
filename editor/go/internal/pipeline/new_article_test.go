@@ -31,6 +31,9 @@ func TestNewArticleDoesNotRequireEditingProofAgainstFactLedger(t *testing.T) {
 			if lastUserJSON(t, reviewer.messages[1])["new_article"] != true {
 				t.Fatal("critic not told there is no draft")
 			}
+			if !strings.Contains(reviewer.messages[1][0].Content, "practice_checks") || !strings.Contains(reviewer.messages[1][0].Content, "reader_problem") {
+				t.Fatal("critic prompt omitted the editorial practice check schema")
+			}
 		} else if result.Accepted || !strings.Contains(strings.Join(result.RejectionReasons, " "), ReasonNoImprovement) {
 			t.Fatalf("existing draft lost improvement requirement: %+v", result)
 		}
@@ -53,7 +56,7 @@ func TestNewArticleWithoutEditingProofStillNeedsPositiveCritic(t *testing.T) {
 }
 
 func TestNewArticleCriticContractKeepsBlockingFindingsAndFactGates(t *testing.T) {
-	for _, fragment := range []string{"new_article=true", "необязательные улучшения", "существенная", "все восемь"} {
+	for _, fragment := range []string{"new_article=true", "необязательные улучшения", "существенная", "все восемь", "practice_checks", "not_applicable", "reader_problem", "mode=facts_only"} {
 		if !strings.Contains(criticInstruction, fragment) {
 			t.Fatalf("missing critic decision contract: %s", fragment)
 		}

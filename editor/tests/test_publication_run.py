@@ -123,7 +123,62 @@ def reviews(run):
         },
         "whole_article_checked": True,
     }
+    # Synthetic one-sentence evidence only; production never manufactures verdicts.
+    from editorteam.editorial_practices import LOGIC, PRESERVATION, catalog
+
+    for owner, report in (("fact_review", factual), ("literary_review", literary)):
+        report["practice_checks"] = [
+            {"id": p["id"], "status": "clear", "quote": TEXT,
+             "reason": "Условный совет подтверждён единственным источником тестового примера."}
+            for p in catalog()["practices"] if p["owner"] == owner
+        ]
+    for field, ids in (("logic_checks", LOGIC), ("preservation_checks", PRESERVATION)):
+        literary[field] = [{"id": key, "status": "clear", "quote": TEXT,
+                           "reason": "Совет, условие и исключение сохранены в одном предложении."}
+                          for key in ids]
+    factual["source_checks"] = [{"source_id": "SRC-1", "status": "verified",
+        "evidence_quote": TEXT, "reason": "Прочитан тестовый snapshot.",
+        "identity_check": "URL совпадает; библиографических идентификаторов нет.",
+        "support_check": "Snapshot содержит весь условный совет.", "access": "snapshot"}]
     return factual, literary
+
+
+def test_v3_missing_practice_blocks_native_flow_and_export(tmp_path):
+    run = prepared(tmp_path)
+    assert next_task(run)["review_contract_version"] == 3
+    fact, _ = reviews(run)
+    fact["practice_checks"].pop()
+    result = submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
+    assert any("practice_checks: missing" in e for e in result["blocked"]["errors"])
+    with pytest.raises(ValueError, match="both reviews"):
+        export(run, output=tmp_path / "article.md")
+
+
+def test_source_grounding_accepts_equivalent_urls_without_rewriting_sources():
+    from editorteam.publication_run import _ground_sources
+
+    source_handoff = handoff()
+    source_handoff["sources"][0]["url"] = "https://EXAMPLE.org/guide"
+    snapshots = [{"url": "https://example.org/guide", "text": TEXT}]
+    assert _ground_sources(source_handoff, snapshots) == []
+    assert source_handoff["sources"][0]["url"] == "https://EXAMPLE.org/guide"
+    source_handoff["sources"][0]["url"] = "https://example.org/other"
+    assert _ground_sources(source_handoff, snapshots)
+
+
+def test_v2_receipts_remain_compatible(tmp_path):
+    run = prepared(tmp_path)
+    state_path = run / "state.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["review_contract_version"] = 2
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+    fact, literary = reviews(run)
+    for report in (fact, literary):
+        for field in ("practice_checks", "logic_checks", "preservation_checks", "source_checks"):
+            report.pop(field, None)
+    assert not submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))["blocked"]
+    assert not submit(run, stage="literary_review", artifact=write(tmp_path, "lit.json", literary))["blocked"]
+    export(run, output=tmp_path / "article.md")
 
 
 def test_revision_carries_strengths_from_original_review(tmp_path):

@@ -282,6 +282,25 @@ with tempfile.TemporaryDirectory() as temporary:
             self.assertEqual(process.returncode, 0, process.stderr)
         self.assertTrue((directory / "references/publication-contract.md").is_file())
 
+    def test_contextual_review_runs_from_both_archives_without_site_packages(self):
+        article = self.root / "проверка практик.md"
+        article.write_text("Не только атака, но и защита важны — сохраните ресурс.", encoding="utf-8")
+        review = self.root / "пустой отзыв.json"
+        review.write_text('{"status":"pass"}', encoding="utf-8")
+        for name in ("editor-team", "manacost-publish"):
+            directory = self.unpacked / name
+            env = {**self.env, "PYTHONPATH": str(directory / "python")}
+            command = [sys.executable, "-S", "-m", "editorteam.editorial_practices"]
+            process = subprocess.run([*command, "prepare", "--text", str(article), "--owner", "literary_review"],
+                                     cwd=self.root, env=env, capture_output=True, encoding="utf-8", timeout=30)
+            self.assertEqual(process.returncode, 0, process.stderr)
+            self.assertEqual(len(json.loads(process.stdout)["practices"]), 19)
+            process = subprocess.run([*command, "validate", "--text", str(article), "--owner", "literary_review", "--review", str(review)],
+                                     cwd=self.root, env=env, capture_output=True, encoding="utf-8", timeout=30)
+            self.assertEqual(process.returncode, 1, process.stderr)
+            self.assertEqual(json.loads(process.stdout)["status"], "blocked")
+            self.assertNotIn("Traceback", process.stderr)
+
     def test_publish_runs_without_site_packages_and_blocks_unreviewed_export(self):
         skill = self.unpacked / "manacost-publish"
         run = self.root / "первый запуск с пробелами"

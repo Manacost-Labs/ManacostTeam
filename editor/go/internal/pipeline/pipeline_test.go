@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzers"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/editorialreview"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
 )
 
@@ -64,7 +65,7 @@ func (f *fakeLLM) Complete(_ context.Context, messages []llm.Message, _ int) (st
 	if stage == "critic" {
 		// Critic fixtures quote the real source and candidate so that
 		// ValidateImprovements can verify them like a real reply.
-		var payload struct{ Source, Candidate string }
+		var payload struct{ Source, Candidate, Mode string }
 		if len(messages) > 1 && json.Unmarshal([]byte(messages[1].Content), &payload) == nil {
 			reply = strings.ReplaceAll(reply, "__SOURCE__", jsonEscape(payload.Source))
 			reply = strings.ReplaceAll(reply, "__CANDIDATE__", jsonEscape(payload.Candidate))
@@ -80,6 +81,26 @@ func (f *fakeLLM) Complete(_ context.Context, messages []llm.Message, _ int) (st
 				fields["edit_assessments"], _ = json.Marshal(assessments)
 				encoded, _ := json.Marshal(fields)
 				reply = string(encoded)
+			}
+			// Test fixtures provide grounded evidence for every catalog practice.
+			// This is deliberately test-only; production never fills review data.
+			if json.Unmarshal([]byte(reply), &fields) == nil && fields != nil {
+				if _, present := fields["practice_checks"]; !present {
+					catalog, err := editorialreview.Load()
+					if err != nil {
+						panic(err)
+					}
+					checks := make([]editorialreview.Check, 0, len(catalog.Practices))
+					for _, practice := range catalog.Practices {
+						if strings.EqualFold(payload.Mode, "facts_only") && practice.Owner != "fact_review" {
+							continue
+						}
+						checks = append(checks, editorialreview.Check{ID: practice.ID, Status: "clear", Quote: payload.Candidate, Reason: "Fixture evidence: candidate checked in context."})
+					}
+					fields["practice_checks"], _ = json.Marshal(checks)
+					encoded, _ := json.Marshal(fields)
+					reply = string(encoded)
+				}
 			}
 		}
 	}
@@ -172,6 +193,79 @@ func findingsOf(t *testing.T, payload map[string]any, key string) []map[string]a
 		out = append(out, entry)
 	}
 	return out
+}
+
+func TestAcceptCannotHideEditorialPracticeIssue(t *testing.T) {
+	catalog, err := editorialreview.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checks := make([]editorialreview.Check, 0, len(catalog.Practices))
+	for _, p := range catalog.Practices {
+		checks = append(checks, editorialreview.Check{ID: p.ID, Status: "clear", Quote: "Кандидат", Reason: "Проверено."})
+	}
+	checks[0].Status = "issue"
+	checks[0].ReaderProblem = "Проблема"
+	checks[0].Benefit = "Польза"
+	checks[0].MeaningRisk = "Риск"
+	checks[0].Suggestion = "Исправить"
+	err = validatePracticeChecks(criticInput{Candidate: "Кандидат", Mode: "edit"}, criticResult{Verdict: "accept", PracticeChecks: checks})
+	if err == nil {
+		t.Fatal("accept with unresolved issue was accepted")
+	}
+}
+
+func TestReviewScopeIsServerOwned(t *testing.T) {
+	for _, tc := range []struct {
+		name, mode, wantScope, wantVerification string
+	}{
+		{"facts", "facts_only", "preservation_only", "not_performed"},
+		{"ordinary", "edit", "source_and_candidate", "not_performed"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := criticInput{Mode: tc.mode, ReviewScope: "model-invented", SourceVerification: "verified"}
+			applyReviewScopeInput(&in)
+			if in.ReviewScope != tc.wantScope || in.SourceVerification != tc.wantVerification {
+				t.Fatalf("scope was not server-owned: %+v", in)
+			}
+			out := criticResult{ReviewScope: "model-invented", SourceVerification: "verified"}
+			applyReviewScope(&out, in)
+			if out.ReviewScope != tc.wantScope || out.SourceVerification != tc.wantVerification {
+				t.Fatalf("output scope was not enforced: %+v", out)
+			}
+		})
+	}
+}
+
+func TestAcceptCannotHideNormalizedEditorialPracticeIssue(t *testing.T) {
+	catalog, err := editorialreview.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checks := make([]editorialreview.Check, 0, len(catalog.Practices))
+	for _, p := range catalog.Practices {
+		checks = append(checks, editorialreview.Check{ID: p.ID, Status: "clear", Quote: "Кандидат", Reason: "Проверено."})
+	}
+	checks[0].Status = "  ISSUE "
+	checks[0].ReaderProblem = "Проблема"
+	checks[0].Benefit = "Польза"
+	checks[0].MeaningRisk = "Риск"
+	checks[0].Suggestion = "Исправить"
+	err = validatePracticeChecks(criticInput{Candidate: "Кандидат", Mode: "edit"}, criticResult{Verdict: "accept", PracticeChecks: checks})
+	if err == nil {
+		t.Fatal("accept with normalized unresolved issue was accepted")
+	}
+}
+
+func TestPracticeIssueBecomesActionableFinding(t *testing.T) {
+	checks := []editorialreview.Check{{ID: "p1", Status: "issue", Quote: "Кандидат", Reason: "Проверить переход.", ReaderProblem: "Читатель теряет связь.", Benefit: "Понятнее ход мысли.", MeaningRisk: "Меняется причинность.", Suggestion: "Добавить переход."}, {ID: "p2", Status: "unverified", Quote: "Кандидат", Reason: "Нет источника."}}
+	findings := practiceFindings("Кандидат", checks)
+	if len(findings) != 2 || findings[0].Evidence != "Кандидат" || len(findings[0].Suggestions) != 1 {
+		t.Fatalf("practice issue was not actionable: %#v", findings)
+	}
+	if findings[1].Severity != "warning" || !hasTag(findings[1], "analyzer_unavailable") {
+		t.Fatalf("unverified check should remain a non-repairable blocker: %#v", findings[1])
+	}
 }
 
 func containsRule(items []map[string]any, rule string) bool {

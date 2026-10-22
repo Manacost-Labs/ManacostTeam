@@ -10,13 +10,12 @@
 точка отсчёта другая: нормы, снятые с 49 опубликованных гайдов.
 
   * голос и ритм сравниваются с корпусом только диагностически;
-  * маркеров шаблона не больше максимума корпуса (60 на 10 000 слов), от нормы
-    12,2 — предупреждение; «убрать»-маркеров не больше двух;
+  * количество маркеров только назначает контекстную проверку, не отказ;
   * обязательные разделы профиля на месте, кроме честно объявленных
     отсутствующими; порядок, тонкие разделы и полотна — на просмотр;
   * охват классов и зачин — относительно исходника, не константы;
   * форма подачи как у автора: не больше одной таблицы и четырёх кодов,
-    без оценочных букв провайдера, каждая цифра — один раз;
+    без оценочных букв провайдера; повтор цифры — на просмотр, не отказ;
   * лексика: отсутствие в корпусе — предупреждение со списком слов, не запрет.
 
 Пороги откалиброваны так, чтобы опубликованные гайды затвор не отвергал:
@@ -40,12 +39,9 @@ DEPTHS = ("лёгкая", "обычная", "глубокая", "перепла�
 DEFAULT_DEPTH = "обычная"
 REWRITE = "переплавка"
 
-# Пороги отказа стоят за краем корпуса: то, чего у автора не бывает вовсе.
-# Предупреждения начинаются от нормы. Замеры по 49 гайдам: ритм min 0.419,
+# Диагностические ориентиры корпуса. Замеры по 49 гайдам: ритм min 0.419,
 # «убрать»-маркеров max 2 на гайд, маркеров всего max 56.3 на 10 000 слов.
-RHYTHM_FLOOR = 0.40          # ниже минимума корпуса — точно выровнено
-MARKERS_REMOVE_MAX = 2       # до двух «убрать»-маркеров — предупреждение, три — отказ
-MARKERS_HARD_PER_10K = 60.0  # выше максимума корпуса — отказ; от нормы (12.2) — предупреждение
+RHYTHM_FLOOR = 0.40          # ориентир корпуса, не доказательство выравнивания
 MARKERS_MIN_WORDS = 300      # частота маркеров на 10к слов достоверна от этого объёма
 MIN_RHYTHM_SENTENCES = 15
 
@@ -187,10 +183,11 @@ def form_checks(text, form, *, game="hearthstone"):
     soft = {f: idx for f, idx in fm["repeated_facts"].items() if len(idx) == 2}
     if max_rep is not None and len(hard) > max_rep:
         shown = "; ".join(f"{f} в абзацах {', '.join(map(str, idx))}" for f, idx in list(hard.items())[:3])
-        violations.append(_item(
+        warnings.append(_item(
             "form_fact_repeated",
             f"одна и та же цифра звучит в трёх и больше абзацах: {shown}",
-            suggestion="назвать цифру один раз там, где читатель принимает решение; дальше ссылаться на вывод",
+            "review",
+            suggestion="проверить, относится ли цифра к одному факту и помогает ли повтор читателю; не удалять по счётчику",
         ))
     for f, idx in list(soft.items())[:5]:
         warnings.append(_item(
@@ -349,7 +346,7 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
                 "review",
             ))
 
-    # маркеры шаблона — абсолютно
+    # Counts locate passages for review; they cannot establish a reader problem.
     pats = markers.load_patterns()
     hits = markers.scan(after, pats)          # сканер сам гасит код и цитаты
     remove_hits = [h for h in hits if h["action"] == "remove"]
@@ -362,25 +359,24 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
         shown = "; ".join(f"«{h['text']}» (стр. {h['line']})" for h in remove_hits[:3])
         item = _item(
             "markers_remove_present",
-            f"шаблонные фразы, которых у автора не бывает: {shown}",
-            "error" if len(remove_hits) > MARKERS_REMOVE_MAX else "review",
-            suggestion="вырезать без замены на другую рамку",
+            f"проверьте функцию фраз в контексте: {shown}",
+            "review",
+            suggestion="назвать читательскую проблему; сохранить фразу, если она уместна",
         )
-        (violations if len(remove_hits) > MARKERS_REMOVE_MAX else warnings).append(item)
+        warnings.append(item)
     if words >= MARKERS_MIN_WORDS and per10k > norms["markers_per_10k"]:
         names = {}
         for h in hits:
             names[h["name"]] = names.get(h["name"], 0) + 1
         top = ", ".join(f"{n} ×{c}" for n, c in sorted(names.items(), key=lambda kv: -kv[1])[:3])
-        hard = per10k > MARKERS_HARD_PER_10K
         item = _item(
             "markers_above_norm",
             f"маркеров шаблона {per10k:.1f} на 10 000 слов при норме автора "
             f"{norms['markers_per_10k']}: {top}",
-            "error" if hard else "review",
-            suggestion="переписать от смысла: назвать факт вместо рамки",
+            "review",
+            suggestion="проверить смысл и функцию; частота сама по себе не ошибка",
         )
-        (violations if hard else warnings).append(item)
+        warnings.append(item)
 
     # структура — по скелету профиля, с честным «нет материала». Если модель
     # озаглавила разделы решётками, короткие строки заголовками не считаются:

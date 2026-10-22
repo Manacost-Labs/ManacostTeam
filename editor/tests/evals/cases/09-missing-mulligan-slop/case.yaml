@@ -50,7 +50,8 @@ structure:
   sections_missing_in_input:
   - mulligan
   placeholder_allowed: true
-input_must_fail:
+input_must_fail: []
+input_must_review:
 - markers_remove
 input_must_pass: false
 thresholds: {}

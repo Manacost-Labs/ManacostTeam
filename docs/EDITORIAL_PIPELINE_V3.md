@@ -83,7 +83,7 @@ Native `publish next` собирает chapter_brief из принятого han
 - Author analysis фиксирует точные strengths до изменения. Draft, repair и
   critic получают keep_spans; потеря такого фрагмента при приёме требует
   конкретного объяснения, а не только высокого style score.
-- Новые native Codex runs используют review_contract_version=2: литературный
+- Новые native Codex runs используют review_contract_version=3: литературный
   review включает функции абзацев и проверку вопросов читателя. Старые runs
   без этого поля читаются как v1; schema_version handoff и state остаётся 1.
 - CLI компилирует chapter handoff и очередь вопросов для одной адресной волны
@@ -264,7 +264,7 @@ Learn поддерживает вставки, удаления и длинны�
 
 ## Native review v2 и совместимость
 
-Новый `publication_run init` устанавливает review_contract_version=2.
+Новый `publication_run init` устанавливает review_contract_version=3.
 Литературный report содержит strengths (допустим пустой список), непустой
 paragraph_functions с реальными quote/function, whole_article_checked=true и
 reader_check с action/reason/conditions/alternative. Для неприменимого вопроса
@@ -359,3 +359,29 @@ baseline/candidate прогоны, новые проверенные матер�
 Нулевая критическая ошибка и сохранение всех обязательных условий — критерии
 приёма материала. −30% времени редактора и ≥90% покрытия — гипотезы для
 человеческого benchmark, не достигнутые показатели этого выпуска.
+
+## Содержательность, логика и проверяемость
+
+Применяй полный контекстный протокол `editorial_practices` (26 подразделов
+эссе Википедии). Каталог содержит проверочный вопрос, допустимый случай,
+пример дефекта и действие. Не превращай слова, конструкции, тройки, списки,
+тире, оговорки и повторы в запреты. Сначала назови конкретную проблему
+читателя; затем выбери минимальную правку, сохранив факты и голос автора.
+
+В новых native runs `review_contract_version=3`: назначенные practice_checks
+обязательны. Literary report также содержит logic_checks и preservation_checks;
+factual report — source_checks с точной цитатой источника, проверкой его
+идентичности и поддержки тезиса. Полная схема приходит в `next`.
+Недоступность ссылки, UTM и необычная пунктуация не доказывают генерацию.
+DOI проверяется через resolver/метаданные/содержание, универсальной контрольной
+суммы у него нет. ISBN требует также контрольную цифру и сверку издания.
+Непроверенное остаётся unverified; не дописывай детали, причины и личный опыт.
+
+Гейт проверяет покрытие, хеши и цитаты при submit и перед export. Он не
+доказывает истинность суждения reviewer. Отзывы независимы; после ремонта
+проверяются снова. Сохранённые runs v1/v2 не мигрируются автоматически.
+Для отдельной правки: `editor-team editorial-review prepare` и `validate`,
+с `--text`, `--original`, `--owner literary_review`, `--review` при validate.
+Независимая проверка фактов требует `--handoff` и `--owner fact_review`.
+
+Standalone factual/all CLI требует также `--sources sources.json`: полные snapshots с provenance/SHA256; report привязан к `sources_sha256`. Неполный handoff, изменённый snapshot и неподтверждённая claim блокируют допуск.

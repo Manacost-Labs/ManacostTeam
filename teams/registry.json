@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.11.3",
+      "version": "1.12.0",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -103,6 +103,10 @@
         {
           "source": "docs/PLAYER_EDITORIAL_STANDARD.md",
           "destination": "references/player-editorial-standard.md"
+        },
+        {
+          "source": "docs/EDITORIAL_PRACTICES.md",
+          "destination": "references/editorial-practices.md"
         }
       ]
     },
@@ -110,7 +114,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.10.2",
+      "version": "1.10.3",
       "source": "teams/research-team",
       "resources": [
         {
@@ -140,6 +144,10 @@
         {
           "source": "docs/PLAYER_EDITORIAL_STANDARD.md",
           "destination": "references/player-editorial-standard.md"
+        },
+        {
+          "source": "docs/EDITORIAL_PRACTICES.md",
+          "destination": "references/editorial-practices.md"
         }
       ]
     },
@@ -325,7 +333,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.9.2",
+      "version": "1.10.0",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -395,9 +403,21 @@
         {
           "source": "docs/PLAYER_EDITORIAL_STANDARD.md",
           "destination": "references/player-editorial-standard.md"
+        },
+        {
+          "source": "docs/EDITORIAL_PRACTICES.md",
+          "destination": "references/editorial-practices.md"
+        },
+        {
+          "source": "editor/src/editorteam/editorial_practices.py",
+          "destination": "python/editorteam/editorial_practices.py"
+        },
+        {
+          "source": "editor/src/editorteam/editorial_practices.json",
+          "destination": "python/editorteam/editorial_practices.json"
         }
       ]
     }
   ],
-  "release_version": "1.16.1"
+  "release_version": "1.17.0"
 }

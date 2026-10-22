@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/editorialreview"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
 )
 
@@ -379,16 +380,16 @@ func writeMarkerLists(b *strings.Builder, rules *analyzer.Rules) {
 		return out
 	}
 	if remove := join(rules.Markers.Remove, false); len(remove) > 0 {
-		b.WriteString("НИКОГДА (вырезается без потерь): " + strings.Join(remove, ", ") + "\n")
+		b.WriteString("КОНТЕКСТНАЯ ПРОВЕРКА УСТОЙЧИВЫХ ОБОРОТОВ (убирай только при доказанной пользе и без потери голоса): " + strings.Join(remove, ", ") + "\n")
 	}
 	if rewrite := join(rules.Markers.Rewrite, true); len(rewrite) > 0 {
-		b.WriteString("НЕ ПИСАТЬ, ВМЕСТО ЭТОГО — ФАКТ:\n")
+		b.WriteString("ВОЗМОЖНЫЕ МЕСТА ДЛЯ ЛОКАЛЬНОЙ ПРОВЕРКИ (сохрани факт, условие и степень уверенности; меняй только при конкретной пользе):\n")
 		for _, item := range rewrite {
 			b.WriteString("- " + item + "\n")
 		}
 	}
 	if review := join(rules.Markers.Review, false); len(review) > 0 {
-		b.WriteString("НЕ БОЛЬШЕ ОДНОГО НА АБЗАЦ: " + strings.Join(review, ", ") + "\n")
+		b.WriteString("ПРОВЕРЬ ПЛОТНОСТЬ И ФУНКЦИЮ В КОНТЕКСТЕ АБЗАЦА (не вводи механический лимит): " + strings.Join(review, ", ") + "\n")
 	}
 	b.WriteString("\n")
 }
@@ -396,7 +397,7 @@ func writeMarkerLists(b *strings.Builder, rules *analyzer.Rules) {
 func buildRewritePrompt(rules *analyzer.Rules, claims []map[string]any, outline *analyzer.Outline) string {
 	var b strings.Builder
 	b.WriteString("Ты переплавляешь черновик по игре " + rules.Game + " в чистовой текст в манере автора. ")
-	b.WriteString("Верни ТОЛЬКО текст, без пояснений и без разметки кода.\n\n")
+	b.WriteString("Результат должен быть готовым материалом, а не отчётом о проверке.\n\n")
 
 	b.WriteString("ГЛАВНОЕ ПРАВИЛО\n")
 	b.WriteString("Исходник — источник фактов, а не формы. Каждая карта, число, совет, оговорка и вывод берутся только из него.\n")
@@ -423,7 +424,9 @@ func buildRewritePrompt(rules *analyzer.Rules, claims []map[string]any, outline 
 	writeCorrections(&b, rules)
 	writeTypography(&b, rules)
 	writeForbiddenPhrases(&b)
+	b.WriteString(editorialreview.Prompt())
 	writeMarkerLists(&b, rules)
+	b.WriteString("Верни ТОЛЬКО текст, без пояснений, JSON-отчёта и без разметки кода.\n")
 	return b.String()
 }
 
@@ -435,6 +438,7 @@ func buildOutlinePrompt(rules *analyzer.Rules) string {
 	b.WriteString("Тезисы берутся только из исходника: карты, числа, советы, оговорки — своими словами, но без новых фактов.\n")
 	b.WriteString("Раздел, для которого в исходнике нет материала, — в missing_sections, не в sections. Выдумывать нельзя.\n\n")
 	writeSkeleton(&b, rules)
+	b.WriteString(editorialreview.Prompt())
 	b.WriteString("СХЕМА ОТВЕТА\n")
 	b.WriteString(`{"sections":[{"id":"builds","title":"Сборки","claims":["один тезис исходника с названиями карт и числами как в исходнике"]}],` +
 		`"missing_sections":["id разделов без материала"],"notes":["что в исходнике спорно или неполно"]}` + "\n")

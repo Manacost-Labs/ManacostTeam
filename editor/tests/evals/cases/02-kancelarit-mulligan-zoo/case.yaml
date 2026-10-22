@@ -45,9 +45,10 @@ structure:
   sections_missing_in_input: []
   placeholder_allowed: false
 input_must_fail:
-- markers_high
 - soul_low
 - elegance.nominalization
+input_must_review:
+- markers_high
 input_must_pass: false
 thresholds: {}
 notes: 'Канцелярит: «осуществление», «является», «в целях». Разделы на месте, голоса нет.'

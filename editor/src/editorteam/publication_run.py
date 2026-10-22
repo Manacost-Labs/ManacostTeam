@@ -10,6 +10,7 @@ import uuid
 from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 from .editorial_lab import canonical_url
 
@@ -228,7 +229,7 @@ def _validate_state(state: dict) -> None:
     """Reject malformed control data before accessing paths or stage artifacts."""
     if (
         type(state.get("review_contract_version", 1)) is not int
-        or state.get("review_contract_version", 1) not in {1, 2}
+        or state.get("review_contract_version", 1) not in {1, 2, 3}
         or any(
             not isinstance(state.get(key), str) or not state[key].strip()
             for key in ("brief", "patch", "profile")
@@ -319,7 +320,7 @@ def init_run(run: Path, *, brief: str, patch: str, profile: str, shortcodes: str
     (run / "artifacts").mkdir()
     state = {
         "schema_version": 1,
-        "review_contract_version": 2,
+        "review_contract_version": 3,
         "brief": brief,
         "patch": patch,
         "profile": profile,
@@ -443,6 +444,21 @@ def next_task(run: Path) -> dict:
             stage: 1 - used for stage, used in state["review_retries"].items()
         },
     }
+    if state.get("review_contract_version", 1) >= 3:
+        from .editorial_practices import catalog, prepare
+
+        if stage in {"fact_review", "literary_review"}:
+            task["editorial_practices"] = prepare(
+                _data(run, state, "draft").decode("utf-8"), owner=stage
+            )
+        else:
+            task["editorial_practices"] = catalog()
+        task["instructions"] += (
+            " Выполни все применимые проверки editorial_practices; каждый пункт требует "
+            "контекстного решения, а не запрета конструкции. Для review верни practice_checks "
+            "и поля review_schema. Проверяй содержательность, логику, источники и сохранение голоса. "
+            "Не подменяй неизвестные данные выдумкой. issue/unverified требуют исправления или источника."
+        )
     guidance = craft_guidance(stage)
     if guidance is not None:
         task["craft_guidance"] = guidance
@@ -516,8 +532,16 @@ def _sources(rows) -> None:
             raise ValueError("source provenance id/source/retrieved_at required")
 
 
+def _source_url_key(url: str) -> str:
+    # Host/scheme casing and an empty root path are equivalent. A path's
+    # trailing slash, query and fragment may address different content.
+    canonical_url(url)  # Validate public URL without using its lossy dedup key.
+    parts = urlsplit(url)
+    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path or "/", parts.query, parts.fragment))
+
+
 def _ground_sources(handoff: dict, candidates: list[dict]) -> list[str]:
-    by_url = {row["url"]: row["text"] for row in candidates}
+    by_url = {_source_url_key(row["url"]): row["text"] for row in candidates}
     errors = []
     counterevidence = [
         row
@@ -525,7 +549,7 @@ def _ground_sources(handoff: dict, candidates: list[dict]) -> list[str]:
         for row in claim.get("research_context", {}).get("counterevidence", [])
     ]
     for source in [*handoff.get("sources", []), *counterevidence]:
-        url = source["url"]
+        url = _source_url_key(source["url"])
         if url not in by_url or not source.get("quote") or source["quote"] not in by_url[url]:
             errors.append(
                 f"source quote absent from collected full text: {source.get('source_id')}"
@@ -601,13 +625,14 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
             handoff, text = _context(run, state)
             report = _json(data)
             errors = (
-                validate_factual(handoff, text, report)
+                validate_factual(handoff, text, report, require_practices=state.get("review_contract_version", 1) >= 3)
                 if stage == "fact_review"
                 else validate_literary(
                     text,
                     report,
                     keep_spans=_keep_spans(run, state),
                     require_extended=state.get("review_contract_version", 1) >= 2,
+                    require_practices=state.get("review_contract_version", 1) >= 3,
                 )
             )
             if not isinstance(report, dict) or report.get("handoff_sha256") != handoff_hash(
@@ -665,6 +690,7 @@ def export(run: Path, *, output: Path) -> dict:
             _json(_data(run, state, "literary_review")),
             keep_spans=_keep_spans(run, state),
             require_extended=state.get("review_contract_version", 1) >= 2,
+            require_practices=state.get("review_contract_version", 1) >= 3,
         )
         if errors:
             raise ValueError("; ".join(errors))

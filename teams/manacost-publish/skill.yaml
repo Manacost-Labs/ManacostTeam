@@ -1,4 +1,4 @@
 name: manacost-publish
-version: "1.9.2"
+version: "1.10.0"
 team: EditorTeam
 entrypoint: SKILL.md

@@ -89,7 +89,8 @@ def test_remove_markers_three_is_violation_two_is_warning():
     assert "markers_remove_present" in kinds(warnings)
     assert metrics["markers_remove"] == 2
     violations, _, metrics = gate.analyze(three, profile="constructed-guide")
-    assert "markers_remove_present" in kinds(violations)
+    assert "markers_remove_present" not in kinds(violations)
+    assert "markers_remove_present" in kinds(warnings)
     assert metrics["markers_remove"] == 3
 
 
@@ -179,7 +180,8 @@ def test_form_violations_follow_profile_limits():
         text,
         {"tables_max": 1, "codes_max": 4, "repeated_facts_max": 0, "grade_labels": "forbidden"},
     )
-    assert {"form_tables", "form_codes", "form_grade_labels", "form_fact_repeated"} == kinds(
+    assert "form_fact_repeated" in kinds(warnings)
+    assert {"form_tables", "form_codes", "form_grade_labels"} == kinds(
         violations
     )
     # тот же текст без ограничений формы проходит
@@ -227,8 +229,9 @@ def test_same_percent_for_different_subjects_is_not_a_repeat():
         "Напомним: против Друида у Пират Воина 36,1%.\n\n"
         "И снова: 36,1% против Друида — вот почему Воин падает.\n"
     )
-    violations, _, _ = gate.form_checks(same, {"repeated_facts_max": 0})
-    assert "form_fact_repeated" in kinds(violations)
+    violations, warnings, _ = gate.form_checks(same, {"repeated_facts_max": 0})
+    assert "form_fact_repeated" not in kinds(violations)
+    assert "form_fact_repeated" in kinds(warnings)
 
 
 def test_terminology_hits_follow_the_dictionary():

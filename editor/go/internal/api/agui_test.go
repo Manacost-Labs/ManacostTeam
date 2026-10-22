@@ -17,7 +17,7 @@ import (
 	llmpkg "github.com/Manacost-Labs/EditorTeam/go/internal/llm"
 )
 
-const goodGatewayReview = `{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":{"factual_preservation":8,"meaning_preservation":8,"clarity":8,"structure":8,"usefulness":8,"natural_russian":8,"author_voice":8,"terminology":8},"improvements":[],"regressions":[],"findings":[],"repair_required":false}`
+const goodGatewayReview = `{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":{"factual_preservation":8,"meaning_preservation":8,"clarity":8,"structure":8,"usefulness":8,"natural_russian":8,"author_voice":8,"terminology":8},"improvements":[],"regressions":[],"findings":[],"practice_checks":[{"id":"source_use","status":"clear","quote":"Готовый текст.","reason":"Fixture evidence: source checked."},{"id":"links","status":"clear","quote":"Готовый текст.","reason":"Fixture evidence: link context checked."},{"id":"bibliography","status":"clear","quote":"Готовый текст.","reason":"Fixture evidence: bibliography context checked."},{"id":"tracking","status":"clear","quote":"Готовый текст.","reason":"Fixture evidence: URL context checked."},{"id":"knowledge_gaps","status":"clear","quote":"Готовый текст.","reason":"Fixture evidence: knowledge limits checked."},{"id":"attribution","status":"clear","quote":"Готовый текст.","reason":"Fixture evidence: attribution checked."},{"id":"categories","status":"clear","quote":"Готовый текст.","reason":"Fixture evidence: taxonomy checked."}],"repair_required":false}`
 
 func testGatewayHandler(t *testing.T, token string, reviews ...string) http.Handler {
 	t.Helper()

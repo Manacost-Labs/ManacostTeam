@@ -27,13 +27,14 @@ import (
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzers"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/editorialreview"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/guards"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/retrieval"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v60"
+const PromptVersion = "editorteam-go-v61"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -164,35 +165,38 @@ func (e *RequestError) Error() string { return e.Message }
 var ErrInvalidRetrieval = &RequestError{Message: "retrieval должен быть auto, on или off"}
 
 type Result struct {
-	TaskContext              json.RawMessage     `json:"task_context,omitempty"`
-	Text                     string              `json:"text"`
-	Mode                     string              `json:"mode"`
-	Status                   string              `json:"status"`
-	Changes                  []Change            `json:"changes,omitempty"`
-	FactualRisks             []string            `json:"factual_risks,omitempty"`
-	QAFindings               []analyzers.Finding `json:"qa_findings,omitempty"`
-	ProtectedEntitiesChanged []string            `json:"protected_entities_changed,omitempty"`
-	Scores                   Scores              `json:"scores"`
-	ScoresValid              bool                `json:"scores_valid"`
-	CriticVerdict            string              `json:"critic_verdict,omitempty"`
-	Improvements             []Improvement       `json:"improvements,omitempty"`
-	Regressions              []string            `json:"regressions,omitempty"`
-	Accepted                 bool                `json:"accepted"`
-	RejectionReasons         []string            `json:"rejection_reasons,omitempty"`
-	Provider                 string              `json:"provider,omitempty"`
-	Model                    string              `json:"model,omitempty"`
-	PromptVersion            string              `json:"prompt_version"`
-	PromptVariant            string              `json:"prompt_variant"`
-	Analysis                 Analysis            `json:"analysis,omitempty"`
-	Attempts                 int                 `json:"attempts"`
-	ChecksComplete           bool                `json:"checks_complete"`
-	SkippedAnalyzers         []string            `json:"skipped_analyzers,omitempty"`
-	Retrieval                RetrievalReport     `json:"retrieval"`
-	FactReview               *FactReview         `json:"fact_review,omitempty"`
-	FactCheckPassed          *bool               `json:"fact_check_passed,omitempty"`
-	UnsupportedAdditions     []string            `json:"unsupported_additions,omitempty"`
-	ReviewerModel            string              `json:"reviewer_model,omitempty"`
-	RevisionFallback         *RevisionFallback   `json:"revision_fallback,omitempty"`
+	TaskContext              json.RawMessage         `json:"task_context,omitempty"`
+	Text                     string                  `json:"text"`
+	Mode                     string                  `json:"mode"`
+	Status                   string                  `json:"status"`
+	Changes                  []Change                `json:"changes,omitempty"`
+	FactualRisks             []string                `json:"factual_risks,omitempty"`
+	QAFindings               []analyzers.Finding     `json:"qa_findings,omitempty"`
+	ProtectedEntitiesChanged []string                `json:"protected_entities_changed,omitempty"`
+	Scores                   Scores                  `json:"scores"`
+	ScoresValid              bool                    `json:"scores_valid"`
+	CriticVerdict            string                  `json:"critic_verdict,omitempty"`
+	Improvements             []Improvement           `json:"improvements,omitempty"`
+	PracticeChecks           []editorialreview.Check `json:"practice_checks,omitempty"`
+	ReviewScope              string                  `json:"review_scope,omitempty"`
+	SourceVerification       string                  `json:"source_verification,omitempty"`
+	Regressions              []string                `json:"regressions,omitempty"`
+	Accepted                 bool                    `json:"accepted"`
+	RejectionReasons         []string                `json:"rejection_reasons,omitempty"`
+	Provider                 string                  `json:"provider,omitempty"`
+	Model                    string                  `json:"model,omitempty"`
+	PromptVersion            string                  `json:"prompt_version"`
+	PromptVariant            string                  `json:"prompt_variant"`
+	Analysis                 Analysis                `json:"analysis,omitempty"`
+	Attempts                 int                     `json:"attempts"`
+	ChecksComplete           bool                    `json:"checks_complete"`
+	SkippedAnalyzers         []string                `json:"skipped_analyzers,omitempty"`
+	Retrieval                RetrievalReport         `json:"retrieval"`
+	FactReview               *FactReview             `json:"fact_review,omitempty"`
+	FactCheckPassed          *bool                   `json:"fact_check_passed,omitempty"`
+	UnsupportedAdditions     []string                `json:"unsupported_additions,omitempty"`
+	ReviewerModel            string                  `json:"reviewer_model,omitempty"`
+	RevisionFallback         *RevisionFallback       `json:"revision_fallback,omitempty"`
 }
 
 type RevisionFallback struct {
@@ -597,6 +601,8 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		result.Scores = critic.Scores
 		result.ScoresValid = true
 		result.CriticVerdict = critic.Verdict
+		result.PracticeChecks = append([]editorialreview.Check(nil), critic.PracticeChecks...)
+		result.ReviewScope, result.SourceVerification = critic.ReviewScope, critic.SourceVerification
 		// Улучшения принимаются только с доказательствами из текста.
 		result.Improvements = ValidateImprovements(verifiedText, candidate, critic.Improvements)
 		result.Regressions = critic.Regressions
@@ -892,35 +898,40 @@ func appendUnique(values []string, more ...string) []string {
 // criticInput — данные для critic. Они уходят JSON-ом в user message, а не
 // инструкциями в system prompt.
 type criticInput struct {
-	NewArticle        bool                `json:"new_article,omitempty"`
-	LocalEdits        []LocalEdit         `json:"local_edits,omitempty"`
-	Source            string              `json:"source"`
-	Candidate         string              `json:"candidate"`
-	Diff              []Change            `json:"diff"`
-	Mode              string              `json:"mode"`
-	RevisionBase      string              `json:"revision_base,omitempty"`
-	RevisionBrief     string              `json:"revision_brief,omitempty"`
-	Analysis          Analysis            `json:"analysis"`
-	Handoff           *ResearchHandoff    `json:"research_handoff,omitempty"`
-	SourceClaims      []map[string]any    `json:"source_claims"`
-	ProtectedEntities []string            `json:"protected_entities"`
-	ToolFindings      []analyzers.Finding `json:"tool_findings"`
-	StyleExamples     []promptExample     `json:"style_examples"`
-	KeepSpans         []StrongSpan        `json:"keep_spans,omitempty"`
-	RequiredSections  []string            `json:"sections_required,omitempty"`
+	NewArticle         bool                `json:"new_article,omitempty"`
+	LocalEdits         []LocalEdit         `json:"local_edits,omitempty"`
+	Source             string              `json:"source"`
+	Candidate          string              `json:"candidate"`
+	Diff               []Change            `json:"diff"`
+	Mode               string              `json:"mode"`
+	RevisionBase       string              `json:"revision_base,omitempty"`
+	RevisionBrief      string              `json:"revision_brief,omitempty"`
+	Analysis           Analysis            `json:"analysis"`
+	Handoff            *ResearchHandoff    `json:"research_handoff,omitempty"`
+	SourceClaims       []map[string]any    `json:"source_claims"`
+	ProtectedEntities  []string            `json:"protected_entities"`
+	ToolFindings       []analyzers.Finding `json:"tool_findings"`
+	StyleExamples      []promptExample     `json:"style_examples"`
+	KeepSpans          []StrongSpan        `json:"keep_spans,omitempty"`
+	RequiredSections   []string            `json:"sections_required,omitempty"`
+	ReviewScope        string              `json:"review_scope,omitempty"`
+	SourceVerification string              `json:"source_verification,omitempty"`
 }
 
 type criticResult struct {
-	EditAssessments      []EditAssessment    `json:"edit_assessments,omitempty"`
-	NoNewFacts           bool                `json:"no_new_facts"`
-	UnsupportedAdditions []string            `json:"unsupported_additions"`
-	Verdict              string              `json:"verdict"`
-	Scores               Scores              `json:"scores"`
-	Improvements         []Improvement       `json:"improvements"`
-	Regressions          []string            `json:"regressions"`
-	Findings             []analyzers.Finding `json:"findings"`
-	RepairRequired       bool                `json:"repair_required"`
-	StrengthChanges      []StrengthChange    `json:"strength_changes,omitempty"`
+	EditAssessments      []EditAssessment        `json:"edit_assessments,omitempty"`
+	NoNewFacts           bool                    `json:"no_new_facts"`
+	UnsupportedAdditions []string                `json:"unsupported_additions"`
+	Verdict              string                  `json:"verdict"`
+	Scores               Scores                  `json:"scores"`
+	Improvements         []Improvement           `json:"improvements"`
+	Regressions          []string                `json:"regressions"`
+	Findings             []analyzers.Finding     `json:"findings"`
+	RepairRequired       bool                    `json:"repair_required"`
+	StrengthChanges      []StrengthChange        `json:"strength_changes,omitempty"`
+	PracticeChecks       []editorialreview.Check `json:"practice_checks"`
+	ReviewScope          string                  `json:"review_scope,omitempty"`
+	SourceVerification   string                  `json:"source_verification,omitempty"`
 }
 
 // criticError — типизированный сбой critic: Kind совпадает с причиной
@@ -959,6 +970,8 @@ const criticInstruction = "\nТы critic. Не переписывай текст
 	"если существующий черновик изменен (new_article=false), но назвать улучшение нечем, оставь improvements пустым: такой candidate не примут. regressions — массив строк с цитатой и причиной ухудшения, не массив объектов. Для чтения цитируй candidate, утраченную степень цитируй отдельно из source в scope_quote. " +
 	"Правила согласованности: verdict accept требует repair_required=false и не допускает error или blocker; verdict repair требует repair_required=true и хотя бы одно исправимое finding; verdict reject — когда изменение нельзя принять. " +
 	"В findings указывай только конкретные исправимые места; error и blocker — только для потери смысла, факта или защищённой сущности. Хороший текст не трогают: для него verdict accept с пустыми findings. " +
+	"Обязательно верни practice_checks для каждого назначенного id из EDITORIAL_PRACTICES; неприменимый id помечай not_applicable с непустым reason (ровно по одному id; в mode=facts_only — только owner=fact_review; в proofread диагностируй все назначенные практики, но не предлагай стилевую переработку). Каждый объект имеет id, status (clear|not_applicable|issue|unverified), quote и reason; reason обязателен всегда, clear/issue требуют точную непустую цитату из candidate, у not_applicable/unverified quote может быть пустой, но если указан — также должен быть точным. Для issue обязательны reader_problem, benefit, meaning_risk и suggestion. Не пропускай id, не дублируй и не добавляй неизвестные id. issue и unverified — нерешённые состояния: не принимай candidate; issue описывай как конкретную исправимую трудность, unverified оставляй запросом на источник или уточнение, не выдумывай исправление. " +
+	"В mode=facts_only это review_scope=preservation_only: оцени только сохранение supplied source/source_claims, условий, отрицаний и уверенности. Это не независимая проверка истинности исходника и не внешний доступ; верни review_scope=preservation_only и source_verification=not_performed. Для внешних источников без переданного содержимого ставь unverified или not_applicable с явным ограничением, никогда не утверждай проверку по памяти. " +
 	"Проверь статью целиком: повторы между главами, противоречащие советы, последовательность объяснения и единообразие терминов. Не требуй одинакового шаблона абзацев. " +
 	"style_examples, если они есть, нужны только для оценки author_voice: не сверяй с ними факты и не требуй совпадения содержания."
 
@@ -968,16 +981,19 @@ var scoreKeys = []string{"factual_preservation", "meaning_preservation", "clarit
 // allowlist, все восемь оценок как целые числа в диапазоне 0–10.
 func parseCritic(text string) (criticResult, error) {
 	var raw struct {
-		EditAssessments      []EditAssessment    `json:"edit_assessments"`
-		NoNewFacts           *bool               `json:"no_new_facts"`
-		UnsupportedAdditions []string            `json:"unsupported_additions"`
-		Verdict              string              `json:"verdict"`
-		Scores               map[string]*float64 `json:"scores"`
-		Improvements         []Improvement       `json:"improvements"`
-		Regressions          json.RawMessage     `json:"regressions"`
-		Findings             []analyzers.Finding `json:"findings"`
-		RepairRequired       bool                `json:"repair_required"`
-		StrengthChanges      []StrengthChange    `json:"strength_changes"`
+		EditAssessments      []EditAssessment        `json:"edit_assessments"`
+		NoNewFacts           *bool                   `json:"no_new_facts"`
+		UnsupportedAdditions []string                `json:"unsupported_additions"`
+		Verdict              string                  `json:"verdict"`
+		Scores               map[string]*float64     `json:"scores"`
+		Improvements         []Improvement           `json:"improvements"`
+		Regressions          json.RawMessage         `json:"regressions"`
+		Findings             []analyzers.Finding     `json:"findings"`
+		RepairRequired       bool                    `json:"repair_required"`
+		StrengthChanges      []StrengthChange        `json:"strength_changes"`
+		PracticeChecks       []editorialreview.Check `json:"practice_checks"`
+		ReviewScope          string                  `json:"review_scope"`
+		SourceVerification   string                  `json:"source_verification"`
 	}
 	if err := json.Unmarshal([]byte(stripJSON(text)), &raw); err != nil {
 		return criticResult{}, fmt.Errorf("ответ critic не JSON: %w", err)
@@ -985,7 +1001,7 @@ func parseCritic(text string) (criticResult, error) {
 	if raw.NoNewFacts == nil || raw.UnsupportedAdditions == nil {
 		return criticResult{}, errors.New("обязательны no_new_facts и unsupported_additions, null не допускается")
 	}
-	out := criticResult{NoNewFacts: *raw.NoNewFacts, UnsupportedAdditions: raw.UnsupportedAdditions, RepairRequired: raw.RepairRequired, StrengthChanges: raw.StrengthChanges, EditAssessments: raw.EditAssessments}
+	out := criticResult{NoNewFacts: *raw.NoNewFacts, UnsupportedAdditions: raw.UnsupportedAdditions, RepairRequired: raw.RepairRequired, StrengthChanges: raw.StrengthChanges, EditAssessments: raw.EditAssessments, PracticeChecks: raw.PracticeChecks, ReviewScope: raw.ReviewScope, SourceVerification: raw.SourceVerification}
 	for _, item := range raw.Improvements {
 		if strings.TrimSpace(item.Category) == "" || strings.TrimSpace(item.Reason) == "" {
 			continue
@@ -1044,7 +1060,7 @@ func parseCritic(text string) (criticResult, error) {
 		if !out.RepairRequired {
 			return criticResult{}, errors.New("verdict repair требует repair_required=true")
 		}
-		if len(repairable(out.Findings)) == 0 {
+		if len(repairable(out.Findings)) == 0 && !hasPracticeIssue(out.PracticeChecks) {
 			return criticResult{}, errors.New("verdict repair без исправимых findings")
 		}
 	}
@@ -1056,6 +1072,16 @@ func parseCritic(text string) (criticResult, error) {
 		}
 	}
 	return out, nil
+}
+
+func hasPracticeIssue(checks []editorialreview.Check) bool {
+	for _, check := range checks {
+		status := strings.ToLower(strings.TrimSpace(check.Status))
+		if status == "issue" || status == "unverified" {
+			return true
+		}
+	}
+	return false
 }
 
 // textPayload — user message для analysis и draft: текст и, отдельным
@@ -1134,10 +1160,11 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 			"После черновика проверь функцию каждого абзаца, порядок объяснения и повторы. Конкретность, шутки, обращения и длина фраз зависят от задачи; одинаковая структура абзацев не нужна. Не заявляй личный опыт или тестирование без источника. " +
 			"Построй связный русский текст, убери повторы между главами, выдержи жанр и единый голос; соблюдай editorial_rules. Corrections.required — применимая норма, advisory — контекстный пример, не запрет. Fact corrections не доказывают текущий игровой факт. " +
 			"style_examples показывают только форму; факты бери исключительно из handoff. Верни только готовый материал."
-		return s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+craftInstruction+precisionInstruction+proseInstruction("reconstruct")+reconstructionReviewInstruction("reconstruct")+publicationAuthorInstruction, examples)}, {Role: "user", Content: string(payload)}})
+		return s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+editorialreview.Prompt()+craftInstruction+precisionInstruction+proseInstruction("reconstruct")+reconstructionReviewInstruction("reconstruct")+publicationAuthorInstruction, examples)}, {Role: "user", Content: string(payload)}})
 	}
 	raw, _ := json.Marshal(analysis)
 	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (наблюдения, не обязательный план; проверь выводы по исходнику, не добавляй факты из анализа):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Верни только готовый текст. Режим "+req.Mode+". Сохрани названия, числа, ссылки, отрицания, осторожность, разметку и голос автора. Сохрани смысл и голос strengths. Это не запрет исправлять внутри них грамматику, повтор или тяжёлый синтаксис: меняй только место с конкретной пользой для читателя, сохраняя условия и степень уверенности. В edit/rewrite можно разделить длинный абзац по смене мысли и сохранить соседние удачные формулировки; не сокращай ради самого сокращения. Сохрани сноски: звёздочка со следующим неразрывным пробелом — буквальный знак сноски; при обычном пробеле экранируй звёздочку обратной косой чертой, чтобы не получить список. Не добавляй новые карты, факты или выводы. Правильность мысли не запрещает улучшать её форму. Если после проверки структуры и синтаксиса конкретной пользы нет, верни текст без изменений.", examples)
+	system += editorialreview.Prompt()
 	if req.Mode == "proofread" {
 		system += "\nКонтракт proofread: исправь только опечатки, грамматику, пунктуацию и типографику. Не меняй композицию, стиль и порядок абзацев."
 	}
@@ -1147,7 +1174,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 		input = string(data)
 		system += candidateRevisionInstruction(true)
 	}
-	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction + craftInstruction + proseInstruction(req.Mode) + formEditingInstruction(req.Mode) + "\ntool_observations и parse_warnings в анализе — диагностика, а не требования переписать текст. Опечатку проверь в контексте; частоту слов не исправляй автоматически."}, {Role: "user", Content: input}})
+	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction + craftInstruction + proseInstruction(req.Mode) + formEditingInstruction(req.Mode) + "\ntool_observations и parse_warnings в анализе — диагностика, а не требования переписать текст. Опечатку проверь в контексте; частоту слов не исправляй автоматически.\nФИНАЛЬНЫЙ ФОРМАТ: верни только готовый текст правки без JSON, отчёта, пояснений или служебных меток."}, {Role: "user", Content: input}})
 }
 
 // critic вызывает модель с JSON-данными в user message. Невалидный ответ
@@ -1160,6 +1187,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	// Keep source evidence and exact preservation spans, not the writer's
 	// suggested substitutions or justification for making them.
 	in.Analysis = Analysis{}
+	applyReviewScopeInput(&in)
 	if in.Mode == "reconstruct" {
 		in.RequiredSections = append([]string(nil), bundle.SectionsRequired...)
 	}
@@ -1171,7 +1199,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}
 	}
 	messages := []llm.Message{
-		{Role: "system", Content: s.styleSystem(bundle.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief)+revisionBaseInstruction(in.RevisionBase)+reconstructionReviewInstruction(in.Mode)+publicationCriticInstruction(in.Mode), examplesOf(in))},
+		{Role: "system", Content: s.styleSystem(bundle.Prompt()+editorialreview.Prompt()+criticInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief)+revisionBaseInstruction(in.RevisionBase)+reconstructionReviewInstruction(in.Mode)+publicationCriticInstruction(in.Mode), examplesOf(in))},
 		{Role: "user", Content: string(payload)},
 	}
 	started := time.Now()
@@ -1186,8 +1214,10 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: kind, Err: err}
 	}
 	out, parseErr := parseCritic(text)
+	applyReviewScope(&out, in)
+	out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
 	if out.Verdict != "" {
-		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out))
+		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out))
 	}
 	if parseErr == nil {
 		s.logStage(ctx, "critic", started, attempt, "")
@@ -1206,8 +1236,10 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: kind, Err: err}
 	}
 	out, parseErr = parseCritic(text)
+	applyReviewScope(&out, in)
+	out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
 	if out.Verdict != "" {
-		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out))
+		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out))
 	}
 	if parseErr != nil {
 		s.logStage(ctx, "critic_retry", started, attempt, ReasonCriticInvalid)
@@ -1215,6 +1247,67 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	}
 	s.logStage(ctx, "critic_retry", started, attempt, "")
 	return out, nil
+}
+
+func applyReviewScope(out *criticResult, in criticInput) {
+	out.ReviewScope, out.SourceVerification = in.ReviewScope, in.SourceVerification
+}
+
+func applyReviewScopeInput(in *criticInput) {
+	if strings.EqualFold(strings.TrimSpace(in.Mode), "facts_only") {
+		in.ReviewScope, in.SourceVerification = "preservation_only", "not_performed"
+		return
+	}
+	if in.Handoff != nil {
+		in.ReviewScope, in.SourceVerification = "supplied_evidence", "supplied_handoff_only"
+		return
+	}
+	in.ReviewScope, in.SourceVerification = "source_and_candidate", "not_performed"
+}
+
+func validatePracticeChecks(in criticInput, out criticResult) error {
+	factsOnly := strings.EqualFold(strings.TrimSpace(in.Mode), "facts_only")
+	if err := editorialreview.ValidateChecks(in.Candidate, out.PracticeChecks, factsOnly); err != nil {
+		return err
+	}
+	if out.Verdict == "accept" {
+		for _, check := range out.PracticeChecks {
+			status := strings.ToLower(strings.TrimSpace(check.Status))
+			if status == "issue" || status == "unverified" {
+				return fmt.Errorf("practice_checks: verdict accept has unresolved %s status for %s", status, check.ID)
+			}
+		}
+	}
+	return nil
+}
+
+// practiceFindings turns grounded practice issues into the same actionable
+// findings consumed by repair. Unverified checks remain source/evidence
+// blockers and are deliberately marked unavailable so repair cannot invent a
+// fix for a claim that still needs verification.
+func practiceFindings(candidate string, checks []editorialreview.Check) []analyzers.Finding {
+	findings := make([]analyzers.Finding, 0)
+	for _, check := range checks {
+		status := strings.ToLower(strings.TrimSpace(check.Status))
+		if status != "issue" && status != "unverified" {
+			continue
+		}
+		message := fmt.Sprintf("Редакционная практика %s: %s", check.ID, strings.TrimSpace(check.Reason))
+		if status == "issue" {
+			message = fmt.Sprintf("%s Проблема для читателя: %s Риск для смысла: %s Польза исправления: %s", message, strings.TrimSpace(check.ReaderProblem), strings.TrimSpace(check.MeaningRisk), strings.TrimSpace(check.Benefit))
+		}
+		finding := analyzers.Finding{Analyzer: "editorial_practice", RuleID: "editorial_practice." + check.ID, Severity: "error", Message: message, Evidence: check.Quote, Suggestions: []string{strings.TrimSpace(check.Suggestion)}}
+		if status == "unverified" {
+			finding.Severity = "warning"
+			finding.Tags = []string{"practice_unverified", "analyzer_unavailable"}
+			finding.Suggestions = []string{"Запросить источник или уточнение перед исправлением."}
+		}
+		if strings.TrimSpace(finding.Evidence) == "" || !strings.Contains(candidate, finding.Evidence) {
+			continue
+		}
+		findings = append(findings, finding)
+	}
+	return findings
 }
 
 // examplesOf возвращает примеры critic-входа в исходном виде для system prompt.
@@ -1244,7 +1337,7 @@ func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, c
 	if err != nil {
 		return "", err
 	}
-	system := s.styleSystem(bundle.WithQA(messagesOf(findings)).Prompt()+
+	system := s.styleSystem(bundle.WithQA(messagesOf(findings)).Prompt()+editorialreview.Prompt()+
 		"\nИсправь в candidate только места из QA_FINDINGS: они переданы в поле findings JSON в сообщении пользователя. "+
 		"Исправляй указанный смысловой сдвиг по source: восстанавливай его факты, количество, условия, отрицания и степень уверенности. Не добавляй сведения из памяти. "+
 		"Сохрани полезные правки candidate вне отмеченной ошибки, включая ясные формулировки и исправления грамматики. Не откатывай весь текст к source и не переписывай его заново. "+

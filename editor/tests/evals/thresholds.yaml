@@ -13,7 +13,7 @@ constructed-guide:
   rhythm_ratio_min: 0.45         # q1 корпуса 0.446; затвор режет только ниже 0.40
   short_pct_min: 7               # доля предложений короче 8 слов: корпус q1 9.5, min 5.6
   long_pct_min: 3                # доля длиннее 25 слов: корпус q1 5.1, min 2.6
-  markers_remove_max: 0          # чат-остатки, анонсы, эмодзи, дисклеймеры — никогда
+  markers_remove_max: 0          # диагностический порог: требуется контекстная проверка
   markers_total_max_per_10k: 12  # медиана корпуса 10.6; порог selftest 20 — для автора, модели даём медиану
   author_min: 8.0                # q1 корпуса 8.4, минимум 6.9
   sections_required_present: true

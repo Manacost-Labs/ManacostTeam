@@ -64,11 +64,12 @@ structure:
   sections_missing_in_input: []
   placeholder_allowed: false
 input_must_fail:
-- markers_high
-- markers_remove
 - soul_low
 - sections_missing
 - rhythm_flat
+input_must_review:
+- markers_high
+- markers_remove
 input_must_pass: false
 thresholds: {}
 notes: 'Синтетика: ИИ-риторика, тройки, без разделов. Заменить реальным примером, когда появится.'

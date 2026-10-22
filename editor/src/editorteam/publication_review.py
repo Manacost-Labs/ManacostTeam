@@ -367,7 +367,7 @@ def _report(text: str, report: dict) -> list[str]:
     return errors
 
 
-def validate_factual(handoff: dict, text: str, report: dict) -> list[str]:
+def validate_factual(handoff: dict, text: str, report: dict, *, require_practices: bool = False) -> list[str]:
     """Require supported literal attestations, provenance and model judgments."""
     errors = validate_handoff(handoff, handoff.get("patch") if isinstance(handoff, dict) else "")
     errors += _report(text, report)
@@ -432,6 +432,10 @@ def validate_factual(handoff: dict, text: str, report: dict) -> list[str]:
             errors.append(f"factual: {cid} approved evidence not cited exactly")
     for cid in required - seen:
         errors.append(f"factual: missing attestation for {cid}")
+    if require_practices:
+        from .editorial_practices import validate
+
+        errors += validate(text, report, owner="fact_review", handoff=handoff)
     approved = _approved_text(handoff)
     approved_urls = {
         sources[ref]["url"] for claim in claims.values() for ref in claim["evidence_refs"]
@@ -446,7 +450,8 @@ def validate_factual(handoff: dict, text: str, report: dict) -> list[str]:
 
 
 def validate_literary(
-    text: str, report: dict, *, keep_spans: list[dict] | None = None, require_extended: bool = False
+    text: str, report: dict, *, keep_spans: list[dict] | None = None, require_extended: bool = False,
+    require_practices: bool = False,
 ) -> list[str]:
     """Check the independent whole-article assessment and quoted findings."""
     errors = _report(text, report)
@@ -479,6 +484,10 @@ def validate_literary(
             )
         if not report.get("paragraph_functions"):
             errors.append("literary: paragraph_functions required for whole-article review")
+    if require_practices:
+        from .editorial_practices import validate
+
+        errors += validate(text, report, owner="literary_review")
     changes = report.get("strength_changes", [])
     if not isinstance(changes, list) or any(not isinstance(row, dict) for row in changes):
         errors.append("literary: malformed strength_changes")
@@ -533,10 +542,12 @@ def validate_reviews(
     *,
     keep_spans: list[dict] | None = None,
     require_extended: bool = False,
+    require_practices: bool = False,
 ) -> list[str]:
     """Gate both reviews of exactly the same article and evidence handoff."""
-    errors = validate_factual(handoff, text, factual) + validate_literary(
-        text, literary, keep_spans=keep_spans, require_extended=require_extended
+    errors = validate_factual(handoff, text, factual, require_practices=require_practices) + validate_literary(
+        text, literary, keep_spans=keep_spans, require_extended=require_extended,
+        require_practices=require_practices,
     )
     if isinstance(handoff, dict) and isinstance(literary, dict):
         try:

@@ -95,7 +95,7 @@ def analyze(
     if prof.enabled("markers"):
         markers = C.sibling("markers")
         for hit in markers.scan(text, markers.load_patterns()):
-            sev = {"remove": "likely", "rewrite": "likely", "review": "review"}[hit["action"]]
+            sev = "review"
             report.add(
                 Finding(
                     id=f"markers.{hit['id']}",
@@ -105,7 +105,7 @@ def analyze(
                     confidence=0.6 if sev == "review" else 0.8,
                     message=hit["name"],
                     evidence=hit["text"],
-                    suggestion=hit["fix"],
+                    suggestion="Проверить функцию в контексте; сохранить уместное. Возможная правка: " + hit["fix"],
                     line=hit["line"],
                     profile=prof.id,
                 )
@@ -988,7 +988,7 @@ def marker_lists() -> dict:
             {
                 "name": p["name"],
                 "examples": p.get("examples", []),
-                "fix": p.get("fix", ""),
+                "fix": "Только при конкретной проблеме читателя; не запрет конструкции. " + p.get("fix", ""),
             }
         )
     return out
@@ -1037,7 +1037,10 @@ def rules_for(
                 replace.append({"from": alias, "to": r.preferred})
         elif r.decision == "allowed":
             keep.append(r.subject)
+    from editorteam.editorial_practices import catalog
+
     out = {
+        "editorial_practices": catalog(),
         "game": g.id,
         "profile": prof.id,
         "depth": depth,

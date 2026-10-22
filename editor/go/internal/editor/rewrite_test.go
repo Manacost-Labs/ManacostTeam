@@ -239,8 +239,7 @@ func TestRewritePromptCarriesSkeletonExamplesAndMarkers(t *testing.T) {
 		"Источник — не шаблон структуры", "Каждая цифра звучит один раз",
 		"ПРАВКИ АВТОРА", "яичная сборка → сборка на яйцах (карта — Яйцо)",
 		"ОБРАЗЦЫ ГОЛОСА (СТИЛЬ, НЕ ФАКТ)", "[муллиган] Играйте очень агрессивно",
-		"НИКОГДА (вырезается без потерь): «надеюсь, это поможет»",
-		"НЕ ПИСАТЬ, ВМЕСТО ЭТОГО — ФАКТ", "стоит отметить", "НЕ БОЛЬШЕ ОДНОГО НА АБЗАЦ",
+		"КОНТЕКСТНАЯ ПРОВЕРКА УСТОЙЧИВЫХ ОБОРОТОВ", "ВОЗМОЖНЫЕ МЕСТА ДЛЯ ЛОКАЛЬНОЙ ПРОВЕРКИ", "стоит отметить", "ПРОВЕРЬ ПЛОТНОСТЬ И ФУНКЦИЮ В КОНТЕКСТЕ АБЗАЦА",
 		"ОТК", "дека → колода", "винрейт", "Исходник — источник фактов, а не формы",
 		"Плана нет",
 	} {
@@ -268,6 +267,9 @@ func TestRewritePromptCarriesSkeletonExamplesAndMarkers(t *testing.T) {
 func TestEditPromptIsUnchangedForOrdinaryDepths(t *testing.T) {
 	rules := rewriteRules()
 	p := buildSystemPromptContext(&rules, "обычная", nil)
+	if !strings.HasSuffix(p, "ФИНАЛЬНЫЙ ФОРМАТ: верни только готовый текст правки без JSON, отчёта, пояснений или служебных меток.\n") {
+		t.Fatal("ordinary editor prompt must end with writer-only output contract")
+	}
 	for _, want := range []string{"Правка — не улучшение по умолчанию", "РЕЖИМ: обычная", "Сокращение больше 5%"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("в промпте правки нет %q", want)

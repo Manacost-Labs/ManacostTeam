@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/editorialreview"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/pipeline"
 )
@@ -74,20 +75,22 @@ type Change struct {
 }
 
 type Result struct {
-	Text             string            `json:"text"`
-	Accepted         bool              `json:"accepted"`
-	Attempts         []Attempt         `json:"attempts"`
-	Changes          []Change          `json:"changes"`
-	Preserved        []string          `json:"preserved"`
-	Saved            bool              `json:"saved"`
-	SaveStatus       string            `json:"save_status"`
-	Verdict          *analyzer.Verdict `json:"verdict"`
-	Report           *analyzer.Report  `json:"report"`
-	Model            string            `json:"model"`
-	Caveats          []string          `json:"caveats,omitempty"`
-	SourceText       string            `json:"-"`
-	GoogleDocumentID string            `json:"-"`
-	ReviewPath       string            `json:"review_path,omitempty"`
+	Text               string            `json:"text"`
+	Accepted           bool              `json:"accepted"`
+	Attempts           []Attempt         `json:"attempts"`
+	Changes            []Change          `json:"changes"`
+	Preserved          []string          `json:"preserved"`
+	Saved              bool              `json:"saved"`
+	SaveStatus         string            `json:"save_status"`
+	Verdict            *analyzer.Verdict `json:"verdict"`
+	Report             *analyzer.Report  `json:"report"`
+	Model              string            `json:"model"`
+	Caveats            []string          `json:"caveats,omitempty"`
+	SourceText         string            `json:"-"`
+	GoogleDocumentID   string            `json:"-"`
+	ReviewPath         string            `json:"review_path,omitempty"`
+	ReviewScope        string            `json:"review_scope"`
+	SourceVerification string            `json:"source_verification"`
 
 	// Переплавка: глубина, план и разделы, для которых в исходнике не было
 	// материала, — они честно не написаны, а не выдуманы.
@@ -133,10 +136,12 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 	}
 
 	res := &Result{
-		Model:     s.llm.Model(),
-		Changes:   []Change{},
-		Preserved: []string{},
-		Depth:     req.Mode,
+		Model:              s.llm.Model(),
+		Changes:            []Change{},
+		Preserved:          []string{},
+		Depth:              req.Mode,
+		ReviewScope:        "preservation_only",
+		SourceVerification: "not_performed",
 	}
 	if prov, ok := rules.Norms["provisional"].(bool); ok && prov {
 		res.Caveats = append(res.Caveats,
@@ -352,7 +357,9 @@ func buildSystemPromptContext(r *analyzer.Rules, mode string, claims []map[strin
 	writeCorrections(&b, r)
 	writeTypography(&b, r)
 	writeForbiddenPhrases(&b)
+	b.WriteString(editorialreview.Prompt())
 	b.WriteString("Сокращение больше 5% требует аудита каждого удаления, но не запрещает удалить точный повтор или пустую рамку.\n")
+	b.WriteString("ФИНАЛЬНЫЙ ФОРМАТ: верни только готовый текст правки без JSON, отчёта, пояснений или служебных меток.\n")
 	return b.String()
 }
 
@@ -448,9 +455,8 @@ func writeTypography(b *strings.Builder, r *analyzer.Rules) {
 }
 
 func writeForbiddenPhrases(b *strings.Builder) {
-	b.WriteString("ЗАПРЕЩЕНО ДОБАВЛЯТЬ\n")
-	b.WriteString("«стоит отметить», «важно понимать», «давайте разберёмся», «подведём итог»,\n")
-	b.WriteString("конструкцию «не просто X, а Y», новые факты, числа и выводы.\n")
+	b.WriteString("ПРОВЕРЯЙ КОНТЕКСТНЫЕ РИСКИ\n")
+	b.WriteString("Шаблонное вступление, рекламная рамка, повтор вывода или связка без новой информации требуют локальной проверки читательской пользы; отдельное слово или конструкция сами по себе не запрещены. Новые факты, числа и выводы без источника добавлять нельзя.\n")
 }
 
 // safeClaims не передаёт модели backstage sources и replay analytics.
