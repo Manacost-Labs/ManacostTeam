@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.12.0",
+      "version": "1.13.0",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -114,7 +114,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.10.3",
+      "version": "1.10.4",
       "source": "teams/research-team",
       "resources": [
         {
@@ -333,7 +333,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.10.0",
+      "version": "1.11.0",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -415,9 +415,13 @@
         {
           "source": "editor/src/editorteam/editorial_practices.json",
           "destination": "python/editorteam/editorial_practices.json"
+        },
+        {
+          "source": "editor/src/editorteam/integrity.py",
+          "destination": "python/editorteam/integrity.py"
         }
       ]
     }
   ],
-  "release_version": "1.17.0"
+  "release_version": "1.18.0"
 }

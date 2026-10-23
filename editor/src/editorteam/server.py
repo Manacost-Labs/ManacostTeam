@@ -34,6 +34,7 @@ from editorteam import games as G
 from editorteam import profiles as P
 from editorteam.corpus_learning import CorpusError, CorpusStore
 from editorteam.finding import Finding, Report
+from editorteam.integrity import arithmetic_issues, diagnostic_scope
 from editorteam.task_context import adapt_editor_request, manacost_style
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -87,6 +88,10 @@ def analyze(
     g = G.load(game)
     prof = P.load(profile or (g.profiles[0] if g.profiles else P.DEFAULT))
     report = Report(document="<текст>", profile=prof.id)
+    for issue in arithmetic_issues(text):
+        report.add(Finding(id=issue["kind"], analyzer="integrity", category="internal-consistency",
+                           severity=issue["severity"], message=issue["message"],
+                           evidence=issue["evidence"], suggestion=issue["suggestion"], line=issue["line"]))
 
     caveat = g.norms.caveat()
     if caveat:
@@ -268,11 +273,13 @@ def validate(
     evidence_requested: bool = False,
     author: str = "manacost",
     meaning: str = "",
+    editorial_review: dict | None = None,
+    source_handoff: dict | None = None,
+    source_snapshots: list | None = None,
 ) -> dict:
-    """Затвор: что правка сделала с голосом, защищённым и ритмом.
+    """Deterministic diagnostics, optionally bound to an independent review.
 
-    Это главная проверка сервиса. Модель правит, а принимается правка
-    только если не потеряла того, ради чего текст пишется.
+    A diagnostic accepted flag alone never certifies editorial quality or truth.
 
     В глубине «переплавка» исходник — источник фактов, а не формы, поэтому
     относительные проверки голоса, ритма и длины выключены. Вместо них —
@@ -526,7 +533,10 @@ def validate(
             **{f"coverage_{key}": value for key, value in cov_m.items()},
         }
 
-    return {
+    if not rewrite:  # Rewrite gate already includes the same arithmetic check.
+        violations.extend(arithmetic_issues(after))
+    result = {
+        **diagnostic_scope(),
         "accepted": not violations,
         "violations": violations,
         "warnings": warnings,
@@ -545,6 +555,42 @@ def validate(
         "declared_missing": list(declared_missing or []),
         "corpus_version": _corpus_version(),
     }
+    if editorial_review is not None or source_handoff is not None or source_snapshots is not None:
+        from .editorial_practices import validate as validate_review
+
+        errors = validate_review(after, editorial_review, original=before, owner="all",
+                                 handoff=source_handoff, snapshots=source_snapshots, require_snapshots=True)
+        if source_handoff is not None and not errors:
+            from .publication_review import validate_factual
+
+            errors += validate_factual(source_handoff, after, editorial_review)
+        if not errors:
+            from .editorial_practices import _corrected_original
+            from .publication_review import article_hash
+
+            baseline = _corrected_original(before, editorial_review)
+            if baseline != before:
+                # Full independent review above remains bound to the actual
+                # versions and snapshots. Re-run only deterministic checks on
+                # the specifically proved corrections; retain every unrelated
+                # guard, including caller-supplied claim contracts.
+                result = validate(
+                    baseline, after, game, profile, mode=mode, depth=depth,
+                    declared_missing=declared_missing, claims_before=claims_before,
+                    claims_after=claims_after, current_meta_epoch=current_meta_epoch,
+                    current_patch=current_patch, evidence_requested=evidence_requested,
+                    author=author, meaning=meaning,
+                )
+                result["diagnostic_baseline_sha256"] = article_hash(baseline)
+                result["review_original_sha256"] = article_hash(before)
+        result["independent_review_required"] = bool(errors)
+        result["independent_review_validated"] = not errors
+        result["editorial_review_errors"] = errors
+        result["review_scope"] = "supplied_sources" if source_handoff is not None else "source_and_candidate"
+        if not errors and source_handoff is not None:
+            result["source_verification"] = "supplied_sources_checked"
+        result["accepted"] = result["accepted"] and not errors
+    return result
 
 
 def validate_outline(outline: dict, source: str, game: str, profile: str | None) -> dict:
@@ -1029,14 +1075,17 @@ def rules_for(
     clarity = C.sibling("clarity")
     rewrite_gate = C.sibling("rewrite_gate")
     depth = rewrite_gate.normalize_depth(depth)
-    replace, keep = [], []
+    replace, keep, advice = [], [], []
     for r in R.terminology():
-        if r.decision in ("auto_replace", "forbidden") and r.preferred:
+        if r.decision in ("auto_replace", "forbidden") and r.preferred and r.mandatory:
             replace.append({"from": r.subject, "to": r.preferred})
             for alias in r.alias_names():
                 replace.append({"from": alias, "to": r.preferred})
         elif r.decision == "allowed":
             keep.append(r.subject)
+        elif r.preferred:
+            advice.append({"from": r.subject, "alternative": r.preferred,
+                           "reason": r.note or "Корпусная частота не запрещает авторское слово."})
     from editorteam.editorial_practices import catalog
 
     out = {
@@ -1046,6 +1095,7 @@ def rules_for(
         "depth": depth,
         "protected": g.protected,
         "replace": replace,
+        "terminology_advice": advice,
         "keep": keep,
         "typography": R.typography(),
         "sections_required": [s.title for s in prof.required_sections],
@@ -1097,7 +1147,7 @@ def rules_for(
         out["style_rules"] = [*out.get("style_rules", []), *house_style_rules()]
     if task_context is not None and g.id != "hearthstone":
         # Hearthstone terminology/corpus examples have no authority over other games.
-        out.update({"replace": [], "keep": []})
+        out.update({"replace": [], "keep": [], "terminology_advice": []})
         out["typography"] = style["typography"]
         out["style_memory"]["purpose"] = ["voice", "rhythm"]
         if depth == rewrite_gate.REWRITE:
@@ -1201,6 +1251,9 @@ class Handler(BaseHTTPRequestHandler):
                         evidence_requested=data.get("evidence_requested", False),
                         author=data.get("author", "manacost"),
                         meaning=data.get("meaning", ""),
+                        editorial_review=data.get("editorial_review"),
+                        source_handoff=data.get("source_handoff"),
+                        source_snapshots=data.get("source_snapshots"),
                     ),
                 )
             elif self.path == "/rules":

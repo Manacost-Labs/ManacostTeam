@@ -47,17 +47,18 @@ func NormalizeDepth(value string) (string, bool) {
 }
 
 type Request struct {
-	Text              string             `json:"text"`
-	Game              string             `json:"game"`
-	Profile           string             `json:"profile"`
-	Mode              string             `json:"mode"`           // лёгкая | обычная | глубокая | переплавка
-	EditorialMode     string             `json:"editorial_mode"` // GUIDE | ANALYSIS | REPORT
-	EvidenceRequested bool               `json:"evidence_requested"`
-	Claims            []map[string]any   `json:"claims,omitempty"`
-	CurrentPatch      string             `json:"current_patch,omitempty"`
-	CurrentMetaEpoch  string             `json:"current_meta_epoch,omitempty"`
-	DeclaredMissing   []string           `json:"declared_missing,omitempty"` // разделы без материала в исходнике
-	LLMContext        llm.RequestContext `json:"-"`
+	Text              string                           `json:"text"`
+	Game              string                           `json:"game"`
+	Profile           string                           `json:"profile"`
+	Mode              string                           `json:"mode"`           // лёгкая | обычная | глубокая | переплавка
+	EditorialMode     string                           `json:"editorial_mode"` // GUIDE | ANALYSIS | REPORT
+	EvidenceRequested bool                             `json:"evidence_requested"`
+	Claims            []map[string]any                 `json:"claims,omitempty"`
+	SourceSnapshots   []editorialreview.SourceSnapshot `json:"source_snapshots,omitempty"`
+	CurrentPatch      string                           `json:"current_patch,omitempty"`
+	CurrentMetaEpoch  string                           `json:"current_meta_epoch,omitempty"`
+	DeclaredMissing   []string                         `json:"declared_missing,omitempty"` // разделы без материала в исходнике
+	LLMContext        llm.RequestContext               `json:"-"`
 }
 
 type Attempt struct {
@@ -75,22 +76,23 @@ type Change struct {
 }
 
 type Result struct {
-	Text               string            `json:"text"`
-	Accepted           bool              `json:"accepted"`
-	Attempts           []Attempt         `json:"attempts"`
-	Changes            []Change          `json:"changes"`
-	Preserved          []string          `json:"preserved"`
-	Saved              bool              `json:"saved"`
-	SaveStatus         string            `json:"save_status"`
-	Verdict            *analyzer.Verdict `json:"verdict"`
-	Report             *analyzer.Report  `json:"report"`
-	Model              string            `json:"model"`
-	Caveats            []string          `json:"caveats,omitempty"`
-	SourceText         string            `json:"-"`
-	GoogleDocumentID   string            `json:"-"`
-	ReviewPath         string            `json:"review_path,omitempty"`
-	ReviewScope        string            `json:"review_scope"`
-	SourceVerification string            `json:"source_verification"`
+	Text               string               `json:"text"`
+	Accepted           bool                 `json:"accepted"`
+	Attempts           []Attempt            `json:"attempts"`
+	Changes            []Change             `json:"changes"`
+	Preserved          []string             `json:"preserved"`
+	Saved              bool                 `json:"saved"`
+	SaveStatus         string               `json:"save_status"`
+	Verdict            *analyzer.Verdict    `json:"verdict"`
+	Report             *analyzer.Report     `json:"report"`
+	Model              string               `json:"model"`
+	Caveats            []string             `json:"caveats,omitempty"`
+	SourceText         string               `json:"-"`
+	GoogleDocumentID   string               `json:"-"`
+	ReviewPath         string               `json:"review_path,omitempty"`
+	ReviewScope        string               `json:"review_scope"`
+	SourceVerification string               `json:"source_verification"`
+	EditorialReview    *pipeline.EditReview `json:"editorial_review,omitempty"`
 
 	// Переплавка: глубина, план и разделы, для которых в исходнике не было
 	// материала, — они честно не написаны, а не выдуманы.
@@ -116,6 +118,9 @@ func New(l llm.Completer, a *analyzer.Client, maxAttempts int) *Service {
 
 // Edit прогоняет текст через цикл «правка → проверка → повтор».
 func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
+	if err := editorialreview.ValidateSources(req.SourceSnapshots); err != nil {
+		return nil, &pipeline.RequestError{Message: err.Error()}
+	}
 	if req.EditorialMode == "" {
 		req.EditorialMode = "GUIDE"
 	}
@@ -140,7 +145,7 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 		Changes:            []Change{},
 		Preserved:          []string{},
 		Depth:              req.Mode,
-		ReviewScope:        "preservation_only",
+		ReviewScope:        "not_performed",
 		SourceVerification: "not_performed",
 	}
 	if prov, ok := rules.Norms["provisional"].(bool); ok && prov {
@@ -152,7 +157,7 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 	if req.Mode == DepthRewrite {
 		return s.rewrite(ctx, req, rules, claims, res)
 	}
-	system := buildSystemPromptContext(rules, req.Mode, claims)
+	system := buildSystemPromptContext(rules, req.Mode, claims) + pipeline.SourceEditingInstruction
 	if isGoogleDocumentURL(req.Text) && hasGoogleDocumentReadTool(req.LLMContext.Tools) {
 		system += "\nИСТОЧНИК GOOGLE DOCS\n"
 		system += "Ссылка в сообщении — это адрес исходного документа, а не текст для правки. "
@@ -161,7 +166,7 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 	}
 	messages := []llm.Message{
 		{Role: "system", Content: system},
-		{Role: "user", Content: req.Text},
+		{Role: "user", Content: pipeline.EditSourcePayload(req.Text, req.SourceSnapshots)},
 	}
 
 	validationText := req.Text
@@ -177,7 +182,7 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 			sourceLoaded = true
 			// Retries should repair the document prose, not ask the model to
 			// fetch the URL again and risk another summary.
-			messages[1].Content = validationText
+			messages[1].Content = pipeline.EditSourcePayload(validationText, req.SourceSnapshots)
 		}
 		if googleURL && !sourceLoaded {
 			if attempt == s.maxAttempts {
@@ -200,7 +205,7 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 		if err != nil {
 			return nil, fmt.Errorf("проверка попытки %d: %w", attempt, err)
 		}
-		s.reviewFacts(ctx, validationText, candidate, claims, verdict)
+		s.reviewFacts(ctx, validationText, candidate, claims, req, verdict, res)
 
 		res.Attempts = append(res.Attempts, Attempt{
 			N: attempt, Accepted: verdict.Accepted, Violations: verdict.Violations,
@@ -253,15 +258,30 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 	return res, nil
 }
 
-func (s *Service) reviewFacts(ctx context.Context, source, candidate string, claims []map[string]any, verdict *analyzer.Verdict) {
-	if !verdict.Accepted {
+func (s *Service) reviewFacts(ctx context.Context, source, candidate string, claims []map[string]any, req Request, verdict *analyzer.Verdict, res *Result) {
+	if !verdict.Accepted && len(req.SourceSnapshots) == 0 {
 		return
 	}
 	model := s.Reviewer
 	if model == nil {
 		model = s.llm
 	}
-	if err := pipeline.ReviewFactualEdit(ctx, model, source, candidate, claims); err != nil {
+	report, err := pipeline.ReviewEdit(ctx, model, source, candidate, claims, req.SourceSnapshots)
+	res.EditorialReview = report
+	if report != nil {
+		res.ReviewScope, res.SourceVerification = report.ReviewScope, report.SourceVerification
+	}
+	if err == nil && report.PreservationSource(source) != source {
+		var corrected *analyzer.Verdict
+		corrected, err = s.an.ValidateWithContext(ctx, report.PreservationSource(source), candidate, req.Game, req.Profile,
+			analyzer.ValidationContext{Mode: req.EditorialMode, Depth: res.Depth, DeclaredMissing: res.MissingSections,
+				EvidenceRequested: req.EvidenceRequested, ClaimsBefore: claims, ClaimsAfter: claims,
+				CurrentPatch: req.CurrentPatch, CurrentMetaEpoch: req.CurrentMetaEpoch})
+		if err == nil {
+			*verdict = *corrected
+		}
+	}
+	if err != nil {
 		verdict.Accepted = false
 		verdict.Violations = append(verdict.Violations, analyzer.Violation{Kind: "factual_review_failed", Message: err.Error()})
 	}

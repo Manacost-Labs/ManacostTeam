@@ -96,7 +96,9 @@ def main() -> int:
         print(str(exc), file=sys.stderr)
         return 2
     issues = scan(before, after, claims)
-    print(json.dumps({"accepted": not issues, "violations": issues}, ensure_ascii=False, indent=2))
+    import common as C
+
+    print(json.dumps({**C.diagnostic_scope(), "accepted": not issues, "violations": issues}, ensure_ascii=False, indent=2))
     return 1 if issues else 0
 
 

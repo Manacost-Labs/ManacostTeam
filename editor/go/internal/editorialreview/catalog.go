@@ -78,14 +78,16 @@ func Prompt() string {
 }
 
 type Check struct {
-	ID            string `json:"id"`
-	Status        string `json:"status"`
-	Quote         string `json:"quote"`
-	Reason        string `json:"reason"`
-	ReaderProblem string `json:"reader_problem,omitempty"`
-	Benefit       string `json:"benefit,omitempty"`
-	MeaningRisk   string `json:"meaning_risk,omitempty"`
-	Suggestion    string `json:"suggestion,omitempty"`
+	ID             string           `json:"id"`
+	Status         string           `json:"status"`
+	Quote          string           `json:"quote"`
+	OriginalQuote  string           `json:"original_quote,omitempty"`
+	Reason         string           `json:"reason"`
+	ReaderProblem  string           `json:"reader_problem,omitempty"`
+	Benefit        string           `json:"benefit,omitempty"`
+	MeaningRisk    string           `json:"meaning_risk,omitempty"`
+	Suggestion     string           `json:"suggestion,omitempty"`
+	ChangeEvidence []ChangeEvidence `json:"change_evidence,omitempty"`
 }
 
 // ValidateChecks enforces exact catalog coverage and candidate-grounded quotes.
@@ -104,7 +106,7 @@ func ValidateChecks(candidate string, checks []Check, factsOnly bool) error {
 	}
 	got := make(map[string]bool)
 	for _, ch := range checks {
-		p, ok := want[ch.ID]
+		_, ok := want[ch.ID]
 		if !ok {
 			return fmt.Errorf("practice_checks: unknown or inapplicable id %q", ch.ID)
 		}
@@ -112,25 +114,9 @@ func ValidateChecks(candidate string, checks []Check, factsOnly bool) error {
 			return fmt.Errorf("practice_checks: duplicate id %q", ch.ID)
 		}
 		got[ch.ID] = true
-		status := strings.ToLower(strings.TrimSpace(ch.Status))
-		if status != "clear" && status != "not_applicable" && status != "issue" && status != "unverified" {
-			return fmt.Errorf("practice_checks: invalid status for %s", ch.ID)
+		if err := validateCheck(candidate, "", ch, false, true); err != nil {
+			return fmt.Errorf("practice_checks: %w", err)
 		}
-		if strings.TrimSpace(ch.Reason) == "" {
-			return fmt.Errorf("practice_checks: %s %s requires reason", ch.ID, status)
-		}
-		if status == "clear" || status == "issue" {
-			if strings.TrimSpace(ch.Quote) == "" || !strings.Contains(candidate, ch.Quote) {
-				return fmt.Errorf("practice_checks: %s quote must be nonempty and occur in candidate", ch.ID)
-			}
-		}
-		if (status == "not_applicable" || status == "unverified") && strings.TrimSpace(ch.Quote) != "" && !strings.Contains(candidate, ch.Quote) {
-			return fmt.Errorf("practice_checks: %s optional quote must occur in candidate", ch.ID)
-		}
-		if status == "issue" && (strings.TrimSpace(ch.ReaderProblem) == "" || strings.TrimSpace(ch.Benefit) == "" || strings.TrimSpace(ch.MeaningRisk) == "" || strings.TrimSpace(ch.Suggestion) == "") {
-			return fmt.Errorf("practice_checks: issue %s requires reader_problem, benefit, meaning_risk, suggestion", ch.ID)
-		}
-		_ = p
 	}
 	var missing []string
 	for id := range want {

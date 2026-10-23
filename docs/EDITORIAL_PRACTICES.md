@@ -84,12 +84,14 @@
 
 ## Проверка источника
 
-Для каждого source_id reviewer читает сохранённый полный snapshot либо реальную
-страницу/архив, фиксирует способ доступа, точную evidence_quote, проверку
+Для каждого source_id reviewer читает сохранённый полный snapshot, фиксирует
+`access=snapshot`, точную evidence_quote, проверку
 идентичности источника и объяснение поддержки тезиса. Нужно сверить контекст,
 дату/патч, область выборки и независимость источников, если на них основан вывод.
 Пересказ и поисковый snippet не заменяют чтение. Неизвестные библиографические
-поля нужно обозначить как неизвестные, не восстановить по догадке.
+поля нужно обозначить как неизвестные, не восстановить по догадке. Получение
+страницы или архива — отдельный этап сбора. Переданный способ сбора не означает,
+что reviewer сам выполнил live-запрос; SHA256 подтверждает байты, не происхождение.
 
 Нельзя заменять источник другим, менять URL или отбрасывать параметры без
 проверки, что содержание и адресация сохранились. Сбой доступа — unavailable;
@@ -103,8 +105,8 @@
 
 ## Контракт и команды
 
-Новые native runs используют `review_contract_version=3`. Версии 1 и 2
-продолжают принимать прежние receipts; версия 3 обязательна при новом init.
+Новые native runs используют `review_contract_version=3`. История версий 1 и 2
+сохраняется, но старый receipt сам по себе не даёт текущий публикационный допуск.
 `publish next` передаёт каталог writer/research и назначенный набор reviewer.
 `submit` и `export` проверяют его независимо от итогового pass.
 
@@ -137,8 +139,42 @@ issue/unverified не дают положительного допуска. Чи
 
 Фактический отзыв также содержит `source_checks` для каждого источника:
 source_id, status, evidence_quote, reason, identity_check, support_check,
-access (live/snapshot/archive). Старые claims/evidence_refs и handoff_sha256
+access (`snapshot` при чтении переданных снимков). Старые claims/evidence_refs и handoff_sha256
 сохраняются и проверяются вместе с новыми полями.
+
+При изменённом исходнике `author_voice` и `strengths` требуют `change_evidence`:
+1–16 пар `{original_quote, quote, disposition, reason, benefit, meaning_risk}`.
+Обе цитаты точны; пустая новая цитата обозначает удаление. Хотя бы одна пара
+должна описывать реально изменённый фрагмент. `disposition` — preserved,
+justified или issue; issue блокирует приём. Необходимо объяснить судьбу
+уточнений, основания оценки и авторской лексики. Сокращение само по себе
+не доказывает пользы. Неизменённый удачный текст не нужно править ради отчёта.
+
+Отдельный `original_factual_checks` обязателен при переданном исходнике,
+даже когда candidate совпадает с ним:
+
+```json
+{
+  "whole_text_checked": true,
+  "internal_consistency": "clear",
+  "source_agreement": "not_performed",
+  "issues": []
+}
+```
+
+`internal_consistency` — clear или issue. `source_agreement` — not_performed,
+supplied_sources_checked или issue. Каждая найденная ошибка содержит точную
+исходную `quote`, `reason` и `resolution=unresolved|corrected`. Unresolved
+блокирует приём. Corrected требует отличающейся `correction_quote` из кандидата,
+`source_id` и точной `evidence_quote` полного источника; ошибочная исходная
+формулировка не должна оставаться в результате. Источник должен устанавливать
+само исправление. Несовместимые счёт и процент без подтверждения не разрешается
+«исправлять» выбором одного числа или удалением спорного места.
+
+Проверяется весь текст, а не только diff: причинность, направление порога,
+область сравнения, основание оценки и степень уверенности. Отсутствие внешнего
+подтверждения без признаков ошибки — ограничение проверки, а не придуманная
+ошибка. Оно не мешает отдельной проверке сохранения текста.
 
 Для отдельной редактуры (из editor, пакет использует PYTHONPATH=python):
 
@@ -155,17 +191,35 @@ prepare создаёт задание, **не положительный отз�
 незакрытых проверках. Без handoff можно оценить сохранение авторского текста,
 но нельзя объявить независимую фактическую проверку.
 
-Go critic использует ту же матрицу через embedded JSON, проверяет точное покрытие,
-цитаты и нерешённые замечания. В facts_only назначается фактическая часть;
-режим не даёт права переписывать авторский стиль. Полный источниковедческий
-публикационный допуск выполняется native workflow со snapshots и двумя отзывами.
+Go critic использует тот же каталог: все 26 практик, пять logic_checks и семь
+preservation_checks обязательны в `/v2/edit`, legacy `/edit` и AG-UI, включая
+facts_only и unchanged. Facts_only ограничивает вмешательство в стиль, а не
+полноту чтения. Нерешённые замечания, потеря содержания/голоса и отрицательные
+оценки critic несовместимы с accept; баллы нельзя повышать ради допуска.
 
-Область проверки Go задаёт сервер, а не ответ модели. Legacy Result явно
-возвращает `review_scope=preservation_only`, `source_verification=not_performed`.
-Обычный pipeline без handoff сообщает `source_and_candidate/not_performed`,
-с handoff — `supplied_evidence/supplied_handoff_only`. Это не утверждение
-о живом доступе к источнику. Не выдавать сохранение исходника за проверку
-его истинности; отсутствующее внешнее подтверждение остаётся ограничением.
+Для Go во всех редакторских маршрутах можно передать `source_snapshots`:
+`{source_id,url,title?,published_at?,retrieved_at,access,text,sha256}`. Не более
+восьми снимков, 100000 символов на снимок и 150000 суммарно; SHA256 вычисляется
+по точным UTF-8 байтам text. URL — HTTP(S) без credentials, retrieved_at —
+RFC3339. Неизвестные title/published_at не придумываются. Исходное access —
+заявленные данные сбора live/snapshot/archive, а отзыв читает их как snapshot.
+Go не получает страницу по этому URL самостоятельно. Формат Python publication
+sources сохраняет свой отдельный контракт provenance; форматы не взаимозаменяемы.
+
+Область проверки Go задаёт сервер, а не ответ модели. Без снимков обычный
+pipeline и legacy после отзыва сообщают `source_and_candidate/not_performed`.
+До отзыва legacy сообщает `not_performed/not_performed`. Handoff без полных снимков —
+`supplied_evidence/supplied_handoff_only`. Со снимками —
+`supplied_sources_and_preservation/supplied_snapshots_only`. Это ограниченная
+сверка с предоставленными текстами, не внешнее подтверждение каждого факта.
+
+Python `audit`, `/analyze` и `validate-edit` без независимого отзыва возвращают
+`review_scope=diagnostics_only`, `independent_review_required=true`,
+`publication_ready=false`, `source_verification=not_performed`. Их `accepted`
+означает только отсутствие инструментальных нарушений. `validate-edit --review`
+(в API `editorial_review`) проверяет полный контракт; для источников нужны
+также `--handoff`/`--sources` (`source_handoff`/`source_snapshots`). Проверенный
+контракт отзыва не превращает диагностический маршрут в публикационный экспорт.
 
 ## Проверка реализации
 
@@ -179,4 +233,8 @@ reviewer отличить дефект от уместного приёма; э�
 а не улучшение естественности на реальных статьях. Для последнего остаётся
 независимая оценка редактора на корпусе без смешивания фактов и стилевых метрик.
 
-Standalone factual/all CLI требует также `--sources sources.json`: полные snapshots с provenance/SHA256; report привязан к `sources_sha256`. Неполный handoff, изменённый snapshot и неподтверждённая claim блокируют допуск.
+При сверке источников standalone factual/all CLI требует `--handoff` и
+`--sources sources.json`: полные snapshots с provenance/SHA256; report привязан
+к sources_sha256. Неполный handoff, изменённый snapshot и неподтверждённая claim
+блокируют допуск. Без handoff возможна отдельная проверка исходника/кандидата,
+но source_verification остаётся not_performed.

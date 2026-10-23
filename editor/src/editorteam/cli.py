@@ -99,6 +99,12 @@ def audit(args) -> int:
     profile = P.load(profile_name)
 
     report = Report(document=str(args.file), profile=profile.id)
+    from editorteam.integrity import arithmetic_issues
+
+    for issue in arithmetic_issues(text):
+        report.add(Finding(id=issue["kind"], analyzer="integrity", category="internal-consistency",
+                           severity=issue["severity"], message=issue["message"],
+                           evidence=issue["evidence"], suggestion=issue["suggestion"], line=issue["line"]))
     if confidence is not None:
         report.notes.append(
             f"профиль определён автоматически: {profile.id} (уверенность {confidence}); "
@@ -416,13 +422,19 @@ def validate_edit(args) -> int:
         current_patch=args.current_patch,
         author=args.author,
         meaning=args.meaning,
+        editorial_review=json.loads(_read(Path(args.review))) if getattr(args, "review", None) else None,
+        source_handoff=json.loads(_read(Path(args.handoff))) if getattr(args, "handoff", None) else None,
+        source_snapshots=json.loads(_read(Path(args.sources))) if getattr(args, "sources", None) else None,
     )
     if selected:
         result["task_context"] = selected["task_context"]
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        print("PASS" if result["accepted"] else "REJECTED")
+        verdict = "REVIEW CONTRACT PASS" if result.get("independent_review_validated") else "DIAGNOSTICS PASS; independent editorial review required"
+        print(verdict if result["accepted"] else "REJECTED")
+        for error in result.get("editorial_review_errors", []):
+            print(f"  [editorial-review] {error}")
         for item in result["violations"]:
             print(f"  [{item['kind']}] {item['message']}")
         for item in result.get("warnings", []):
@@ -511,10 +523,13 @@ def check_cmd(args) -> int:
             "edit_depth": args.depth,
             "profile": profile,
         }
+    from editorteam.integrity import diagnostic_scope
+
+    result.update(diagnostic_scope())
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0 if result["accepted"] else 1
-    print("PASS" if result["accepted"] else "REJECTED")
+    print("DIAGNOSTICS PASS; independent editorial review required" if result["accepted"] else "REJECTED")
     seen = set()
     for item in result["violations"]:
         hint = item.get("suggestion") or CHECK_HINTS.get(item["kind"], "")
@@ -643,6 +658,7 @@ def claims_cmd(args) -> int:
     )
     result = {
         "accepted": not violations,
+        **C.diagnostic_scope(),
         "violations": violations,
         "warnings": warnings,
         "metrics": metrics,
@@ -650,7 +666,7 @@ def claims_cmd(args) -> int:
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        print("PASS" if not violations else "REJECTED")
+        print("DIAGNOSTICS PASS; independent editorial review required" if not violations else "REJECTED")
         for item in violations:
             print(f"  [{item['kind']}:{item['field']}] {item['message']}")
         for item in warnings:
@@ -1049,6 +1065,7 @@ def _emit(report: Report, args) -> None:
         print(report.to_json())
         return
     print(f"\n{report.document}   профиль: {report.profile}")
+    print("  Диагностика; для выдачи требуется независимая редакторская проверка.")
     for note in report.notes:
         print(f"  ! {note}")
     if report.skipped:
@@ -1212,6 +1229,9 @@ def build_parser() -> argparse.ArgumentParser:
     ve.add_argument("--claims-after")
     ve.add_argument("--current-meta-epoch")
     ve.add_argument("--current-patch")
+    ve.add_argument("--review", help="независимый полный JSON review с хешами обеих версий")
+    ve.add_argument("--handoff", help="проверенный publication handoff для сверки источников")
+    ve.add_argument("--sources", help="полные snapshots источников с provenance и SHA256")
     ve.set_defaults(func=validate_edit)
 
     ck = sub.add_parser(

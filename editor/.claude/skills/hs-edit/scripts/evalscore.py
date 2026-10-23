@@ -345,7 +345,7 @@ def score(text, case, thresholds, *, source_text=None, is_input=False):
 
     failed = sorted(set(failed))
     warnings = sorted(set(warnings) - set(failed))
-    return {"evals_schema_version": EVALS_SCHEMA_VERSION, "accepted": not failed,
+    return {**C.diagnostic_scope(), "evals_schema_version": EVALS_SCHEMA_VERSION, "accepted": not failed,
             "failed": failed, "warnings": warnings, "metrics": metrics}
 
 

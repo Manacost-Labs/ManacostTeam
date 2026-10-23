@@ -555,10 +555,10 @@ def main():
     violations, warnings, metrics = coverage(
         source, ap_path.read_text(encoding="utf-8"), declared_missing=declared)
     if args.format == "json":
-        print(json.dumps({"accepted": not violations, "violations": violations,
+        print(json.dumps({**C.diagnostic_scope(), "accepted": not violations, "violations": violations,
                           "warnings": warnings, "metrics": metrics}, ensure_ascii=False, indent=2))
         return 1 if violations else 0
-    print("PASS" if not violations else "REJECTED")
+    print("DIAGNOSTICS PASS; independent editorial review required" if not violations else "REJECTED")
     for item in violations:
         print(f"  [{item['kind']}:{item['field']}] {item['message']}")
     for item in warnings:

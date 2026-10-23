@@ -11,6 +11,7 @@ import (
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/reviewfixture"
 )
 
 // фальшивый сайдкар: отдаёт заранее заданные вердикты по очереди
@@ -65,7 +66,7 @@ func (c contextualCompleter) Model() string { return "test-context-model" }
 
 func (c contextualCompleter) Complete(_ context.Context, messages []llm.Message, _ int) (string, error) {
 	if strings.Contains(messages[0].Content, "Ты critic") {
-		return goodFactualReview, nil
+		return reviewfixture.Complete(goodFactualReview, messages[1].Content), nil
 	}
 	return c.completion.Text, nil
 }

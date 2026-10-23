@@ -49,9 +49,9 @@ func TestCriticRejectsUnknownSeverity(t *testing.T) {
 			t.Fatalf("unknown severity %q accepted", severity)
 		}
 	}
-	// Low stylistic scores alone do not invalidate preserved facts and meaning.
+	// A critic's negative quality judgment contradicts its own accept verdict.
 	response := strings.Replace(criticJSON("accept"), `"clarity":8`, `"clarity":0`, 1)
-	if _, err := parseCritic(response); err != nil {
-		t.Fatal(err)
+	if _, err := parseCritic(response); err == nil {
+		t.Fatal("contradictory quality judgment accepted")
 	}
 }

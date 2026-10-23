@@ -2,7 +2,7 @@
 name: manacost-publish
 description: "Готовит статью Hearthstone в Codex: источники Manacost MCP, проверенные советы, авторский текст и независимые отзывы. Сохраняет запуск для продолжения."
 metadata:
-  version: "1.10.0"
+  version: "1.11.0"
 ---
 
 # Manacost Publish
@@ -133,7 +133,9 @@ strengths, paragraph_functions, whole_article_checked и reader_check;
 meaning_risk. Keep_spans переносят сильные цитаты предыдущих ревизий; потерю
 каждой reviewer объясняет в strength_changes с причиной и replacement_quote
 либо обоснованным удалением. Inputs проверяющих не содержат чужой verdict.
-Прежние runs без поля версии продолжают v1 без переписывания истории.
+Прежние runs без поля версии читаются как v1 для истории. Для v1/v2 next
+сообщает current_review_required=true/publication_ready=false, export блокируется.
+Создай новый текущий run и повтори независимые отзывы; старую историю сохрани.
 
 При decision_cards factual reviewer подтверждает decision_cards_checked
 только после смысловой проверки всех заполненных полей и оснований. Формальная
@@ -180,9 +182,28 @@ DOI проверяется через resolver/метаданные/содерж
 
 Гейт проверяет покрытие, хеши и цитаты при submit и перед export. Он не
 доказывает истинность суждения reviewer. Отзывы независимы; после ремонта
-проверяются снова. Сохранённые runs v1/v2 не мигрируются автоматически.
+проверяются снова. Сохранённые runs v1/v2 читаются, но не дают новый export
+по старым receipts; изменение версии state вручную недопустимо.
 Для отдельной правки: `editor-team editorial-review prepare` и `validate`,
 с `--text`, `--original`, `--owner literary_review`, `--review` при validate.
 Независимая проверка фактов требует `--handoff` и `--owner fact_review`.
 
-Standalone factual/all CLI требует также `--sources sources.json`: полные snapshots с provenance/SHA256; report привязан к `sources_sha256`. Неполный handoff, изменённый snapshot и неподтверждённая claim блокируют допуск.
+При сверке источников standalone factual/all CLI требует --handoff и --sources
+sources.json: полные snapshots с provenance/SHA256 и report с sources_sha256.
+Без handoff проверка исходника/кандидата не объявляет внешнее подтверждение:
+source_verification=not_performed. Невалидные доказательства блокируют допуск.
+
+Всего reviewers покрывают 26 практик (7 factual и 19 literary); литературный
+отзыв также содержит 5 logic_checks и 7 preservation_checks. При переданном
+исходнике обязателен original_factual_checks, даже если текст не изменился.
+Unresolved исходная ошибка блокирует готовность. Corrected требует точных
+цитат исходника/кандидата и полного источника, устанавливающего исправление.
+Не угадывай правильное число и не удаляй спорное утверждение ради pass.
+
+При правке author_voice и strengths проверяются по change_evidence: реальные
+пары цитат, польза, причина и риск для смысла. Не теряй предмет уточнения,
+источник оценки или авторскую лексику ради краткости. Отдельное слово или
+конструкция не является дефектом. Source_checks.access=snapshot при чтении
+переданных снимков; metadata сбора не доказывает новый веб-доступ reviewer.
+Допуск ограничен переданными источниками и проверенными утверждениями,
+а диагностические audit/analyze/validate-edit не заменяют native export.

@@ -240,12 +240,13 @@ def test_terminology_hits_follow_the_dictionary():
         "На этом отрезке статы решают."
     )
     found = {h["preferred"] for h in gate.terminology_hits(bad)}
-    assert {"Алмаз", "колода", "топ Легенды", "контра", "ранг", "характеристики"} <= found
+    assert {"Алмаз", "топ Легенды"} <= found
+    assert not {"колода", "контра", "ранг", "характеристики"} & found
     good = "На Алмазе и в Легенде колода сильна, а в топе Легенды её контра — Друид."
     assert gate.terminology_hits(good) == []
     violations, _, metrics = gate.analyze(section("Сборки") + bad, profile="constructed-guide")
     assert "term_replace" in kinds(violations)
-    assert metrics["terminology_hits"] >= 5
+    assert metrics["terminology_hits"] >= 2
 
 
 def test_rewrite_sections_count_only_markdown_headings():
@@ -273,8 +274,8 @@ def test_terminology_aliases_hit_english_and_transliterated_forms():
     by_pref = {h["preferred"]: h["found"] for h in hits}
     assert by_pref.get("Алмаз") == "Diamond"
     assert by_pref.get("топ Легенды") == "Top Legend"
-    assert by_pref.get("контра") == "каунтерпик"
-    assert by_pref.get("ранг") == "брекете"
+    assert "контра" not in by_pref
+    assert "ранг" not in by_pref
     assert not [
         h
         for h in gate.terminology_hits("в топе Легенды и на Алмазе")

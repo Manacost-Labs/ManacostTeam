@@ -16,6 +16,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/editorialreview"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/pipeline"
 )
 
 const outlineAttempts = 2
@@ -48,7 +49,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, rules *analyzer.Rule
 	res.MissingTitles = sectionTitles(rules, declared)
 
 	// Проход 2: проза по плану, затвор — против нормы автора.
-	system := buildRewritePrompt(rules, claims, outline)
+	system := buildRewritePrompt(rules, claims, outline) + pipeline.SourceEditingInstruction
 	user := "ИСХОДНИК (источник фактов, не формы):\n" + source
 	if outline != nil {
 		raw, _ := json.Marshal(outline)
@@ -56,7 +57,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, rules *analyzer.Rule
 	}
 	messages := []llm.Message{
 		{Role: "system", Content: system},
-		{Role: "user", Content: user},
+		{Role: "user", Content: pipeline.EditSourcePayload(user, req.SourceSnapshots)},
 	}
 
 	for attempt := 1; attempt <= s.maxAttempts; attempt++ {
@@ -76,7 +77,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, rules *analyzer.Rule
 		if err != nil {
 			return nil, fmt.Errorf("проверка переплавки %d: %w", attempt, err)
 		}
-		s.reviewFacts(ctx, source, candidate, claims, verdict)
+		s.reviewFacts(ctx, source, candidate, claims, req, verdict, res)
 		res.Attempts = append(res.Attempts, Attempt{
 			N: attempt, Accepted: verdict.Accepted, Violations: verdict.Violations,
 			Warnings: verdict.Warnings,

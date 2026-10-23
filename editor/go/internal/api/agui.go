@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/editor"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/editorialreview"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
 )
 
@@ -18,11 +19,12 @@ import (
 // read-only Google Docs tools and the signed OpenBot routing fields are later
 // forwarded; arbitrary tools and props never reach the model.
 type runInput struct {
-	ThreadID       string         `json:"threadId"`
-	RunID          string         `json:"runId"`
-	Messages       []runMessage   `json:"messages"`
-	Tools          []runTool      `json:"tools"`
-	ForwardedProps map[string]any `json:"forwardedProps"`
+	ThreadID        string                           `json:"threadId"`
+	RunID           string                           `json:"runId"`
+	Messages        []runMessage                     `json:"messages"`
+	Tools           []runTool                        `json:"tools"`
+	ForwardedProps  map[string]any                   `json:"forwardedProps"`
+	SourceSnapshots []editorialreview.SourceSnapshot `json:"source_snapshots,omitempty"`
 }
 
 type runMessage struct {
@@ -64,6 +66,11 @@ func (s *Server) agui(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req := editorRequest(text)
+	req.SourceSnapshots = input.SourceSnapshots
+	if err := editorialreview.ValidateSources(req.SourceSnapshots); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	req.LLMContext = editorLLMContext(input)
 	if strings.TrimSpace(req.Text) == "" {
 		writeErr(w, http.StatusBadRequest, "после режима редактуры не осталось текста")

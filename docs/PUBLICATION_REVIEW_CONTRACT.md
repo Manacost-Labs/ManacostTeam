@@ -9,11 +9,23 @@
 без прежнего verdict. Это не утверждение, что разные модели независимы
 статистически: речь об отдельных контекстах и отсутствии подсказанного ответа.
 
-Новые runs имеют `state.review_contract_version=2`, при `state.schema_version=1`.
-Старые runs без поля review_contract_version читаются как v1 и не требуют
-перезаписи артефактов. Схема handoff также остаётся 1: research_context,
+Новые runs имеют `state.review_contract_version=3`, при `state.schema_version=1`.
+Старые runs без поля review_contract_version читаются как v1 для истории.
+Для v1/v2 next сообщает publication_ready=false/current_review_required=true,
+а export требует новый текущий run с независимой повторной проверкой. История
+и receipts не переписываются; изменение номера версии не заменяет review.
+Схема handoff также остаётся 1: research_context,
 source_context/evidence_context, decision_cards и editorial_context —
 необязательные расширения. Проверка хешей и смысловые обязанности сохраняются.
+
+Контракт v3 требует 7 factual и 19 literary practice_checks, пять logic_checks
+и семь preservation_checks в литературном отзыве. При переданном исходнике
+обязателен original_factual_checks, включая unchanged; изменения голоса и
+сильных фрагментов подкрепляются change_evidence. Нерешённая исходная ошибка
+блокирует приём, доказательное исправление требует точных цитат исходника,
+кандидата и полного источника. Подробнее — [контракт практик](https://github.com/Manacost-Labs/ManacostTeam/blob/main/docs/EDITORIAL_PRACTICES.md).
+При supplied snapshots source_checks.access всегда snapshot: reviewer читает
+сохранённые тексты. Совпадение хешей и цитат не доказывает семантическую истину.
 
 ## Привязка к версии
 

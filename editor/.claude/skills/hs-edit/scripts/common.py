@@ -65,6 +65,23 @@ if VENDOR.exists() and str(VENDOR) not in sys.path:
     sys.path.insert(0, str(VENDOR))
 
 
+def diagnostic_scope():
+    """Single diagnostic contract in both checkout and portable layouts."""
+    for candidate in (ROOT / "python", ROOT / "src"):
+        if candidate.exists() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
+    from editorteam.integrity import diagnostic_scope as scope
+
+    return scope()
+
+
+def integrity_issues(text):
+    diagnostic_scope()  # Resolve the same portable Python package.
+    from editorteam.integrity import arithmetic_issues
+
+    return arithmetic_issues(text)
+
+
 def venv_python():
     """Интерпретатор из .venv проекта — или None.
 

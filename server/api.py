@@ -113,10 +113,10 @@ def forward(url: str, payload: dict) -> tuple[int, dict]:
 def prepare_request(path: str, value: dict, default_game: str) -> dict:
     if not isinstance(value, dict):
         raise ValueError("request must be a JSON object")
-    allowed = {"game", "patch", "text", "genre", "product", "mode", "research_handoff"}
+    allowed = {"game", "patch", "text", "genre", "product", "mode", "research_handoff", "source_snapshots"}
     if set(value) - allowed:
         raise ValueError(
-            "unknown fields; use game, patch, text, genre, product, mode and research_handoff"
+            "unknown fields; use game, patch, text, genre, product, mode, research_handoff and source_snapshots"
         )
     text = value.get("text")
     if not isinstance(text, str) or not text.strip():
@@ -132,6 +132,13 @@ def prepare_request(path: str, value: dict, default_game: str) -> dict:
         patch=value.get("patch"),
     )
     result = {"text": text, "task_context": context}
+    if "source_snapshots" in value:
+        snapshots = value["source_snapshots"]
+        if path != "/v1/editor/edit" or not isinstance(snapshots, list) or len(snapshots) > 8 or any(not isinstance(row, dict) for row in snapshots):
+            raise ValueError("source_snapshots must be a list of at most 8 objects for editor/edit")
+        # The editor validates hashes, exact evidence, URLs and scope. This
+        # router forwards data only and does not attest or fetch source URLs.
+        result["source_snapshots"] = snapshots
     if "research_handoff" in value:
         if path != "/v1/editor/edit" or not isinstance(value["research_handoff"], dict):
             raise ValueError("research_handoff must be an object for editor/edit")

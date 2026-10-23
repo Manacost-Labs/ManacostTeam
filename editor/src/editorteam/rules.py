@@ -7,7 +7,7 @@
 Виды решений:
     auto_replace — заменять автоматически, практика автора совпадает с правилом
     allowed      — оставлять как написано, слово авторское
-    forbidden    — слова в корпусе нет, правило пустое
+    advisory     — корпусная подсказка; авторское слово сохраняется по контексту
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import yaml
 
 CONFIG_DIR = Path(__file__).resolve().parents[2] / "config"
 
-DECISIONS = {"auto_replace", "allowed", "forbidden"}
+DECISIONS = {"auto_replace", "allowed", "forbidden", "advisory"}
 
 
 class ConfigError(ValueError):
@@ -32,6 +32,7 @@ class ConfigError(ValueError):
 class TermRule:
     id: str
     decision: str
+    authority: str = ""
     slang: str | None = None
     word: str | None = None
     preferred: str | None = None
@@ -60,9 +61,13 @@ class TermRule:
 
     def replacement_for(self, text_word: str) -> str | None:
         """Чем заменять — или None, если решение «оставить»."""
-        if self.decision != "auto_replace" or not self.preferred:
+        if self.decision != "auto_replace" or not self.preferred or not self.mandatory:
             return None
         return self.preferred
+
+    @property
+    def mandatory(self) -> bool:
+        return self.authority in {"language_norm", "author_global"}
 
 
 def _load_yaml(name: str) -> dict:
@@ -126,8 +131,8 @@ def validate() -> list[str]:
             ok = isinstance(a, str) or (isinstance(a, dict) and a.get("pattern"))
             if not ok:
                 problems.append(f"{r.id}: alias должен быть строкой или {{pattern: …}}: {a!r}")
-        if r.aliases and r.decision not in ("auto_replace", "forbidden"):
-            problems.append(f"{r.id}: aliases имеют смысл только у auto_replace или forbidden")
+        if r.aliases and r.decision not in ("auto_replace", "forbidden", "advisory"):
+            problems.append(f"{r.id}: aliases требуют правила замены или контекстной подсказки")
 
     # auto_replace обязан указывать, на что заменять
     for r in rules:
@@ -187,6 +192,7 @@ def as_markdown_table() -> str:
             "auto_replace": f"→ {r.preferred}",
             "allowed": "оставлять",
             "forbidden": "нет в корпусе",
+            "advisory": f"контекстная подсказка: {r.preferred}; не обязательная замена",
         }[r.decision]
         lines.append(f"| {r.subject} | {decision} | {freq} |")
     return "\n".join(lines)

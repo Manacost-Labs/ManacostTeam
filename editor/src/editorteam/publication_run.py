@@ -350,6 +350,14 @@ def _context(run: Path, state: dict) -> tuple[dict, str]:
     return _json(_data(run, state, "research")), _data(run, state, "draft").decode("utf-8")
 
 
+def _previous_draft(run: Path, state: dict) -> str | None:
+    """Compare repairs to the prior actual draft; do not invent a source voice."""
+    drafts = [row for row in state["history"] if row["stage"] == "draft"]
+    if len(drafts) < 2:
+        return None
+    return _confined(run, drafts[-2]["path"]).read_text(encoding="utf-8")
+
+
 def _keep_spans(run: Path, state: dict) -> list[dict]:
     """Carry quoted strengths from prior drafts, never an author's self-review."""
     drafts, spans = {}, {}
@@ -449,8 +457,12 @@ def next_task(run: Path) -> dict:
 
         if stage in {"fact_review", "literary_review"}:
             task["editorial_practices"] = prepare(
-                _data(run, state, "draft").decode("utf-8"), owner=stage
+                _data(run, state, "draft").decode("utf-8"), owner=stage,
+                original=_previous_draft(run, state),
+                handoff=_json(_data(run, state, "research")),
+                snapshots=_json(_data(run, state, "sources")),
             )
+            task["original"] = _previous_draft(run, state)
         else:
             task["editorial_practices"] = catalog()
         task["instructions"] += (
@@ -506,6 +518,14 @@ def next_task(run: Path) -> dict:
         if state["draft_revisions"] >= 2 and not retries_remaining:
             task["stage"], task["role"] = "blocked", "publication_editor"
             task["instructions"] = "Лимит двух исправлений исчерпан. Требуется решение редактора."
+    if state.get("review_contract_version", 1) < 3:
+        task["publication_ready"] = False
+        task["current_review_required"] = True
+        task["instructions"] += (
+            " Исторические reviews доступны для просмотра, но не разрешают новый export. "
+            "Создайте текущий native run из сохранённых sources, handoff и draft и выполните "
+            "полные независимые factual/literary reviews; исходный run и его историю сохраните."
+        )
     return task
 
 
@@ -624,8 +644,12 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
         else:
             handoff, text = _context(run, state)
             report = _json(data)
+            review_context = ({"original": _previous_draft(run, state),
+                               "snapshots": _json(_data(run, state, "sources"))}
+                              if state.get("review_contract_version", 1) >= 3 else {})
             errors = (
-                validate_factual(handoff, text, report, require_practices=state.get("review_contract_version", 1) >= 3)
+                validate_factual(handoff, text, report, require_practices=state.get("review_contract_version", 1) >= 3,
+                                 **review_context)
                 if stage == "fact_review"
                 else validate_literary(
                     text,
@@ -633,6 +657,7 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
                     keep_spans=_keep_spans(run, state),
                     require_extended=state.get("review_contract_version", 1) >= 2,
                     require_practices=state.get("review_contract_version", 1) >= 3,
+                    handoff=handoff, **review_context,
                 )
             )
             if not isinstance(report, dict) or report.get("handoff_sha256") != handoff_hash(
@@ -682,6 +707,12 @@ def export(run: Path, *, output: Path) -> dict:
         state = _load(run)
         if state["stage"] != "ready" or state["blocked"]:
             raise ValueError("both reviews must pass before export")
+        if state.get("review_contract_version", 1) < 3:
+            raise ValueError(
+                "current independent re-review required: historical v1/v2 receipts cannot authorize export. "
+                "Create a current native run from the saved sources, handoff and draft and submit full "
+                "independent factual and literary reviews. The historical run and its history are unchanged."
+            )
         handoff, text = _context(run, state)
         errors = validate_reviews(
             handoff,
@@ -691,6 +722,8 @@ def export(run: Path, *, output: Path) -> dict:
             keep_spans=_keep_spans(run, state),
             require_extended=state.get("review_contract_version", 1) >= 2,
             require_practices=state.get("review_contract_version", 1) >= 3,
+            original=_previous_draft(run, state) if state.get("review_contract_version", 1) >= 3 else None,
+            snapshots=_json(_data(run, state, "sources")) if state.get("review_contract_version", 1) >= 3 else None,
         )
         if errors:
             raise ValueError("; ".join(errors))

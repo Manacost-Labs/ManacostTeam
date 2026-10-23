@@ -13,20 +13,20 @@ rules:
   - id: term.deck
     slang: дека
     aliases: [дэка]
-    decision: auto_replace
+    decision: advisory
     preferred: колода
     corpus: {slang: 56, preferred: 1854}
-    note: "Практика совпадает с правилом — замена безопасна"
+    note: "Корпус чаще использует «колода»; сохранять «дека», если это уместная авторская лексика. Частота не разрешает автоматическую замену."
 
   - id: term.stats
     slang: статы
-    decision: auto_replace
+    decision: advisory
     preferred: характеристики
     corpus: {slang: 15, preferred: 128}
 
   - id: term.setup
     slang: сетап
-    decision: auto_replace
+    decision: advisory
     preferred: подготовка
     corpus: {slang: 21, preferred: 99}
 
@@ -77,14 +77,14 @@ rules:
 
   - id: term.minion
     slang: миньон
-    decision: forbidden
+    decision: advisory
     preferred: существо
     corpus: {slang: 0, preferred: 870}
-    note: "Правило пустое: слова нет в корпусе"
+    note: "Отсутствие в корпусе не запрещает авторское слово; проверять контекст"
 
   - id: term.spell
     slang: спел
-    decision: forbidden
+    decision: advisory
     preferred: заклинание
     corpus: {slang: 0, preferred: 1168}
 
@@ -101,6 +101,7 @@ rules:
     slang: Бриллиант
     aliases: [Diamond, даймонд, бриллиантовый]
     decision: auto_replace
+    authority: language_norm
     preferred: Алмаз
     corpus: {slang: 0, preferred: 8}
     note: "Ранг Diamond в локализации — Алмаз; «на Алмазе и в Легенде», «до Алмаза»"
@@ -113,6 +114,7 @@ rules:
       - {pattern: '\bTop[\s-]+Legend\w*', shown: "Top Legend"}
       - {pattern: '\bтоп[\s-]+лег\w*', shown: "топ легенд (строчными)", case_sensitive: true}
     decision: auto_replace
+    authority: language_norm
     preferred: топ Легенды
     corpus: {slang: 0, preferred: 5}
     note: "«в топе Легенды», «до топа Легенды» — строчными, в родительном падеже"
@@ -120,7 +122,7 @@ rules:
   - id: term.counterpick
     slang: контрпик
     aliases: [counterpick, counter-pick, каунтерпик, контр-пик]
-    decision: auto_replace
+    decision: advisory
     preferred: контра
     corpus: {slang: 0, preferred: 39}
     note: "«контра», «законтрить»; «контрпик» автор не пишет"
@@ -128,7 +130,7 @@ rules:
   - id: term.rank_segment
     slang: отрезок
     aliases: [брекет, bracket]
-    decision: forbidden
+    decision: advisory
     preferred: ранг
     corpus: {slang: 0, preferred: 86}
     note: "О рангах — «на этих рангах», «на высоких рангах», не «на этом отрезке»"

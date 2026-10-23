@@ -14,6 +14,17 @@ from server.api import APIServer, Handler, prepare_request  # noqa: E402
 
 
 class ServerAPITests(unittest.TestCase):
+    def test_editor_forwards_source_snapshots_without_inventing_access(self):
+        snapshots = [{"source_id": "patch", "access": "snapshot", "text": "Evidence."}]
+        request = prepare_request("/v1/editor/edit", {"text": "Текст.", "source_snapshots": snapshots}, "deadlock")
+        self.assertEqual(request["source_snapshots"], snapshots)
+        status, _ = self.request("/v1/editor/edit", {"text": "Текст.", "source_snapshots": snapshots})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.calls[-1], ("/v2/edit", request))
+        for path, value in (("/v1/editor/edit", {}), ("/v1/editor/analyze", snapshots), ("/v1/translate/prepare", snapshots)):
+            with self.subTest(path=path, value=value), self.assertRaises(ValueError):
+                prepare_request(path, {"text": "Текст.", "source_snapshots": value}, "deadlock")
+
     def test_rejection_drains_unread_request_before_socket_close(self):
         request = Mock()
         request.recv.side_effect = [b"GET /health HTTP/1.0\r\n\r\n", b""]

@@ -92,3 +92,14 @@ func TestValidateChecksRequiresReasonAndIssueFields(t *testing.T) {
 		t.Fatalf("unverified should be a valid unresolved review state: %v", err)
 	}
 }
+
+func TestValidateChecksRejectsNoncanonicalStatus(t *testing.T) {
+	candidate := "Автор может писать: не только это, но и то."
+	for _, status := range []string{"CLEAR", " clear", "clear ", "Issue"} {
+		checks := validChecks(t, candidate)
+		checks[0].Status = status
+		if err := ValidateChecks(candidate, checks, false); err == nil {
+			t.Errorf("noncanonical status %q accepted", status)
+		}
+	}
+}

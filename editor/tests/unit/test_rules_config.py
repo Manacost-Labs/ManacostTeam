@@ -24,9 +24,10 @@ def test_winrate_is_allowed_not_replaced():
     assert r.replacement_for("винрейт") is None
 
 
-def test_deck_is_replaced():
+def test_corpus_frequency_alone_does_not_require_replacing_author_deck_word():
     r = next(t for t in rules.terminology() if t.id == "term.deck")
-    assert r.replacement_for("дека") == "колода"
+    assert r.replacement_for("дека") is None
+    assert r.decision == "advisory"
 
 
 def test_duplicate_id_is_caught(monkeypatch):

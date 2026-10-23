@@ -81,8 +81,11 @@ class Report:
         return sum(1 for f in self.findings if f.severity == severity)
 
     def to_dict(self) -> dict:
+        from .integrity import diagnostic_scope
+
         return {
             "schema_version": SCHEMA_VERSION,
+            **diagnostic_scope(),
             "document": self.document,
             "profile": self.profile,
             "summary": {s: self.count(s) for s in SEVERITIES},

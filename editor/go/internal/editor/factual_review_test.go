@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
-	"github.com/Manacost-Labs/EditorTeam/go/internal/editorialreview"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/reviewfixture"
 )
 
-const goodFactualReview = `{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":{"factual_preservation":8,"meaning_preservation":8,"clarity":8,"structure":8,"usefulness":8,"natural_russian":8,"author_voice":8,"terminology":8},"improvements":[],"regressions":[],"findings":[],"practice_checks":[{"id":"source_use","status":"not_applicable","quote":"","reason":"Fixture baseline does not exercise source comparison."},{"id":"links","status":"not_applicable","quote":"","reason":"Fixture baseline has no links."},{"id":"bibliography","status":"not_applicable","quote":"","reason":"Fixture baseline has no bibliography."},{"id":"tracking","status":"not_applicable","quote":"","reason":"Fixture baseline has no URL tracking."},{"id":"knowledge_gaps","status":"not_applicable","quote":"","reason":"Fixture baseline has no knowledge-gap claim."},{"id":"attribution","status":"not_applicable","quote":"","reason":"Fixture baseline has no attribution claim."},{"id":"categories","status":"not_applicable","quote":"","reason":"Fixture baseline has no taxonomy claim."}],"repair_required":false}`
+const goodFactualReview = `{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":{"factual_preservation":8,"meaning_preservation":8,"clarity":8,"structure":8,"usefulness":8,"natural_russian":8,"author_voice":8,"terminology":8},"improvements":[],"regressions":[],"findings":[],"repair_required":false}`
 
 type factualModel struct {
 	draft, review string
@@ -27,22 +27,7 @@ func (m *factualModel) Complete(_ context.Context, messages []llm.Message, _ int
 	if strings.Contains(messages[0].Content, "Ты critic") {
 		m.reviews++
 		if m.review == goodFactualReview && len(messages) > 1 {
-			var payload struct {
-				Candidate string `json:"candidate"`
-			}
-			_ = json.Unmarshal([]byte(messages[1].Content), &payload)
-			var review map[string]any
-			_ = json.Unmarshal([]byte(m.review), &review)
-			catalog, _ := editorialreview.Load()
-			checks := make([]map[string]any, 0)
-			for _, practice := range catalog.Practices {
-				if practice.Owner == "fact_review" {
-					checks = append(checks, map[string]any{"id": practice.ID, "status": "clear", "quote": payload.Candidate, "reason": "Fixture evidence: factual candidate checked in context."})
-				}
-			}
-			review["practice_checks"] = checks
-			encoded, _ := json.Marshal(review)
-			return string(encoded), nil
+			return reviewfixture.Complete(m.review, messages[1].Content), nil
 		}
 		return m.review, nil
 	}
@@ -84,7 +69,7 @@ func TestLegacyPreservesValidAndUnchangedResults(t *testing.T) {
 		if err != nil || !result.Accepted || result.Text != candidate {
 			t.Fatalf("valid legacy edit failed: result=%+v error=%v", result, err)
 		}
-		if result.ReviewScope != "preservation_only" || result.SourceVerification != "not_performed" {
+		if result.ReviewScope != "source_and_candidate" || result.SourceVerification != "not_performed" {
 			t.Fatalf("legacy result must expose truthful review scope: %+v", result)
 		}
 		if candidate != "Способность наносит урон." && model.reviews != 1 {
@@ -93,7 +78,7 @@ func TestLegacyPreservesValidAndUnchangedResults(t *testing.T) {
 	}
 }
 
-func TestLegacyFactualReviewDeclaresPreservationOnlyScope(t *testing.T) {
+func TestLegacyFactualReviewDeclaresSourceAndCandidateScope(t *testing.T) {
 	an := fakeAnalyzer(t, []analyzer.Verdict{{Accepted: true}})
 	defer an.Close()
 	model := &factualModel{draft: "Способность причиняет урон.", review: goodFactualReview}
@@ -105,7 +90,7 @@ func TestLegacyFactualReviewDeclaresPreservationOnlyScope(t *testing.T) {
 	if len(model.last) < 2 || json.Unmarshal([]byte(model.last[1].Content), &payload) != nil {
 		t.Fatal("factual reviewer payload was not captured")
 	}
-	if payload["review_scope"] != "preservation_only" || payload["source_verification"] != "not_performed" {
+	if payload["review_scope"] != "source_and_candidate" || payload["source_verification"] != "not_performed" {
 		t.Fatalf("legacy review scope was not explicit: %#v", payload)
 	}
 }

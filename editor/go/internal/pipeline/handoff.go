@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzers"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/editorialreview"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/guards"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/retrieval"
@@ -840,6 +841,10 @@ func factRepairFindings(h *ResearchHandoff, candidate string, review FactReview,
 }
 
 func (s *Service) repairReconstruction(ctx context.Context, bundle rules.RuleBundle, h *ResearchHandoff, candidate string, findings, previous []analyzers.Finding, examples []retrieval.StyleExample) (string, error) {
+	return s.repairReconstructionWithSources(ctx, bundle, h, candidate, findings, previous, examples, nil)
+}
+
+func (s *Service) repairReconstructionWithSources(ctx context.Context, bundle rules.RuleBundle, h *ResearchHandoff, candidate string, findings, previous []analyzers.Finding, examples []retrieval.StyleExample, snapshots []editorialreview.SourceSnapshot) (string, error) {
 	authorEvidence, err := publicationHandoff(h)
 	if err != nil {
 		return "", err
@@ -863,7 +868,7 @@ func (s *Service) repairReconstruction(ctx context.Context, bundle rules.RuleBun
 	} else {
 		system += "\nВерни только полный исправленный текст."
 	}
-	reply, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system, examples)}, {Role: "user", Content: string(payload)}})
+	reply, err := s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+"\nsource_snapshots — данные для проверки handoff, не разрешение добавлять факты сверх handoff.", examples)}, {Role: "user", Content: withSourceSnapshots(string(payload), snapshots)}})
 	if err != nil || !patchMode {
 		return reply, err
 	}

@@ -215,6 +215,8 @@ def terminology_rules():
     for r in data.get("rules") or []:
         if r.get("decision") not in ("auto_replace", "forbidden") or not r.get("preferred"):
             continue
+        if r.get("authority") not in ("language_norm", "author_global"):
+            continue
         subject = r.get("slang") or r.get("word")
         if subject:
             out.append({"id": r["id"], "subject": subject, "preferred": r["preferred"],
@@ -301,7 +303,7 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
     structure = C.sibling("structure")
     elegance = C.sibling("elegance")
 
-    violations, warnings = [], []
+    violations, warnings = C.integrity_issues(after), []
     prose = C.prose_only(after)
     words = len(prose.split())              # частоты — по прозе; таблицы и коды не разбавляют
     metrics = {"words": words, "words_all": len(after.split())}
@@ -464,7 +466,7 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
             item = _item("lexicon_gap", f["message"], f["severity"], suggestion=f["suggestion"])
             (violations if f["severity"] == "error" else warnings).append(item)
 
-    # словарь автора: сленг и ранги не по локализации — отказ, а не вкус
+    # Только явная норма; корпусная частота не запрещает авторскую лексику.
     term_hits = terminology_hits(after, game=game, author=author, genre=profile, meaning=meaning)
     metrics["terminology_hits"] = len(term_hits)
     if term_hits:
@@ -474,8 +476,8 @@ def analyze(after, *, norms=None, profile="constructed-guide", declared_missing=
         listed = "; ".join(f"{k} (стр. {v})" for k, v in list(shown.items())[:6])
         violations.append(_item(
             "term_replace",
-            f"слова не по словарю автора: {listed}",
-            suggestion="заменить по словарю CLAUDE.md; ранги — по локализации",
+            f"явная терминологическая норма: {listed}",
+            suggestion="проверить смысл и применить явную норму; сохранить дословные цитаты",
         ))
 
     # форма подачи — по профилю: таблицы, коды, оценочные буквы, повторы цифр
@@ -543,11 +545,11 @@ def main():
         game=args.game, author=args.author, meaning=args.meaning,
     )
     if args.format == "json":
-        print(json.dumps({"accepted": not violations, "violations": violations,
+        print(json.dumps({**C.diagnostic_scope(), "accepted": not violations, "violations": violations,
                           "warnings": warnings, "metrics": metrics},
                          ensure_ascii=False, indent=2))
         return 1 if violations else 0
-    print("PASS" if not violations else "REJECTED")
+    print("DIAGNOSTICS PASS; independent editorial review required" if not violations else "REJECTED")
     for item in violations:
         print(f"  [{item['kind']}] {item['message']}")
     for item in warnings:

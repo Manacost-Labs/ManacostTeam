@@ -356,6 +356,9 @@ def _report(text: str, report: dict) -> list[str]:
     if not isinstance(report, dict):
         return ["review: expected an object"]
     errors = []
+    from .integrity import arithmetic_issues
+
+    errors.extend(f"review: {issue['message']} {issue['suggestion']}" for issue in arithmetic_issues(text))
     try:
         expected_hash = article_hash(text)
     except UnicodeError:
@@ -367,7 +370,8 @@ def _report(text: str, report: dict) -> list[str]:
     return errors
 
 
-def validate_factual(handoff: dict, text: str, report: dict, *, require_practices: bool = False) -> list[str]:
+def validate_factual(handoff: dict, text: str, report: dict, *, require_practices: bool = False,
+                     original: str | None = None, snapshots: list | None = None) -> list[str]:
     """Require supported literal attestations, provenance and model judgments."""
     errors = validate_handoff(handoff, handoff.get("patch") if isinstance(handoff, dict) else "")
     errors += _report(text, report)
@@ -435,7 +439,7 @@ def validate_factual(handoff: dict, text: str, report: dict, *, require_practice
     if require_practices:
         from .editorial_practices import validate
 
-        errors += validate(text, report, owner="fact_review", handoff=handoff)
+        errors += validate(text, report, owner="fact_review", handoff=handoff, original=original, snapshots=snapshots)
     approved = _approved_text(handoff)
     approved_urls = {
         sources[ref]["url"] for claim in claims.values() for ref in claim["evidence_refs"]
@@ -452,6 +456,7 @@ def validate_factual(handoff: dict, text: str, report: dict, *, require_practice
 def validate_literary(
     text: str, report: dict, *, keep_spans: list[dict] | None = None, require_extended: bool = False,
     require_practices: bool = False,
+    original: str | None = None, handoff: dict | None = None, snapshots: list | None = None,
 ) -> list[str]:
     """Check the independent whole-article assessment and quoted findings."""
     errors = _report(text, report)
@@ -487,7 +492,7 @@ def validate_literary(
     if require_practices:
         from .editorial_practices import validate
 
-        errors += validate(text, report, owner="literary_review")
+        errors += validate(text, report, owner="literary_review", original=original, handoff=handoff, snapshots=snapshots)
     changes = report.get("strength_changes", [])
     if not isinstance(changes, list) or any(not isinstance(row, dict) for row in changes):
         errors.append("literary: malformed strength_changes")
@@ -543,11 +548,13 @@ def validate_reviews(
     keep_spans: list[dict] | None = None,
     require_extended: bool = False,
     require_practices: bool = False,
+    original: str | None = None, snapshots: list | None = None,
 ) -> list[str]:
     """Gate both reviews of exactly the same article and evidence handoff."""
-    errors = validate_factual(handoff, text, factual, require_practices=require_practices) + validate_literary(
+    errors = validate_factual(handoff, text, factual, require_practices=require_practices,
+                              original=original, snapshots=snapshots) + validate_literary(
         text, literary, keep_spans=keep_spans, require_extended=require_extended,
-        require_practices=require_practices,
+        require_practices=require_practices, original=original, handoff=handoff, snapshots=snapshots,
     )
     if isinstance(handoff, dict) and isinstance(literary, dict):
         try:

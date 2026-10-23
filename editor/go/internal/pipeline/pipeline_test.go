@@ -13,6 +13,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzers"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/editorialreview"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/reviewfixture"
 )
 
 // trace is shared by the fake completer and the fake analyzers so tests can
@@ -22,6 +23,7 @@ type trace struct{ events []string }
 func (t *trace) add(event string) { t.events = append(t.events, event) }
 
 type fakeLLM struct {
+	omitContextualReview bool
 	// Most fixtures test other gates. Supply grounded local-review fixtures;
 	// dedicated retry tests disable this to exercise missing/invalid evidence.
 	omitLocalReview bool
@@ -92,15 +94,15 @@ func (f *fakeLLM) Complete(_ context.Context, messages []llm.Message, _ int) (st
 					}
 					checks := make([]editorialreview.Check, 0, len(catalog.Practices))
 					for _, practice := range catalog.Practices {
-						if strings.EqualFold(payload.Mode, "facts_only") && practice.Owner != "fact_review" {
-							continue
-						}
 						checks = append(checks, editorialreview.Check{ID: practice.ID, Status: "clear", Quote: payload.Candidate, Reason: "Fixture evidence: candidate checked in context."})
 					}
 					fields["practice_checks"], _ = json.Marshal(checks)
 					encoded, _ := json.Marshal(fields)
 					reply = string(encoded)
 				}
+			}
+			if !f.omitContextualReview {
+				reply = reviewfixture.Complete(reply, messages[1].Content)
 			}
 		}
 	}
@@ -219,7 +221,7 @@ func TestReviewScopeIsServerOwned(t *testing.T) {
 	for _, tc := range []struct {
 		name, mode, wantScope, wantVerification string
 	}{
-		{"facts", "facts_only", "preservation_only", "not_performed"},
+		{"facts", "facts_only", "source_and_candidate", "not_performed"},
 		{"ordinary", "edit", "source_and_candidate", "not_performed"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -353,7 +355,7 @@ func TestCriticReceivesSourceCandidateDiffAndToolFindings(t *testing.T) {
 }
 
 func TestValidCriticJSONIsAccepted(t *testing.T) {
-	lm := &fakeLLM{replies: []string{analysisJSON, "Готово.", `{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":{"factual_preservation":10,"meaning_preservation":9,"clarity":8,"structure":7,"usefulness":6,"natural_russian":5,"author_voice":4,"terminology":3},"improvements":` + improvementJSON + `,"regressions":["ритм ровнее"],"findings":[],"repair_required":false}`}}
+	lm := &fakeLLM{replies: []string{analysisJSON, "Готово.", `{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept","scores":{"factual_preservation":10,"meaning_preservation":9,"clarity":8,"structure":9,"usefulness":9,"natural_russian":8,"author_voice":10,"terminology":8},"improvements":` + improvementJSON + `,"regressions":[],"findings":[],"repair_required":false}`}}
 	result := run(t, lm, "Текст.", "edit")
 	if !result.Accepted || result.Status != StatusEdited || !result.ScoresValid || result.CriticVerdict != "accept" || len(result.RejectionReasons) != 0 {
 		t.Fatalf("valid critic: %+v", result)
@@ -361,8 +363,8 @@ func TestValidCriticJSONIsAccepted(t *testing.T) {
 	if len(result.Improvements) != 1 || result.Improvements[0].Category != "clarity" {
 		t.Fatalf("improvements: %+v", result.Improvements)
 	}
-	want := Scores{FactualPreservation: 10, MeaningPreservation: 9, Clarity: 8, Structure: 7, Usefulness: 6, NaturalRussian: 5, AuthorVoice: 4, Terminology: 3}
-	if result.Scores != want || len(result.Regressions) != 1 {
+	want := Scores{FactualPreservation: 10, MeaningPreservation: 9, Clarity: 8, Structure: 9, Usefulness: 9, NaturalRussian: 8, AuthorVoice: 10, Terminology: 8}
+	if result.Scores != want || len(result.Regressions) != 0 {
 		t.Fatalf("scores: %+v", result)
 	}
 }

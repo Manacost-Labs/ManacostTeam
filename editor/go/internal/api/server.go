@@ -194,6 +194,11 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 
 	res, err := s.ed.Edit(ctx, req)
 	if err != nil {
+		var invalid *pipeline.RequestError
+		if errors.As(err, &invalid) {
+			writeErr(w, http.StatusBadRequest, invalid.Error())
+			return
+		}
 		if errors.Is(err, context.DeadlineExceeded) {
 			writeErr(w, http.StatusGatewayTimeout, "правка не уложилась в таймаут")
 			return

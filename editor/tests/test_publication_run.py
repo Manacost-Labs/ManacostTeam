@@ -140,6 +140,26 @@ def reviews(run):
         "evidence_quote": TEXT, "reason": "Прочитан тестовый snapshot.",
         "identity_check": "URL совпадает; библиографических идентификаторов нет.",
         "support_check": "Snapshot содержит весь условный совет.", "access": "snapshot"}]
+    if task["review_contract_version"] >= 3:
+        from editorteam.editorial_practices import prepare
+
+        candidate = Path(task["inputs"]["draft"]).read_text(encoding="utf-8")
+        original = task.get("original")
+        snapshots = json.loads(Path(task["inputs"]["sources"]).read_text(encoding="utf-8"))
+        packet = prepare(candidate, original=original, snapshots=snapshots)
+        for report in (factual, literary):
+            report["sources_sha256"] = packet["sources_sha256"]
+            if original is not None:
+                report["original_sha256"] = packet["original_sha256"]
+                report["original_factual_checks"] = {"whole_text_checked": True, "internal_consistency": "clear",
+                    "source_agreement": "supplied_sources_checked", "issues": []}
+        if original is not None:
+            for row in literary["preservation_checks"]:
+                row["original_quote"] = original
+                if row["id"] in {"author_voice", "strengths"} and original != candidate:
+                    row["change_evidence"] = [{"original_quote": original, "quote": candidate,
+                        "disposition": "preserved", "reason": "Условный совет сохранён.",
+                        "benefit": "Ясное оформление тестового совета.", "meaning_risk": "Условие не удалено."}]
     return factual, literary
 
 
@@ -166,11 +186,12 @@ def test_source_grounding_accepts_equivalent_urls_without_rewriting_sources():
     assert _ground_sources(source_handoff, snapshots)
 
 
-def test_v2_receipts_remain_compatible(tmp_path):
+@pytest.mark.parametrize("version", [1, 2])
+def test_historical_receipts_remain_readable_but_cannot_authorize_new_export(tmp_path, version):
     run = prepared(tmp_path)
     state_path = run / "state.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
-    state["review_contract_version"] = 2
+    state["review_contract_version"] = version
     state_path.write_text(json.dumps(state), encoding="utf-8")
     fact, literary = reviews(run)
     for report in (fact, literary):
@@ -178,7 +199,17 @@ def test_v2_receipts_remain_compatible(tmp_path):
             report.pop(field, None)
     assert not submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))["blocked"]
     assert not submit(run, stage="literary_review", artifact=write(tmp_path, "lit.json", literary))["blocked"]
-    export(run, output=tmp_path / "article.md")
+    state_before_export = state_path.read_bytes()
+    history_before_export = status(run)["history"]
+    output = tmp_path / "article.md"
+    with pytest.raises(ValueError, match="current independent re-review required"):
+        export(run, output=output)
+    assert not output.exists()
+    assert state_path.read_bytes() == state_before_export
+    assert status(run)["history"] == history_before_export
+    assert next_task(run)["stage"] == "ready"
+    assert next_task(run)["publication_ready"] is False
+    assert next_task(run)["current_review_required"] is True
 
 
 def test_revision_carries_strengths_from_original_review(tmp_path):
@@ -294,7 +325,7 @@ def test_packet_preserves_optional_claims_and_research_limits():
     assert bundle["claims"][0]["condition"] == "при слабой позиции"
 
 
-def test_legacy_run_resumes_without_new_review_fields(tmp_path):
+def test_legacy_run_without_version_is_readable_but_requires_current_review_for_export(tmp_path):
     run = prepared(tmp_path)
     state = status(run)
     state.pop("review_contract_version")
@@ -305,8 +336,11 @@ def test_legacy_run_resumes_without_new_review_fields(tmp_path):
     submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
     submit(run, stage="literary_review", artifact=write(tmp_path, "lit.json", literary))
     output = tmp_path / "legacy-final.md"
-    export(run, output=output)
-    assert output.read_text(encoding="utf-8") == TEXT
+    with pytest.raises(ValueError, match="current independent re-review required"):
+        export(run, output=output)
+    assert not output.exists()
+    assert status(run)["history"]
+    assert next_task(run)["publication_ready"] is False
 
 
 def test_shared_handoff_metadata_survives_saved_receipts_and_next_task(tmp_path):

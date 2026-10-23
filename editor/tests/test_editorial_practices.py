@@ -16,6 +16,7 @@ TEXT = "Не только атака, но и защита важны — сох
 def assessment(owner="literary_review", text=TEXT):
     packet = prepare(text, owner=owner)
     return {
+        "status": "pass",
         "article_sha256": packet["article_sha256"],
         "practice_checks": [
             {"id": p["id"], "status": "clear", "quote": text,
@@ -142,6 +143,12 @@ def test_preservation_binds_both_versions_and_quotes():
     report["original_sha256"] = prepare(TEXT, original=original)["original_sha256"]
     for row in report["preservation_checks"]:
         row["original_quote"] = original
+        if row["id"] in {"author_voice", "strengths"}:
+            row["change_evidence"] = [{"original_quote": original, "quote": TEXT, "disposition": "justified",
+                "reason": "Параллелизм и обращение сохранены.", "benefit": "Уточнено условие из задания.",
+                "meaning_risk": "Не потерять обе стороны сравнения."}]
+    report["original_factual_checks"] = {"whole_text_checked": True, "internal_consistency": "clear",
+        "source_agreement": "not_performed", "issues": []}
     assert not validate(TEXT, report, owner="literary_review", original=original)
     assert validate(TEXT, report, owner="literary_review", original=original + " ещё")
     report["preservation_checks"][0]["original_quote"] = "выдумано"

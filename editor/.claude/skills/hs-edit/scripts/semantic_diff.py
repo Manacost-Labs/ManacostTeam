@@ -463,7 +463,9 @@ def main() -> int:
         args.current_meta_epoch,
         args.current_patch,
     )
-    print(json.dumps({"accepted": not issues, "violations": issues}, ensure_ascii=False, indent=2))
+    import common as C
+
+    print(json.dumps({**C.diagnostic_scope(), "accepted": not issues, "violations": issues}, ensure_ascii=False, indent=2))
     return 1 if issues else 0
 
 

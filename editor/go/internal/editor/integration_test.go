@@ -12,6 +12,7 @@ import (
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/llm"
+	"github.com/Manacost-Labs/EditorTeam/go/internal/reviewfixture"
 )
 
 // Сквозная проверка с настоящим Python-сайдкаром. Пропускается, если он
@@ -60,6 +61,9 @@ func llmReturning(t *testing.T, reply string, reviews ...string) *httptest.Serve
 			response = goodFactualReview
 			if len(reviews) > 0 {
 				response = reviews[0]
+			}
+			if response == goodFactualReview && len(request.Messages) > 1 {
+				response = reviewfixture.Complete(response, request.Messages[1].Content)
 			}
 		}
 		b, _ := json.Marshal(response)

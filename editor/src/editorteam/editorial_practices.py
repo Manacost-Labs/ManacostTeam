@@ -7,6 +7,8 @@ import json
 import re
 from pathlib import Path
 
+from .integrity import arithmetic_issues
+
 LOGIC = ("coherence", "causal_support", "scope_and_conditions", "reference_consistency", "information_gain")
 PRESERVATION = ("facts_numbers", "conditions_exceptions_negation", "modality", "entities_roles",
                 "author_voice", "quotations_markup", "strengths")
@@ -40,6 +42,8 @@ def prepare(text: str, *, owner: str = "all", original: str | None = None, hando
             snapshots: list | None = None) -> dict:
     if not isinstance(text, str) or not text.strip():
         raise ValueError("nonempty article required")
+    if original is not None and (not isinstance(original, str) or not original.strip()):
+        raise ValueError("nonempty original text required when supplied")
     if owner not in {"all", "fact_review", "literary_review"}:
         raise ValueError("invalid review owner")
     data = catalog()
@@ -50,11 +54,14 @@ def prepare(text: str, *, owner: str = "all", original: str | None = None, hando
         "logic_dimensions": list(LOGIC) if owner != "fact_review" else [],
         "preservation_dimensions": list(PRESERVATION) if owner != "fact_review" else [],
         "identifiers": identifiers(text),
+        "original_integrity_hints": arithmetic_issues(original if original is not None else text),
+        "review_scope": "supplied_sources" if handoff is not None else "source_and_candidate",
+        "source_verification": "required" if handoff is not None else "not_performed",
         "review_schema": {
             "practice_checks": "One row per assigned id: {id,status:clear|not_applicable|issue|unverified,quote,reason}. clear/issue need an exact candidate quote. NA needs a concrete applicability reason, never a blanket exemption.",
             "logic_checks": "One row per logic dimension, same schema. Assess the entire article and inter-section contradictions. NA only for causal_support, with a reason.",
-            "preservation_checks": "One row per preservation dimension, same schema. No NA; explain what was preserved, including absence of a feature. When original is supplied, original_quote must be exact and nonempty. For a new article use the brief and evidence; do not invent an original author voice.",
-            "source_checks": "Factual owner: one row per handoff source {source_id,status:verified|unavailable|mismatch,evidence_quote,reason,identity_check,support_check,access:live|snapshot|archive}. evidence_quote must occur in approved source quote. Verify title/author/date/edition/DOI/ISBN and actual support, not just URL existence. Explain missing metadata; never invent it. Use saved source contents or retrieve the source; say which.",
+            "preservation_checks": "One row per preservation dimension, same schema. No NA; explain what was preserved, including absence of a feature. When original is supplied, original_quote must be exact and nonempty. Compare unique detail, evidence basis, threshold direction, comparison scope, causality and uncertainty, not only numbers. If versions differ, author_voice and strengths require change_evidence (1..16 changed spans): {original_quote,quote,disposition:preserved|justified|issue,reason,benefit,meaning_risk}. Quotes must be exact; candidate quote may be empty for a deletion. At least one pair must differ. Explain whether specificity, attribution, author vocabulary and useful qualifications survived; brevity alone is not a benefit. For a new article use the brief and evidence; do not invent an original author voice.",
+            "source_checks": "Factual owner: one row per handoff source {source_id,status:verified|unavailable|mismatch,evidence_quote,reason,identity_check,support_check,access:snapshot}. evidence_quote must occur in approved source quote. Verify title/author/date/edition/DOI/ISBN and actual support, not just URL existence. Explain missing metadata; never invent it. Read the supplied full snapshots. Their retrieval provenance does not prove a live or archive retrieval by the reviewer; describe the actual review access as snapshot.",
             "issues": "issue requires reader_problem, benefit, meaning_risk, suggestion. An optional stylistic alternative is clear with explanation, not an issue. Unresolved issue/unverified cannot pass.",
             "hashes": "article_sha256 required; original_sha256 required if original supplied. Existing publication handoff_sha256 and independent review fields remain mandatory.",
         },
@@ -62,6 +69,16 @@ def prepare(text: str, *, owner: str = "all", original: str | None = None, hando
     }
     if original is not None:
         packet["original_sha256"] = _hash(original)
+        packet["review_schema"]["original_factual_checks"] = (
+            "Required even when unchanged: {whole_text_checked:true,internal_consistency:clear|issue,"
+            "source_agreement:not_performed|supplied_sources_checked|issue,issues:[{quote,reason,"
+            "resolution:unresolved|corrected,correction_quote,source_id,evidence_quote}]}. "
+            "Inspect original arithmetic, threshold direction, causality, comparison scope and confidence separately "
+            "from preservation. quote must be exact original text. No sources means not_performed, not verified. "
+            "Unresolved issues block acceptance; corrected requires an exact candidate correction and matching full "
+            "source evidence. Do not silently decide which inconsistent number is true. Source agreement covers "
+            "only supplied sources; unsupported factual scope stays explicit."
+        )
     if handoff is not None:
         from .publication_review import handoff_hash, validate_handoff
 
@@ -72,7 +89,14 @@ def prepare(text: str, *, owner: str = "all", original: str | None = None, hando
         packet["sources"] = handoff.get("sources", [])
     if snapshots is not None:
         from .publication_review import handoff_hash
+        from .publication_run import _ground_sources
+        from .publication_run import _sources as validate_snapshots
 
+        validate_snapshots(snapshots)
+        if handoff is not None:
+            errors = _ground_sources(handoff, snapshots)
+            if errors:
+                raise ValueError("; ".join(errors))
         packet["sources_sha256"] = handoff_hash(snapshots)
         packet["review_schema"]["hashes"] += " sources_sha256 required for supplied snapshots."
     return packet
@@ -80,6 +104,35 @@ def prepare(text: str, *, owner: str = "all", original: str | None = None, hando
 
 def _nonempty(value) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def _change_evidence(original: str, text: str, row: dict, field: str) -> list[str]:
+    if row.get("id") not in {"author_voice", "strengths"}:
+        return []
+    entries = row.get("change_evidence")
+    if original == text and entries is None:
+        return []
+    if not isinstance(entries, list) or not 1 <= len(entries) <= 16:
+        return [f"{field}/{row['id']}: change_evidence requires 1..16 contextual changed-span assessments"]
+    errors, changed = [], False
+    for item in entries:
+        if not isinstance(item, dict):
+            errors.append(f"{field}: malformed change_evidence")
+            continue
+        before, after = item.get("original_quote"), item.get("quote")
+        if not _nonempty(before) or before not in original:
+            errors.append(f"{field}: change_evidence exact original_quote required")
+        if not isinstance(after, str) or (after and after not in text):
+            errors.append(f"{field}: change_evidence exact candidate quote required (empty for deletion)")
+        changed |= isinstance(before, str) and isinstance(after, str) and before != after
+        if not isinstance(item.get("disposition"), str) or item["disposition"] not in {"preserved", "justified"}:
+            errors.append(f"{field}: change_evidence unresolved or invalid disposition")
+        for key in ("reason", "benefit", "meaning_risk"):
+            if not _nonempty(item.get(key)):
+                errors.append(f"{field}: change_evidence requires {key}")
+    if original != text and not changed:
+        errors.append(f"{field}: change_evidence must assess an actual changed pair")
+    return errors
 
 
 def _checks(text: str, rows, expected: set[str], field: str, *, na: set[str], original: str | None = None) -> list[str]:
@@ -116,7 +169,88 @@ def _checks(text: str, rows, expected: set[str], field: str, *, na: set[str], or
             before = row.get("original_quote")
             if not _nonempty(before) or before not in original:
                 errors.append(f"{field}/{key}: exact original_quote required")
+            errors += _change_evidence(original, text, row, field)
     errors.extend(f"{field}: missing {key}" for key in sorted(expected - seen))
+    return errors
+
+
+def _corrected_original(original: str, report: dict) -> str:
+    """Apply an already validated correction ledger to a private diagnostic copy.
+
+    This helper does not authorize corrections. Call it only after full review
+    and source validation; the public review stays bound to the real original.
+    Offsets are resolved once in the original so replacements cannot cascade.
+    """
+    spans = []
+    for issue in report["original_factual_checks"]["issues"]:
+        if not isinstance(issue, dict) or issue.get("resolution") != "corrected":
+            continue
+        quote, correction = issue.get("quote"), issue.get("correction_quote")
+        if not _nonempty(quote) or not _nonempty(correction):
+            raise ValueError("corrected original issue requires nonempty exact quotes")
+        start = original.find(quote)
+        if start < 0 or original.find(quote, start + 1) >= 0:
+            raise ValueError("corrected original quote must identify one unique original span")
+        spans.append((start, start + len(quote), correction))
+    spans.sort()
+    for previous, current in zip(spans, spans[1:]):
+        if current[0] < previous[1]:
+            raise ValueError("corrected original spans must not overlap or repeat")
+    baseline = original
+    for start, end, correction in reversed(spans):
+        baseline = baseline[:start] + correction + baseline[end:]
+    return baseline
+
+
+def _original_facts(original: str, text: str, report: dict, handoff, snapshots) -> list[str]:
+    row = report.get("original_factual_checks")
+    if not isinstance(row, dict) or row.get("whole_text_checked") is not True:
+        return ["original_factual_checks: whole original must be checked separately from preservation"]
+    errors = []
+    if not isinstance(row.get("internal_consistency"), str) or row["internal_consistency"] not in {"clear", "issue"}:
+        errors.append("original_factual_checks: internal_consistency required")
+    agreement = row.get("source_agreement")
+    expected = "supplied_sources_checked" if snapshots else "not_performed"
+    if not isinstance(agreement, str) or agreement not in {expected, "issue"}:
+        errors.append(f"original_factual_checks: source_agreement must be {expected} or issue")
+    issues = row.get("issues")
+    if not isinstance(issues, list) or len(issues) > 256:
+        return errors + ["original_factual_checks: bounded issues list required"]
+    if issues and row.get("internal_consistency") == "clear" and agreement != "issue":
+        errors.append("original_factual_checks: clear checks contradict reported original issues")
+    if not issues and (row.get("internal_consistency") == "issue" or agreement == "issue"):
+        errors.append("original_factual_checks: issue status requires quoted findings")
+    sources = {item.get("source_id"): item for item in (handoff or {}).get("sources", [])}
+    source_texts = {item.get("id"): item.get("text", "") for item in snapshots or []}
+    by_url = {item.get("url"): item.get("text", "") for item in snapshots or []}
+    for source_id, source in sources.items():
+        if source.get("url") in by_url:
+            source_texts[source_id] = by_url[source["url"]]
+    for issue in issues:
+        if not isinstance(issue, dict):
+            errors.append("original_factual_checks: malformed issue")
+            continue
+        quote = issue.get("quote")
+        if not _nonempty(quote) or quote not in original or not _nonempty(issue.get("reason")):
+            errors.append("original_factual_checks: exact original quote and reason required")
+        if issue.get("resolution") != "corrected":
+            errors.append("original_factual_checks: unresolved original issue")
+            continue
+        correction, evidence = issue.get("correction_quote"), issue.get("evidence_quote")
+        if not _nonempty(correction) or correction not in text or (_nonempty(quote) and quote in text):
+            errors.append("original_factual_checks: corrected issue requires changed candidate evidence")
+        source_id = issue.get("source_id")
+        if not isinstance(source_id, str) or not _nonempty(evidence) or evidence not in source_texts.get(source_id, ""):
+            errors.append("original_factual_checks: correction requires verified full source evidence")
+    for hint in arithmetic_issues(original):
+        if not any(isinstance(item, dict) and isinstance(item.get("quote"), str)
+                   and (hint["evidence"] in item["quote"] or item["quote"] in hint["evidence"])
+                   and item["quote"].strip() for item in issues):
+            errors.append("original_factual_checks: original arithmetic inconsistency must be assessed explicitly")
+    try:
+        _corrected_original(original, report)
+    except ValueError as error:
+        errors.append(f"original_factual_checks: {error}")
     return errors
 
 
@@ -156,12 +290,13 @@ def validate(text: str, report, *, owner: str = "all", handoff: dict | None = No
              snapshots: list | None = None, require_snapshots: bool = False) -> list[str]:
     try:
         packet = prepare(text, owner=owner, original=original, handoff=handoff, snapshots=snapshots)
-    except (ValueError, TypeError, UnicodeError) as error:
+    except (ValueError, TypeError, KeyError, UnicodeError) as error:
         return [f"editorial: invalid input: {error}"]
     if not isinstance(report, dict):
         return ["editorial review must be an object"]
     errors = []
-    if "status" in report and report["status"] != "pass":
+    errors.extend(f"integrity: {issue['message']} {issue['suggestion']}" for issue in arithmetic_issues(text))
+    if report.get("status") != "pass":
         errors.append("editorial: reviewer did not pass the article")
     for field in ("article_sha256", "original_sha256", "handoff_sha256", "sources_sha256"):
         if field in packet and report.get(field) != packet[field]:
@@ -171,19 +306,29 @@ def validate(text: str, report, *, owner: str = "all", handoff: dict | None = No
     if owner != "fact_review":
         errors += _checks(text, report.get("logic_checks"), set(LOGIC), "logic_checks", na={"causal_support"})
         errors += _checks(text, report.get("preservation_checks"), set(PRESERVATION), "preservation_checks", na=set(), original=original)
-    if owner != "literary_review":
+    if original is not None:
+        errors += _original_facts(original, text, report, handoff, snapshots)
+    preservation_only = owner == "all" and handoff is None and snapshots is None and original is not None
+    if preservation_only:
+        if report.get("source_verification") != "not_performed" or report.get("source_checks") != []:
+            errors.append("source_checks: preservation-only review must declare not_performed and an empty source_checks list")
+    elif owner != "literary_review":
         errors += _sources(handoff, report.get("source_checks"))
         if require_snapshots and snapshots is None:
             errors.append("source_checks: collected full snapshots required (--sources)")
-        if snapshots is not None and isinstance(handoff, dict):
-            from .publication_run import _ground_sources
-            from .publication_run import _sources as validate_snapshots
+    if snapshots is not None:
+        from .publication_run import _ground_sources
+        from .publication_run import _sources as validate_snapshots
 
-            try:
-                validate_snapshots(snapshots)
+        try:
+            validate_snapshots(snapshots)
+            if isinstance(handoff, dict):
                 errors += _ground_sources(handoff, snapshots)
-            except (KeyError, TypeError, ValueError) as error:
-                errors.append(f"source_checks: invalid snapshots: {error}")
+            for row in report.get("source_checks", []) if isinstance(report.get("source_checks"), list) else []:
+                if isinstance(row, dict) and row.get("access") != "snapshot":
+                    errors.append("source_checks: supplied snapshots do not prove a live or archive retrieval by the reviewer")
+        except (KeyError, TypeError, ValueError) as error:
+            errors.append(f"source_checks: invalid snapshots: {error}")
     return errors
 
 
@@ -210,11 +355,13 @@ def main(argv=None) -> int:
             report = json.loads(args.review.read_text(encoding="utf-8-sig"))
             errors = validate(text, report, owner=args.owner, original=original, handoff=handoff,
                               snapshots=snapshots, require_snapshots=True)
-            if args.owner != "literary_review" and not errors:
+            if args.owner != "literary_review" and handoff is not None and not errors:
                 from .publication_review import validate_factual
 
                 errors += validate_factual(handoff, text, report)
             result = {"status": "blocked" if errors else "pass", "errors": errors,
+                      "review_scope": "supplied_sources" if handoff is not None else "source_and_candidate",
+                      "source_verification": "supplied_sources_checked" if handoff is not None and not errors else "not_performed",
                       "limitation": "Contract validation; semantic judgment remains the reviewer's responsibility."}
     except (OSError, ValueError, TypeError, UnicodeError) as error:
         result = {"status": "blocked", "errors": [str(error)]}
