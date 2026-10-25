@@ -22,5 +22,6 @@
     "manacost-publish-1.11.0.zip": "dcc5bfe4f9dd5f99c2f72f00481101bf135b400f9dcedac71f81e5ade52b1211",
     "manacost-publish-1.11.0.skill": "dcc5bfe4f9dd5f99c2f72f00481101bf135b400f9dcedac71f81e5ade52b1211",
     "manacost-team-1.18.0-plugin.zip": "50e9f1ad8eca8b489d9b8b613adaedb5f09433a72b044e1ed8a23162a5498432"
-  }
+  },
+  "download_base": "https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/"
 }

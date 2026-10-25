@@ -41,6 +41,9 @@ BINARY = {
     ".tgz",
 }
 VERSION = re.compile(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)")
+REPOSITORY = "https://github.com/Manacost-Labs/ManacostTeam"
+# Tracked in git; the archives they list are GitHub Release assets.
+MANIFEST_FILES = ("SHA256SUMS", "index.json")
 
 
 def portable_bytes(file: Path) -> bytes:
@@ -356,6 +359,14 @@ def assemble(root: Path, entry: dict, destination: Path) -> None:
     validate_bundle(destination)
 
 
+def download_base(version: str) -> str:
+    return f"{REPOSITORY}/releases/download/v{version}/"
+
+
+def sha256(file: Path) -> str:
+    return hashlib.sha256(file.read_bytes()).hexdigest()
+
+
 def verify_release(built: Path, output: Path) -> None:
     """Require the exact file inventory as well as reproducible bytes."""
     if not output.is_dir():
@@ -373,32 +384,33 @@ def verify_release(built: Path, output: Path) -> None:
             raise ValueError(f"release differs from sources: {file.name}; bump version")
 
 
-def publish_release(built: Path, output: Path, history: Path, *, check: bool) -> None:
-    """Preflight every archive and publish a complete new directory in one rename."""
-    archives = [file for file in built.iterdir() if file.suffix in {".zip", ".skill"}]
-    if history.is_dir():
-        for release in sorted(history.iterdir()):
-            if not VERSION.fullmatch(release.name) or not release.is_dir():
-                continue
-            for archive in archives:
-                previous = release / archive.name
-                if previous.exists() and (
-                    not previous.is_file()
-                    or previous.read_bytes() != archive.read_bytes()
-                ):
-                    raise ValueError(
-                        f"published archive is immutable across releases; bump version: "
-                        f"{release.name}/{archive.name}"
-                    )
-    if check or output.exists():
-        verify_release(built, output)
-        return
+def verify_manifest(built: Path, manifest: Path) -> None:
+    """Require the exact tracked manifest; archives are GitHub Release assets."""
+    if not manifest.is_dir():
+        raise ValueError("release manifest missing; build the release first")
+    actual = {file.name for file in manifest.iterdir()}
+    # Snapshots committed before GitHub Releases keep archives until migrated.
+    legacy = {file.name for file in built.iterdir()} - set(MANIFEST_FILES)
+    missing = sorted(set(MANIFEST_FILES) - actual)
+    extra = sorted(actual - set(MANIFEST_FILES) - legacy)
+    if missing or extra:
+        raise ValueError(
+            f"release inventory differs: missing={missing}; unexpected={extra}"
+        )
+    for name in sorted(actual):
+        installed = manifest / name
+        if not installed.is_file() or installed.read_bytes() != (built / name).read_bytes():
+            raise ValueError(f"release differs from sources: {name}; bump version")
+
+
+def publish_directory(files: list[Path], output: Path) -> None:
+    """Publish a complete new directory in one rename."""
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(
         prefix=f".{output.name}-", dir=output.parent
     ) as temporary:
         staged = Path(temporary)
-        for file in built.iterdir():
+        for file in files:
             shutil.copyfile(file, staged / file.name)
         if output.exists():
             raise ValueError(
@@ -407,7 +419,39 @@ def publish_release(built: Path, output: Path, history: Path, *, check: bool) ->
         staged.rename(output)
 
 
-def build(root: Path, output: Path, *, check: bool = False) -> dict:
+def publish_release(
+    built: Path, output: Path, manifest: Path, history: Path, *, check: bool
+) -> None:
+    """Preflight history and manifest before writing local archives or the manifest."""
+    if history.is_dir():
+        for release in sorted(history.iterdir()):
+            index = release / "index.json"
+            if not VERSION.fullmatch(release.name) or not index.is_file():
+                continue
+            published = json.loads(index.read_text(encoding="utf-8"))["archives"]
+            for name, digest in sorted(published.items()):
+                archive = built / name
+                if archive.exists() and sha256(archive) != digest:
+                    raise ValueError(
+                        f"published archive is immutable across releases; bump version: "
+                        f"{release.name}/{name}"
+                    )
+    if check or manifest.exists():
+        verify_manifest(built, manifest)
+    if check:
+        return
+    if output.exists():
+        verify_release(built, output)
+    else:
+        publish_directory(sorted(built.iterdir()), output)
+    if not manifest.exists():
+        publish_directory([built / name for name in MANIFEST_FILES], manifest)
+
+
+def build(
+    root: Path, output: Path, *, check: bool = False, manifest: Path | None = None
+) -> dict:
+    """Write archives to output and their manifest to release/team-skills/<version>."""
     entries = load_registry(root)
     registry = json.loads(
         (root / "teams" / "registry.json").read_text(encoding="utf-8")
@@ -459,18 +503,26 @@ def build(root: Path, output: Path, *, check: bool = False) -> dict:
             "teams": len({entry["team"] for entry in entries}),
             "skills": len(entries),
             "archives": checksums,
+            "download_base": download_base(version),
         }
         (built / "index.json").write_text(
             json.dumps(index, indent=2) + "\n", encoding="utf-8", newline="\n"
         )
-        publish_release(built, output, root / "release" / "team-skills", check=check)
+        history = root / "release" / "team-skills"
+        publish_release(
+            built, output, manifest or history / version, history, check=check
+        )
     return index
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path)
-    parser.add_argument("--check", action="store_true")
+    parser.add_argument(
+        "--output", type=Path, help="local archive directory (default: build/team-skills/<version>)"
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="verify the tracked manifest; write nothing"
+    )
     args = parser.parse_args()
     try:
         load_registry(ROOT)
@@ -479,13 +531,14 @@ def main() -> int:
         )
         output = (
             args.output
-            or ROOT / "release" / "team-skills" / registry["release_version"]
+            or ROOT / "build" / "team-skills" / registry["release_version"]
         )
         result = build(ROOT, output, check=args.check)
     except (ValueError, TypeError, OSError) as exc:
         parser.exit(1, f"package error: {exc}\n")
     print(
         f"{result['teams']} teams; {result['skills']} portable skills; reproducible archives verified"
+        + ("" if args.check else f"; archives in {output}")
     )
     return 0
 

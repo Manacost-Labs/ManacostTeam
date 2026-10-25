@@ -2,7 +2,7 @@
 
 Нужны Git и Python 3.11+. Для серверного запуска также нужны Docker и Compose v2.
 Один checkout служит источником установки; установщик не скачивает зависимости
-и не меняет глобальные настройки агента. Выпуск навыков — 1.6.0.
+(только архивы навыков из GitHub Releases) и не меняет глобальные настройки агента. Выпуск навыков — 1.6.0.
 
 ```bash
 git clone https://github.com/Manacost-Labs/ManacostTeam.git
@@ -20,6 +20,9 @@ python3 tools/install.py agent --client codex --directory ~/articles --game dead
 Результат: `.agents/skills/editor-team`, `.agents/skills/translate-team`,
 контекст `.manacost/context.json` и манифест `.manacost/install.json`.
 Навыки распакованы из релизных ZIP с проверкой SHA256 и работают без checkout.
+ZIP берутся из локальной сборки `build/team-skills/<версия>/`, иначе скачиваются
+из GitHub Release `v<версия>`. Без сети скачайте ассеты релиза в каталог и
+укажите `--archives DIR`; если ассет недоступен, установщик останавливается до записи.
 В этом репозитории уже есть entrypoints; не устанавливайте поверх них.
 
 Для Claude Code замените `--client codex` на `--client claude` — навыки попадут

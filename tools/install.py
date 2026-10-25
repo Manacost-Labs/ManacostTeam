@@ -10,11 +10,17 @@ import json
 import secrets
 import stat
 import sys
+import urllib.error
+import urllib.request
 import zipfile
 from pathlib import Path, PurePosixPath
 
 import build_team_skills as packages
 from resolve_context import ROOT, resolve_context
+
+# Local builds first; release/team-skills keeps archives only in unmigrated snapshots.
+ARCHIVE_DIRS = (ROOT / "build/team-skills", ROOT / "release/team-skills")
+ARCHIVE_LIMIT = 50 * 1024 * 1024
 
 
 def json_bytes(value: dict) -> bytes:
@@ -77,7 +83,38 @@ def unpack_skill(payload: bytes, name: str) -> dict[str, bytes]:
     return files
 
 
-def install_agent(directory: Path, client: str, names: list[str], game: str) -> dict:
+def release_archive(
+    version: str, manifest: dict, filename: str, archives: Path | None
+) -> bytes:
+    """Read a local archive or download the GitHub Release asset from the manifest."""
+    local = [archives] if archives else [base / version for base in ARCHIVE_DIRS]
+    for directory in local:
+        if (directory / filename).is_file():
+            return (directory / filename).read_bytes()
+    if archives:
+        raise ValueError(f"archive not found in {archives}: {filename}")
+    url = manifest["download_base"] + filename
+    try:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            payload = response.read(ARCHIVE_LIMIT + 1)
+    except (urllib.error.URLError, TimeoutError) as error:
+        raise ValueError(
+            f"release asset unavailable: {url} ({error}); build it locally with "
+            "`python tools/build_team_skills.py` or download the release assets "
+            "and pass --archives DIR"
+        ) from error
+    if len(payload) > ARCHIVE_LIMIT:
+        raise ValueError(f"release asset exceeds 50 MiB: {url}")
+    return payload
+
+
+def install_agent(
+    directory: Path,
+    client: str,
+    names: list[str],
+    game: str,
+    archives: Path | None = None,
+) -> dict:
     entries = {entry["name"]: entry for entry in packages.load_registry(ROOT)}
     if (
         not names
@@ -86,8 +123,12 @@ def install_agent(directory: Path, client: str, names: list[str], game: str) -> 
     ):
         raise ValueError("select unique skill names from teams/registry.json")
     registry = json.loads((ROOT / "teams/registry.json").read_text(encoding="utf-8"))
-    release = ROOT / "release/team-skills" / registry["release_version"]
-    manifest = json.loads((release / "index.json").read_text(encoding="utf-8"))
+    version = registry["release_version"]
+    manifest = json.loads(
+        (ROOT / "release/team-skills" / version / "index.json").read_text(
+            encoding="utf-8"
+        )
+    )
     prefix = {"codex": ".agents/skills/", "claude": ".claude/skills/", "generic": ""}[
         client
     ]
@@ -96,7 +137,7 @@ def install_agent(directory: Path, client: str, names: list[str], game: str) -> 
     installed = {}
     for name in names:
         filename = f"{name}-{entries[name]['version']}.zip"
-        payload = (release / filename).read_bytes()
+        payload = release_archive(version, manifest, filename, archives)
         digest = hashlib.sha256(payload).hexdigest()
         if manifest["archives"].get(filename) != digest:
             raise ValueError(f"archive checksum mismatch: {filename}")
@@ -181,6 +222,11 @@ def main(argv=None) -> int:
     )
     agent.add_argument("--skills", default="editor-team,translate-team")
     agent.add_argument("--game", default="hearthstone")
+    agent.add_argument(
+        "--archives",
+        type=Path,
+        help="directory with downloaded release assets (default: local build, then GitHub Releases)",
+    )
     server = commands.add_parser(
         "server", help="prepare Docker Compose; does not start containers"
     )
@@ -199,7 +245,11 @@ def main(argv=None) -> int:
     try:
         if args.command == "agent":
             result = install_agent(
-                args.directory, args.client, args.skills.split(","), args.game
+                args.directory,
+                args.client,
+                args.skills.split(","),
+                args.game,
+                args.archives,
             )
         elif args.command == "server":
             result = install_server(args.directory, args.game, args.port)

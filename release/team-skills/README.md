@@ -1,27 +1,31 @@
 # Готовые навыки ManacostTeam
 
-Версия 1.8.0: семь Teams и девять навыков, включая подготовку статьи и подсветку карт. Для Claude загружайте ZIP;
-одноимённые `.skill` содержат идентичные байты. Для ChatGPT web/mobile используйте
-combined plugin в поддерживающем импорт клиенте.
+Архивы навыков — ассеты [GitHub Release v1.18.0](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.18.0).
+В этом каталоге хранится только манифест каждого выпуска: `index.json`
+(SHA256 архивов и `download_base`) и `SHA256SUMS`. Ассет выпуска `X.Y.Z`
+доступен по адресу `https://github.com/Manacost-Labs/ManacostTeam/releases/download/vX.Y.Z/<файл>`.
+Для Claude загружайте ZIP; одноимённые `.skill` содержат идентичные байты.
+Для ChatGPT web/mobile используйте combined plugin в поддерживающем импорт клиенте.
 
 | Навык | ZIP |
 | --- | --- |
-| EditorTeam | [editor-team](1.8.0/editor-team-1.8.0.zip) |
-| ResearchTeam | [research-team](1.8.0/research-team-1.3.1.zip) |
-| SVGTeam | [svg-team](1.8.0/svg-team-1.0.1.zip) |
-| TranslateTeam | [translate-team](1.8.0/translate-team-1.2.1.zip) |
-| XMLTeam | [xml-team](1.8.0/xml-team-1.0.1.zip) |
-| JobTeam | [job-team](1.8.0/job-team-1.0.1.zip) |
-| MarketingTeam | [marketing-team](1.8.0/marketing-team-1.0.1.zip) |
-| Контекстные шорткоды карт | [card-shortcodes](1.8.0/card-shortcodes-1.0.3.zip) |
-| Подготовка и проверка статьи | [manacost-publish](1.8.0/manacost-publish-1.2.0.zip) |
-| Все девять в одном plugin | [manacost-team plugin](1.8.0/manacost-team-1.8.0-plugin.zip) |
+| EditorTeam | [editor-team-1.13.0.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/editor-team-1.13.0.zip) |
+| ResearchTeam | [research-team-1.10.4.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/research-team-1.10.4.zip) |
+| SVGTeam | [svg-team-1.0.1.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/svg-team-1.0.1.zip) |
+| TranslateTeam | [translate-team-1.2.1.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/translate-team-1.2.1.zip) |
+| XMLTeam | [xml-team-1.0.1.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/xml-team-1.0.1.zip) |
+| JobTeam | [job-team-1.0.1.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/job-team-1.0.1.zip) |
+| MarketingTeam | [marketing-team-1.0.1.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/marketing-team-1.0.1.zip) |
+| Контекстные шорткоды карт | [card-shortcodes-1.0.3.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/card-shortcodes-1.0.3.zip) |
+| Подготовка и проверка статьи | [manacost-publish-1.11.0.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/manacost-publish-1.11.0.zip) |
+| Все 9 в одном plugin | [manacost-team-1.18.0-plugin.zip](https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.18.0/manacost-team-1.18.0-plugin.zip) |
 
-[Импорт, вызов и ограничения среды](../../docs/TEAM_STANDARD.md).
-[Контрольные суммы](1.8.0/SHA256SUMS), [машинный индекс](1.8.0/index.json).
-[Релиз на GitHub](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.8.0),
-[изменения и совместимость](../../docs/QUALITY_AUDIT.md).
+[Контрольные суммы](1.18.0/SHA256SUMS), [машинный индекс](1.18.0/index.json),
+[импорт, вызов и ограничения среды](../../docs/TEAM_STANDARD.md),
+[установка](../../docs/INSTALL.md).
 
-XML включает workflow, исходники и lockfile; сборка требует Node.js, pnpm и
-установки dependencies. Остальные Python helpers и 22 SVG-примера проверены
-из распакованных архивов. Облачные аккаунты навыки автоматически не устанавливают.
+Сборка: `python tools/build_team_skills.py` пишет архивы в игнорируемый
+`build/team-skills/<версия>/` и манифест сюда. Публикация:
+`python tools/publish_team_skills.py release --execute` после push манифеста.
+Снимки до 1.18.0 включительно ещё содержат архивы в Git, пока не выполнен
+`python tools/publish_team_skills.py migrate`.
