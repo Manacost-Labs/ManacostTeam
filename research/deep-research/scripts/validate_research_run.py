@@ -23,7 +23,10 @@ from search_support import (
 from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
 from validate_editor_output import (
+    INSIGHT_CONFIDENCE as RU_INSIGHT_CONFIDENCE,
     WORD_RE,
+    card_text_paraphrase,
+    insight_items,
     is_safe_external_url,
     mask_fenced_code,
     mask_hidden_html_elements,
@@ -38,6 +41,17 @@ from validate_editor_output import (
     visible_external_links,
 )
 
+
+INSIGHT_TYPES = {
+    "pro_reasoning",
+    "common_mistake",
+    "surprising_number",
+    "community_debate",
+    "why_it_works",
+    "game_situation",
+}
+INSIGHT_CONFIDENCE = set(RU_INSIGHT_CONFIDENCE.values())
+TIMESTAMP_RE = re.compile(r"^(?:\d{1,2}:)?\d{1,2}:\d{2}$")
 
 REQUIRED_FILES = (
     "manifest.json",
@@ -606,6 +620,142 @@ def validate_candidates(
                 errors.append(f"{label}: opened candidate must reference a known source_id")
 
 
+def non_empty_text(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def validate_insights_ledger(
+    root: Path,
+    evidence: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+    errors: list[str],
+) -> list[dict[str, Any]]:
+    """Validate the optional insights.jsonl ledger and return accepted records."""
+
+    path = root / "insights.jsonl"
+    if not path.is_file():
+        return []
+    insights = load_jsonl(path, errors)
+    collect_ids(insights, "insight_id", "INS-", "insights.jsonl", errors)
+    evidence_by_id = {
+        record["evidence_id"]: record
+        for record in evidence
+        if isinstance(record.get("evidence_id"), str)
+    }
+    sources_by_id = {
+        record["source_id"]: record
+        for record in sources
+        if isinstance(record.get("source_id"), str)
+    }
+    accepted: list[dict[str, Any]] = []
+    for record in insights:
+        label = f"insights.jsonl:{record['__line__']}"
+        status = record.get("status")
+        if status == "rejected":
+            if not non_empty_text(record.get("rejection_reason")):
+                errors.append(f"{label}: rejected insight needs rejection_reason")
+            continue
+        if status != "accepted":
+            errors.append(f"{label}: status must be accepted or rejected")
+            continue
+        insight_type = record.get("insight_type")
+        if not string_in(insight_type, INSIGHT_TYPES):
+            errors.append(f"{label}: invalid insight_type")
+        for field in ("statement", "why_non_obvious"):
+            if not non_empty_text(record.get(field)):
+                errors.append(f"{label}: missing {field}")
+        statement = str(record.get("statement", ""))
+        if (
+            non_empty_text(statement)
+            and " ".join(statement.casefold().split())
+            == " ".join(str(record.get("why_non_obvious", "")).casefold().split())
+        ):
+            errors.append(f"{label}: why_non_obvious must differ from statement")
+        if card_text_paraphrase(statement):
+            errors.append(
+                f"{label}: statement restates card text; name the decision, "
+                "number, condition, or source position"
+            )
+        if not string_in(str(record.get("confidence", "")).lower(), INSIGHT_CONFIDENCE):
+            errors.append(f"{label}: confidence must be high, medium, or low")
+
+        evidence_ids = record.get("evidence_ids")
+        source_ids = record.get("source_ids")
+        if not isinstance(evidence_ids, list) or not evidence_ids:
+            errors.append(f"{label}: insight without evidence_ids cannot be accepted")
+            evidence_ids = []
+        if not isinstance(source_ids, list) or not source_ids:
+            errors.append(f"{label}: insight without source_ids cannot be accepted")
+            source_ids = []
+        evidence_sources: set[str] = set()
+        for evidence_id in evidence_ids:
+            item = evidence_by_id.get(evidence_id) if isinstance(evidence_id, str) else None
+            if item is None:
+                errors.append(f"{label}: unknown evidence {evidence_id}")
+                continue
+            if isinstance(item.get("source_id"), str):
+                evidence_sources.add(item["source_id"])
+        for source_id in source_ids:
+            if not isinstance(source_id, str) or source_id not in sources_by_id:
+                errors.append(f"{label}: unknown source {source_id}")
+        if evidence_ids and source_ids and evidence_sources != set(
+            value for value in source_ids if isinstance(value, str)
+        ):
+            errors.append(
+                f"{label}: source_ids must match the sources of its evidence_ids"
+            )
+
+        if insight_type == "pro_reasoning":
+            if not non_empty_text(record.get("speaker")):
+                errors.append(f"{label}: pro_reasoning needs speaker")
+            if not TIMESTAMP_RE.match(str(record.get("timestamp", ""))):
+                errors.append(f"{label}: pro_reasoning needs timestamp like 41:20")
+        elif insight_type == "common_mistake":
+            if not non_empty_text(record.get("correction")):
+                errors.append(f"{label}: common_mistake needs correction")
+            lineages = {
+                sources_by_id[source_id].get("lineage_id") or source_id
+                for source_id in evidence_sources
+                if source_id in sources_by_id
+            }
+            if len(lineages) < 2:
+                errors.append(
+                    f"{label}: common_mistake needs two independent source lineages"
+                )
+        elif insight_type == "surprising_number":
+            for field in ("metric", "value", "expected", "sample"):
+                if not non_empty_text(record.get(field)):
+                    errors.append(f"{label}: surprising_number needs {field}")
+        elif insight_type == "community_debate":
+            positions = record.get("positions")
+            own_evidence = [
+                frozenset(position.get("evidence_ids") or [])
+                for position in positions
+                if isinstance(position, dict)
+                and non_empty_text(position.get("position"))
+                and isinstance(position.get("evidence_ids"), list)
+            ] if isinstance(positions, list) else []
+            if (
+                len(own_evidence) < 2
+                or len(own_evidence) != len(positions)
+                or any(not ids or not ids <= set(evidence_ids) for ids in own_evidence)
+                or len(set(own_evidence)) < 2
+            ):
+                errors.append(
+                    f"{label}: community_debate needs two or more positions, "
+                    "each with its own evidence_ids from this insight"
+                )
+        elif insight_type == "why_it_works":
+            if not non_empty_text(record.get("condition")):
+                errors.append(f"{label}: why_it_works needs condition")
+        elif insight_type == "game_situation":
+            for field in ("situation", "decision"):
+                if not non_empty_text(record.get(field)):
+                    errors.append(f"{label}: game_situation needs {field}")
+        accepted.append(record)
+    return accepted
+
+
 def main() -> int:
     args = parse_args()
     root = Path(args.directory).expanduser().resolve()
@@ -910,6 +1060,7 @@ def main() -> int:
             warnings.append(f"{label}: schema 1.2 query should record a language")
 
     validate_candidates(root, query_ids, source_ids, errors)
+    accepted_insights = validate_insights_ledger(root, evidence, sources, errors)
 
     for record in sources:
         label = f"sources.jsonl:{record['__line__']}"
@@ -1523,7 +1674,9 @@ def main() -> int:
             errors.append("handoff.md: final stage requires bundle_validation: pass")
 
         if effective_output_profile == "editor-ready":
-            clarity_errors, clarity_warnings = validate_editor_markdown(report_text)
+            clarity_errors, clarity_warnings = validate_editor_markdown(
+                report_text, require_insights=bool(accepted_insights)
+            )
             for finding in clarity_errors:
                 errors.append(
                     f"report.md: editor-ready [{finding.code}] {finding.message}"
@@ -1592,6 +1745,21 @@ def main() -> int:
                 errors.append(
                     "report.md: no visible source link matches sources.jsonl"
                 )
+            insight_identities = {
+                identity
+                for record in accepted_insights
+                for source_id in list_or_empty(record, "source_ids")
+                if isinstance(source_id, str)
+                for identity in source_url_identities_by_id.get(source_id, set())
+            }
+            for item in insight_items(report_text)[1]:
+                if item.links and insight_identities.isdisjoint(
+                    citation_identity(link) for link in item.links
+                ):
+                    errors.append(
+                        f"report.md:{item.line}: «Неочевидное» item does not cite "
+                        "a source of an accepted insights.jsonl record"
+                    )
 
             clarity_review = audit.get("clarity_review")
             if not isinstance(clarity_review, dict):

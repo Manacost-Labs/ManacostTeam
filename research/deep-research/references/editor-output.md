@@ -27,11 +27,16 @@ The editor should see the answer before the research process. Use a working titl
 - `Коротко` — two to four sentences with the main answer and the relevant as-of, patch, version, season, or other time boundary;
 - `Контекст` — scope and definitions the editor needs to interpret the findings;
 - `Основной материал` — findings arranged by meaning, with descriptive subheadings where useful;
+- `Неочевидное` — five to ten accepted insights from `insights.jsonl`: what the reader does not expect, why it matters, what it rests on, and how confident it is; mandatory when the bundle has accepted insights, format in [the editor contract](editor-insights-contract.md);
 - `Что важно не исказить` — material conditions, exceptions, wording limits, and editorial traps;
 - `Что остаётся неясным` — only unresolved points that could change the story;
 - `Ключевые источники` — optional short list when it improves navigation.
 
 Do not print empty sections. Adapt headings to the subject when that improves clarity, but keep the result compact and scan-friendly.
+
+## Non-obvious material
+
+Collect it during research with [the insight guide](insight-material.md), not during prose editing. Only accepted `insights.jsonl` records with evidence and sources may appear in `Неочевидное`; the block shows no internal IDs. `scripts/validate_editor_output.py` checks that every item has a direct source link, a reason, and a confidence level and does not restate card text; `--require-insights` makes the block mandatory for a standalone file.
 
 ## Clarity Editor boundary
 

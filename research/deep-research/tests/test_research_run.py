@@ -256,6 +256,43 @@ def prepare_editor_ready_final(run: Path) -> dict[str, object]:
     return audit
 
 
+INSIGHT_BLOCK = (
+    "\n## Неочевидное\n\n"
+    "1. **Колоду выгоднее вести в затяжную игру против контроля, а не давить с первых ходов.**\n"
+    "   - Почему интересно: по составу колоду легко принять за агрессивную.\n"
+    "   - На чём держится: [проверенный источник](https://example.com/source#fixture).\n"
+    "   - Уверенность: средняя.\n"
+)
+
+
+def accepted_insight(**overrides: object) -> dict[str, object]:
+    record: dict[str, object] = {
+        "insight_id": "INS-0001",
+        "insight_type": "why_it_works",
+        "status": "accepted",
+        "statement": "Колоду выгоднее вести в затяжную игру против контроля.",
+        "why_non_obvious": "По составу колоду легко принять за агрессивную.",
+        "condition": "Верно, пока в мете мало быстрых колод.",
+        "confidence": "medium",
+        "evidence_ids": ["EVD-0001"],
+        "source_ids": ["SRC-0001"],
+    }
+    record.update(overrides)
+    return record
+
+
+def add_insights(
+    run: Path, records: list[dict[str, object]], *, block: str = INSIGHT_BLOCK
+) -> None:
+    write_jsonl(run / "insights.jsonl", records)
+    report = (run / "report.md").read_text(encoding="utf-8")
+    marker = "## Что важно не исказить"
+    (run / "report.md").write_text(
+        report.replace(marker, block.lstrip("\n") + "\n" + marker), encoding="utf-8"
+    )
+    populate_editor_ready_reviews(run)
+
+
 class ResearchRunToolsTest(unittest.TestCase):
     def initialize(
         self,
@@ -318,6 +355,84 @@ class ResearchRunToolsTest(unittest.TestCase):
 
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("missing useful_data record EVD-0001", result.stdout)
+
+    def run_insight_case(
+        self, records: list[dict[str, object]], *, block: str = INSIGHT_BLOCK
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as temp:
+            run = self.initialize(Path(temp), output_profile="editor-ready")
+            prepare_editor_ready_final(run)
+            add_insights(run, records, block=block)
+            return validate_bundle(run, stage="final")
+
+    def test_accepted_insight_with_cited_block_passes(self) -> None:
+        result = self.run_insight_case([accepted_insight()])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_insight_without_source_is_rejected(self) -> None:
+        result = self.run_insight_case(
+            [accepted_insight(evidence_ids=[], source_ids=[])]
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("without evidence_ids cannot be accepted", result.stdout)
+        self.assertIn("without source_ids cannot be accepted", result.stdout)
+
+    def test_insight_restating_card_text_is_rejected(self) -> None:
+        result = self.run_insight_case(
+            [accepted_insight(statement="Боевой клич: наносит 3 ед. урона случайному существу.")]
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("statement restates card text", result.stdout)
+
+    def test_insight_type_minimum_evidence(self) -> None:
+        result = self.run_insight_case(
+            [
+                accepted_insight(insight_type="pro_reasoning", speaker="Игрок"),
+                accepted_insight(
+                    insight_id="INS-0002",
+                    insight_type="community_debate",
+                    positions=[{"position": "За", "evidence_ids": ["EVD-0001"]}],
+                ),
+                accepted_insight(insight_id="INS-0003", insight_type="common_mistake", correction="Ждать"),
+                accepted_insight(insight_id="INS-0004", confidence="sure"),
+            ]
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("pro_reasoning needs timestamp", result.stdout)
+        self.assertIn("community_debate needs two or more positions", result.stdout)
+        self.assertIn("common_mistake needs two independent source lineages", result.stdout)
+        self.assertIn("confidence must be high, medium, or low", result.stdout)
+
+    def test_rejected_insight_needs_reason_and_is_not_required_in_report(self) -> None:
+        result = self.run_insight_case(
+            [accepted_insight(status="rejected", rejection_reason="Пересказ текста карты.")],
+            block="",
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result = self.run_insight_case([accepted_insight(status="rejected")], block="")
+        self.assertIn("rejected insight needs rejection_reason", result.stdout)
+
+    def test_accepted_insight_requires_report_block(self) -> None:
+        result = self.run_insight_case([accepted_insight()], block="")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("[missing-insights]", result.stdout)
+
+    def test_report_block_must_cite_accepted_insight_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            run = self.initialize(Path(temp), output_profile="editor-ready")
+            prepare_editor_ready_final(run)
+            sources = [json.loads(line) for line in (run / "sources.jsonl").read_text(encoding="utf-8").splitlines()]
+            other = dict(sources[0], source_id="SRC-0002", lineage_id="LIN-0002")
+            other["requested_url"] = other["final_url"] = "https://example.com/other"
+            write_jsonl(run / "sources.jsonl", [*sources, other])
+            add_insights(
+                run,
+                [accepted_insight()],
+                block=INSIGHT_BLOCK.replace("source#fixture", "other"),
+            )
+            result = validate_bundle(run, stage="final")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("does not cite a source of an accepted insights.jsonl record", result.stdout)
 
     def test_initializer_defaults_to_research_report_output_profile(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

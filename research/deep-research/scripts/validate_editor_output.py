@@ -82,7 +82,7 @@ INLINE_HTML_TAG_START_RE = re.compile(
 )
 INLINE_CODE_RE = re.compile(r"(`+)(.*?)\1")
 INTERNAL_ID_RE = re.compile(
-    r"(?<![A-Z0-9_])(?:(?:QRY|SRC|EVD|CLM|COM|CTR|SEM|CHK|LIN)-\d+|"
+    r"(?<![A-Z0-9_])(?:(?:QRY|SRC|EVD|CLM|COM|CTR|SEM|CHK|LIN|INS)-\d+|"
     r"RES-\d{8}T\d{6}Z-[A-F0-9]{8})(?![A-Z0-9_])",
     re.IGNORECASE,
 )
@@ -268,6 +268,10 @@ UNFINISHED_PLACEHOLDER_PREFIXES = (
     "опционально",
     "название источника",
     "что именно он подтверждает",
+    "утверждение одной фразой",
+    "что читатель знающий текст карт",
+    "таймкод выборка или период",
+    "высокая средняя низкая",
 )
 
 LIMITATION_HEADINGS = {
@@ -355,6 +359,48 @@ JARGON_PATTERNS = (
     (re.compile(r"\b(?:VERY_HIGH|HIGH|MEDIUM|LOW|SPECULATIVE)\b"), "confidence code"),
 )
 
+INSIGHT_HEADINGS = {"неочевидное"}
+MIN_INSIGHT_ITEMS = 5
+MAX_INSIGHT_ITEMS = 10
+INSIGHT_CONFIDENCE = {"высокая": "high", "средняя": "medium", "низкая": "low"}
+INSIGHT_ITEM_RE = re.compile(r"^(\s{0,3})(?:[-+*]|\d+[.)])\s+(.*)$")
+SECTION_END_RE = re.compile(r"^\s{0,3}#{1,2}\s")
+INSIGHT_FIELD_RE = re.compile(
+    r"^\s*(?:[-+*]\s+)?[*_]{0,2}(?P<label>почему интересно|на чём держится|"
+    r"на чем держится|уверенность)\s*[*_]{0,2}\s*:\s*[*_]{0,2}\s*(?P<value>.*)$",
+    re.IGNORECASE,
+)
+# shortcut: phrase lists catch typical card-text wording, not every keyword or
+# translation; extend them when a reviewed paraphrase slips through.
+CARD_TEXT_RE = re.compile(
+    r"(?:боевой клич|предсмертный хрип|комбо|перегрузка|вдохновение|"
+    r"battlecry|deathrattle|combo|overload|inspire|spellburst|outcast)\s*:"
+    r"|[+-]\d+\s*/\s*[+-]\d+"
+    r"|\b(?:наносит|нанесите|наносят)\s+\d+\s+(?:ед\.?|единиц\w*)\s+урона"
+    r"|\bdeals?\s+\d+\s+damage"
+    r"|\b(?:призывает|призовите|summons?)\b"
+    r"|\b(?:возьмите|берёт|берет|draws?)\s+(?:\d+\s+|an?\s+)?(?:карт|cards?\b)"
+    r"|\b(?:восстанавливает|восстановите|restores?)\s+\d+"
+    r"|\b(?:получает|получите|gains?)\s+\+\d+"
+    r"|\b(?:провокаци\w*|божественн\w+ щит\w*|рывок|натиск|маскировк\w*|"
+    r"неистовство ветра|похищение жизни|перерождени\w*|taunt|divine shield|"
+    r"charge|rush|stealth|windfury|lifesteal|reborn)\b",
+    re.IGNORECASE,
+)
+# A card-effect statement becomes an insight only when it names a decision,
+# a measured outcome, a comparison or a source position.
+GAME_SIGNAL_RE = re.compile(
+    r"\d+(?:[.,]\d+)?\s?%|п\.\s?п\."
+    r"|\b(?:винрейт\w*|win ?rates?|процент\w* побед|дол\w+ побед)\b"
+    r"|\b\d+\s*[-‑]?\s*(?:й|м|го|ом)?\s+ход\w*|\bход\w*\s+\d+"
+    r"|\b(?:муллиган\w*|mulligan\w*|матчап\w*|matchups?)\b"
+    r"|\b(?:против|вместо|раньше|позже|придерж\w*|держ(?:ать|ите|ат|ит)|"
+    r"ошиб\w*|спор\w*|сообществ\w*|объясня\w*|считает|считают|утвержда\w*|"
+    r"чаще|реже|выгодн\w*|размен\w*|выборк\w*|матч(?:ей|ах|и)?|партий|партиях)\b"
+    r"|\bпо словам\b",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -380,10 +426,161 @@ class Table:
     line_indexes: frozenset[int]
 
 
+@dataclass
+class InsightItem:
+    line: int
+    statement: str
+    why: str = ""
+    confidence: str = ""
+    links: tuple[str, ...] = ()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("markdown", help="Path to the editor-ready Markdown file")
+    parser.add_argument(
+        "--require-insights",
+        action="store_true",
+        help="Fail when the «Неочевидное» block is missing",
+    )
     return parser.parse_args()
+
+
+def _plain(value: str) -> str:
+    return " ".join(re.sub(r"[*_~]", "", strip_link_destinations(value)).split())
+
+
+def card_text_paraphrase(statement: str) -> bool:
+    """Flag a statement that restates a card effect without game context."""
+
+    return bool(CARD_TEXT_RE.search(statement)) and not GAME_SIGNAL_RE.search(
+        statement
+    )
+
+
+def insight_confidence(value: str) -> str | None:
+    words = WORD_RE.findall(_plain(value).casefold())
+    return INSIGHT_CONFIDENCE.get(words[0]) if words else None
+
+
+def insight_items(markdown: str) -> tuple[int | None, list[InsightItem]]:
+    """Return the «Неочевидное» heading line and its parsed list items."""
+
+    lines = code_masked_rendered_lines(markdown)
+    start = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if (match := H2_RE.match(line))
+            and normalize_heading(match.group(1)) in INSIGHT_HEADINGS
+        ),
+        None,
+    )
+    if start is None:
+        return None, []
+    items: list[InsightItem] = []
+    item_indent: int | None = None
+    for index in range(start + 1, len(lines)):
+        line = lines[index]
+        if SECTION_END_RE.match(line):
+            break
+        field = INSIGHT_FIELD_RE.match(line)
+        if field and items:
+            label = field.group("label").casefold()
+            value = field.group("value")
+            if label == "почему интересно":
+                items[-1].why = _plain(value)
+            elif label == "уверенность":
+                items[-1].confidence = _plain(value)
+            else:
+                items[-1].links += tuple(visible_external_links(value))
+            continue
+        item = INSIGHT_ITEM_RE.match(line)
+        # Deeper-indented bullets belong to the current item, not a new one.
+        if item and (item_indent is None or len(item.group(1)) <= item_indent):
+            item_indent = len(item.group(1))
+            items.append(InsightItem(index + 1, _plain(item.group(2))))
+    return start + 1, items
+
+
+def validate_insights(
+    markdown: str, *, require: bool = False
+) -> tuple[list[Finding], list[Finding]]:
+    errors: list[Finding] = []
+    warnings: list[Finding] = []
+    heading, items = insight_items(markdown)
+    if heading is None:
+        if require:
+            errors.append(
+                Finding(
+                    "missing-insights",
+                    "нужен раздел «Неочевидное» с подтверждёнными наблюдениями",
+                )
+            )
+        return errors, warnings
+    if not items:
+        errors.append(
+            Finding("empty-insights", "раздел «Неочевидное» не содержит пунктов", heading)
+        )
+        return errors, warnings
+    if len(items) > MAX_INSIGHT_ITEMS:
+        errors.append(
+            Finding(
+                "too-many-insights",
+                f"в разделе «Неочевидное» {len(items)} пунктов; "
+                f"допустимо не более {MAX_INSIGHT_ITEMS}",
+                heading,
+            )
+        )
+    elif len(items) < MIN_INSIGHT_ITEMS:
+        warnings.append(
+            Finding(
+                "few-insights",
+                f"в разделе «Неочевидное» {len(items)} пунктов при ориентире "
+                f"{MIN_INSIGHT_ITEMS}–{MAX_INSIGHT_ITEMS}; не добивайте блок "
+                "пересказом карт",
+                heading,
+            )
+        )
+    for item in items:
+        if not item.statement:
+            errors.append(
+                Finding("insight-missing-statement", "у пункта нет утверждения", item.line)
+            )
+        if not item.why or item.why.casefold() == item.statement.casefold():
+            errors.append(
+                Finding(
+                    "insight-missing-why",
+                    "укажите «Почему интересно:» — что здесь неочевидно читателю",
+                    item.line,
+                )
+            )
+        if not item.links:
+            errors.append(
+                Finding(
+                    "insight-missing-source",
+                    "в «На чём держится:» нужна прямая ссылка на проверенный источник",
+                    item.line,
+                )
+            )
+        if insight_confidence(item.confidence) is None:
+            errors.append(
+                Finding(
+                    "insight-missing-confidence",
+                    "укажите «Уверенность:» высокая, средняя или низкая",
+                    item.line,
+                )
+            )
+        if card_text_paraphrase(item.statement):
+            errors.append(
+                Finding(
+                    "insight-card-paraphrase",
+                    "утверждение пересказывает эффект карты; назовите решение, "
+                    "цифру, условие или позицию источника",
+                    item.line,
+                )
+            )
+    return errors, warnings
 
 
 def strip_html_comments(line: str, inside_comment: bool) -> tuple[str, bool]:
@@ -1482,9 +1679,10 @@ def collect_paragraphs(lines: list[str], table_lines: set[int]) -> list[Paragrap
     return paragraphs
 
 
-def validate_markdown(markdown: str) -> tuple[list[Finding], list[Finding]]:
-    errors: list[Finding] = []
-    warnings: list[Finding] = []
+def validate_markdown(
+    markdown: str, *, require_insights: bool = False
+) -> tuple[list[Finding], list[Finding]]:
+    errors, warnings = validate_insights(markdown, require=require_insights)
     rendered = visible_lines(markdown, prose=False)
     prose = visible_lines(markdown, prose=True)
 
@@ -1766,7 +1964,9 @@ def main() -> int:
         print(f"- error [unreadable-file]: не удалось прочитать {path}: {exc}")
         return 1
 
-    errors, warnings = validate_markdown(markdown)
+    errors, warnings = validate_markdown(
+        markdown, require_insights=args.require_insights
+    )
     print_result(errors, warnings)
     return int(bool(errors))
 
