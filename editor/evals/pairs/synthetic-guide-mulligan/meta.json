@@ -1,0 +1,9 @@
+{
+  "id": "synthetic-guide-mulligan",
+  "type": "GUIDE",
+  "topic": "муллиган темповой колоды (заглушка)",
+  "date": "2026-10-25",
+  "origin": "synthetic",
+  "synthetic": true,
+  "notes": "Синтетическая заглушка для проверки протокола; не текст владельца."
+}

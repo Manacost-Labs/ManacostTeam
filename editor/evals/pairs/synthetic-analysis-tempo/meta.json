@@ -1,0 +1,9 @@
+{
+  "id": "synthetic-analysis-tempo",
+  "type": "ANALYSIS",
+  "topic": "почему темповая колода сильна в мете (заглушка)",
+  "date": "2026-10-25",
+  "origin": "synthetic",
+  "synthetic": true,
+  "notes": "Синтетическая заглушка для проверки протокола; не текст владельца."
+}

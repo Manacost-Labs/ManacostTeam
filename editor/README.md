@@ -347,7 +347,9 @@ ru-spelling-dictionary 1.0.8 с проверкой SHA-256 для `amd64` и
 не исправляет текст автоматически.
 Evaluation запускается командой `npx promptfoo eval -c evals/promptfooconfig.yaml`;
 описание кейсов, baseline/candidate и дополнительных judge-метрик находится в
-[`docs/evals.md`](docs/evals.md). Правила Vale, их профили и тесты описаны в
+[`docs/evals.md`](docs/evals.md). Главная метрика качества — слепое сравнение
+правки ИИ с эталоном владельца на парах [`evals/pairs/`](evals/pairs/README.md):
+`node evals/blind_review.js pairs --out build/blind-pairs`. Правила Vale, их профили и тесты описаны в
 [`docs/sidecars.md`](docs/sidecars.md), команды диагностики стека — в
 [`docs/editor-toolchain.md`](docs/editor-toolchain.md).
 
