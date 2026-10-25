@@ -13,6 +13,7 @@ import json
 import sys
 from pathlib import Path
 
+from editorteam import card_paraphrase as CardParaphrase
 from editorteam import corpus as Corpus
 from editorteam import profiles as P
 from editorteam import ru_audit as RuAudit
@@ -988,6 +989,73 @@ def spelling_hints_cmd(args) -> int:
     return exit_code(report, args.fail_on)
 
 
+def _card_lexicon():
+    C = _scripts()
+    cards = C.sibling("cards")
+    cards.ensure_pymorphy()
+    from editorteam.card_shortcodes import AMBIGUOUS_NAMES
+
+    texts = CardParaphrase.load_texts()
+    idx = cards.Index(list(texts), C.morph())
+    skip = cards.NOT_CARDS | AMBIGUOUS_NAMES
+    return CardParaphrase.Lexicon(idx, texts, cards.corpus_common(idx), skip)
+
+
+def _prose_lines(text: str) -> str:
+    """Проза без фронт-маттера, кода, цитат, таблиц и заголовков — строки на месте,
+    чтобы номер строки в отчёте совпадал с файлом."""
+    C = _scripts()
+    m = C.FRONT_MATTER.match(text)
+    if m:
+        text = "\n" * m.group(0).count("\n") + text[m.end() :]
+    lines = C.mask_protected(text).split("\n")
+    return "\n".join("" if C._TABLE_ROW.match(x) or C._HEADING.match(x) else x for x in lines)
+
+
+def card_paraphrase_cmd(args) -> int:
+    """Пересказ эффектов карт, упоминания без совета и плотность инсайта."""
+    if args.update_texts:
+        import datetime as dt
+        import urllib.request
+
+        def fetch(url):
+            req = urllib.request.Request(url, headers={"User-Agent": "editorteam"})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return json.loads(r.read().decode("utf-8"))
+
+        n = CardParaphrase.update_texts(fetch, taken=dt.date.today().isoformat())
+        print(f"обновлено: {n} названий с текстами")
+        return 0
+    if not args.file and not args.calibrate:
+        print("card-paraphrase: нужен файл или --calibrate папка", file=sys.stderr)
+        return 2
+    missing = [d for d in args.calibrate or () if not Path(d).is_dir()]
+    if missing:
+        print(f"card-paraphrase: нет папки {', '.join(missing)}", file=sys.stderr)
+        return 2
+    lex = _card_lexicon()
+    if args.calibrate:
+        reports = []
+        for folder in args.calibrate:
+            for path in sorted(Path(folder).glob("*.md")):
+                text = _prose_lines(path.read_text(encoding="utf-8"))
+                reports.append(CardParaphrase.analyze(text, lex, lambda t: t, str(path)))
+        summary = CardParaphrase.calibrate(reports)
+        summary["thresholds"] = CardParaphrase.thresholds()
+        summary["out_of_norm"] = {
+            key: sum(1 for r in reports if r["verdicts"][key] is False)
+            for key in ("paraphrase_rate", "bare_mention_rate", "insight_density")
+        }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0
+    report = CardParaphrase.analyze(_read(Path(args.file)), lex, _prose_lines, str(args.file))
+    if args.format == "json":
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print(CardParaphrase.render(report, limit=args.limit))
+    return 1 if args.check and False in report["verdicts"].values() else 0
+
+
 def _print_corpus_summary(summary: dict, args) -> None:
     if args.format == "json":
         print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -1183,6 +1251,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="показывать и замену одного известного слова другим (это не опечатка)",
     )
     sp.set_defaults(func=spelling_hints_cmd)
+
+    cp = sub.add_parser(
+        "card-paraphrase",
+        help="механический текст про карты: пересказ эффекта, упоминание без совета, инсайт",
+        parents=[common],
+    )
+    cp.add_argument("file", nargs="?", help="Markdown или TXT")
+    cp.add_argument("--check", action="store_true", help="код 1, если метрика хуже нормы автора")
+    cp.add_argument("--limit", type=int, default=20, help="сколько цитат показать в тексте")
+    cp.add_argument(
+        "--calibrate", nargs="+", metavar="DIR", help="распределение метрик по папкам корпуса"
+    )
+    cp.add_argument(
+        "--update-texts", action="store_true", help="перекачать тексты карт с HearthstoneJSON"
+    )
+    cp.set_defaults(func=card_paraphrase_cmd)
 
     ra = sub.add_parser(
         "ru-audit",
