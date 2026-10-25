@@ -80,7 +80,7 @@ func TestAllEditModesRejectMissingContextualReview(t *testing.T) {
 
 func TestUnchangedLegacyInputStillNeedsFullReview(t *testing.T) {
 	model := &fakeLLM{omitContextualReview: true, replies: []string{criticJSON("accept")}}
-	if err := ReviewFactualEdit(context.Background(), model, "Текст.", "Текст.", nil); err == nil || model.i != 2 {
+	if err := ReviewFactualEdit(context.Background(), model, "Текст.", "Текст.", nil); err == nil || model.i != 3 {
 		t.Fatalf("identical input bypassed review: calls=%d err=%v", model.i, err)
 	}
 	model = &fakeLLM{replies: []string{criticJSON("accept")}}

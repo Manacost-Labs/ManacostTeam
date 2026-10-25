@@ -1307,30 +1307,70 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return out, nil
 	}
 	s.logStage(ctx, "critic", started, attempt, ReasonCriticInvalid)
-	retry := append(append([]llm.Message{}, messages...),
-		llm.Message{Role: "assistant", Content: text},
-		llm.Message{Role: "user", Content: "Ответ не разобран: " + parseErr.Error() + ". Верни только исправленный JSON по схеме из инструкции, без пояснений и без текста статьи."},
-	)
-	started = time.Now()
-	text, err = model.Complete(ctx, retry, 0)
-	if err != nil {
-		kind := errorKind(ctx, err)
-		s.logStage(ctx, "critic_retry", started, attempt, kind)
-		return criticResult{}, &criticError{Kind: kind, Err: err}
-	}
-	out, parseErr = parseCritic(text)
-	applyReviewScope(&out, in)
-	out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
-	out.Findings = append(out.Findings, contextualFindings(in, out)...)
+	// Malformed JSON gets one retry. A parsed reply whose evidence breaks the
+	// review contract gets one more: the corrections are mechanical (which
+	// text to quote, which finding to link) and the same proof is required.
+	retries := 1
 	if out.Verdict != "" {
-		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out), validateContextualReview(in, out))
+		retries = 2
 	}
-	if parseErr != nil {
+	for try := 1; ; try++ {
+		messages = append(messages,
+			llm.Message{Role: "assistant", Content: text},
+			llm.Message{Role: "user", Content: "Ответ не разобран: " + parseErr.Error() + ". Верни только исправленный JSON по схеме из инструкции, без пояснений и без текста статьи." + criticRetryHints(parseErr)},
+		)
+		started = time.Now()
+		text, err = model.Complete(ctx, messages, 0)
+		if err != nil {
+			kind := errorKind(ctx, err)
+			s.logStage(ctx, "critic_retry", started, attempt, kind)
+			return criticResult{}, &criticError{Kind: kind, Err: err}
+		}
+		out, parseErr = parseCritic(text)
+		applyReviewScope(&out, in)
+		out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
+		out.Findings = append(out.Findings, contextualFindings(in, out)...)
+		if out.Verdict != "" {
+			parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out), validateContextualReview(in, out))
+		}
+		if parseErr == nil {
+			s.logStage(ctx, "critic_retry", started, attempt, "")
+			return out, nil
+		}
 		s.logStage(ctx, "critic_retry", started, attempt, ReasonCriticInvalid)
-		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: parseErr}
+		if try >= retries {
+			return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: parseErr}
+		}
 	}
-	s.logStage(ctx, "critic_retry", started, attempt, "")
-	return out, nil
+}
+
+// criticRetryHints restates the evidence rule behind each observed contract
+// error. It explains where the quote must come from; it never relaxes a rule.
+func criticRetryHints(err error) string {
+	msg := err.Error()
+	var hints []string
+	if strings.Contains(msg, "scope_quote") {
+		hints = append(hints, "scope=preserved — scope_quote дословно из candidate (нового текста), а не из source; scope=lost — из source")
+	}
+	if strings.Contains(msg, "reading_quote must quote candidate") {
+		hints = append(hints, "reading_quote — дословный фрагмент candidate внутри candidate_context этой правки")
+	}
+	if strings.Contains(msg, "repair requires") {
+		hints = append(hints, "decision=repair только при verdict repair или reject и finding с тем же rule_id, чей message содержит reading_quote дословно; если такого finding нет, реши keep или добавь finding")
+	}
+	if strings.Contains(msg, "keep contradicts") {
+		hints = append(hints, "keep допустим только при reading=natural, scope=preserved и пустом finding_rule_id")
+	}
+	if strings.Contains(msg, "requires reader_problem") {
+		hints = append(hints, "каждый check со статусом issue заполняет reader_problem, benefit, meaning_risk и suggestion")
+	}
+	if strings.Contains(msg, "keep_span") {
+		hints = append(hints, "для каждого утраченного keep_span добавь strength_changes с его quote целиком, reason и replacement_quote из candidate")
+	}
+	if len(hints) == 0 {
+		return ""
+	}
+	return " Как исправить: " + strings.Join(hints, "; ") + "."
 }
 
 func applyReviewScope(out *criticResult, in criticInput) {

@@ -26,7 +26,8 @@ func TestMissingLocalReviewRetriesThenFailsClosed(t *testing.T) {
 	model := &fakeLLM{omitLocalReview: true, replies: []string{criticJSON("accept")}}
 	s := New(model, nil, "fake")
 	_, err := s.critic(context.Background(), rules.RuleBundle{}, criticInput{Mode: "edit", Source: "Задача была завершена командой.", Candidate: "Команда завершила задачу."}, 1)
-	if err == nil || err.Kind != ReasonCriticInvalid || len(model.messages) != 2 {
+	// Parsed but unproven evidence gets two corrective retries, then fails closed.
+	if err == nil || err.Kind != ReasonCriticInvalid || len(model.messages) != 3 {
 		t.Fatalf("missing review escaped retry: %v, %d calls", err, len(model.messages))
 	}
 	var payload criticInput
@@ -43,7 +44,7 @@ func TestCriticRetryReportsBothStrengthAndLocalEvidenceErrors(t *testing.T) {
 	model := &fakeLLM{omitLocalReview: true, replies: []string{criticJSON("accept")}}
 	s := New(model, nil, "fake")
 	_, err := s.critic(context.Background(), rules.RuleBundle{}, criticInput{Mode: "edit", Source: source, Candidate: candidate, KeepSpans: []StrongSpan{{Quote: source, Reason: "Удачный смысл."}}}, 1)
-	if err == nil || len(model.messages) != 2 {
+	if err == nil || len(model.messages) != 3 {
 		t.Fatal("invalid evidence escaped bounded retry")
 	}
 	message := model.messages[1][len(model.messages[1])-1].Content
@@ -179,5 +180,41 @@ func TestContextualScopeAndUsefulSyntaxCanSurviveKeepSpan(t *testing.T) {
 	result := run(t, model, source, "edit")
 	if !result.Accepted || result.Text != candidate || result.Attempts != 1 {
 		t.Fatalf("contextual scope or keep-span improvement discarded: %+v", result)
+	}
+}
+
+func TestCriticEvidenceErrorGetsSecondCorrectionWithHints(t *testing.T) {
+	source, candidate := "Задача была завершена командой.", "Команда завершила задачу."
+	bad := strings.Replace(criticJSON("accept"), `"verdict"`, `"edit_assessments":[{"edit_id":1,"reading_quote":"Команда завершила задачу.","reading":"natural","scope_quote":"Задача была завершена командой.","scope":"preserved","decision":"keep","reason":"Активный залог короче."}],"verdict"`, 1)
+	good := strings.Replace(bad, `"scope_quote":"Задача была завершена командой."`, `"scope_quote":"Команда завершила задачу."`, 1)
+	model := &fakeLLM{omitLocalReview: true, replies: []string{bad, bad, good}}
+	out, err := New(model, nil, "fake").critic(context.Background(), rules.RuleBundle{}, criticInput{Mode: "edit", Source: source, Candidate: candidate}, 1)
+	if err != nil || out.Verdict != "accept" || len(model.messages) != 3 {
+		t.Fatalf("second evidence correction not used: %v, %d calls", err, len(model.messages))
+	}
+	retry := model.messages[1][len(model.messages[1])-1].Content
+	if !strings.Contains(retry, "scope_quote") || !strings.Contains(retry, "дословно из candidate") {
+		t.Fatalf("retry lacks the quote-source hint: %s", retry)
+	}
+}
+
+func TestCriticMalformedJSONStillRetriesOnce(t *testing.T) {
+	model := &fakeLLM{replies: []string{"мусор", "ещё мусор", criticJSON("accept")}}
+	_, err := New(model, nil, "fake").critic(context.Background(), rules.RuleBundle{}, criticInput{Mode: "facts_only", Source: "Текст.", Candidate: "Текст."}, 1)
+	if err == nil || err.Kind != ReasonCriticInvalid || len(model.messages) != 2 {
+		t.Fatalf("malformed JSON retry budget changed: %v, %d calls", err, len(model.messages))
+	}
+}
+
+// The observed live failures were evidence-contract errors, not transport:
+// a fenced reply with prose around the object parses like the bare object.
+func TestParseCriticToleratesWrappingAroundJSON(t *testing.T) {
+	bare, err := parseCritic(criticJSON("accept"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrapped, err := parseCritic("Вот проверка:\n```json\n" + criticJSON("accept") + "\n```\nГотово.")
+	if err != nil || wrapped.Verdict != bare.Verdict || wrapped.Scores != bare.Scores {
+		t.Fatalf("wrapped critic reply rejected: %v", err)
 	}
 }
