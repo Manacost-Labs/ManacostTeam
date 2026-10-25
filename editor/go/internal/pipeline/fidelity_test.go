@@ -69,11 +69,12 @@ func TestBoundaryPunctuationRepairPreservesNeighborAndParagraph(t *testing.T) {
 	if stageOf(model.messages[3][0].Content) != "repair" {
 		t.Fatal("finding was mistaken for an invalid critic response")
 	}
-	// The qualifier example must reach analysis and the writer, not only a
+	// The qualifier example must reach analysis before the draft, not only a
 	// critic looking at an already chosen draft (the observed missed route).
+	// The writer receives that analysis; its own prompt is the short core.
 	for _, messages := range model.messages {
 		stage := stageOf(messages[0].Content)
-		if stage != "repair" && !strings.Contains(messages[0].Content, qualifierExampleInstruction) {
+		if stage != "repair" && stage != "rewrite" && !strings.Contains(messages[0].Content, qualifierExampleInstruction) {
 			t.Fatalf("qualifier distinction missing from %s request", stage)
 		}
 	}

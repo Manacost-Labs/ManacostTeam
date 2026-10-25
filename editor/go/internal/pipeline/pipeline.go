@@ -34,7 +34,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/rules"
 )
 
-const PromptVersion = "editorteam-go-v62"
+const PromptVersion = "editorteam-go-v63"
 
 // MinPreservationScore is the acceptance floor for facts and meaning, not style.
 const MinPreservationScore = 8
@@ -84,6 +84,7 @@ type Request struct {
 	// Internal fallback: exact previous draft, review only, no new repair budget.
 	reviewOnly       bool
 	reviewStrengths  []StrongSpan
+	brief            *WritingBrief                    // set by the brief stage for the writer only
 	TaskContext      json.RawMessage                  `json:"task_context,omitempty"`
 	Text             string                           `json:"text"`
 	CandidateText    string                           `json:"candidate_text,omitempty"`   // edit: revise this draft against Text without regenerating it
@@ -103,6 +104,8 @@ type Request struct {
 	Meaning          string                           `json:"meaning,omitempty"`
 	ReaderLevel      string                           `json:"reader_level,omitempty"`
 	Retrieval        string                           `json:"retrieval,omitempty"` // auto | on | off; пусто = auto
+	// Facts from an XMLTeam replay analysis; they may ground turn-by-turn scenes.
+	ReplayFacts []ReplayFact `json:"replay_facts,omitempty"`
 }
 
 // Scores — оценки critic по шкале 0–10. Они заполняются только из валидного
@@ -202,6 +205,7 @@ type Result struct {
 	UnsupportedAdditions     []string                      `json:"unsupported_additions,omitempty"`
 	ReviewerModel            string                        `json:"reviewer_model,omitempty"`
 	RevisionFallback         *RevisionFallback             `json:"revision_fallback,omitempty"`
+	Writing                  *WritingReport                `json:"writing,omitempty"`
 }
 
 type RevisionFallback struct {
@@ -303,6 +307,9 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 	req.Mode = mode
 	if err := editorialreview.ValidateSources(req.SourceSnapshots); err != nil {
 		return nil, &RequestError{Message: err.Error()}
+	}
+	if err := validateReplayFacts(req.ReplayFacts); err != nil {
+		return nil, err
 	}
 	if req.CandidateText != "" && (mode != "edit" || strings.TrimSpace(req.CandidateText) == "") {
 		return nil, &RequestError{Message: "candidate_text должен содержать текст и доступен только в режиме edit"}
@@ -424,6 +431,29 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 	}
 	result.Analysis = analysis
 	result.FactualRisks = append(result.FactualRisks, analysis.FactualRisks...)
+	writes := s.LLM != nil && !req.reviewOnly && isWritingMode(mode) && (req.CandidateText == "" || req.ReviseCandidate)
+	if writes {
+		result.Writing = &WritingReport{}
+	}
+	if writes && needsBrief(mode) {
+		started := time.Now()
+		brief, err := s.writingBrief(ctx, req, analysis)
+		if err != nil {
+			s.logStage(ctx, "brief", started, 1, errorKind(ctx, err))
+			return nil, err
+		}
+		s.logStage(ctx, "brief", started, 1, "")
+		result.Writing.Brief = brief
+		if brief.Stop != "" {
+			// No reader thesis, no text: say why instead of writing filler.
+			result.Writing.StopReason = brief.Stop
+			result.RejectionReasons = []string{ReasonNoThesis}
+			result.FactualRisks = append(result.FactualRisks, "Текст не написан: "+brief.Stop)
+			result.Status = StatusRejected
+			return result, nil
+		}
+		req.brief = brief
+	}
 	candidate := req.Text
 	if req.CandidateText != "" && s.LLM != nil && !req.ReviseCandidate {
 		candidate = req.CandidateText
@@ -441,6 +471,12 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		candidate = preserveEditParagraphs(mode, req.Text, draft)
 		if req.ReviseCandidate {
 			candidate = preserveEditParagraphs(mode, req.CandidateText, candidate)
+		}
+		if writes {
+			started := time.Now()
+			candidate = s.polishDraft(ctx, bundle, examples, analysis.Strengths, candidate, result.Writing)
+			s.logStage(ctx, "writing_passes", started, 1, "")
+			candidate = preserveEditParagraphs(mode, req.Text, candidate)
 		}
 	}
 	result.Attempts = 1
@@ -476,7 +512,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			guard = guards.CompareWithTerms(req.Text, candidate, pyRules.Protected)
 		}
 		if mode == "reconstruct" {
-			guard = reconstructionGuard(verifiedText+"\n"+req.Handoff.scopeText(), candidate, req.Handoff.sourceNameForms()...)
+			guard = reconstructionGuard(verifiedText+"\n"+req.Handoff.scopeText()+"\n"+replayText(groundedReplayFacts(req.ReplayFacts)), candidate, req.Handoff.sourceNameForms()...)
 		}
 		leaks = corpusLeaks(verifiedText, candidate, examples)
 		copies = DetectCorpusCopy(verifiedText, candidate, examples)
@@ -491,7 +527,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 			if req.Handoff != nil {
 				started := time.Now()
 				result.FactReview = nil
-				fact, err := s.factReview(ctx, req.Handoff, candidate)
+				fact, err := s.factReview(ctx, req.Handoff, candidate, groundedReplayFacts(req.ReplayFacts)...)
 				if err != nil {
 					s.logStage(ctx, "fact_review", started, result.Attempts, "fact_review_failed")
 					criticOK = false
@@ -524,6 +560,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 					Analysis:   analysis, Handoff: req.Handoff, SourceSnapshots: req.SourceSnapshots, SourceClaims: bundle.SourceClaims, ProtectedEntities: bundle.ProtectedEntities,
 					KeepSpans:    analysis.Strengths,
 					ToolFindings: repairable(findings), StyleExamples: promptExamples(examples),
+					ReplayFacts: groundedReplayFacts(req.ReplayFacts),
 				}, result.Attempts)
 				if cerr != nil {
 					criticOK = false
@@ -935,6 +972,7 @@ type criticInput struct {
 	ProtectedEntities  []string                         `json:"protected_entities"`
 	ToolFindings       []analyzers.Finding              `json:"tool_findings"`
 	StyleExamples      []promptExample                  `json:"style_examples"`
+	ReplayFacts        []ReplayFact                     `json:"replay_facts,omitempty"`
 	KeepSpans          []StrongSpan                     `json:"keep_spans,omitempty"`
 	RequiredSections   []string                         `json:"sections_required,omitempty"`
 	ReviewScope        string                           `json:"review_scope,omitempty"`
@@ -987,7 +1025,7 @@ const criticInstruction = "\nТы critic. Не переписывай текст
 	"оцени именно изменение candidate относительно source. Верни только JSON вида " +
 	`{"no_new_facts":true,"unsupported_additions":[],"verdict":"accept|repair|reject","scores":{"factual_preservation":0,"meaning_preservation":0,"clarity":0,"structure":0,"usefulness":0,"natural_russian":0,"author_voice":0,"terminology":0},"improvements":[{"category":"clarity","before":"","after":"","reason":"","reader_problem":"","benefit":"","meaning_risk":""}],"regressions":[],"findings":[{"rule_id":"","severity":"info|warning|error|blocker","message":"","line":0}],"repair_required":false}` +
 	"Поля no_new_facts и unsupported_additions обязательны. Проверь каждое новое описание, механику, имя, причинное объяснение, пример, численное значение и совет. " +
-	"Основание — source, проверенный research_handoff и переданные полные source_snapshots, а не память модели, анализ черновика или стиль корпуса. Доказательное исправление исходной ошибки по snapshot допустимо только с полным original_factual_checks/issues/resolution=corrected; оно не считается unsupported_addition. Если подтверждения нет или смысл неясен, no_new_facts=false и перечисли добавления дословными фрагментами candidate в unsupported_additions. " +
+	"Основание — source, проверенный research_handoff, переданные полные source_snapshots и replay_facts (факты XML-реплея observed/derived с packet evidence; сцена сверх них — неподтверждённое добавление), а не память модели, анализ черновика или стиль корпуса. Доказательное исправление исходной ошибки по snapshot допустимо только с полным original_factual_checks/issues/resolution=corrected; оно не считается unsupported_addition. Если подтверждения нет или смысл неясен, no_new_facts=false и перечисли добавления дословными фрагментами candidate в unsupported_additions. " +
 	"Не превращай проверку в исправление исходных фактов по памяти. Неподтверждённое утверждение не становится допустимым из-за красивого объяснения или высокой оценки текста. " +
 	"При mode=facts_only не отклоняй из-за личных стилевых предпочтений и не требуй improvements; полнота содержательных проверок остаётся обязательной. " +
 	"verdict accept допускается только при factual_preservation>=8 и meaning_preservation>=8. Не повышай оценки ради принятия: при потере фактов или смысла верни reject либо repair с конкретными findings. " +
@@ -1125,11 +1163,6 @@ func hasPracticeIssue(checks []editorialreview.Check) bool {
 // textPayload — user message для analysis и draft: текст и, отдельным
 // полем, примеры стиля. Они не смешиваются с source_claims и protected_entities
 // из system prompt.
-func textPayload(text string, examples []retrieval.StyleExample) string {
-	raw, _ := json.Marshal(map[string]any{"text": text, "style_examples": promptExamples(examples)})
-	return string(raw)
-}
-
 func (s *Service) styleSystem(prompt string, examples []retrieval.StyleExample) string {
 	if len(examples) > 0 {
 		prompt += styleInstruction
@@ -1183,7 +1216,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 		if err != nil {
 			return "", err
 		}
-		payload, err := json.Marshal(map[string]any{"draft": req.Text, "research_handoff": authorEvidence, "condition_ledger": conditionLedger(req.Handoff), "canonical_names": sourceCardNames(req.Handoff), "style_examples": promptExamples(examples), "editorial_rules": map[string]any{"style": bundle.StyleRules, "terminology": bundle.TerminologyRules, "language": bundle.Language, "corrections": bundle.Corrections, "sections_required": bundle.SectionsRequired}})
+		payload, err := json.Marshal(map[string]any{"draft": req.Text, "research_handoff": authorEvidence, "condition_ledger": conditionLedger(req.Handoff), "canonical_names": sourceCardNames(req.Handoff), "style_examples": promptExamples(examples), "writing_brief": req.brief, "replay_facts": groundedReplayFacts(req.ReplayFacts), "contrast_pairs": bundle.ContrastPairs, "editorial_rules": map[string]any{"style": bundle.StyleRules, "terminology": bundle.TerminologyRules, "language": bundle.Language, "corrections": bundle.Corrections, "sections_required": bundle.SectionsRequired}})
 		if err != nil {
 			return "", err
 		}
@@ -1198,21 +1231,32 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 			"После черновика проверь функцию каждого абзаца, порядок объяснения и повторы. Конкретность, шутки, обращения и длина фраз зависят от задачи; одинаковая структура абзацев не нужна. Не заявляй личный опыт или тестирование без источника. " +
 			"Построй связный русский текст, убери повторы между главами, выдержи жанр и единый голос; соблюдай editorial_rules. Corrections.required — применимая норма, advisory — контекстный пример, не запрет. Fact corrections не доказывают текущий игровой факт. " +
 			"style_examples показывают только форму; факты бери исключительно из handoff. Верни только готовый материал."
-		return s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+editorialreview.Prompt()+craftInstruction+precisionInstruction+proseInstruction("reconstruct")+reconstructionReviewInstruction("reconstruct")+publicationAuthorInstruction+"\nsource_snapshots позволяют проверить handoff; они не разрешают добавлять новые факты сверх него. Противоречия должны быть разрешены перед приёмкой.", examples)}, {Role: "user", Content: withSourceSnapshots(string(payload), req.SourceSnapshots)}})
+		// Practice catalogue and craft rules are judged by the critic; the
+		// writer keeps the handoff contract and the short writing core.
+		return s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+writerCore("reconstruct")+reconstructionReviewInstruction("reconstruct")+publicationAuthorInstruction+"\nsource_snapshots позволяют проверить handoff; они не разрешают добавлять новые факты сверх него. Противоречия должны быть разрешены перед приёмкой.", examples)}, {Role: "user", Content: withSourceSnapshots(string(payload), req.SourceSnapshots)}})
 	}
 	raw, _ := json.Marshal(analysis)
-	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (наблюдения, не обязательный план; проверь выводы по исходнику, не добавляй факты из анализа):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Верни только готовый текст. Режим "+req.Mode+". Сохрани названия, числа, ссылки, отрицания, осторожность, разметку и голос автора. Сохрани смысл и голос strengths. Это не запрет исправлять внутри них грамматику, повтор или тяжёлый синтаксис: меняй только место с конкретной пользой для читателя, сохраняя условия и степень уверенности. В edit/rewrite можно разделить длинный абзац по смене мысли и сохранить соседние удачные формулировки; не сокращай ради самого сокращения. Сохрани сноски: звёздочка со следующим неразрывным пробелом — буквальный знак сноски; при обычном пробеле экранируй звёздочку обратной косой чертой, чтобы не получить список. Не добавляй новые карты, факты или выводы. Правильность мысли не запрещает улучшать её форму. Если после проверки структуры и синтаксиса конкретной пользы нет, верни текст без изменений.", examples)
-	system += editorialreview.Prompt()
+	// The writer reads only the core. Names, numbers, negations, paragraph
+	// boundaries and footnotes are enforced afterwards by guards, analyzers,
+	// preserveEditParagraphs and the critic, which keeps the practice catalogue.
+	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (наблюдения, не обязательный план; проверь выводы по исходнику, не добавляй факты из анализа):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Режим "+req.Mode+". Не добавляй новых карт, фактов, чисел и выводов. tool_observations в анализе — подсказки, не задания. Если конкретной пользы для читателя нет, верни текст без изменений."+writerCore(req.Mode), examples)
 	if req.Mode == "proofread" {
 		system += "\nКонтракт proofread: исправь только опечатки, грамматику, пунктуацию и типографику. Не меняй композицию, стиль и порядок абзацев."
 	}
-	input := textPayload(req.Text, examples)
+	inputData := map[string]any{"text": req.Text, "style_examples": promptExamples(examples)}
 	if req.ReviseCandidate {
-		data, _ := json.Marshal(map[string]any{"text": req.CandidateText, "source": req.Text, "style_examples": promptExamples(examples)})
-		input = string(data)
+		inputData = map[string]any{"text": req.CandidateText, "source": req.Text, "style_examples": promptExamples(examples)}
 		system += candidateRevisionInstruction(true)
 	}
-	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + precisionInstruction + craftInstruction + SourceEditingInstruction + proseInstruction(req.Mode) + formEditingInstruction(req.Mode) + "\ntool_observations и parse_warnings в анализе — диагностика, а не требования переписать текст. Опечатку проверь в контексте; частоту слов не исправляй автоматически.\nФИНАЛЬНЫЙ ФОРМАТ: верни только готовый текст правки без JSON, отчёта, пояснений или служебных меток."}, {Role: "user", Content: withSourceSnapshots(input, req.SourceSnapshots)}})
+	if isWritingMode(req.Mode) && len(bundle.ContrastPairs) > 0 {
+		inputData["contrast_pairs"] = bundle.ContrastPairs
+	}
+	if req.brief != nil {
+		inputData["writing_brief"] = req.brief
+		inputData["replay_facts"] = groundedReplayFacts(req.ReplayFacts)
+	}
+	input, _ := json.Marshal(inputData)
+	return s.complete(ctx, []llm.Message{{Role: "system", Content: system + SourceEditingInstruction + "\nФИНАЛЬНЫЙ ФОРМАТ: верни только готовый текст правки без JSON, отчёта, пояснений или служебных меток."}, {Role: "user", Content: withSourceSnapshots(string(input), req.SourceSnapshots)}})
 }
 
 // critic вызывает модель с JSON-данными в user message. Невалидный ответ
@@ -1385,7 +1429,8 @@ func (s *Service) repairWithSources(ctx context.Context, bundle rules.RuleBundle
 	if err != nil {
 		return "", err
 	}
-	system := s.styleSystem(bundle.WithQA(messagesOf(findings)).Prompt()+editorialreview.Prompt()+
+	// Repair fixes named findings; the practice catalogue stays with the critic.
+	system := s.styleSystem(bundle.WithQA(messagesOf(findings)).Prompt()+
 		"\nИсправь в candidate только места из QA_FINDINGS: они переданы в поле findings JSON в сообщении пользователя. "+
 		"Исправляй указанный смысловой сдвиг по source: восстанавливай его факты, количество, условия, отрицания и степень уверенности. Не добавляй сведения из памяти. "+
 		"Сохрани полезные правки candidate вне отмеченной ошибки, включая ясные формулировки и исправления грамматики. Не откатывай весь текст к source и не переписывай его заново. "+

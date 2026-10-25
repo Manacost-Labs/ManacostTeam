@@ -28,6 +28,8 @@ type fakeLLM struct {
 	// dedicated retry tests disable this to exercise missing/invalid evidence.
 	omitLocalReview bool
 	replies         []string
+	writing         map[string][]string // scripted writing-stage replies, consumed in order
+	writingCalls    [][]llm.Message
 	fail            map[int]error
 	messages        [][]llm.Message
 	stages          []string
@@ -35,7 +37,27 @@ type fakeLLM struct {
 	i               int
 }
 
+// Writing stages are scripted apart from the main reply queue: most tests
+// cover other gates and need neutral answers there (empty plan changes).
+var writingStageMarkers = map[string]string{briefMarker: "brief", skipMarker: "skip", skipRewriteMarker: "skip_rewrite", variantsMarker: "variants", variantJudgeMarker: "variant_judge"}
+
+const defaultBriefJSON = `{"reader_gain":"Когда Монетку выгоднее приберечь, чем сыграть сразу.","non_obvious":"Ранний розыгрыш теряет темп в долгом матч-апе.","sections":[{"decision":"когда приберечь Монетку против агро","why":"чтобы ответить на ранние угрозы"}]}`
+
+var defaultWritingReplies = map[string]string{"brief": defaultBriefJSON, "skip": `{"skip":[]}`, "skip_rewrite": "", "variants": `{"variants":[]}`, "variant_judge": `{"best":0}`}
+
+func writingStageOf(system string) string {
+	for marker, stage := range writingStageMarkers {
+		if strings.Contains(system, marker) {
+			return stage
+		}
+	}
+	return ""
+}
+
 func stageOf(system string) string {
+	if stage := writingStageOf(system); stage != "" {
+		return stage
+	}
 	switch {
 	case strings.Contains(system, "QA_FINDINGS"):
 		return "repair"
@@ -49,6 +71,14 @@ func stageOf(system string) string {
 
 func (f *fakeLLM) Model() string { return "fake-model" }
 func (f *fakeLLM) Complete(_ context.Context, messages []llm.Message, _ int) (string, error) {
+	if stage := writingStageOf(messages[0].Content); stage != "" {
+		f.writingCalls = append(f.writingCalls, append([]llm.Message(nil), messages...))
+		if queue := f.writing[stage]; len(queue) > 0 {
+			f.writing[stage] = queue[1:]
+			return queue[0], nil
+		}
+		return defaultWritingReplies[stage], nil
+	}
 	f.messages = append(f.messages, append([]llm.Message(nil), messages...))
 	stage := stageOf(messages[0].Content)
 	f.stages = append(f.stages, stage)

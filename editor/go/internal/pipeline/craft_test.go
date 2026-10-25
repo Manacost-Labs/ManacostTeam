@@ -33,7 +33,12 @@ func TestFormEditingIntentIsScopedToEditorialModes(t *testing.T) {
 				if stageOf(system) == "rewrite" && !strings.HasSuffix(system, "ФИНАЛЬНЫЙ ФОРМАТ: верни только готовый текст правки без JSON, отчёта, пояснений или служебных меток.") {
 					t.Errorf("ordinary writer prompt must end with writer-only output contract")
 				}
-				wantsForm := mode == "edit" || mode == "rewrite"
+				editorial := mode == "edit" || mode == "rewrite"
+				// Analysis and critic carry the form policy; the writer reads only its core.
+				wantsForm := editorial && stageOf(system) != "rewrite"
+				if stageOf(system) == "rewrite" && strings.Contains(system, "ЯДРО ПИСАТЕЛЯ") != editorial {
+					t.Errorf("writer core does not match mode %s", mode)
+				}
 				if strings.Contains(system, "Задача edit/rewrite:") != wantsForm {
 					t.Errorf("stage %s: form editing intent does not match mode %s", stageOf(system), mode)
 				}

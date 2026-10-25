@@ -168,7 +168,8 @@ func TestWriteStartsWithoutDraftAndKeepsEvidenceAndStyleBoundaries(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, rule := range []string{"копировать предложения дословно", "Пустое обобщение", "риторические вопросы"} {
+	// The writer reads the short core; the full craft catalogue stays with the critic.
+	for _, rule := range []string{"копировать предложения дословно", "ЯДРО ПИСАТЕЛЯ", "Общие слова, обещания и финал-пересказ", "не выдумывай"} {
 		if !strings.Contains(strings.ToLower(writer.messages[0][0].Content), strings.ToLower(rule)) {
 			t.Fatal("writing prompt lacks", rule)
 		}
@@ -319,6 +320,13 @@ func TestSmallConcreteEditsAndActionArgumentsReachEditorialStages(t *testing.T) 
 	_, _ = s.rewrite(context.Background(), req, bundle, a, nil)
 	_, _ = s.critic(context.Background(), bundle, criticInput{Source: req.Text, Candidate: "Готовый текст.", Mode: "edit"}, 1)
 	for _, messages := range model.messages {
+		if stageOf(messages[0].Content) == "rewrite" {
+			// The writer gets the analysis built under this policy, not the policy text.
+			if !strings.Contains(messages[0].Content, "ЯДРО ПИСАТЕЛЯ") {
+				t.Fatal("writer lost its core")
+			}
+			continue
+		}
 		for _, rule := range []string{"не повод сохранять доказанный дубль", "в справочник три статьи"} {
 			if !strings.Contains(messages[0].Content, rule) {
 				t.Fatal("editorial policy did not reach model stage:", rule)
