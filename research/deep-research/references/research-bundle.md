@@ -47,6 +47,7 @@ research-run/
 ├── contradictions.jsonl
 ├── checkpoints.jsonl
 ├── semantic-audit.jsonl
+├── insights.jsonl          # optional non-obvious material for the editor
 ├── audit.json
 ├── report.md
 ├── useful-data.md          # required for deep/exhaustive editor-ready
@@ -165,6 +166,30 @@ Use `community_claim_id` or `contradiction_id` and the corresponding template fi
 
 For coverage-enabled evidence, claim, and community records, `output_disposition` is exactly one of `main`, `useful_data`, `appendix`, or `omit`. Query records have section links but no output disposition. `omit` requires a non-empty `output_omit_reason`. `useful_data` requires a non-empty `useful_data_types` list containing only `number`, `comparison`, `advice`, `sequence`, `example`, `mistake`, `exception`, `deck_code`, `x_insight`, or `youtube_segment`. Every non-rejected critical or material claim must route to `main`.
 
+### Insight
+
+`insights.jsonl` is optional. It keeps material that makes a text interesting beyond bare facts: spoken pro reasoning, common mistakes, surprising numbers, community debates, why a deck works, and concrete game situations. [The insight guide](insight-material.md) explains where to look and what evidence each type needs.
+
+Every record has `insight_id` (`INS-0001`), `status` (`accepted` or `rejected`), and, when rejected, `rejection_reason`. An accepted record also needs:
+
+- `insight_type`: `pro_reasoning`, `common_mistake`, `surprising_number`, `community_debate`, `why_it_works`, or `game_situation`;
+- `statement` and a different `why_non_obvious` (what the reader likely does not expect);
+- `confidence`: `high`, `medium`, or `low`;
+- non-empty `evidence_ids` and `source_ids`; the sources must be exactly the sources of the listed evidence. A record without them cannot be accepted and never reaches the editor.
+
+Type minimums: `pro_reasoning` needs `speaker` and `timestamp` (`41:20` or `1:02:03`); `common_mistake` needs `correction` and evidence from two source lineages; `surprising_number` needs `metric`, `value`, `expected`, and `sample`; `community_debate` needs two or more `positions`, each with its own `evidence_ids` from the record; `why_it_works` needs `condition`; `game_situation` needs `situation` and `decision`. A `statement` that restates card text without a decision, number, comparison, or source position is rejected.
+
+```json
+{"insight_id": "INS-0001", "insight_type": "surprising_number", "status": "accepted",
+ "statement": "При розыгрыше на 4-м ходу доля побед карты ниже, чем на 6-м.",
+ "why_non_obvious": "Читатель ждёт, что дешёвую карту выгодно сыграть сразу.",
+ "metric": "доля побед по ходу розыгрыша", "value": "−5 п. п. на 4-м ходу",
+ "expected": "розыгрыш в кривую не хуже позднего", "sample": "120 000 партий, Алмаз+, 1–7 сентября",
+ "confidence": "high", "evidence_ids": ["EVD-0004"], "source_ids": ["SRC-0002"]}
+```
+
+At the final `editor-ready` stage, any accepted insight makes the «Неочевидное» block in `report.md` mandatory, and each block item must cite a source of an accepted insight. The block format is defined in [the editor contract](editor-insights-contract.md).
+
 ### Checkpoint
 
 `checkpoint_id`, `pass`, `created_at`, the five gap-detection lists, saturated/unsaturated branches, and next actions.
@@ -186,6 +211,7 @@ The deterministic validator checks:
 - execution/access timestamps and checkpoint gap-list shapes;
 - schema 1.1 provenance policy, snapshot containment, SHA-256 shape, and actual snapshot hash;
 - semantic-audit references, verdict values, match fields, and final critical/material coverage;
+- the optional `insights.jsonl` ledger: accepted records with evidence, matching sources, confidence, type minimums, and no card-text restatement;
 - editor-ready section links on query/evidence/claim/community records, plus allowed dispositions, omission reasons, and useful-data types on evidence/claim/community records when the feature flag is enabled;
 - final audit/readiness conditions.
 

@@ -93,6 +93,7 @@ Read when applicable:
 - [confidence system](references/confidence-system.md) when rating claims and writing conclusions;
 - [research operations](references/research-operations.md) and [research bundle](references/research-bundle.md) for `exhaustive`, `raw-research`, resumable/file-backed work, or handoff to another Skill;
 - [editor output](references/editor-output.md) for `editor-ready` material or whenever a user asks for a document that an editor can quickly understand and revise;
+- [insight material](references/insight-material.md) for articles and guides: collect pro reasoning, mistakes, surprising numbers, debates, and game situations as `insights.jsonl` records for the «Неочевидное» block;
 - [architecture](references/architecture.md) only when maintaining this package.
 
 Load one or more domain adapters only when relevant:

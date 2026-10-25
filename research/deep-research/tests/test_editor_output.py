@@ -12,9 +12,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATE = ROOT / "scripts/validate_editor_output.py"
+INSIGHT_FIXTURES = ROOT / "tests/fixtures/insights"
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from validate_editor_output import visible_external_links  # noqa: E402
+from validate_editor_output import (  # noqa: E402
+    card_text_paraphrase,
+    validate_markdown,
+    visible_external_links,
+)
 
 
 VALID_OPENING = """# Рабочий заголовок
@@ -1105,6 +1110,94 @@ Resolution status: resolved
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("[too-many-tables]", result.stdout)
         self.assertIn("[wide-table]", result.stdout)
+
+
+class InsightBlockValidationTest(unittest.TestCase):
+    def codes(self, markdown: str, **options: bool) -> tuple[set[str], set[str]]:
+        errors, warnings = validate_markdown(markdown, **options)
+        return {item.code for item in errors}, {item.code for item in warnings}
+
+    def fixture(self, name: str) -> str:
+        return (INSIGHT_FIXTURES / name).read_text(encoding="utf-8")
+
+    def test_good_block_passes(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(VALIDATE), "--require-insights", str(INSIGHT_FIXTURES / "good.md")],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn("insight", result.stdout)
+
+    def test_block_without_sources_fails(self) -> None:
+        errors, _ = self.codes(self.fixture("no-sources.md"))
+        self.assertIn("insight-missing-source", errors)
+
+    def test_card_text_paraphrase_fails(self) -> None:
+        errors, _ = validate_markdown(self.fixture("card-paraphrase.md"))
+        lines = [item.line for item in errors if item.code == "insight-card-paraphrase"]
+        self.assertEqual(lines, [11, 15, 19])
+
+    def test_missing_confidence_or_why_fails(self) -> None:
+        markdown = self.fixture("good.md")
+        markdown = markdown.replace("   - Уверенность: высокая.\n", "", 1)
+        markdown = markdown.replace(
+            "   - Почему интересно: обычный совет предлагает искать добор против любого соперника.\n",
+            "",
+        )
+        errors, _ = self.codes(markdown)
+        self.assertIn("insight-missing-confidence", errors)
+        self.assertIn("insight-missing-why", errors)
+
+    def test_unknown_confidence_fails(self) -> None:
+        markdown = self.fixture("good.md").replace(
+            "Уверенность: высокая.", "Уверенность: примерно наверняка.", 1
+        )
+        errors, _ = self.codes(markdown)
+        self.assertIn("insight-missing-confidence", errors)
+
+    def test_block_size_limits(self) -> None:
+        markdown = self.fixture("good.md")
+        start = markdown.index("1. **")
+        end = markdown.index("## Что важно")
+        items = markdown[start:end].strip() + "\n"
+        few = markdown[:start] + items.split("2. **")[0] + "\n" + markdown[end:]
+        _, warnings = self.codes(few)
+        self.assertIn("few-insights", warnings)
+        many = markdown[:start] + items * 3 + "\n" + markdown[end:]
+        errors, _ = self.codes(many)
+        self.assertIn("too-many-insights", errors)
+
+    def test_extra_nested_bullet_stays_inside_its_item(self) -> None:
+        markdown = self.fixture("good.md").replace(
+            "   - Уверенность: высокая.\n",
+            "   - Уверенность: высокая.\n   - Дополнительное пояснение к пункту.\n",
+            1,
+        )
+        errors, warnings = self.codes(markdown)
+        self.assertEqual(errors, set())
+        self.assertNotIn("too-many-insights", errors | warnings)
+
+    def test_block_is_optional_unless_required(self) -> None:
+        markdown = self.fixture("good.md")
+        start = markdown.index("## Неочевидное")
+        without = markdown[:start] + markdown[markdown.index("## Что важно"):]
+        self.assertNotIn("missing-insights", self.codes(without)[0])
+        self.assertIn("missing-insights", self.codes(without, require_insights=True)[0])
+
+    def test_internal_insight_id_is_rejected(self) -> None:
+        markdown = self.fixture("good.md").replace("Уверенность: высокая.", "Уверенность: высокая (INS-0001).", 1)
+        self.assertIn("internal-id", self.codes(markdown)[0])
+
+    def test_card_effect_with_game_context_is_not_a_paraphrase(self) -> None:
+        self.assertTrue(card_text_paraphrase("Финишер получает +2/+2 и Провокацию."))
+        self.assertFalse(
+            card_text_paraphrase(
+                "Финишер с Провокацией выгоднее придержать против агро до 7-го хода."
+            )
+        )
+        self.assertFalse(card_text_paraphrase("Колода выигрывает затяжные партии."))
 
 
 if __name__ == "__main__":

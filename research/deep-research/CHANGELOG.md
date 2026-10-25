@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added non-obvious material for editors: the `references/insight-material.md` collection guide, an optional `insights.jsonl` ledger (accepted records need evidence, matching sources, confidence, type-specific minimums, and no card-text restatement), and the «Неочевидное» block in `editor-ready` with its editor contract (`references/editor-insights-contract.md`). `validate_editor_output.py` checks the block and gains `--require-insights`; the final bundle gate requires the block when insights are accepted and binds each item to an accepted insight source.
+
 - Added `scripts/model_trial.py`: `start` prepares a schema 1.2 bundle from a recall case with registry opens, a query plan, and a self-contained `TASK.md` for any agent host (Codex, Claude Code, Gemini CLI, ChatGPT); `score` runs every deterministic gate and writes a transparent 0-100 scorecard; `compare` tabulates several trials side by side.
 
 - Added a search-recall benchmark (`evaluation/recall`) with ten Hearthstone cases whose gold sources are official pages, first-party statistics hosts, and mode-specific community venues, plus `scripts/validate_recall.py`, which scores linked bundles on recall, snippet-only admissions, and queries-to-first-authoritative-source.
