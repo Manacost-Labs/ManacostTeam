@@ -175,7 +175,29 @@ TEMPLATES: dict[str, dict[str, tuple[str, ...]]] = {
         "freshness": ("{topic} {year}", "{topic} {version}"),
         "localized": ("{topic} на русском", "{topic} русское сообщество"),
     },
+    # Simplified Chinese: Chinese venues have no Reddit/X/YouTube lane; their
+    # forums and video site are reached through the localized family.
+    "zh": {
+        "general": ("{topic}", "{topic} 攻略", "{topic} 解析"),
+        "primary": ("{topic} 官方", "{topic} 更新说明 {version}", "{entity} 改动 {version}"),
+        "statistics": ("{topic} 数据", "{topic} 胜率 {version}", "{entity} 胜率"),
+        "experts": ("{topic} 高分 思路", "{topic} 大神 解析 {version}"),
+        "reddit": (),
+        "x": (),
+        "youtube": (),
+        "mistakes": ("{topic} 常见错误",),
+        "synergies": ("{topic} 配合", "{entity} 联动"),
+        "counterargument": ("{topic} 被高估", "为什么不 {topic}", "{entity} 弱点"),
+        "freshness": ("{topic} {year}", "{topic} {version}", "{topic} 最新改动"),
+        "localized": (
+            "{topic} 国服",
+            "site:nga.cn {topic}",
+            "site:bilibili.com {topic}",
+            "site:iyingdi.com {topic}",
+        ),
+    },
 }
+CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 
 CONTEXT_VERSION_KEYS = (
     "patch",
@@ -231,7 +253,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--language",
         action="append",
         default=[],
-        help="Template language (en, ru); repeatable; default en",
+        help="Template language (en, ru, zh); repeatable; default en, plus ru for Hearthstone",
     )
     parser.add_argument(
         "--family",
@@ -368,6 +390,8 @@ def localized_phrase(phrases: dict[str, Any], language: str, fallback: str = "")
         raise ValueError(f"missing {language} search_phrases: supply a real localized phrase in query_localization.topics or --search-phrase")
     if language == "en" and re.search(r"[А-Яа-яЁё]", value):
         raise ValueError("English search_phrases must use English names and phrasing, not a Russian title plus a suffix")
+    if language == "zh" and not CJK_RE.search(value):
+        raise ValueError("zh search_phrases must use Chinese names and phrasing")
     return " ".join(value.split())
 
 
@@ -696,7 +720,7 @@ def main(argv: list[str] | None = None) -> int:
         for entry in args.search_phrase:
             language, separator, phrase = entry.partition("=")
             if not separator or language not in TEMPLATES or not phrase.strip():
-                raise ValueError("--search-phrase expects en|ru=PHRASE")
+                raise ValueError("--search-phrase expects en|ru|zh=PHRASE")
             localization.setdefault("topics", {}).setdefault("__all__", {})[language] = phrase
         if args.question_gaps:
             records = question_queue(plan or {}, executed, load_jsonl(root / "sources.jsonl"), planned, languages, args.section)

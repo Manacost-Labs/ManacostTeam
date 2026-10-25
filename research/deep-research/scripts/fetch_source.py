@@ -30,7 +30,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable, Mapping
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from urllib.request import Request, urlopen
 
 from candidates import record_candidate
@@ -38,6 +38,7 @@ from search_support import canonical_url, lineage_hint, next_id
 
 MAX_RESPONSE_BYTES = 5_000_000
 MIN_READABLE_CHARS = 300
+MAX_OUTBOUND_LINKS = 300
 JS_SHELL_MARKERS = (
     "enable javascript",
     "javascript is required",
@@ -115,6 +116,33 @@ class _TextExtractor(HTMLParser):
         if self._skip_depth:
             return
         self.parts.append(data)
+
+
+class _LinkExtractor(HTMLParser):
+    def __init__(self, base_url: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self.base_url = base_url
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != "a":
+            return
+        href = dict(attrs).get("href")
+        if not href:
+            return
+        url = urljoin(self.base_url, href.strip()).split("#", 1)[0]
+        if urlsplit(url).scheme in {"http", "https"} and url not in self.links:
+            self.links.append(url)
+
+
+def extract_links(markup: str, base_url: str) -> list[str]:
+    """Outbound page links for the link-following search wave."""
+
+    parser = _LinkExtractor(base_url)
+    parser.feed(markup)
+    parser.close()
+    own = canonical_url(base_url)
+    return [link for link in parser.links if canonical_url(link) != own][:MAX_OUTBOUND_LINKS]
 
 
 def html_to_text(markup: str) -> tuple[str | None, str]:
@@ -381,8 +409,10 @@ def main(argv: list[str] | None = None, *, transport: Transport | None = None) -
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
+    outbound_links: list[str] = []
     if fetched["content_type"].startswith("text/html") or "<html" in fetched["body"][:2048].lower():
         page_title, text = html_to_text(fetched["body"])
+        outbound_links = extract_links(fetched["body"], fetched["final_url"])
     else:
         page_title, text = None, fetched["body"].strip() + "\n"
     if not text.strip():
@@ -439,6 +469,8 @@ def main(argv: list[str] | None = None, *, transport: Transport | None = None) -
     }
     if fetched["http_status"] is not None:
         record["http_status"] = fetched["http_status"]
+    if outbound_links:
+        record["outbound_links"] = outbound_links
     for field in ("platform", "author", "publisher", "published_at"):
         value = getattr(args, field)
         if value:
@@ -451,7 +483,7 @@ def main(argv: list[str] | None = None, *, transport: Transport | None = None) -
         for field in (
             "final_url", "canonical_url", "accessed_at", "access_integrity", "fingerprint_status",
             "snapshot_path", "content_sha256", "content_bytes", "fingerprinted_at", "retrieved_by",
-            "content_type", "http_status",
+            "content_type", "http_status", "outbound_links",
         ):
             if field in record:
                 merged[field] = record[field]

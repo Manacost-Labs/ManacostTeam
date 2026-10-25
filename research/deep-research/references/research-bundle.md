@@ -190,6 +190,10 @@ Type minimums: `pro_reasoning` needs `speaker` and `timestamp` (`41:20` or `1:02
 
 At the final `editor-ready` stage, any accepted insight makes the «Неочевидное» block in `report.md` mandatory, and each block item must cite a source of an accepted insight. The block format is defined in [the editor contract](editor-insights-contract.md).
 
+### Coverage map and search waves
+
+`coverage-map.json` is written by `platform_coverage.py --write-map` and lists every source class with its status, query counts, inspected source IDs and reason; it is required for a schema 1.2 final report and always checked against the ledgers when present. `search-waves.json` is written by `search_waves.py`: the saturation configuration (`threshold_waves`, `min_new_sources`, `max_waves`, languages), the query IDs planned per wave, one closed record per wave and the saturation decision. Query records planned by a wave keep `wave`, `executor`, `include_domains` and `executor_query`; follow-link records add `query_kind: follow_link`, `follow_url` and `origin_source_ids`; refutation records add `challenge_claim_ids`. Sources fetched by `fetch_source.py` keep up to 300 `outbound_links`.
+
 ### Checkpoint
 
 `checkpoint_id`, `pass`, `created_at`, the five gap-detection lists, saturated/unsaturated branches, and next actions.

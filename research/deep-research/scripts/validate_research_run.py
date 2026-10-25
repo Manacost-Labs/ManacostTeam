@@ -22,6 +22,9 @@ from search_support import (
 )
 from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
+from platform_coverage import MAP_FILE, check_map
+from search_waves import WAVES_FILE, validate_state as validate_wave_state
+
 from validate_editor_output import (
     INSIGHT_CONFIDENCE as RU_INSIGHT_CONFIDENCE,
     WORD_RE,
@@ -2245,6 +2248,26 @@ def main() -> int:
                     )
     elif audit_status == "not_run":
         warnings.append("research audit has not run yet")
+
+    # Where the search looked: a final schema 1.2 report needs the coverage map.
+    map_path = root / MAP_FILE
+    if map_path.is_file():
+        try:
+            errors.extend(check_map(json.loads(map_path.read_text(encoding="utf-8")), queries, sources))
+        except json.JSONDecodeError as exc:
+            errors.append(f"{MAP_FILE}: invalid JSON: {exc.msg}")
+    else:
+        message = (
+            f"missing {MAP_FILE}: run platform_coverage.py RUN_DIRECTORY --write-map "
+            "and give a --reason for every unavailable or unsearched source class"
+        )
+        (errors if args.stage == "final" and schema_version == "1.2" else warnings).append(message)
+    waves_path = root / WAVES_FILE
+    if waves_path.is_file():
+        try:
+            errors.extend(validate_wave_state(json.loads(waves_path.read_text(encoding="utf-8"))))
+        except json.JSONDecodeError as exc:
+            errors.append(f"{WAVES_FILE}: invalid JSON: {exc.msg}")
 
     if errors:
         print("Research bundle: FAIL")

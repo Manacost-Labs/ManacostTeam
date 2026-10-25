@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Resolve official Russian Hearthstone entity names through Koloda API."""
+"""Resolve official Hearthstone entity names: Russian through Koloda API,
+Simplified Chinese through the HearthstoneJSON zhCN client export.
+
+Search planning needs the same card under every language the search runs in.
+Koloda stays the only source of Russian names; HearthstoneJSON supplies the
+zhCN client string for Chinese queries and never overrides Koloda.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +13,7 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 import time
 from collections.abc import Callable, Mapping
 from copy import deepcopy
@@ -383,18 +390,146 @@ class KolodaNameResolver:
         raise RuntimeError("Koloda name lookup failed.")
 
 
+HSJSON_URL = "https://api.hearthstonejson.com/v1/latest/{locale}/cards.json"
+HSJSON_LOCALES = {"en": "enUS", "ru": "ruRU", "zh": "zhCN"}
+HSJSON_TTL_SECONDS = 7 * 86400
+
+
+def _hsjson_cache_dir() -> Path:
+    configured = os.environ.get("HEARTHSTONEJSON_CACHE")
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / ".cache/manacost/hearthstonejson"
+
+
+class HearthstoneJsonNames:
+    """DBF -> client name per locale, cached on disk between runs."""
+
+    def __init__(
+        self,
+        cache_dir: Path | None = None,
+        *,
+        transport: Transport = _urllib_transport,
+        timeout: float = 60.0,
+        ttl: float = HSJSON_TTL_SECONDS,
+        now: Callable[[], float] = time.time,
+    ) -> None:
+        self.cache_dir = cache_dir or _hsjson_cache_dir()
+        self.transport = transport
+        self.timeout = timeout
+        self.ttl = ttl
+        self.now = now
+        self._tables: dict[str, dict[int, str]] = {}
+
+    def source_url(self, language: str) -> str:
+        return HSJSON_URL.format(locale=HSJSON_LOCALES[language])
+
+    def table(self, language: str) -> dict[int, str]:
+        if language not in HSJSON_LOCALES:
+            raise ValueError(f"Unsupported HearthstoneJSON language: {language}.")
+        if language in self._tables:
+            return self._tables[language]
+        path = self.cache_dir / f"{HSJSON_LOCALES[language]}.json"
+        fresh = path.is_file() and self.now() - path.stat().st_mtime < self.ttl
+        if fresh:
+            body = path.read_bytes()
+        else:
+            request = Request(
+                self.source_url(language),
+                headers={"Accept": "application/json", "User-Agent": "ResearchTeam/1.0"},
+                method="GET",
+            )
+            try:
+                status, _, body = self.transport(request, self.timeout)
+            except (URLError, TimeoutError, OSError) as exc:
+                raise RuntimeError("HearthstoneJSON lookup failed.") from exc
+            if status != 200:
+                raise RuntimeError(f"HearthstoneJSON returned HTTP {status}.")
+        try:
+            cards = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError("HearthstoneJSON returned invalid JSON.") from exc
+        if not isinstance(cards, list):
+            raise RuntimeError("HearthstoneJSON returned an unexpected shape.")
+        if not fresh:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = path.with_suffix(".tmp")
+            temporary.write_bytes(body)
+            temporary.replace(path)
+        table = {}
+        for card in cards:
+            dbf = _positive_int(card.get("dbfId")) if isinstance(card, dict) else None
+            name = _normalized_text(card.get("name")) if dbf else None
+            if dbf and name:
+                table[dbf] = name
+        self._tables[language] = table
+        return table
+
+    def name(self, dbf: int, language: str) -> str | None:
+        return self.table(language).get(dbf)
+
+    def find_dbf(self, english_name: str) -> list[int]:
+        wanted = english_name.strip().casefold()
+        return sorted(dbf for dbf, name in self.table("en").items() if name.casefold() == wanted)
+
+
+def search_names(
+    dbf: int,
+    *,
+    koloda: KolodaNameResolver | None = None,
+    hsjson: HearthstoneJsonNames | None = None,
+    kind: str = "auto",
+) -> dict[str, Any]:
+    """Names for query planning in en/ru/zh with the provenance of each."""
+
+    koloda = koloda or KolodaNameResolver()
+    hsjson = hsjson or HearthstoneJsonNames()
+    official = koloda.resolve(dbf, kind)
+    names: dict[str, str] = {}
+    provenance: dict[str, str] = {}
+    for language, field in (("en", "name_en"), ("ru", "name_ru")):
+        if official.get(field):
+            names[language] = official[field]
+            provenance[language] = official["source_url"]
+    if "en" not in names:
+        english = hsjson.name(dbf, "en")
+        if english:
+            names["en"] = english
+            provenance["en"] = hsjson.source_url("en")
+    chinese = hsjson.name(dbf, "zh")
+    if chinese:
+        names["zh"] = chinese
+        provenance["zh"] = hsjson.source_url("zh")
+    return {
+        "dbf": dbf,
+        "names": names,
+        "name_sources": provenance,
+        "missing_languages": [language for language in ("en", "ru", "zh") if language not in names],
+        "resolved_at": _now_utc(),
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Resolve an official Russian Hearthstone name by DBF ID."
     )
     parser.add_argument("--dbf", type=int, required=True)
     parser.add_argument("--kind", choices=("auto", *KIND_PATHS), default="auto")
+    parser.add_argument(
+        "--search-names",
+        action="store_true",
+        help="Return en/ru/zh names for query planning (zh from HearthstoneJSON)",
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        if args.search_names:
+            names = search_names(args.dbf, kind=args.kind)
+            print(json.dumps(names, ensure_ascii=False, indent=2, sort_keys=True))
+            return 0 if not names["missing_languages"] else 1
         result = KolodaNameResolver().resolve(args.dbf, args.kind)
     except (ValueError, RuntimeError) as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False))

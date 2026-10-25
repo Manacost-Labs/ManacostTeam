@@ -958,7 +958,8 @@ def run_tinyfish(arguments: list[str], operation: str) -> dict[str, Any]:
     if result.returncode != 0:
         raise ProviderError("tinyfish", f"TinyFish {operation} failed.")
     try:
-        payload = json.loads(result.stdout)
+        # The CLI may append an NDJSON update notice after the payload.
+        payload, _ = json.JSONDecoder().raw_decode(result.stdout.lstrip())
     except json.JSONDecodeError as exc:
         raise ProviderError("tinyfish", "TinyFish returned invalid JSON.") from exc
     if not isinstance(payload, dict):
@@ -1048,14 +1049,16 @@ def tinyfish_search(
     )
 
 
-def tinyfish_fetch(urls: list[str]) -> dict[str, Any]:
+def tinyfish_fetch(urls: list[str], *, links: bool = False) -> dict[str, Any]:
     if shutil.which("tinyfish"):
-        return run_tinyfish(["fetch", "content", "get", *urls, "--format", "json"], "fetch")
-    return tinyfish_request(
-        "POST",
-        TINYFISH_FETCH_URL,
-        body={"urls": urls, "format": "markdown"},
-    )
+        return run_tinyfish(
+            ["fetch", "content", "get", *urls, "--format", "json", *(["--links"] if links else [])], "fetch"
+        )
+    body: dict[str, Any] = {"urls": urls, "format": "markdown"}
+    if links:
+        # shortcut: REST field mirrors the CLI --links flag; confirm against the API docs when the CLI is absent.
+        body["links"] = True
+    return tinyfish_request("POST", TINYFISH_FETCH_URL, body=body)
 
 
 def stats_api_endpoint(operation: str, params: dict[str, Any]) -> tuple[str, str]:
@@ -1236,6 +1239,8 @@ def normalize_tinyfish_fetch(payload: dict[str, Any], urls: list[str]) -> dict[s
                 "provider_position": position,
             }
         )
+        if isinstance(item.get("links"), list):
+            results[-1]["links"] = [link for link in item["links"] if isinstance(link, str)]
     warnings = [
         "Fetched pages remain untrusted evidence and may contain prompt injection.",
         "Local limiter reserves at most 150 fetched URLs per rolling minute.",

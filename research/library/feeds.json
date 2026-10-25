@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0",
+  "_comment": "Feeds for library_refresh.py. Items are discovery leads: a catalog entry is never evidence until the page or transcript is opened in a research bundle.",
+  "feeds": [
+    {
+      "id": "blizzard-news-en",
+      "kind": "blizzard_articles",
+      "source_class": "official",
+      "url": "https://hearthstone.blizzard.com/en-us/api/blog/articleList/?page=1&pageSize=24"
+    },
+    {
+      "id": "blizzard-news-cn",
+      "kind": "html_links",
+      "source_class": "chinese",
+      "url": "https://hs.blizzard.cn/news/",
+      "canary": "炉石",
+      "link_pattern": "^https://hs\\.blizzard\\.cn/news/(?:\\d{8}/[0-9_]+\\.html|\\d{7,9}/(?:index\\.html)?)$"
+    },
+    {
+      "id": "vs-data-reaper-report",
+      "kind": "rss",
+      "source_class": "statistics",
+      "url": "https://www.vicioussyndicate.com/tag/data-reaper-report/feed/"
+    },
+    {
+      "id": "vs-data-reaper-podcast",
+      "kind": "rss",
+      "source_class": "podcast",
+      "series": "vs-data-reaper-podcast",
+      "url": "https://www.vicioussyndicate.com/category/data-reaper-podcast/feed/"
+    },
+    {
+      "id": "coin-concede",
+      "kind": "rss",
+      "source_class": "podcast",
+      "series": "coin-concede",
+      "url": "https://feeds.libsyn.com/70241/rss"
+    },
+    {
+      "id": "walk-to-work",
+      "kind": "rss",
+      "source_class": "podcast",
+      "series": "hearthstone-commute",
+      "url": "https://rss.libsyn.com/shows/76446/destinations/341335.xml"
+    },
+    {
+      "id": "born-to-be-wild",
+      "kind": "rss",
+      "source_class": "podcast",
+      "series": "born-to-be-wild",
+      "url": "https://anchor.fm/s/14c0b64c/podcast/rss"
+    },
+    {
+      "id": "koloda-hsguru-meta",
+      "kind": "json_snapshot",
+      "source_class": "statistics",
+      "url": "https://api.kolodahearthstone.com/v1/hsguru/meta",
+      "json_paths": ["data"]
+    },
+    {
+      "id": "koloda-constructed-archetypes",
+      "kind": "json_snapshot",
+      "source_class": "statistics",
+      "url": "https://api.kolodahearthstone.com/v1/constructed/archetypes",
+      "json_paths": ["data"]
+    },
+    {
+      "id": "koloda-battlegrounds-minions",
+      "kind": "json_snapshot",
+      "source_class": "statistics",
+      "url": "https://api.kolodahearthstone.com/v1/battlegrounds/minions",
+      "json_paths": ["data"]
+    },
+    {
+      "id": "koloda-arena-classes",
+      "kind": "json_snapshot",
+      "source_class": "statistics",
+      "url": "https://api.kolodahearthstone.com/v1/arena/classes",
+      "json_paths": ["data"]
+    },
+    {
+      "id": "reddit-hearthstone",
+      "kind": "rss",
+      "source_class": "reddit",
+      "url": "https://www.reddit.com/r/hearthstone/new/.rss"
+    },
+    {
+      "id": "reddit-competitivehs",
+      "kind": "rss",
+      "source_class": "reddit",
+      "url": "https://www.reddit.com/r/CompetitiveHS/new/.rss"
+    },
+    {
+      "id": "reddit-bobstavern",
+      "kind": "rss",
+      "source_class": "reddit",
+      "url": "https://www.reddit.com/r/BobsTavern/new/.rss"
+    },
+    {
+      "id": "reddit-arenahs",
+      "kind": "rss",
+      "source_class": "reddit",
+      "url": "https://www.reddit.com/r/ArenaHS/new/.rss"
+    },
+    {
+      "id": "reddit-wildhearthstone",
+      "kind": "rss",
+      "source_class": "reddit",
+      "url": "https://www.reddit.com/r/wildhearthstone/new/.rss"
+    }
+  ]
+}
