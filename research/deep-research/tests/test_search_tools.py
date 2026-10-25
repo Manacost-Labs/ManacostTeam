@@ -944,7 +944,10 @@ class RecallBenchmarkTest(unittest.TestCase):
     def test_case_definitions_are_valid(self) -> None:
         result = run(RECALL, str(RECALL_DIR), "--stage", "plan")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("10 cases defined", result.stdout)
+        import re
+
+        defined = int(re.search(r"\((\d+) cases defined", result.stdout).group(1))
+        self.assertGreaterEqual(defined, 30)
 
     def test_scoring_reports_recall_misses_and_first_authoritative_query(self) -> None:
         import validate_recall
@@ -983,7 +986,7 @@ class RecallBenchmarkTest(unittest.TestCase):
             self.assertEqual(report["queries_to_first_authoritative"], 2)
 
             (bench / "results.jsonl").write_text(json.dumps({"case_id": "RECALL-101", "bundle_path": str(run_dir)}) + "\n", encoding="utf-8")
-            cases = [dict(case, case_id=f"RECALL-{100 + i}") for i in range(1, 11)]
+            cases = [dict(case, case_id=f"RECALL-{100 + i}") for i in range(1, 31)]
             (bench / "cases.jsonl").write_text("".join(json.dumps(item) + "\n" for item in cases), encoding="utf-8")
             scored = run(RECALL, str(bench), "--stage", "score")
             self.assertEqual(scored.returncode, 1, scored.stdout)
