@@ -165,21 +165,29 @@ def migrate(args) -> int:
         (path for path in HISTORY.iterdir() if builder.VERSION.fullmatch(path.name)),
         key=lambda path: tuple(map(int, path.name.split("."))),
     )
-    published, tracked = True, []
+    tracked, failed = [], []
     for manifest in snapshots:
-        published &= publish(manifest, manifest, execute=args.execute)
-        tracked += [
-            file.relative_to(ROOT).as_posix()
-            for file in sorted(manifest.iterdir())
-            if file.suffix in {".zip", ".skill"}
-        ]
-    if not args.remove_archives or not tracked:
-        return 0
-    if not (args.execute and published):
-        print(f"--remove-archives: {len(tracked)} files stay tracked until every asset is published")
-        return 0
-    run("git", "rm", "--quiet", "--", *tracked)
-    print(f"git rm: {len(tracked)} archives; review and commit the manifests-only tree")
+        try:
+            published = publish(manifest, manifest, execute=args.execute)
+        except (ValueError, RuntimeError, OSError, KeyError) as error:
+            # One unpublished snapshot must not block the others; its archives stay.
+            print(f"v{manifest.name}: FAILED: {error}")
+            failed.append(manifest.name)
+            continue
+        if published:
+            tracked += [
+                file.relative_to(ROOT).as_posix()
+                for file in sorted(manifest.iterdir())
+                if file.suffix in {".zip", ".skill"}
+            ]
+    if args.remove_archives and args.execute and tracked:
+        run("git", "rm", "--quiet", "--", *tracked)
+        print(f"git rm: {len(tracked)} archives of verified snapshots; review and commit")
+    elif args.remove_archives:
+        print("--remove-archives: archives stay tracked until their assets are published")
+    if failed:
+        print(f"not migrated, archives kept: {', '.join(failed)}")
+        return 1
     return 0
 
 
