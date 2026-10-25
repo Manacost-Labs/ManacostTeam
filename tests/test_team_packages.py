@@ -184,7 +184,7 @@ with tempfile.TemporaryDirectory() as temporary:
         cls.temporary = tempfile.TemporaryDirectory(prefix="manacost-portable-smoke-")
         cls.root = Path(cls.temporary.name)
         cls.output = cls.root / "release"
-        cls.index = builder.build(ROOT, cls.output)
+        cls.index = builder.build(ROOT, cls.output, manifest=cls.root / "manifest")
         cls.unpacked = cls.root / "unpacked"
         for archive in cls.output.glob("*.zip"):
             with zipfile.ZipFile(archive) as bundle:

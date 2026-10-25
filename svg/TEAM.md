@@ -4,4 +4,4 @@
 
 - [svg-team](../teams/svg-team/SKILL.md) — `/svg-team`.
 
-Сборка: `python tools/build_team_skills.py` из корня репозитория. Пакеты лежат в release/team-skills/1.0.0. Зависимости и тесты модуля остаются в его собственном каталоге.
+Сборка: `python tools/build_team_skills.py` из корня репозитория. Архивы собираются в build/team-skills/<версия>/ и публикуются в GitHub Releases; в Git — только манифест release/team-skills/<версия>/. Зависимости и тесты модуля остаются в его собственном каталоге.

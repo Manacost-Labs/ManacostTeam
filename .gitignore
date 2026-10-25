@@ -3,8 +3,11 @@
 .env.*
 !.env.example
 
-# Shared packaging/test scratch state; source and versioned releases stay tracked.
+# Shared packaging/test scratch state; source and release manifests stay tracked.
 /build/
+# Team-skill archives are GitHub Release assets (tools/publish_team_skills.py).
+/release/team-skills/*/*.zip
+/release/team-skills/*/*.skill
 # Durable local source material; retain between research runs, never package/push.
 /research/library/transcripts/
 /research/library/audio/

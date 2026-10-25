@@ -11,10 +11,45 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
+import build_team_skills as builder  # noqa: E402
 import install  # noqa: E402
+
+REGISTRY = json.loads((ROOT / "teams/registry.json").read_text(encoding="utf-8"))
+VERSION = REGISTRY["release_version"]
+TRANSLATE = next(
+    f"{entry['name']}-{entry['version']}.zip"
+    for entry in REGISTRY["skills"]
+    if entry["name"] == "translate-team"
+)
+
+
+class Response(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
 
 
 class InstallationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Archives are GitHub Release assets, so tests install from a fresh local build.
+        cls.temporary = tempfile.TemporaryDirectory(prefix="manacost-install-")
+        cls.archives = Path(cls.temporary.name) / "archives"
+        builder.build(
+            ROOT,
+            cls.archives / VERSION,
+            manifest=Path(cls.temporary.name) / "manifest",
+        )
+        cls.patch = patch.object(install, "ARCHIVE_DIRS", (cls.archives,))
+        cls.patch.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.patch.stop()
+        cls.temporary.cleanup()
+
     def test_agent_cli_uses_explicit_utf8_for_metadata(self):
         with tempfile.TemporaryDirectory() as temporary:
             target = Path(temporary) / "Навыки"
@@ -25,6 +60,7 @@ class InstallationTests(unittest.TestCase):
                     str(ROOT / "tools/install.py"), "agent",
                     "--directory", str(target), "--client", "codex",
                     "--skills", "translate-team", "--game", "deadlock",
+                    "--archives", str(self.archives / VERSION),
                 ],
                 env={**os.environ, "PYTHONIOENCODING": "ascii", "PYTHONUTF8": "0"},
                 capture_output=True,
@@ -67,6 +103,42 @@ class InstallationTests(unittest.TestCase):
                 )
             self.assertEqual(entry.read_text(), "user changes")
             self.assertFalse((target / ".agents/skills/job-team").exists())
+
+    def test_missing_local_archive_downloads_the_release_asset(self):
+        payload = (self.archives / VERSION / TRANSLATE).read_bytes()
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch.object(install, "ARCHIVE_DIRS", ()),
+            patch.object(
+                install.urllib.request, "urlopen", return_value=Response(payload)
+            ) as urlopen,
+        ):
+            install.install_agent(Path(temporary), "claude", ["translate-team"], "hearthstone")
+            self.assertEqual(
+                urlopen.call_args.args[0],
+                f"https://github.com/Manacost-Labs/ManacostTeam/releases/download/v{VERSION}/{TRANSLATE}",
+            )
+            self.assertTrue(
+                (Path(temporary) / ".claude/skills/translate-team/SKILL.md").is_file()
+            )
+
+    def test_unavailable_release_asset_fails_clearly_before_installation(self):
+        missing = install.urllib.error.HTTPError(
+            "https://example.invalid", 404, "Not Found", {}, None
+        )
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch.object(install, "ARCHIVE_DIRS", ()),
+            patch.object(install.urllib.request, "urlopen", side_effect=missing),
+        ):
+            target = Path(temporary) / "not-created"
+            with self.assertRaisesRegex(ValueError, "release asset unavailable.*--archives"):
+                install.install_agent(target, "codex", ["translate-team"], "hearthstone")
+            with self.assertRaisesRegex(ValueError, "archive not found"):
+                install.install_agent(
+                    target, "codex", ["translate-team"], "hearthstone", Path(temporary)
+                )
+            self.assertFalse(target.exists())
 
     def test_archive_traversal_is_rejected(self):
         for member in ("skill/../escape", "skill/\\escape", "/skill/escape"):

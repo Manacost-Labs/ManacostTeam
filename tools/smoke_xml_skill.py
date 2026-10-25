@@ -15,6 +15,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+import build_team_skills as builder
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -24,15 +26,14 @@ def main() -> int:
     args = parser.parse_args()
     registry = json.loads((ROOT / "teams/registry.json").read_text(encoding="utf-8"))
     entry = next(item for item in registry["skills"] if item["name"] == "xml-team")
-    archive = (
-        args.archive
-        or ROOT
-        / "release/team-skills"
-        / registry["release_version"]
-        / f"xml-team-{entry['version']}.zip"
-    )
     with tempfile.TemporaryDirectory(prefix="manacost-xml-skill-") as temporary:
-        destination = Path(temporary).resolve()
+        archive = args.archive
+        if archive is None:
+            # Archives are not tracked; build the current release reproducibly.
+            output = Path(temporary) / "archives"
+            builder.build(ROOT, output, manifest=Path(temporary) / "manifest")
+            archive = output / f"xml-team-{entry['version']}.zip"
+        destination = (Path(temporary) / "unpacked").resolve()
         with zipfile.ZipFile(archive) as bundle:
             for item in bundle.infolist():
                 if (
