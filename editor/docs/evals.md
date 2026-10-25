@@ -328,6 +328,60 @@ node evals/blind_review.js import build/blind/ratings.json --key build/blind/key
 раскрывает ключ и строит `report.json` и `report.md` со средними по
 вариантам и распределением предпочтений.
 
+## Пары черновик → эталон
+
+Главная метрика качества — доля пар, где правка ИИ не хуже правки владельца
+в слепом сравнении. Формат пар и команда «поправка → кейс» описаны в
+[`evals/pairs/README.md`](../evals/pairs/README.md); формат проверяет
+`node evals/pairs.js validate`.
+
+```bash
+node evals/blind_review.js pairs --out build/blind-pairs                     # заглушки, без ключей
+node evals/blind_review.js pairs --out build/blind-pairs --real-only \
+  --editor prompt --judge api                                               # настоящий прогон
+node evals/blind_review.js rate build/blind-pairs --reviewer owner           # оценка владельца
+node evals/blind_review.js import build/blind-pairs/ratings.json \
+  --key build/blind-pairs/key.json --out build/blind-pairs/human
+```
+
+`pairs` прогоняет правку ИИ по каждой паре, кладёт её рядом с эталоном
+владельца в слепые A/B (случайная сторона, ключ в `key.json`, правки ИИ и
+сводка — в `private/`; до конца оценки их не открывать) и сразу оценивает пары
+LLM-судьёй. Редактор: `offline` (возвращает черновик, только смоук),
+`prompt` (candidate prompt, переменные как у `prompt-direct`), `pipeline`
+(`/v2/edit`, `EDITOR_EVAL_CANDIDATE_GATEWAY_URL`) или `cmd` с
+`--editor-cmd "команда"`: черновик на stdin, правка на stdout, `PAIR_ID` и
+`PAIR_TYPE` в окружении. Судья `api` — OpenAI-совместимый endpoint:
+`EDITOR_EVAL_JUDGE_MODEL`, `EDITOR_EVAL_JUDGE_BASE_URL`,
+`EDITOR_EVAL_JUDGE_API_KEY` (или `EDITOR_EVAL_API_KEY`/`OPENAI_API_KEY`).
+
+Судья — дешёвый прокси, главный сигнал — владелец. `rate` показывает в
+терминале черновик и версии A/B без меток, спрашивает рубрику и выбор,
+сохраняет `ratings.json` после каждой пары и продолжает с места остановки.
+`import` даёт `metric.human`: пара засчитана, если ИИ выиграл не реже
+эталона (ничья — не хуже). Метрика с offline-редактором, offline-судьёй или
+синтетическими парами помечена `measured: false`.
+
+Рубрика «интересно / механично» лежит в `evals/rubric/interest.json` и общая
+для владельца и судьи: узнал ли читатель новое, нет ли места, которое хочется
+пропустить, есть ли конкретные игровые решения, звучит ли текст как автор.
+Шкала 1–5: 1 — механично, 5 — интересно.
+
+### Правило: новое правило редактуры — только через метрику
+
+Правило редактуры (промпт, затвор, словарь, практика) принимается, только
+если подняло долю «ИИ не хуже человека» на тех же парах. Порядок:
+
+1. Прогон `pairs` и оценка до изменения — базовый `report.json`.
+2. Изменение и повторный прогон в новый `--out` на том же наборе пар.
+3. `node evals/blind_review.js gate --baseline до/human/report.json --candidate после/human/report.json`
+   — exit 0 (`ACCEPT`) только при росте доли на том же наборе и только для
+   измеренных прогонов. `--rater model` проверяет по судье: этого достаточно,
+   чтобы отбросить правило, но не чтобы принять его без владельца.
+
+Каждая поправка владельца к правке ИИ становится парой через
+`node evals/pairs.js case`, поэтому набор растёт из реальных ошибок.
+
 ## Production A/B через два gateway
 
 Запустите два gateway с одинаковой моделью и анализаторами, но с разными

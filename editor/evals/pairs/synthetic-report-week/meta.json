@@ -1,0 +1,9 @@
+{
+  "id": "synthetic-report-week",
+  "type": "REPORT",
+  "topic": "недельный обзор меты (заглушка)",
+  "date": "2026-10-25",
+  "origin": "synthetic",
+  "synthetic": true,
+  "notes": "Синтетическая заглушка для проверки протокола; не текст владельца."
+}
