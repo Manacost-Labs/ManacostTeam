@@ -70,6 +70,12 @@ class LibraryRefreshTest(unittest.TestCase):
             queue = read_jsonl(catalog / "transcript-queue.jsonl")
             self.assertEqual(queue[0]["item_id"], "ep-2")
             self.assertIn("source_library.py transcribe --series pod", queue[0]["command"])
+            hostile = library_refresh.transcript_queue(
+                feeds[0], [{"item_id": "x'; rm -rf ~; '", "url": "https://pod.example/$(id)", "published_at": recent}],
+                archived, since=since)[0]
+            import shlex
+            self.assertEqual(shlex.split(hostile["command"]), hostile["argv"])
+            self.assertIn("x'; rm -rf ~; '", hostile["argv"])
             news = read_jsonl(catalog / "news.jsonl")
             self.assertEqual(news[0]["url"], "https://hearthstone.blizzard.com/en-us/news/24301454")
             self.assertEqual(news[0]["evidence_status"], "discovery_only")

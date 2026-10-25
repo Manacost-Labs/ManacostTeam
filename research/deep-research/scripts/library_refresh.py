@@ -22,6 +22,7 @@ import argparse
 import hashlib
 import json
 import re
+import shlex
 import sys
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -142,13 +143,14 @@ def transcript_queue(feed: dict[str, Any], items: list[dict[str, Any]], archived
         when = published(item.get("published_at"))
         if when is None or when < since or archived(feed.get("series", feed["id"]), item["item_id"]):
             continue
-        command = (
-            f"python3 scripts/source_library.py transcribe --series {feed.get('series', feed['id'])} "
-            f"--episode-id '{item['item_id']}' --source-url '{item.get('url') or feed['url']}' --audio PATH_TO_AUDIO"
-        )
+        # Feed values are untrusted: keep argv and a shell-quoted copy for pasting.
+        argv = ["python3", "scripts/source_library.py", "transcribe", "--series", str(feed.get("series", feed["id"])),
+                "--episode-id", str(item["item_id"]), "--source-url", str(item.get("url") or feed["url"]),
+                "--audio", "PATH_TO_AUDIO"]
+        command = shlex.join(argv)
         queue.append({"feed_id": feed["id"], "item_id": item["item_id"], "title": item.get("title"),
                       "audio_url": item.get("audio_url"), "publisher_transcripts": item.get("publisher_transcripts", []),
-                      "command": command})
+                      "argv": argv, "command": command})
     return queue
 
 
