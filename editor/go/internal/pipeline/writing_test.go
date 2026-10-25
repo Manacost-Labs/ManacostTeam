@@ -128,6 +128,19 @@ func TestReaderSkipPassRewritesOnlyMarkedSentences(t *testing.T) {
 	}
 }
 
+func TestSkipMarksNeverTargetGuardedSentences(t *testing.T) {
+	candidate := "В этом разделе мы поговорим о муллигане. Муллиган Раш Воина простой. Карту не стоит держать. Это обычно помогает."
+	marks := validSkipMarks([]SkipMark{
+		{Quote: "В этом разделе мы поговорим о муллигане.", Why: "обещание"},
+		{Quote: "Муллиган Раш Воина простой.", Why: "вступление"},
+		{Quote: "Карту не стоит держать.", Why: "повтор"},
+		{Quote: "Это обычно помогает.", Why: "общая фраза"},
+	}, candidate, nil)
+	if len(marks) != 1 || !strings.HasPrefix(marks[0].Quote, "В этом разделе") {
+		t.Fatalf("names, negations or hedges reached the skip rewrite: %+v", marks)
+	}
+}
+
 func TestReaderSkipPassFailureKeepsDraftAndIsReported(t *testing.T) {
 	lm := &fakeLLM{writing: map[string][]string{"skip": {"не JSON"}}}
 	report := &WritingReport{}
