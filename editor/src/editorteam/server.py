@@ -730,6 +730,27 @@ def house_style_rules() -> list[str]:
 
 
 @lru_cache(maxsize=1)
+def contrast_pairs() -> list[dict]:
+    """Пары «скучно → интересно» на одну тему для писателя.
+
+    Интересный абзац взят из корпуса дословно, скучный помечен synthetic:
+    это механический пересказ того же абзаца. Модели нужны текст и приём,
+    служебные поля остаются в файле.
+    """
+    path = ROOT / "config" / "contrast_pairs.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return [
+        {
+            "topic": pair["topic"],
+            "boring": pair["boring"]["text"],
+            "interesting": pair["interesting"]["text"],
+            "why": pair["why"],
+        }
+        for pair in data["pairs"]
+    ]
+
+
+@lru_cache(maxsize=1)
 def _exemplars() -> dict:
     C = _scripts()
     path = C.ASSETS / "exemplars.json"
@@ -780,9 +801,9 @@ GENRE_FAMILIES = {
     "meta-report": "analysis",
     "news": "news",
 }
-RETRIEVAL_MAX = 3
+RETRIEVAL_MAX = 5
 RETRIEVAL_EXCERPT_MAX = 1200
-RETRIEVAL_TOTAL_MAX = 3000
+RETRIEVAL_TOTAL_MAX = 4500
 
 
 def _content_norm(text: str) -> str:
@@ -940,7 +961,7 @@ def corpus_examples(
         if total + len(item["excerpt"]) > RETRIEVAL_TOTAL_MAX:
             continue
         # This analysis was previously repeated for every matching paragraph
-        # of every query, even though only three excerpts can be returned.
+        # of every query, even though only RETRIEVAL_MAX excerpts can be returned.
         item["voice_features"] = _voice_features(item["excerpt"])
         out["examples"].append(item)
         total += len(item["excerpt"])
@@ -1145,6 +1166,8 @@ def rules_for(
         out.update({"author_profile": "manacost", "style_rules": style["style_rules"]})
     if author.strip().lower() == "manacost":
         out["style_rules"] = [*out.get("style_rules", []), *house_style_rules()]
+    if g.id == "hearthstone":
+        out["contrast_pairs"] = contrast_pairs()
     if task_context is not None and g.id != "hearthstone":
         # Hearthstone terminology/corpus examples have no authority over other games.
         out.update({"replace": [], "keep": [], "terminology_advice": []})
@@ -1152,7 +1175,7 @@ def rules_for(
         out["style_memory"]["purpose"] = ["voice", "rhythm"]
         if depth == rewrite_gate.REWRITE:
             out["voice_signature"] = style["voice_signature"]
-        for key in ("style_examples", "style_examples_source"):
+        for key in ("style_examples", "style_examples_source", "contrast_pairs"):
             out.pop(key, None)
     return out
 

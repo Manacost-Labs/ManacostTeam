@@ -27,6 +27,8 @@ type RuleBundle struct {
 	Depth             string              `json:"depth,omitempty"`
 	Language          string              `json:"language"`
 	AuthorProfile     string              `json:"author_profile,omitempty"`
+	// Writer-only craft context; review stages judge the result, not the recipe.
+	ContrastPairs []analyzer.ContrastPair `json:"-"`
 }
 
 func Build(r *analyzer.Rules, mode, depth, language string, claims []map[string]any) RuleBundle {
@@ -48,6 +50,7 @@ func Build(r *analyzer.Rules, mode, depth, language string, claims []map[string]
 		Task:              taskFor(mode, depth), EditorialGoal: goalFor(mode, depth)}
 	if r != nil {
 		b.SectionsRequired = append([]string(nil), r.SectionsRequired...)
+		b.ContrastPairs = append([]analyzer.ContrastPair(nil), r.ContrastPairs...)
 		if len(r.StyleRules) > 0 {
 			b.StyleRules = append([]string{}, r.StyleRules...)
 		}

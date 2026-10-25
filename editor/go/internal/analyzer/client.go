@@ -68,6 +68,13 @@ type Report struct {
 	CorpusVersion    string           `json:"corpus_version"`
 }
 
+type ContrastPair struct {
+	Topic       string `json:"topic"`
+	Boring      string `json:"boring"`
+	Interesting string `json:"interesting"`
+	Why         string `json:"why"`
+}
+
 type Rules struct {
 	TaskContext      json.RawMessage     `json:"task_context,omitempty"`
 	StyleRules       []string            `json:"style_rules,omitempty"`
@@ -88,6 +95,8 @@ type Rules struct {
 	Editorial        map[string]any      `json:"editorial"`
 	ReaderQuality    map[string]any      `json:"reader_quality,omitempty"`
 	CorpusVersion    string              `json:"corpus_version"`
+	// Пары «скучно → интересно» из корпуса: приём для писателя, не факты.
+	ContrastPairs []ContrastPair `json:"contrast_pairs,omitempty"`
 
 	// Только для глубины «переплавка»: модель должна видеть, как автор
 	// звучит, а не одни числа норм.

@@ -18,11 +18,12 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/analyzer"
 )
 
-// Лимиты: не больше трёх примеров, не длиннее 1200 знаков каждый и 3000 в сумме.
+// Лимиты: голос подкладывается 3–5 абзацами автора, не длиннее 1200 знаков
+// каждый и 4500 в сумме.
 const (
-	MaxExamples    = 3
+	MaxExamples    = 5
 	MaxExcerptLen  = 1200
-	MaxTotalLen    = 3000
+	MaxTotalLen    = 4500
 	DefaultTimeout = 15 * time.Second
 )
 
