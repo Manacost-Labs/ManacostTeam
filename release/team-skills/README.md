@@ -27,5 +27,4 @@
 Сборка: `python tools/build_team_skills.py` пишет архивы в игнорируемый
 `build/team-skills/<версия>/` и манифест сюда. Публикация:
 `python tools/publish_team_skills.py release --execute` после push манифеста.
-Снимки до 1.18.0 включительно ещё содержат архивы в Git, пока не выполнен
-`python tools/publish_team_skills.py migrate`.
+Архивы всех выпусков 1.0.0–1.18.0 перенесены в GitHub Releases и сверены по SHA256.
