@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Audit platform coverage using executed queries linked to inspected sources."""
+"""Audit platform coverage using executed queries linked to inspected sources.
+
+``--write-map`` also writes ``coverage-map.json``: for every source class
+(official, statistics, reddit, x, youtube, chinese, podcast, web) whether it
+was searched, what was found, or why it was unavailable or not searched. The
+bundle validator recomputes the map from the ledgers and requires it for a
+schema 1.2 final report.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +14,10 @@ import argparse
 import json
 import re
 from pathlib import Path
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlsplit, urlunsplit
+
+from source_classes import SOURCE_CLASSES, query_lane, source_class
 
 PLATFORMS = ("x", "reddit", "youtube", "web")
 INSPECTED = {
@@ -21,6 +31,11 @@ INSPECTED = {
 }
 SUCCESS = {"executed", "completed", "partial", "no_results"}
 FAILURE = {"blocked", "failed", "error", "unavailable", "skipped"}
+MAP_FILE = "coverage-map.json"
+MAP_SCHEMA = "1.0"
+MAP_STATUSES = ("found", "searched_not_found", "unavailable", "not_searched")
+REASON_REQUIRED = {"unavailable", "not_searched"}
+FAILURE_REASON_FIELDS = ("failure_reason", "blocked_reason", "status_reason", "error", "note")
 
 
 def inspection_targets(values: list[str]) -> dict[str, int]:
@@ -361,6 +376,99 @@ def planned_scopes(directory: Path) -> tuple[list[str], list[str]]:
     return list(dict.fromkeys(sections)), languages
 
 
+def map_lanes(queries: list[dict], sources: list[dict]) -> dict[str, dict]:
+    """Per source class: searches, failures and inspected material from the ledgers."""
+    lanes = {
+        lane: {"queries_executed": 0, "queries_failed": 0, "inspected_sources": 0, "source_ids": [], "failure_reasons": []}
+        for lane in SOURCE_CLASSES
+    }
+    for query in queries:
+        if not query.get("executed_at") or query.get("status") in {"planned", "skipped"}:
+            continue
+        lane = lanes[query_lane(query)]
+        if query.get("status") in FAILURE:
+            lane["queries_failed"] += 1
+            reason = next((str(query[field]) for field in FAILURE_REASON_FIELDS if query.get(field)), None)
+            if reason and reason not in lane["failure_reasons"]:
+                lane["failure_reasons"].append(reason)
+        else:
+            lane["queries_executed"] += 1
+    seen: dict[str, set[str]] = {lane: set() for lane in SOURCE_CLASSES}
+    for source in sources:
+        url = inspected_url(source)
+        if not url:
+            continue
+        lane = source_class(url, source.get("source_type"))
+        key = inspection_identity(url)
+        if key in seen[lane]:
+            continue
+        seen[lane].add(key)
+        lanes[lane]["inspected_sources"] += 1
+        lanes[lane]["source_ids"].append(str(source.get("source_id")))
+    for lane in lanes.values():
+        lane["status"] = (
+            "found" if lane["inspected_sources"]
+            else "searched_not_found" if lane["queries_executed"]
+            else "unavailable" if lane["queries_failed"]
+            else "not_searched"
+        )
+    return lanes
+
+
+def build_map(queries: list[dict], sources: list[dict], previous: dict | None = None,
+              reasons: dict[str, str] | None = None) -> dict:
+    """Keep a researcher's reason while the lane status it explains is unchanged."""
+    lanes = map_lanes(queries, sources)
+    old = (previous or {}).get("lanes", {})
+    for name, lane in lanes.items():
+        reason = (reasons or {}).get(name)
+        if reason is None and old.get(name, {}).get("status") == lane["status"]:
+            reason = old[name].get("reason")
+        if reason is None and lane["status"] == "unavailable" and lane["failure_reasons"]:
+            reason = "; ".join(lane["failure_reasons"])
+        lane["reason"] = reason
+    return {
+        "schema_version": MAP_SCHEMA,
+        "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "lanes": lanes,
+        "summary": {status: [name for name, lane in lanes.items() if lane["status"] == status] for status in MAP_STATUSES},
+        "limitation": "The map records logged search attempts and inspected material per source class; it does not prove the lane was searched well.",
+    }
+
+
+def check_map(document: object, queries: list[dict], sources: list[dict]) -> list[str]:
+    """Errors when the map is stale, incomplete, or leaves a gap unexplained."""
+    if not isinstance(document, dict) or document.get("schema_version") != MAP_SCHEMA:
+        return [f"{MAP_FILE}: schema_version must be {MAP_SCHEMA}"]
+    lanes = document.get("lanes")
+    if not isinstance(lanes, dict):
+        return [f"{MAP_FILE}: lanes must be an object"]
+    errors = []
+    expected = map_lanes(queries, sources)
+    for name, wanted in expected.items():
+        lane = lanes.get(name)
+        if not isinstance(lane, dict):
+            errors.append(f"{MAP_FILE}: missing lane {name}")
+            continue
+        stale = [field for field in ("status", "queries_executed", "queries_failed", "inspected_sources") if lane.get(field) != wanted[field]]
+        if stale:
+            errors.append(f"{MAP_FILE}: lane {name} disagrees with the ledgers ({', '.join(stale)}); rerun platform_coverage.py --write-map")
+        reason = lane.get("reason")
+        if wanted["status"] in REASON_REQUIRED and (not isinstance(reason, str) or not reason.strip()):
+            errors.append(f"{MAP_FILE}: lane {name} is {wanted['status']} without a reason; add --reason {name}=TEXT")
+    return errors
+
+
+def parse_reasons(values: list[str]) -> dict[str, str]:
+    reasons = {}
+    for value in values:
+        lane, separator, text = value.partition("=")
+        if not separator or lane not in SOURCE_CLASSES or not text.strip():
+            raise ValueError(f"--reason expects {'|'.join(SOURCE_CLASSES)}=TEXT")
+        reasons[lane] = text.strip()
+    return reasons
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
@@ -368,6 +476,9 @@ def main() -> int:
     parser.add_argument("--section", action="append", default=[])
     parser.add_argument("--language", action="append", default=[])
     parser.add_argument("--strict", action="store_true")
+    parser.add_argument("--write-map", action="store_true", help=f"Write {MAP_FILE} for the bundle validator")
+    parser.add_argument("--reason", action="append", default=[], metavar="CLASS=TEXT",
+                        help="Why a source class is unavailable or not searched; repeatable")
     parser.add_argument(
         "--min-inspected",
         action="append",
@@ -389,7 +500,22 @@ def main() -> int:
     except (ValueError, TypeError, OSError) as exc:
         print(json.dumps({"verdict": "invalid", "error": str(exc)}, ensure_ascii=False))
         return 2
+    if args.write_map:
+        try:
+            queries = read_ledger(args.directory / "queries.jsonl")
+            sources = read_ledger(args.directory / "sources.jsonl")
+            path = args.directory / MAP_FILE
+            previous = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+            document = build_map(queries, sources, previous, parse_reasons(args.reason))
+            path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        except (ValueError, TypeError, OSError) as exc:
+            print(json.dumps({"verdict": "invalid", "error": str(exc)}, ensure_ascii=False))
+            return 2
+        problems = check_map(document, queries, sources)
+        report["coverage_map"] = {"path": str(path), "summary": document["summary"], "problems": problems}
     print(json.dumps(report, ensure_ascii=False, indent=2))
+    if args.write_map and report["coverage_map"]["problems"]:
+        return 1
     return int(args.strict and report["verdict"] != "covered")
 
 

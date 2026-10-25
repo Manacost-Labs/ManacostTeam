@@ -94,6 +94,24 @@ Do not repeat equivalent queries unless a new date/version, source family, langu
 
 Do not hand-write one query per branch. In a persistent run, first seed the known venues of the domain with `scripts/registry_seed.py RUN_DIRECTORY --apply` so official pages, datasets, communities, and known creators are opened directly rather than rediscovered; then generate the matrix with `scripts/plan_queries.py RUN_DIRECTORY --language en --language ru --entity NAME --apply` after the sections and version markers are known. It expands every branch across the canonical families for the run depth, skips queries already in `queries.jsonl`, and writes `query-plan.jsonl`. Execute planned queries in priority order, record each in `queries.jsonl` with the canonical `pass`, `family`, and `language`, and log every seen result in `candidates.jsonl` with an `opened` or `rejected` decision and a canonical reason. Open pages with `scripts/fetch_source.py` so the snapshot, fingerprint, canonical URL, and query link are recorded automatically.
 
+## Search waves
+
+For Hearthstone research, run the matrix as waves instead of one flat plan:
+
+```bash
+python3 scripts/search_waves.py names RUN_DIRECTORY --apply        # en/ru/zh names for entities with a DBF id
+python3 scripts/search_waves.py plan RUN_DIRECTORY --threshold 2 --min-new 1 --apply
+python3 scripts/search_waves.py tasks RUN_DIRECTORY --wave 1 --executor reddit   # one queue per executor
+python3 scripts/search_waves.py close RUN_DIRECTORY --wave 1
+python3 scripts/search_waves.py status RUN_DIRECTORY
+```
+
+Wave 1 seeds eight executor lanes: `official`, `statistics`, `reddit`, `x`, `youtube`, `chinese`, `podcast` and `web`, in EN, RU and ZH. Topic phrases come from `plan.query_localization.topics`; entity names come from `query_localization.entities`, and `names` fills missing Russian names from Koloda and Chinese names from the HearthstoneJSON zhCN export. An entity without a name in a language is skipped for that language, never machine-translated. Each record carries `executor`, `include_domains` and `executor_query` (the query without `site:`), and records are interleaved across lanes so a budget cut never starves one. Give every executor its own worker (a subagent per platform): `tasks` prints that lane's queue.
+
+Every later wave combines three passes: links found in sources inspected in earlier waves (`outbound_links` written by `fetch_source.py`, or URLs printed in the snapshot), a refutation pass for critical/material claims without challenging evidence or a challenge search (a claim's own `search_phrases` target it), and gap queries for searched lanes that still have no inspected source. Execute the records, copy them into `queries.jsonl` with their `wave` and `executor`, then `close` the wave.
+
+`close` counts inspected sources with an unseen identity and lineage and claims first supported in that wave. A wave is dry when nothing is pending, it added fewer than `min_new_sources` sources and no claim; the run is saturated after `threshold_waves` consecutive dry waves, and `max_waves` caps the search. Configuration, each wave's counts per executor and the saturation decision are stored in `search-waves.json`; the bundle validator rejects a file whose flags disagree with its counts. Branch saturation in `search_coverage.py` remains a separate, per-branch check.
+
 ## Coverage log
 
 Run `scripts/search_coverage.py RUN_DIRECTORY` after every pass and `--strict` before the final audit. It reports families per branch, planned-but-unexecuted queries, candidate open rate, host and lineage concentration, challenge coverage for critical and material claims, and fingerprint coverage. A missing required family on a material branch or a critical claim without a challenge search is a blocking finding.

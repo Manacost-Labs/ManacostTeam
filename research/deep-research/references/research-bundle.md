@@ -165,6 +165,10 @@ Use `community_claim_id` or `contradiction_id` and the corresponding template fi
 
 For coverage-enabled evidence, claim, and community records, `output_disposition` is exactly one of `main`, `useful_data`, `appendix`, or `omit`. Query records have section links but no output disposition. `omit` requires a non-empty `output_omit_reason`. `useful_data` requires a non-empty `useful_data_types` list containing only `number`, `comparison`, `advice`, `sequence`, `example`, `mistake`, `exception`, `deck_code`, `x_insight`, or `youtube_segment`. Every non-rejected critical or material claim must route to `main`.
 
+### Coverage map and search waves
+
+`coverage-map.json` is written by `platform_coverage.py --write-map` and lists every source class with its status, query counts, inspected source IDs and reason; it is required for a schema 1.2 final report and always checked against the ledgers when present. `search-waves.json` is written by `search_waves.py`: the saturation configuration (`threshold_waves`, `min_new_sources`, `max_waves`, languages), the query IDs planned per wave, one closed record per wave and the saturation decision. Query records planned by a wave keep `wave`, `executor`, `include_domains` and `executor_query`; follow-link records add `query_kind: follow_link`, `follow_url` and `origin_source_ids`; refutation records add `challenge_claim_ids`. Sources fetched by `fetch_source.py` keep up to 300 `outbound_links`.
+
 ### Checkpoint
 
 `checkpoint_id`, `pass`, `created_at`, the five gap-detection lists, saturated/unsaturated branches, and next actions.

@@ -33,7 +33,19 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def validate_bundle(run: Path, *, stage: str) -> subprocess.CompletedProcess[str]:
+def write_coverage_map(run: Path) -> None:
+    """Fixtures search one lane; every other lane gets an explicit reason."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from platform_coverage import MAP_FILE, build_map, map_lanes, read_ledger
+
+    queries, sources = read_ledger(run / "queries.jsonl"), read_ledger(run / "sources.jsonl")
+    reasons = {lane: "outside this fixture's scope" for lane, item in map_lanes(queries, sources).items() if item["status"] != "found"}
+    write_json(run / MAP_FILE, build_map(queries, sources, reasons=reasons))
+
+
+def validate_bundle(run: Path, *, stage: str, coverage_map: bool = True) -> subprocess.CompletedProcess[str]:
+    if stage == "final" and coverage_map:
+        write_coverage_map(run)
     return subprocess.run(
         [sys.executable, str(VALIDATE), str(run), "--stage", stage],
         check=False,
@@ -557,6 +569,7 @@ class ResearchRunToolsTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
+            write_coverage_map(run)
             blocked = subprocess.run(
                 [sys.executable, str(VALIDATE), str(run), "--stage", "final"],
                 check=False,
@@ -580,6 +593,7 @@ class ResearchRunToolsTest(unittest.TestCase):
                 "The incomplete fixture passed structural preservation checks.\n",
                 encoding="utf-8",
             )
+            write_coverage_map(run)
             passed = subprocess.run(
                 [sys.executable, str(VALIDATE), str(run), "--stage", "final"],
                 check=False,
@@ -1760,6 +1774,28 @@ class ResearchRunToolsTest(unittest.TestCase):
                 "Fixture handoff for structural validation only.\n",
                 encoding="utf-8",
             )
+            missing_map = validate_bundle(run, stage="final", coverage_map=False)
+            self.assertNotEqual(missing_map.returncode, 0)
+            self.assertIn("missing coverage-map.json", missing_map.stdout)
+
+            sys.path.insert(0, str(ROOT / "scripts"))
+            from platform_coverage import build_map, read_ledger
+
+            queries, sources = read_ledger(run / "queries.jsonl"), read_ledger(run / "sources.jsonl")
+            write_json(run / "coverage-map.json", build_map(queries, sources))
+            unexplained = validate_bundle(run, stage="final", coverage_map=False)
+            self.assertNotEqual(unexplained.returncode, 0)
+            self.assertIn("lane reddit is not_searched without a reason", unexplained.stdout)
+
+            write_coverage_map(run)
+            write_jsonl(run / "queries.jsonl", read_ledger(run / "queries.jsonl") + [
+                {"query_id": "QRY-0099", "pass": "discovery", "family": "reddit", "query": "late query",
+                 "executed_at": "2026-08-28T09:00:00Z", "status": "blocked", "result_source_ids": []},
+            ])
+            stale = validate_bundle(run, stage="final", coverage_map=False)
+            self.assertIn("lane reddit disagrees with the ledgers", stale.stdout)
+            write_jsonl(run / "queries.jsonl", queries)
+
             result = subprocess.run(
                 [sys.executable, str(VALIDATE), str(run), "--stage", "final"],
                 check=False,
