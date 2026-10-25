@@ -166,7 +166,7 @@ func writerCore(mode string) string {
 		"1. Каждый абзац отвечает на вопрос игрока: что выбрать, когда, почему и где исключение. Пересказ текста карты — не ответ; ответ — решение, которое карта меняет. Причину и исключение бери только из материала: нет их там — не дописывай, лучше короче.\n" +
 		"2. Начинай с неочевидного: с того, чего читатель ещё не знает. Общие слова, обещания и финал-пересказ убирай.\n" +
 		"3. Сцена сильнее правила: конкретную ситуацию из материала (ход, рука, стол противника) показывай ход за ходом. Ситуацию, которой нет в материале, не выдумывай.\n" +
-		"4. Совет давай императивом читателю («оставляйте», «скидывайте», «не спешите»), а не безличным «оставляется» или «рекомендуется». contrast_pairs показывают разницу между механическим пересказом и живым абзацем на одну тему; style_examples — как звучит автор: неровный ритм, императив к читателю, «но», «хотя», «зато», короткая фраза для решения. Бери приём, не предложения и не факты.\n" +
+		"4. Совет давай императивом читателю («оставляйте», «скидывайте»), а не безличным «оставляется» или «рекомендуется». Условие не превращай в запрет или обратный совет: «держите только с Монеткой» не значит «без Монетки сбрасывайте»; отрицаний не больше, чем в материале. contrast_pairs показывают разницу между механическим пересказом и живым абзацем на одну тему; style_examples — как звучит автор: неровный ритм, императив к читателю, «но», «хотя», «зато», короткая фраза для решения. Бери приём, не предложения и не факты.\n" +
 		"5. Предложение, которое читатель пролистнёт (повтор, обвязка, очевидность), удаляй или наполняй решением.\n" +
 		"6. Удачные фразы автора (strengths) оставляй; то, что мешает чтению, меняй без колебаний."
 	if mode == "rewrite" || mode == "reconstruct" {
@@ -233,7 +233,10 @@ func (s *Service) writingBrief(ctx context.Context, req Request, analysis Analys
 	return brief, nil
 }
 
-var lowerWordRE = regexp.MustCompile(`[а-яё]{3,}`)
+var (
+	lowerWordRE     = regexp.MustCompile(`[а-яё]{3,}`)
+	parentheticalRE = regexp.MustCompile(`\([^()]*\)`)
+)
 
 // parseBrief checks the brief deterministically. Unproven scenes are removed
 // and reported as gaps: a missing scene is honest, an invented one is not.
@@ -288,11 +291,14 @@ func isDecision(text string) bool {
 	if len(strings.Fields(text)) < 3 {
 		return false
 	}
-	chunks := strings.FieldsFunc(text, func(r rune) bool { return r == ',' || r == ';' || r == '/' || r == '+' })
+	// Card names in parentheses illustrate a decision; they are not the plan item.
+	bare := parentheticalRE.ReplaceAllString(text, " ")
+	chunks := strings.FieldsFunc(bare, func(r rune) bool { return r == ',' || r == ';' || r == '/' || r == '+' })
 	if len(chunks) > 1 {
 		names := 0
 		for _, chunk := range chunks {
-			if runes := []rune(strings.TrimSpace(chunk)); len(runes) > 0 && unicode.IsUpper(runes[0]) {
+			chunk = strings.TrimSpace(chunk)
+			if runes := []rune(chunk); len(runes) > 0 && unicode.IsUpper(runes[0]) && len(strings.Fields(chunk)) <= 4 {
 				names++
 			}
 		}
@@ -300,8 +306,8 @@ func isDecision(text string) bool {
 			return false
 		}
 	}
-	rest := text
-	for _, entity := range guards.Extract(text) {
+	rest := bare
+	for _, entity := range guards.Extract(bare) {
 		rest = strings.ReplaceAll(rest, entity.Value, " ")
 	}
 	plain := 0
