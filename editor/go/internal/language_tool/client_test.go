@@ -44,3 +44,12 @@ func TestHealthProbesLanguageToolEndpoint(t *testing.T) {
 		t.Fatal("health must fail when LanguageTool endpoint is unavailable")
 	}
 }
+
+func TestContextSpanIsTheFlaggedFragment(t *testing.T) {
+	if got := contextSpan("...внесет пару изменения в карты", 15, 9); got != "изменения" {
+		t.Fatalf("span: %q", got)
+	}
+	if got := contextSpan("короткий", 5, 10); got != "" {
+		t.Fatalf("out of range must be empty: %q", got)
+	}
+}

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Manacost-Labs/EditorTeam/go/internal/budget"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/finding"
 )
 
@@ -20,14 +21,16 @@ var ErrDegraded = errors.New("NLP-сайдкар работает в огран�
 type Client struct {
 	base    string
 	http    *http.Client
+	timeout time.Duration
 	maxBody int64
 }
 
+// timeout — срок для текста до budget.BaseRunes; длинный текст получает больше.
 func New(base string, timeout time.Duration) *Client {
 	if timeout <= 0 {
 		timeout = 8 * time.Second
 	}
-	return &Client{base: strings.TrimRight(base, "/"), http: &http.Client{Timeout: timeout}, maxBody: 8 << 20}
+	return &Client{base: strings.TrimRight(base, "/"), http: &http.Client{Timeout: timeout * budget.MaxFactor}, timeout: timeout, maxBody: 8 << 20}
 }
 
 func (c *Client) URL() string {
@@ -102,6 +105,8 @@ func (c *Client) Analyze(ctx context.Context, in Input) (*Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("сборка запроса NLP: %w", err)
 	}
+	ctx, cancel := context.WithTimeout(ctx, budget.ForText(c.timeout, in.Text))
+	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/analyze", bytes.NewReader(body))
 	if err != nil {
 		return nil, err

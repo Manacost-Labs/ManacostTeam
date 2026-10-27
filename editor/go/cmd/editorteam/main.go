@@ -96,6 +96,7 @@ func main() {
 		pipe.RetrievalTimeout = cfg.RetrievalTimeout
 	}
 	pipe.SetAllowUnavailable(cfg.AllowUnavailable)
+	pipe.CriticRetries = cfg.CriticRetries
 	pipe.SetPromptVariant(cfg.PromptVariant)
 	server := api.New(cfg, ed, an, log)
 	server.SetPipeline(pipe)

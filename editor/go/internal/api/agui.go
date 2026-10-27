@@ -327,6 +327,12 @@ func renderedResult(result *editor.Result) string {
 	if result.Depth == editor.DepthRewrite {
 		b.WriteString(" · переплавка")
 	}
+	if salvage := result.ProofreadSalvage; !result.Accepted && salvage != nil {
+		b.WriteString(fmt.Sprintf("\n>\n> **Безопасная корректура из отклонённой правки (%d):** %s\n", salvage.Applied, salvage.Note))
+		for _, change := range salvage.Changes {
+			b.WriteString(fmt.Sprintf("> - Строка %d: %s → %s\n", change.Line, quoteDiff(change.Before), quoteDiff(change.After)))
+		}
+	}
 	if result.Depth == editor.DepthRewrite && len(result.MissingTitles) > 0 {
 		b.WriteString("\n>\n> **Не хватает в исходнике:**\n")
 		for _, title := range result.MissingTitles {

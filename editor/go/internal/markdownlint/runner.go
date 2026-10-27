@@ -2,6 +2,8 @@
 package markdownlint
 
 import (
+	"github.com/Manacost-Labs/EditorTeam/go/internal/budget"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -70,7 +72,7 @@ func (r *Runner) Check(parent context.Context, text string) ([]finding.Finding, 
 	if r == nil {
 		return nil, ErrNotInstalled
 	}
-	ctx, cancel := context.WithTimeout(parent, r.Timeout)
+	ctx, cancel := context.WithTimeout(parent, budget.ForText(r.Timeout, text))
 	defer cancel()
 	dir, err := os.MkdirTemp("", "editorteam-markdownlint-")
 	if err != nil {

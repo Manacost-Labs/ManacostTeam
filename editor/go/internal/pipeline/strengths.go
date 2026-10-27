@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/Manacost-Labs/EditorTeam/go/internal/guards"
 )
@@ -15,7 +16,7 @@ func validateStrengthChanges(in criticInput, out criticResult) error {
 	}
 	var invalid []error
 	for _, span := range in.KeepSpans {
-		if strings.Contains(in.Candidate, span.Quote) || proseSpanPreserved(in.Candidate, span.Quote) {
+		if strings.Contains(in.Candidate, span.Quote) || proseSpanPreserved(in.Candidate, span.Quote) || punctuationOnlyPreserved(in.Candidate, span.Quote) {
 			continue
 		}
 		matches := 0
@@ -44,4 +45,34 @@ func proseSpanPreserved(candidate, quote string) bool {
 		}
 	}
 	return strings.Contains(guards.NormalizeWhitespace(candidate), guards.NormalizeWhitespace(quote))
+}
+
+// A comma, dash or quote style fixed inside a strong span keeps its words and
+// voice. Live critic failures came from demanding a loss explanation for
+// exactly this; sentence ends, brackets and words still count as changes.
+func punctuationOnlyPreserved(candidate, quote string) bool {
+	if strings.ContainsAny(quote, "`<>\t") {
+		return false
+	}
+	words := surfaceWords(quote)
+	if len(words) == 0 {
+		return false
+	}
+	return strings.Contains(" "+strings.Join(surfaceWords(candidate), " ")+" ", " "+strings.Join(words, " ")+" ")
+}
+
+// surfaceWords keeps word tokens and the punctuation that ends or brackets a
+// sentence; commas, dashes, quotes and spaces are dropped.
+func surfaceWords(text string) []string {
+	var out []string
+	for _, token := range surfaceTokens(text) {
+		if isWordToken(token) || strings.TrimFunc(token, isDroppedSurfaceRune) != "" {
+			out = append(out, token)
+		}
+	}
+	return out
+}
+
+func isDroppedSurfaceRune(r rune) bool {
+	return unicode.IsSpace(r) || strings.ContainsRune(salvageSafePunct, r)
 }

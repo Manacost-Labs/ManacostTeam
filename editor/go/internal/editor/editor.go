@@ -93,6 +93,8 @@ type Result struct {
 	ReviewScope        string               `json:"review_scope"`
 	SourceVerification string               `json:"source_verification"`
 	EditorialReview    *pipeline.EditReview `json:"editorial_review,omitempty"`
+	// Безопасная корректура из последней отклонённой попытки; Text остаётся исходником.
+	ProofreadSalvage *pipeline.ProofreadSalvage `json:"proofread_salvage,omitempty"`
 
 	// Переплавка: глубина, план и разделы, для которых в исходнике не было
 	// материала, — они честно не написаны, а не выдуманы.
@@ -227,6 +229,9 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 			res.Caveats = append(res.Caveats,
 				"правка не прошла проверку за "+plural(s.maxAttempts)+
 					" — возвращён исходный текст")
+			if req.Mode != DepthRewrite {
+				res.ProofreadSalvage = pipeline.SalvageProofreading(validationText, candidate, rules.Typography)
+			}
 			break
 		}
 

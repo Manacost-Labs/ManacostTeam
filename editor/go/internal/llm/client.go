@@ -8,12 +8,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 )
+
+// ErrTruncated — провайдер остановил ответ по лимиту токенов.
+var ErrTruncated = errors.New("ответ модели обрезан по лимиту длины")
 
 type Message struct {
 	Role    string `json:"role"`
@@ -112,7 +116,8 @@ type chatRequest struct {
 
 type chatResponse struct {
 	Choices []struct {
-		Message Message `json:"message"`
+		Message      Message `json:"message"`
+		FinishReason string  `json:"finish_reason"`
 	} `json:"choices"`
 	Error *struct {
 		Message string `json:"message"`
@@ -165,6 +170,11 @@ func (c *Client) Complete(ctx context.Context, msgs []Message, maxTokens int) (s
 	}
 	if len(parsed.Choices) == 0 {
 		return "", fmt.Errorf("%s вернул пустой ответ", c.provider)
+	}
+	// Обрезанная по лимиту статья выглядит как законченный текст; её нельзя
+	// отдавать на проверку как полноценного кандидата.
+	if parsed.Choices[0].FinishReason == "length" {
+		return "", fmt.Errorf("%w: %s", ErrTruncated, c.provider)
 	}
 	return strings.TrimSpace(parsed.Choices[0].Message.Content), nil
 }
