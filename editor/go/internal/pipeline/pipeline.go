@@ -202,6 +202,7 @@ type Result struct {
 	UnsupportedAdditions     []string                      `json:"unsupported_additions,omitempty"`
 	ReviewerModel            string                        `json:"reviewer_model,omitempty"`
 	RevisionFallback         *RevisionFallback             `json:"revision_fallback,omitempty"`
+	ProofreadSalvage         *ProofreadSalvage             `json:"proofread_salvage,omitempty"`
 }
 
 type RevisionFallback struct {
@@ -232,6 +233,9 @@ type Service struct {
 	Retriever        retrieval.CorpusRetriever
 	RetrievalTimeout time.Duration
 	RetrievalMode    string // auto | on | off, из EDITOR_RETRIEVAL; пусто = auto
+	// CriticRetries — число повторов critic после невалидного ответа,
+	// из EDITOR_CRITIC_RETRIES; 0 = один повтор.
+	CriticRetries int
 }
 
 func (s *Service) logger() *slog.Logger {
@@ -523,7 +527,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 					NewArticle: mode == "reconstruct" && req.Text == "" && req.CandidateText == "",
 					Analysis:   analysis, Handoff: req.Handoff, SourceSnapshots: req.SourceSnapshots, SourceClaims: bundle.SourceClaims, ProtectedEntities: bundle.ProtectedEntities,
 					KeepSpans:    analysis.Strengths,
-					ToolFindings: repairable(findings), StyleExamples: promptExamples(examples),
+					ToolFindings: criticToolFindings(repairable(findings)), StyleExamples: promptExamples(examples),
 				}, result.Attempts)
 				if cerr != nil {
 					criticOK = false
@@ -684,6 +688,9 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 	} else {
 		result.Text = req.Text
 		result.Changes = nil
+		if s.LLM != nil && !req.reviewOnly && mode != "reconstruct" {
+			result.ProofreadSalvage = proofreadSalvage(req.Text, candidate, flaggedWords(pre.findings))
+		}
 	}
 	if !result.Accepted && (result.Status == StatusRejected || result.Text != req.CandidateText) && req.ReviseCandidate && !req.reviewOnly && s.LLM != nil && ctx.Err() == nil {
 		// A failed new revision must not silently erase useful prior edits. The
@@ -1216,8 +1223,8 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 }
 
 // critic вызывает модель с JSON-данными в user message. Невалидный ответ
-// повторяется один раз с текстом ошибки разбора; второй невалидный ответ —
-// critic_invalid_response. Таймаут — critic_timeout, сетевой или HTTP-сбой —
+// повторяется CriticRetries раз с текстом ошибки разбора; последний
+// невалидный ответ — critic_invalid_response. Таймаут — critic_timeout, сетевой или HTTP-сбой —
 // critic_unavailable. Во всех случаях pipeline возвращает исходник без
 // HTTP-ошибки.
 func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in criticInput, attempt int) (criticResult, *criticError) {
@@ -1263,30 +1270,43 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return out, nil
 	}
 	s.logStage(ctx, "critic", started, attempt, ReasonCriticInvalid)
-	retry := append(append([]llm.Message{}, messages...),
-		llm.Message{Role: "assistant", Content: text},
-		llm.Message{Role: "user", Content: "Ответ не разобран: " + parseErr.Error() + ". Верни только исправленный JSON по схеме из инструкции, без пояснений и без текста статьи."},
-	)
-	started = time.Now()
-	text, err = model.Complete(ctx, retry, 0)
-	if err != nil {
-		kind := errorKind(ctx, err)
-		s.logStage(ctx, "critic_retry", started, attempt, kind)
-		return criticResult{}, &criticError{Kind: kind, Err: err}
-	}
-	out, parseErr = parseCritic(text)
-	applyReviewScope(&out, in)
-	out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
-	out.Findings = append(out.Findings, contextualFindings(in, out)...)
-	if out.Verdict != "" {
-		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out), validateContextualReview(in, out))
-	}
-	if parseErr != nil {
+	// Each retry carries only the last bad reply and its errors, so the prompt
+	// does not grow with every failed bookkeeping attempt.
+	for retryNo := 1; retryNo <= s.criticRetries(); retryNo++ {
+		retry := append(append([]llm.Message{}, messages...),
+			llm.Message{Role: "assistant", Content: text},
+			llm.Message{Role: "user", Content: "Ответ не разобран: " + parseErr.Error() + ". Исправь каждую названную ошибку, сохрани остальные верные поля. Верни только исправленный JSON по схеме из инструкции, без пояснений и без текста статьи."},
+		)
+		started = time.Now()
+		text, err = model.Complete(ctx, retry, 0)
+		if err != nil {
+			kind := errorKind(ctx, err)
+			s.logStage(ctx, "critic_retry", started, attempt, kind)
+			return criticResult{}, &criticError{Kind: kind, Err: err}
+		}
+		out, parseErr = parseCritic(text)
+		applyReviewScope(&out, in)
+		out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
+		out.Findings = append(out.Findings, contextualFindings(in, out)...)
+		if out.Verdict != "" {
+			parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out), validateContextualReview(in, out))
+		}
+		if parseErr == nil {
+			s.logStage(ctx, "critic_retry", started, attempt, "")
+			return out, nil
+		}
 		s.logStage(ctx, "critic_retry", started, attempt, ReasonCriticInvalid)
-		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: parseErr}
 	}
-	s.logStage(ctx, "critic_retry", started, attempt, "")
-	return out, nil
+	return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: parseErr}
+}
+
+// criticRetries is the number of schema repairs after the first invalid
+// critic reply. Zero keeps the historical single retry.
+func (s *Service) criticRetries() int {
+	if s.CriticRetries > 0 {
+		return s.CriticRetries
+	}
+	return 1
 }
 
 func applyReviewScope(out *criticResult, in criticInput) {
@@ -1465,17 +1485,42 @@ func claimsFromEntities(entities []guards.Entity) []map[string]any {
 	}
 	return claims
 }
+
+// diff выравнивает строки по Майерсу: одна вставленная строка больше не
+// превращает в «изменение» весь хвост статьи и не раздувает вход critic.
+// Line — номер строки в after (для удаления — в before).
 func diff(before, after string) []Change {
 	if before == after {
 		return nil
 	}
 	b, a := strings.Split(before, "\n"), strings.Split(after, "\n")
-	n := len(b)
-	if len(a) > n {
-		n = len(a)
+	if len(a)+len(b) > maxSalvageLines {
+		return positionalDiff(b, a)
 	}
 	out := []Change{}
-	for i := 0; i < n; i++ {
+	for _, h := range lineHunks(b, a) {
+		n := max(h.delEnd-h.delStart, h.insEnd-h.insStart)
+		for i := 0; i < n; i++ {
+			var change Change
+			if h.delStart+i < h.delEnd {
+				change.Before = b[h.delStart+i]
+				change.Line = h.delStart + i + 1
+			}
+			if h.insStart+i < h.insEnd {
+				change.After = a[h.insStart+i]
+				change.Line = h.insStart + i + 1
+			}
+			if change.Before != "" || change.After != "" {
+				out = append(out, change)
+			}
+		}
+	}
+	return out
+}
+
+func positionalDiff(b, a []string) []Change {
+	out := []Change{}
+	for i := 0; i < max(len(a), len(b)); i++ {
 		var x, y string
 		if i < len(b) {
 			x = b[i]

@@ -53,6 +53,7 @@ type Config struct {
 	MaxProcessOutput    int64
 	RetrievalMode       string        // EDITOR_RETRIEVAL=auto|on|off: примеры авторского стиля из корпуса
 	RetrievalTimeout    time.Duration // EDITOR_RETRIEVAL_TIMEOUT_SEC; недоступный корпус не останавливает правку
+	CriticRetries       int           // EDITOR_CRITIC_RETRIES: повторы critic после ответа не по схеме
 }
 
 func env(key, def string) string {
@@ -112,6 +113,9 @@ func Load() (*Config, error) {
 		MaxProcessOutput:    int64(envInt("EDITOR_PROCESS_MAX_OUTPUT", 4*1024*1024)),
 		RetrievalMode:       strings.ToLower(strings.TrimSpace(env("EDITOR_RETRIEVAL", "auto"))),
 		RetrievalTimeout:    time.Duration(envInt("EDITOR_RETRIEVAL_TIMEOUT_SEC", 15)) * time.Second,
+		// Живые отказы critic были ошибками учёта цитат; второй повтор
+		// дешевле, чем потеря всей правки.
+		CriticRetries: envInt("EDITOR_CRITIC_RETRIES", 2),
 	}
 
 	switch c.RetrievalMode {
@@ -183,6 +187,7 @@ func (c *Config) Redacted() map[string]any {
 		"reasoning_effort":     c.ReasoningEffort,
 		"base_url":             c.BaseURL,
 		"max_attempts":         c.MaxAttempts,
+		"critic_retries":       c.CriticRetries,
 		"api_key_set":          c.APIKey != "",
 		"openbot_url":          c.OpenBotURL,
 		"openbot_token_set":    c.OpenBotToken != "",

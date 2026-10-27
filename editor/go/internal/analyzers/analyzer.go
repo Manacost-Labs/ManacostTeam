@@ -5,6 +5,8 @@
 package analyzers
 
 import (
+	"github.com/Manacost-Labs/EditorTeam/go/internal/budget"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -214,7 +216,7 @@ func (p *PythonAnalyzerAdapter) runScript(ctx context.Context, in Input) (Result
 	if timeout <= 0 {
 		timeout = 20 * time.Second
 	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, budget.ForText(timeout, in.Text))
 	defer cancel()
 	payload, err := json.Marshal(in)
 	if err != nil {

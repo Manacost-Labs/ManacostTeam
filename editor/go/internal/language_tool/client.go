@@ -11,20 +11,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Manacost-Labs/EditorTeam/go/internal/budget"
 	"github.com/Manacost-Labs/EditorTeam/go/internal/finding"
 )
 
 type Client struct {
 	base    string
 	http    *http.Client
+	timeout time.Duration
 	maxBody int64
 }
 
+// timeout — срок для текста до budget.BaseRunes; длинный текст получает больше.
 func New(base string, timeout time.Duration) *Client {
 	if timeout <= 0 {
 		timeout = 8 * time.Second
 	}
-	return &Client{base: strings.TrimRight(base, "/"), http: &http.Client{Timeout: timeout}, maxBody: 4 << 20}
+	return &Client{base: strings.TrimRight(base, "/"), http: &http.Client{Timeout: timeout * budget.MaxFactor}, timeout: timeout, maxBody: 4 << 20}
 }
 
 func (c *Client) URL() string {
@@ -98,6 +101,8 @@ func (c *Client) Check(ctx context.Context, text, language string, opts Options)
 	if len(opts.DisabledRules) > 0 {
 		form.Set("disabledRules", strings.Join(opts.DisabledRules, ","))
 	}
+	ctx, cancel := context.WithTimeout(ctx, budget.ForText(c.timeout, text))
+	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/v2/check", strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
@@ -136,9 +141,20 @@ func (c *Client) Check(ctx context.Context, text, language string, opts Options)
 		column := item.Offset + 1
 		findings = append(findings, finding.Finding{Analyzer: "languagetool", RuleID: item.Rule.ID, Severity: sev,
 			Message: item.Message, Suggestions: suggestions, Line: line, Column: column, Offset: item.Offset, Length: item.Length,
-			Context: item.Context.Text})
+			Evidence: contextSpan(item.Context.Text, item.Context.Offset, item.Context.Length), Context: item.Context.Text})
 	}
 	return findings, nil
+}
+
+// contextSpan — сам отмеченный фрагмент. LanguageTool считает смещения в
+// UTF-16; для кириллицы и латиницы это совпадает с рунами, а выход за
+// границы даёт пустую строку, а не чужой фрагмент.
+func contextSpan(text string, offset, length int) string {
+	runes := []rune(text)
+	if offset < 0 || length <= 0 || offset+length > len(runes) {
+		return ""
+	}
+	return string(runes[offset : offset+length])
 }
 
 func min(a, b int) int {

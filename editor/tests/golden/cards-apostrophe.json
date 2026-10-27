@@ -33,5 +33,9 @@
   "analyzers_skipped": [],
   "notes": [
     "текст короче минимума профиля (108 из 600 слов) — частотные метрики шумят, категоричных выводов не будет"
-  ]
+  ],
+  "independent_review_required": true,
+  "publication_ready": false,
+  "review_scope": "diagnostics_only",
+  "source_verification": "not_performed"
 }

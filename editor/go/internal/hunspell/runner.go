@@ -3,6 +3,8 @@
 package hunspell
 
 import (
+	"github.com/Manacost-Labs/EditorTeam/go/internal/budget"
+
 	"bytes"
 	"context"
 	"errors"
@@ -73,7 +75,7 @@ func (r *Runner) Check(parent context.Context, text string) ([]finding.Finding, 
 	if _, err := os.Stat(r.Dictionary); err != nil {
 		return nil, ErrDictionaryUnavailable
 	}
-	ctx, cancel := context.WithTimeout(parent, r.Timeout)
+	ctx, cancel := context.WithTimeout(parent, budget.ForText(r.Timeout, text))
 	defer cancel()
 	masked := maskProtected(text)
 	args := []string{"-a"}
