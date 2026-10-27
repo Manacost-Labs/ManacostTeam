@@ -9,13 +9,13 @@ import (
 
 func TestSalvageKeepsSurfaceFixesFromRejectedCandidate(t *testing.T) {
 	source := "Патч внесет пару изменения в карты Стандарта.\n\nТаким образом теперь для призыва нужно 4 аберрации вместо 3."
-	candidate := "Патч внесёт пару изменений в карты Стандарта.\n\nТаким образом, теперь для призыва нужно 4 аберрации вместо 3."
+	candidate := "Патч внесет пару изменений в карты Стандарта.\n\nТаким образом, теперь для призыва нужно 4 аберрации вместо 3."
 	flagged := flaggedWords([]analyzers.Finding{
 		{Analyzer: "languagetool", RuleID: "AGREEMENT", Evidence: "пару изменения"},
 		{Analyzer: "languagetool", RuleID: "COMMA", Evidence: "образом теперь"},
 	})
 	got := proofreadSalvage(source, candidate, flagged)
-	if got == nil || got.Text != candidate || got.Applied != 3 || got.Skipped != 0 {
+	if got == nil || got.Text != candidate || got.Applied != 2 || got.Skipped != 0 {
 		t.Fatalf("salvage: %+v", got)
 	}
 	if len(got.Changes) != 2 || got.Changes[0].Line != 1 || got.Changes[1].Line != 3 {
@@ -56,15 +56,43 @@ func TestSalvageNeedsAnalyzerEvidenceForWordForms(t *testing.T) {
 	}
 }
 
-func TestSalvageNeverDowngradesTypography(t *testing.T) {
+func TestSalvageFollowsHouseTypography(t *testing.T) {
+	// typography.yaml: прямые кавычки, длинное тире, без ё, диапазон через дефис.
 	// Живой случай: «ёлочки» менялись на прямые кавычки, иногда непарно.
-	source := "Представляем «Путешествие» — новую сторону игры."
-	candidate := "Представляем \"Путешествие\" - новую сторону игры."
-	if got := proofreadSalvage(source, candidate, salvageFlags{}); got != nil {
-		t.Fatalf("straight quotes and hyphens are not a fix: %+v", got)
+	guillemets := "Представляем «Путешествие» — новую сторону игры."
+	straight := "Представляем \"Путешествие\" - новую сторону игры."
+	if got := proofreadSalvage(guillemets, straight, salvageFlags{}); got != nil {
+		t.Fatalf("a hyphen for a dash and unrequested quote changes are not a fix: %+v", got)
 	}
-	if got := proofreadSalvage(candidate, source, salvageFlags{}); got == nil || got.Text != source {
-		t.Fatalf("typographic quotes and dash are a fix: %+v", got)
+	want := "Представляем \"Путешествие\" — новую сторону игры."
+	if got := proofreadSalvage(straight, guillemets, salvageFlags{}); got == nil || got.Text != want {
+		t.Fatalf("house style takes the dash and keeps straight quotes: %+v", got)
+	}
+	chosen := salvageFlags{style: salvageStyleFrom(map[string]any{"quotes": map[string]any{"decision": "guillemets"}})}
+	if got := proofreadSalvage(straight, guillemets, chosen); got == nil || got.Text != guillemets {
+		t.Fatalf("guillemets carry over only when the style chose them: %+v", got)
+	}
+	for _, pair := range [][2]string{
+		{"Карты стоят 2-3 маны.", "Карты стоят 2–3 маны."},
+		{"Он еще не вышел.", "Он ещё не вышел."},
+		{"Ход - тут.", "Ход – тут."},
+	} {
+		if got := proofreadSalvage(pair[0], pair[1], salvageFlags{}); got != nil {
+			t.Fatalf("%q -> %q breaks the house style: %+v", pair[0], pair[1], got)
+		}
+	}
+	if got := proofreadSalvage("Он ещё не вышел.", "Он еще не вышел.", salvageFlags{}); got == nil || got.Text != "Он еще не вышел." {
+		t.Fatalf("removing ё follows the house style: %+v", got)
+	}
+}
+
+func TestSalvageStyleFromTypography(t *testing.T) {
+	house := salvageStyleFrom(map[string]any{"yo": map[string]any{"decision": "remove"}, "quotes": map[string]any{"decision": "straight"}})
+	if house != (salvageStyle{}) || salvageStyleFrom(nil) != (salvageStyle{}) {
+		t.Fatalf("typography.yaml decisions are the zero style: %+v", house)
+	}
+	if got := salvageStyleFrom(map[string]any{"yo": map[string]any{"decision": "keep"}}); !got.keepYo {
+		t.Fatalf("an edition with ё keeps it: %+v", got)
 	}
 }
 
@@ -82,17 +110,21 @@ func TestSalvageRejectsUnsafeWordForms(t *testing.T) {
 	for _, pair := range [][2]string{
 		{"можно", "нужно"}, {"выше", "ниже"}, {"сильный", "несильный"}, {"Маг", "маг"},
 		{"больше", "меньше"}, {"5", "6"}, {"карта", "карты"},
+		{"внесет", "внесёт"}, {"Тёмный", "Темный"}, {"вышла", "вышёл"},
 	} {
-		if wordFormFix(pair[0], pair[1], map[string]bool{pair[0]: true}) {
+		if wordFormFix(pair[0], pair[1], map[string]bool{pair[0]: true}, salvageStyle{}) {
 			t.Fatalf("%q -> %q must not be a surface fix", pair[0], pair[1])
 		}
 	}
 	for _, pair := range [][2]string{
-		{"внесет", "внесёт"}, {"изменения", "изменений"}, {"посмотреть", "посмотерть"}, {"стратегия", "стратегии"},
+		{"внесёт", "внесет"}, {"изменения", "изменений"}, {"посмотреть", "посмотерть"}, {"стратегия", "стратегии"},
 	} {
-		if !wordFormFix(pair[0], pair[1], map[string]bool{pair[0]: true}) {
+		if !wordFormFix(pair[0], pair[1], map[string]bool{pair[0]: true}, salvageStyle{}) {
 			t.Fatalf("%q -> %q is a surface fix", pair[0], pair[1])
 		}
+	}
+	if !wordFormFix("внесет", "внесёт", nil, salvageStyle{keepYo: true}) {
+		t.Fatal("an edition with ё takes it")
 	}
 }
 
@@ -105,13 +137,13 @@ func TestSalvageLeavesStructureAndListMarkers(t *testing.T) {
 }
 
 func TestRejectedRunExposesSalvageButKeepsSourceText(t *testing.T) {
-	source := "Патч внесет пару изменения в карты."
-	lm := &fakeLLM{replies: []string{analysisJSON, "Патч внесёт пару изменений в карты.", "мусор", "мусор"}}
+	source := "Патч внесет пару изменения - в карты."
+	lm := &fakeLLM{replies: []string{analysisJSON, "Патч внесёт пару изменений — в карты.", "мусор", "мусор"}}
 	result := run(t, lm, source, "edit")
 	if result.Accepted || result.Text != source || len(result.Changes) != 0 {
 		t.Fatalf("rejection must still return the source: %+v", result)
 	}
-	if result.ProofreadSalvage == nil || result.ProofreadSalvage.Text != "Патч внесёт пару изменения в карты." {
+	if result.ProofreadSalvage == nil || result.ProofreadSalvage.Text != "Патч внесет пару изменения — в карты." {
 		t.Fatalf("safe proofreading must survive the rejection: %+v", result.ProofreadSalvage)
 	}
 }

@@ -230,7 +230,7 @@ func (s *Service) Edit(ctx context.Context, req Request) (*Result, error) {
 				"правка не прошла проверку за "+plural(s.maxAttempts)+
 					" — возвращён исходный текст")
 			if req.Mode != DepthRewrite {
-				res.ProofreadSalvage = pipeline.SalvageProofreading(validationText, candidate)
+				res.ProofreadSalvage = pipeline.SalvageProofreading(validationText, candidate, rules.Typography)
 			}
 			break
 		}

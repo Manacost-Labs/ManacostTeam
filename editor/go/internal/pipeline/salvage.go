@@ -23,7 +23,7 @@ type ProofreadSalvage struct {
 }
 
 const salvageNote = "Правка отклонена целиком; здесь только безопасная корректура из кандидата " +
-	"(пунктуация, кавычки-ёлочки, тире, ё и слова, отмеченные орфографической проверкой). " +
+	"(пунктуация, тире и слова, отмеченные проверкой; ё и кавычки — по typography.yaml). " +
 	"Публикационного допуска нет, изменения нужно просмотреть."
 
 // Пределы точного выравнивания: salvage — дешёвая страховка, а не второй
@@ -44,8 +44,27 @@ const salvageDowngradePunct = "\"'-"
 
 // SalvageProofreading — то же для legacy /edit, где отказ тоже возвращает
 // исходник. Без находок анализаторов слова меняются только в части ё.
-func SalvageProofreading(source, candidate string) *ProofreadSalvage {
-	return proofreadSalvage(source, candidate, salvageFlags{})
+func SalvageProofreading(source, candidate string, typography map[string]any) *ProofreadSalvage {
+	return proofreadSalvage(source, candidate, salvageFlags{style: salvageStyleFrom(typography)})
+}
+
+// salvageStyle — решения typography.yaml, которые salvage не вправе нарушить.
+// Нулевое значение — домашний стиль корпуса: без ё (кроме официальных
+// названий), прямые кавычки, длинное тире, диапазоны через дефис.
+type salvageStyle struct {
+	keepYo     bool
+	guillemets bool
+}
+
+func salvageStyleFrom(typography map[string]any) salvageStyle {
+	var style salvageStyle
+	if yo, ok := typography["yo"].(map[string]any); ok {
+		style.keepYo = yo["decision"] != nil && yo["decision"] != "remove"
+	}
+	if quotes, ok := typography["quotes"].(map[string]any); ok {
+		style.guillemets = quotes["decision"] == "guillemets"
+	}
+	return style
 }
 
 // salvageFlags — места исходника, отмеченные анализаторами. Только там
@@ -56,6 +75,7 @@ func SalvageProofreading(source, candidate string) *ProofreadSalvage {
 type salvageFlags struct {
 	spelling map[string]bool
 	grammar  []grammarFlag
+	style    salvageStyle
 }
 
 type grammarFlag struct {
@@ -145,7 +165,7 @@ func proofreadSalvage(source, candidate string, flags salvageFlags) *ProofreadSa
 		}
 		for i := range del {
 			words, grammar := flags.forLine(del[i])
-			line, ok, rejected := salvageLine(del[i], ins[i], words, grammar)
+			line, ok, rejected := salvageLine(del[i], ins[i], words, grammar, flags.style)
 			applied += ok
 			skipped += rejected
 			out.WriteString(line)
@@ -201,7 +221,7 @@ func lineHunks(a, b []string) []hunk {
 
 // salvageLine переносит безопасные под-изменения одной строки. Возвращает
 // итоговую строку, число перенесённых и число отброшенных изменений.
-func salvageLine(source, candidate string, flagged, grammar map[string]bool) (string, int, int) {
+func salvageLine(source, candidate string, flagged, grammar map[string]bool, style salvageStyle) (string, int, int) {
 	a, b := surfaceTokens(source), surfaceTokens(candidate)
 	if wordCount(a) > maxSalvageHunkWords || wordCount(b) > maxSalvageHunkWords {
 		return source, 0, 1
@@ -218,7 +238,7 @@ func salvageLine(source, candidate string, flagged, grammar map[string]bool) (st
 		}
 		// Начало строки — место маркеров списков и заголовков.
 		near := grammar[nearWord(a, start, -1)] || grammar[nearWord(a, posA, 1)]
-		if (start > 0 || allWords(del, ins)) && safeSurfaceChange(del, ins, flagged, near) {
+		if (start > 0 || allWords(del, ins)) && safeSurfaceChange(del, ins, flagged, near, style) {
 			out.WriteString(strings.Join(ins, ""))
 			applied++
 		} else {
@@ -323,7 +343,7 @@ func nearWord(tokens []string, at, dir int) string {
 // неразрывный пробел. Поэтому без находки анализатора рядом проходят только
 // однозначные улучшения типографики; запятая, двоеточие и форма слова
 // переносятся, лишь если Hunspell или LanguageTool отметили это место.
-func safeSurfaceChange(del, ins []string, flagged map[string]bool, near bool) bool {
+func safeSurfaceChange(del, ins []string, flagged map[string]bool, near bool, style salvageStyle) bool {
 	var delWords, insWords []string
 	var delPunct, insPunct strings.Builder
 	nbsp := 0
@@ -359,37 +379,46 @@ func safeSurfaceChange(del, ins []string, flagged map[string]bool, near bool) bo
 	if nbsp < 0 {
 		return false
 	}
-	punctOK := delPunct.String() == insPunct.String() || typographyUpgrade(delPunct.String(), insPunct.String()) || near
+	punctOK := delPunct.String() == insPunct.String() || typographyUpgrade(delPunct.String(), insPunct.String(), style) || near
+	if !style.guillemets && strings.ContainsAny(insPunct.String(), "«»„“") && delPunct.String() != insPunct.String() {
+		return false
+	}
 	switch {
 	case len(delWords) == 0 && len(insWords) == 0:
 		return punctOK
 	case len(delWords) == 1 && len(insWords) == 1:
-		return punctOK && wordFormFix(delWords[0], insWords[0], flagged)
+		return punctOK && wordFormFix(delWords[0], insWords[0], flagged, style)
 	default:
 		return false
 	}
 }
 
-// typographyUpgrade: прямые кавычки и дефисы заменены типографскими знаками
-// один к одному, без добавления или удаления других знаков.
-func typographyUpgrade(before, after string) bool {
+// typographyUpgrade: прямые кавычки и дефисы заменены знаками стиля один к
+// одному, без добавления или удаления других знаков. Дефис становится только
+// длинным тире (dashes.primary, en → em); «ёлочки» — только если издание их
+// выбрало. Диапазон «2-3» — одно слово и сюда не попадает.
+func typographyUpgrade(before, after string, style salvageStyle) bool {
+	targets := "—"
+	if style.guillemets {
+		targets += "«»„“"
+	}
 	x, y := []rune(before), []rune(after)
 	if len(x) == 0 || len(x) != len(y) {
 		return false
 	}
 	for i := range x {
-		if !strings.ContainsRune(salvageDowngradePunct, x[i]) || !strings.ContainsRune("«»„“—–", y[i]) {
+		if !strings.ContainsRune(salvageDowngradePunct, x[i]) || !strings.ContainsRune(targets, y[i]) {
 			return false
 		}
 	}
 	return true
 }
 
-// wordFormFix допускает ё/е всегда, а опечатку на одну букву и исправление
-// окончания при общей основе — только для слова, отмеченного анализатором.
-// Цифры, смена регистра первой буквы, «не»-приставка и короткие слова не
-// проходят: там смена буквы часто меняет смысл.
-func wordFormFix(before, after string, flagged map[string]bool) bool {
+// wordFormFix допускает замену ё/е в сторону стиля, а опечатку на одну букву
+// и исправление окончания при общей основе — только для слова, отмеченного
+// анализатором. Цифры, смена регистра первой буквы, «не»-приставка и короткие
+// слова не проходят: там смена буквы часто меняет смысл.
+func wordFormFix(before, after string, flagged map[string]bool, style salvageStyle) bool {
 	if strings.ContainsFunc(before+after, unicode.IsDigit) {
 		return false
 	}
@@ -399,7 +428,14 @@ func wordFormFix(before, after string, flagged map[string]bool) bool {
 	}
 	lx, ly := []rune(strings.ToLower(before)), []rune(strings.ToLower(after))
 	if strings.ReplaceAll(string(lx), "ё", "е") == strings.ReplaceAll(string(ly), "ё", "е") {
-		return true
+		if style.keepYo {
+			return !strings.ContainsRune(string(lx), 'ё')
+		}
+		// Без ё пишется всё, кроме официальных названий: они с заглавной.
+		return !strings.ContainsRune(string(ly), 'ё') && !unicode.IsUpper(x[0])
+	}
+	if !style.keepYo && strings.Count(string(ly), "ё") > strings.Count(string(lx), "ё") {
+		return false
 	}
 	if !flagged[strings.ReplaceAll(string(lx), "ё", "е")] || hasNegationPrefix(lx) != hasNegationPrefix(ly) {
 		return false

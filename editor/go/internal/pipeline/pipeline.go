@@ -689,7 +689,11 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		result.Text = req.Text
 		result.Changes = nil
 		if s.LLM != nil && !req.reviewOnly && mode != "reconstruct" {
-			result.ProofreadSalvage = proofreadSalvage(req.Text, candidate, flaggedWords(pre.findings))
+			flags := flaggedWords(pre.findings)
+			if pyRules != nil {
+				flags.style = salvageStyleFrom(pyRules.Typography)
+			}
+			result.ProofreadSalvage = proofreadSalvage(req.Text, candidate, flags)
 		}
 	}
 	if !result.Accepted && (result.Status == StatusRejected || result.Text != req.CandidateText) && req.ReviseCandidate && !req.reviewOnly && s.LLM != nil && ctx.Err() == nil {
