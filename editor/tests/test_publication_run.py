@@ -128,18 +128,36 @@ def reviews(run):
 
     for owner, report in (("fact_review", factual), ("literary_review", literary)):
         report["practice_checks"] = [
-            {"id": p["id"], "status": "clear", "quote": TEXT,
-             "reason": "Условный совет подтверждён единственным источником тестового примера."}
-            for p in catalog()["practices"] if p["owner"] == owner
+            {
+                "id": p["id"],
+                "status": "clear",
+                "quote": TEXT,
+                "reason": "Условный совет подтверждён единственным источником тестового примера.",
+            }
+            for p in catalog()["practices"]
+            if p["owner"] == owner
         ]
     for field, ids in (("logic_checks", LOGIC), ("preservation_checks", PRESERVATION)):
-        literary[field] = [{"id": key, "status": "clear", "quote": TEXT,
-                           "reason": "Совет, условие и исключение сохранены в одном предложении."}
-                          for key in ids]
-    factual["source_checks"] = [{"source_id": "SRC-1", "status": "verified",
-        "evidence_quote": TEXT, "reason": "Прочитан тестовый snapshot.",
-        "identity_check": "URL совпадает; библиографических идентификаторов нет.",
-        "support_check": "Snapshot содержит весь условный совет.", "access": "snapshot"}]
+        literary[field] = [
+            {
+                "id": key,
+                "status": "clear",
+                "quote": TEXT,
+                "reason": "Совет, условие и исключение сохранены в одном предложении.",
+            }
+            for key in ids
+        ]
+    factual["source_checks"] = [
+        {
+            "source_id": "SRC-1",
+            "status": "verified",
+            "evidence_quote": TEXT,
+            "reason": "Прочитан тестовый snapshot.",
+            "identity_check": "URL совпадает; библиографических идентификаторов нет.",
+            "support_check": "Snapshot содержит весь условный совет.",
+            "access": "snapshot",
+        }
+    ]
     if task["review_contract_version"] >= 3:
         from editorteam.editorial_practices import prepare
 
@@ -151,15 +169,26 @@ def reviews(run):
             report["sources_sha256"] = packet["sources_sha256"]
             if original is not None:
                 report["original_sha256"] = packet["original_sha256"]
-                report["original_factual_checks"] = {"whole_text_checked": True, "internal_consistency": "clear",
-                    "source_agreement": "supplied_sources_checked", "issues": []}
+                report["original_factual_checks"] = {
+                    "whole_text_checked": True,
+                    "internal_consistency": "clear",
+                    "source_agreement": "supplied_sources_checked",
+                    "issues": [],
+                }
         if original is not None:
             for row in literary["preservation_checks"]:
                 row["original_quote"] = original
                 if row["id"] in {"author_voice", "strengths"} and original != candidate:
-                    row["change_evidence"] = [{"original_quote": original, "quote": candidate,
-                        "disposition": "preserved", "reason": "Условный совет сохранён.",
-                        "benefit": "Ясное оформление тестового совета.", "meaning_risk": "Условие не удалено."}]
+                    row["change_evidence"] = [
+                        {
+                            "original_quote": original,
+                            "quote": candidate,
+                            "disposition": "preserved",
+                            "reason": "Условный совет сохранён.",
+                            "benefit": "Ясное оформление тестового совета.",
+                            "meaning_risk": "Условие не удалено.",
+                        }
+                    ]
     return factual, literary
 
 
@@ -197,8 +226,12 @@ def test_historical_receipts_remain_readable_but_cannot_authorize_new_export(tmp
     for report in (fact, literary):
         for field in ("practice_checks", "logic_checks", "preservation_checks", "source_checks"):
             report.pop(field, None)
-    assert not submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))["blocked"]
-    assert not submit(run, stage="literary_review", artifact=write(tmp_path, "lit.json", literary))["blocked"]
+    assert not submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))[
+        "blocked"
+    ]
+    assert not submit(run, stage="literary_review", artifact=write(tmp_path, "lit.json", literary))[
+        "blocked"
+    ]
     state_before_export = state_path.read_bytes()
     history_before_export = status(run)["history"]
     output = tmp_path / "article.md"
@@ -265,6 +298,7 @@ def test_craft_guidance_reaches_applicable_stages_without_changing_evidence(tmp_
     repair["craft_guidance"]["principles"].clear()
     assert next_task(run)["craft_guidance"]["principles"]
     from editorteam.publication_run import craft_guidance
+
     for stage in ("sources", "research"):
         assert craft_guidance(stage)["role"] == "research"
         assert craft_guidance(stage)["is_factual_evidence"] is False
@@ -273,8 +307,12 @@ def test_craft_guidance_reaches_applicable_stages_without_changing_evidence(tmp_
 
 @pytest.mark.parametrize(
     "stage, expected",
-    [("sources", ["research"]), ("research", ["research"]),
-     ("draft", ["author", "prose"]), ("literary_review", ["author", "prose"])],
+    [
+        ("sources", ["research"]),
+        ("research", ["research"]),
+        ("draft", ["author", "prose"]),
+        ("literary_review", ["author", "prose"]),
+    ],
 )
 def test_editorial_passes_are_role_scoped_fresh_guidance(stage, expected):
     from editorteam.publication_run import craft_guidance
@@ -313,12 +351,16 @@ def test_packet_preserves_optional_claims_and_research_limits():
 
     bundle = handoff()
     bundle["claims"][0]["research_context"] = {
-        "limitations": ["маленькая выборка"], "counterevidence": [{"quote": "Исключение"}]
+        "limitations": ["маленькая выборка"],
+        "counterevidence": [{"quote": "Исключение"}],
     }
     bundle["claims"].append({**bundle["claims"][0], "claim_id": "CLM-2"})
     bundle["chapters"][0]["decision_cards"] = [{"question": "Альтернатива?", "gaps": []}]
     packet = chapter_brief(bundle)
-    assert packet["chapters"][0]["claims"][0]["research_context"] == bundle["claims"][0]["research_context"]
+    assert (
+        packet["chapters"][0]["claims"][0]["research_context"]
+        == bundle["claims"][0]["research_context"]
+    )
     assert packet["chapters"][0]["decision_cards"] == bundle["chapters"][0]["decision_cards"]
     assert packet["additional_claims"][0]["claim_id"] == "CLM-2"
     packet["chapters"][0]["claims"][0]["condition"] = "changed"

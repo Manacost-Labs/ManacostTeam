@@ -47,7 +47,10 @@ def test_json_schema_is_stable():
         "findings",
         "analyzers_skipped",
         "notes",
-        "review_scope", "independent_review_required", "publication_ready", "source_verification",
+        "review_scope",
+        "independent_review_required",
+        "publication_ready",
+        "source_verification",
     }
     assert data["summary"]["error"] == 1
     assert data["summary"]["review"] == 1

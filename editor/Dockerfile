@@ -28,7 +28,7 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=6 \
 CMD ["python", "-m", "editorteam.server", "--host", "0.0.0.0", "--port", "8731"]
 
 # The gateway is a small static Go binary; the runtime image contains only CA roots and that binary.
-FROM golang:1.26.4-alpine AS gateway-build
+FROM golang:1.26.10-alpine AS gateway-build
 
 WORKDIR /src
 COPY editor/go ./go

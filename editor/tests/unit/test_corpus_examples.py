@@ -46,7 +46,9 @@ def test_examples_come_from_the_same_game_and_profile_family(has_corpus: None) -
 def test_voice_analysis_runs_only_for_final_selected_examples(monkeypatch, has_corpus):
     seen = []
     monkeypatch.setattr(server, "_voice_features", lambda text: seen.append(text) or ["voice"])
-    result = server.corpus_examples("\n\n".join([QUERY, QUERY + " Поэтому нужен ресурс."]), "hearthstone", "constructed-guide")
+    result = server.corpus_examples(
+        "\n\n".join([QUERY, QUERY + " Поэтому нужен ресурс."]), "hearthstone", "constructed-guide"
+    )
     assert seen == [item["excerpt"] for item in result["examples"]]
     assert all(item["voice_features"] == ["voice"] for item in result["examples"])
 

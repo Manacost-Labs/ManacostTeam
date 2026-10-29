@@ -77,8 +77,12 @@ INSTRUCTIONS = {
 
 def craft_guidance(stage: str) -> dict | None:
     """Conditional craft cues, separate from the evidence-bearing chapter brief."""
-    role = {"sources": "research", "research": "research", "draft": "write",
-            "literary_review": "review"}.get(stage)
+    role = {
+        "sources": "research",
+        "research": "research",
+        "draft": "write",
+        "literary_review": "review",
+    }.get(stage)
     if role is None:
         return None
     common = [
@@ -131,8 +135,14 @@ def craft_guidance(stage: str) -> dict | None:
         "Балл ИИ-детектора не доказывает авторство и не служит критерием готовности.",
     }
     passes = [research] if role == "research" else [author, prose]
-    return {"version": 2, "role": role, "is_factual_evidence": False,
-            "principles": common, "focus": focus[role], "editorial_passes": passes}
+    return {
+        "version": 2,
+        "role": role,
+        "is_factual_evidence": False,
+        "principles": common,
+        "focus": focus[role],
+        "editorial_passes": passes,
+    }
 
 
 def _hash(data: bytes) -> str:
@@ -457,7 +467,8 @@ def next_task(run: Path) -> dict:
 
         if stage in {"fact_review", "literary_review"}:
             task["editorial_practices"] = prepare(
-                _data(run, state, "draft").decode("utf-8"), owner=stage,
+                _data(run, state, "draft").decode("utf-8"),
+                owner=stage,
                 original=_previous_draft(run, state),
                 handoff=_json(_data(run, state, "research")),
                 snapshots=_json(_data(run, state, "sources")),
@@ -557,7 +568,9 @@ def _source_url_key(url: str) -> str:
     # trailing slash, query and fragment may address different content.
     canonical_url(url)  # Validate public URL without using its lossy dedup key.
     parts = urlsplit(url)
-    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path or "/", parts.query, parts.fragment))
+    return urlunsplit(
+        (parts.scheme.lower(), parts.netloc.lower(), parts.path or "/", parts.query, parts.fragment)
+    )
 
 
 def _ground_sources(handoff: dict, candidates: list[dict]) -> list[str]:
@@ -644,12 +657,22 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
         else:
             handoff, text = _context(run, state)
             report = _json(data)
-            review_context = ({"original": _previous_draft(run, state),
-                               "snapshots": _json(_data(run, state, "sources"))}
-                              if state.get("review_contract_version", 1) >= 3 else {})
+            review_context = (
+                {
+                    "original": _previous_draft(run, state),
+                    "snapshots": _json(_data(run, state, "sources")),
+                }
+                if state.get("review_contract_version", 1) >= 3
+                else {}
+            )
             errors = (
-                validate_factual(handoff, text, report, require_practices=state.get("review_contract_version", 1) >= 3,
-                                 **review_context)
+                validate_factual(
+                    handoff,
+                    text,
+                    report,
+                    require_practices=state.get("review_contract_version", 1) >= 3,
+                    **review_context,
+                )
                 if stage == "fact_review"
                 else validate_literary(
                     text,
@@ -657,7 +680,8 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
                     keep_spans=_keep_spans(run, state),
                     require_extended=state.get("review_contract_version", 1) >= 2,
                     require_practices=state.get("review_contract_version", 1) >= 3,
-                    handoff=handoff, **review_context,
+                    handoff=handoff,
+                    **review_context,
                 )
             )
             if not isinstance(report, dict) or report.get("handoff_sha256") != handoff_hash(
@@ -722,8 +746,12 @@ def export(run: Path, *, output: Path) -> dict:
             keep_spans=_keep_spans(run, state),
             require_extended=state.get("review_contract_version", 1) >= 2,
             require_practices=state.get("review_contract_version", 1) >= 3,
-            original=_previous_draft(run, state) if state.get("review_contract_version", 1) >= 3 else None,
-            snapshots=_json(_data(run, state, "sources")) if state.get("review_contract_version", 1) >= 3 else None,
+            original=_previous_draft(run, state)
+            if state.get("review_contract_version", 1) >= 3
+            else None,
+            snapshots=_json(_data(run, state, "sources"))
+            if state.get("review_contract_version", 1) >= 3
+            else None,
         )
         if errors:
             raise ValueError("; ".join(errors))

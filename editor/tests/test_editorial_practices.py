@@ -1,4 +1,5 @@
 """Contract tests: findings need evidence; ordinary style is not a failure."""
+
 import copy
 
 import pytest
@@ -19,18 +20,30 @@ def assessment(owner="literary_review", text=TEXT):
         "status": "pass",
         "article_sha256": packet["article_sha256"],
         "practice_checks": [
-            {"id": p["id"], "status": "clear", "quote": text,
-             "reason": "В этом примере добавление защиты уточняет условный совет."}
+            {
+                "id": p["id"],
+                "status": "clear",
+                "quote": text,
+                "reason": "В этом примере добавление защиты уточняет условный совет.",
+            }
             for p in packet["practices"]
         ],
         "logic_checks": [
-            {"id": key, "status": "clear", "quote": text,
-             "reason": "Условие явно ограничивает совет, противоположных советов нет."}
+            {
+                "id": key,
+                "status": "clear",
+                "quote": text,
+                "reason": "Условие явно ограничивает совет, противоположных советов нет.",
+            }
             for key in packet["logic_dimensions"]
         ],
         "preservation_checks": [
-            {"id": key, "status": "clear", "quote": text,
-             "reason": "Сверено с исходником: совет, условие и обращение сохранены."}
+            {
+                "id": key,
+                "status": "clear",
+                "quote": text,
+                "reason": "Сверено с исходником: совет, условие и обращение сохранены.",
+            }
             for key in packet["preservation_dimensions"]
         ],
     }
@@ -88,23 +101,56 @@ def test_identifiers_isbn_checksum_but_doi_has_no_checksum():
 
 def test_source_checks_bind_to_actual_handoff_quotes_and_ids():
     handoff = {
-        "schema_version": 1, "brief": "Условный совет", "patch": "test", "status": "research_ready", "style_profile": "guide",
+        "schema_version": 1,
+        "brief": "Условный совет",
+        "patch": "test",
+        "status": "research_ready",
+        "style_profile": "guide",
         "sources": [{"source_id": "s", "url": "https://example.org", "quote": TEXT}],
-        "claims": [{"claim_id": "c", "meaning": "Сохранить ресурс", "action": "сохраните ресурс", "condition": "если нет угрозы",
-                    "confidence": "high", "patch": "test", "status": "supported_with_conditions", "evidence_refs": ["s"]}],
+        "claims": [
+            {
+                "claim_id": "c",
+                "meaning": "Сохранить ресурс",
+                "action": "сохраните ресурс",
+                "condition": "если нет угрозы",
+                "confidence": "high",
+                "patch": "test",
+                "status": "supported_with_conditions",
+                "evidence_refs": ["s"],
+            }
+        ],
         "chapters": [{"chapter_id": "ch", "title": "Совет", "required_claim_ids": ["c"]}],
-        "decisions": [{"question_id": "q", "chapter_id": "ch", "question": "Когда сохранять?", "required": True, "status": "answered", "claim_ids": ["c"]}],
+        "decisions": [
+            {
+                "question_id": "q",
+                "chapter_id": "ch",
+                "question": "Когда сохранять?",
+                "required": True,
+                "status": "answered",
+                "claim_ids": ["c"],
+            }
+        ],
     }
     report = assessment("fact_review")
     report["handoff_sha256"] = prepare(TEXT, handoff=handoff)["handoff_sha256"]
-    report["source_checks"] = [{"source_id": "s", "status": "verified",
-        "evidence_quote": TEXT, "reason": "Проверено по сохранённому источнику.",
-        "identity_check": "Проверено название и соответствие ссылке.",
-        "support_check": "Цитата поддерживает условие совета.",
-        "access": "snapshot"}]
+    report["source_checks"] = [
+        {
+            "source_id": "s",
+            "status": "verified",
+            "evidence_quote": TEXT,
+            "reason": "Проверено по сохранённому источнику.",
+            "identity_check": "Проверено название и соответствие ссылке.",
+            "support_check": "Цитата поддерживает условие совета.",
+            "access": "snapshot",
+        }
+    ]
     assert not validate(TEXT, report, owner="fact_review", handoff=handoff)
-    for key, value in (("source_id", "other"), ("evidence_quote", "Выдумка"),
-                       ("status", "unavailable"), ("support_check", "")):
+    for key, value in (
+        ("source_id", "other"),
+        ("evidence_quote", "Выдумка"),
+        ("status", "unavailable"),
+        ("support_check", ""),
+    ):
         bad = copy.deepcopy(report)
         bad["source_checks"][0][key] = value
         assert validate(TEXT, bad, owner="fact_review", handoff=handoff)
@@ -129,10 +175,14 @@ def test_every_documented_defect_blocks_even_when_other_checks_pass(practice):
     owner = practice["owner"]
     report = assessment(owner, text)
     row = next(r for r in report["practice_checks"] if r["id"] == practice["id"])
-    row.update(status="issue", reason=practice["question"],
-               reader_problem=practice["defect_example"], benefit=practice["action"],
-               meaning_risk="Сохранить факты и оправданный авторский приём.",
-               suggestion=practice["action"])
+    row.update(
+        status="issue",
+        reason=practice["question"],
+        reader_problem=practice["defect_example"],
+        benefit=practice["action"],
+        meaning_risk="Сохранить факты и оправданный авторский приём.",
+        suggestion=practice["action"],
+    )
     errors = validate(text, report, owner=owner)
     assert any(f"practice_checks/{practice['id']}: unresolved issue" in e for e in errors)
 
@@ -144,11 +194,22 @@ def test_preservation_binds_both_versions_and_quotes():
     for row in report["preservation_checks"]:
         row["original_quote"] = original
         if row["id"] in {"author_voice", "strengths"}:
-            row["change_evidence"] = [{"original_quote": original, "quote": TEXT, "disposition": "justified",
-                "reason": "Параллелизм и обращение сохранены.", "benefit": "Уточнено условие из задания.",
-                "meaning_risk": "Не потерять обе стороны сравнения."}]
-    report["original_factual_checks"] = {"whole_text_checked": True, "internal_consistency": "clear",
-        "source_agreement": "not_performed", "issues": []}
+            row["change_evidence"] = [
+                {
+                    "original_quote": original,
+                    "quote": TEXT,
+                    "disposition": "justified",
+                    "reason": "Параллелизм и обращение сохранены.",
+                    "benefit": "Уточнено условие из задания.",
+                    "meaning_risk": "Не потерять обе стороны сравнения.",
+                }
+            ]
+    report["original_factual_checks"] = {
+        "whole_text_checked": True,
+        "internal_consistency": "clear",
+        "source_agreement": "not_performed",
+        "issues": [],
+    }
     assert not validate(TEXT, report, owner="literary_review", original=original)
     assert validate(TEXT, report, owner="literary_review", original=original + " ещё")
     report["preservation_checks"][0]["original_quote"] = "выдумано"
@@ -169,17 +230,42 @@ def test_cli_prepare_is_assignment_and_validate_returns_failure(tmp_path, capsys
 
     article = tmp_path / "article.md"
     article.write_text(TEXT, encoding="utf-8")
-    assert main(["editorial-review", "prepare", "--text", str(article), "--owner", "literary_review"]) == 0
+    assert (
+        main(["editorial-review", "prepare", "--text", str(article), "--owner", "literary_review"])
+        == 0
+    )
     packet = json.loads(capsys.readouterr().out)
     assert "status" not in packet and len(packet["practices"]) == 19
     review = tmp_path / "review.json"
     review.write_text(json.dumps({"status": "pass"}), encoding="utf-8")
-    assert main(["editorial-review", "validate", "--text", str(article), "--owner", "literary_review", "--review", str(review)]) == 1
+    assert (
+        main(
+            [
+                "editorial-review",
+                "validate",
+                "--text",
+                str(article),
+                "--owner",
+                "literary_review",
+                "--review",
+                str(review),
+            ]
+        )
+        == 1
+    )
     assert json.loads(capsys.readouterr().out)["status"] == "blocked"
 
 
-@pytest.mark.parametrize("handoff", [1, [], "invalid", {"sources": [{"source_id": "s", "quote": "fake"}]},
-                                      {"sources": [{"source_id": "s", "quote": None}]}])
+@pytest.mark.parametrize(
+    "handoff",
+    [
+        1,
+        [],
+        "invalid",
+        {"sources": [{"source_id": "s", "quote": "fake"}]},
+        {"sources": [{"source_id": "s", "quote": None}]},
+    ],
+)
 def test_incomplete_or_malformed_handoff_is_blocked(handoff):
     assert validate(TEXT, assessment("fact_review"), owner="fact_review", handoff=handoff)
 
@@ -204,8 +290,18 @@ def test_factual_cli_requires_valid_full_snapshots(tmp_path, capsys):
     fact["sources_sha256"] = packet["sources_sha256"]
     review = tmp_path / "review.json"
     review.write_text(json.dumps(fact), encoding="utf-8")
-    args = ["editorial-review", "validate", "--text", task["inputs"]["draft"],
-            "--owner", "fact_review", "--handoff", task["inputs"]["research"], "--review", str(review)]
+    args = [
+        "editorial-review",
+        "validate",
+        "--text",
+        task["inputs"]["draft"],
+        "--owner",
+        "fact_review",
+        "--handoff",
+        task["inputs"]["research"],
+        "--review",
+        str(review),
+    ]
     assert main(args) == 1
     assert "snapshots required" in capsys.readouterr().out
     assert main([*args, "--sources", source_path]) == 0
@@ -224,5 +320,8 @@ def test_cli_bad_handoff_returns_blocked_json_without_traceback(tmp_path, capsys
     article.write_text(TEXT, encoding="utf-8")
     handoff = tmp_path / "handoff.json"
     handoff.write_text("[]", encoding="utf-8")
-    assert main(["editorial-review", "prepare", "--text", str(article), "--handoff", str(handoff)]) == 1
+    assert (
+        main(["editorial-review", "prepare", "--text", str(article), "--handoff", str(handoff)])
+        == 1
+    )
     assert '"status": "blocked"' in capsys.readouterr().out

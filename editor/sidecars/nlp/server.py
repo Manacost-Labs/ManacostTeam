@@ -398,6 +398,11 @@ def _health_payload() -> dict[str, Any]:
     }
 
 
+class NLPHTTPServer(ThreadingHTTPServer):
+    # Accept short connection bursts before dispatch; analysis stays bounded by MAX_INFLIGHT.
+    request_queue_size = 128
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "EditorTeam-NLP/1.0"
 
@@ -490,7 +495,7 @@ def main() -> None:
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8742)
     args = parser.parse_args()
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
+    server = NLPHTTPServer((args.host, args.port), Handler)
     server.timeout = 1
     stop = threading.Event()
 

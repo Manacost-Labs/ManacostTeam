@@ -124,7 +124,7 @@ func (p *PythonAnalyzerAdapter) Name() string { return "python" }
 
 func (p *PythonAnalyzerAdapter) Health(ctx context.Context) error {
 	if p == nil {
-		return errors.New("Python-анализатор не настроен")
+		return errors.New("анализатор Python не настроен")
 	}
 	if p.Client != nil {
 		return p.Client.Health(ctx)
@@ -132,7 +132,7 @@ func (p *PythonAnalyzerAdapter) Health(ctx context.Context) error {
 	if p.Script != "" {
 		return nil
 	}
-	return errors.New("Python-сайдкар не настроен")
+	return errors.New("сайдкар Python не настроен")
 }
 
 func (p *PythonAnalyzerAdapter) Analyze(ctx context.Context, in Input) (Result, error) {
@@ -143,7 +143,7 @@ func (p *PythonAnalyzerAdapter) Analyze(ctx context.Context, in Input) (Result, 
 		return p.runScript(ctx, in)
 	}
 	if p.Client == nil {
-		return Result{Analyzer: "python", Skipped: true, Error: "Python-сайдкар не настроен"}, nil
+		return Result{Analyzer: "python", Skipped: true, Error: "сайдкар Python не настроен"}, nil
 	}
 	var raw analyzer.Report
 	if in.Before != "" || in.After != "" {
@@ -289,7 +289,7 @@ func (v *ValeAnalyzer) Name() string { return "vale" }
 
 func (v *ValeAnalyzer) Health(ctx context.Context) error {
 	if v == nil || v.Runner == nil {
-		return errors.New("Vale не настроен")
+		return errors.New("анализатор Vale не настроен")
 	}
 	return v.Runner.Health(ctx)
 }
@@ -354,14 +354,14 @@ func (h *HunspellAnalyzer) Name() string { return "hunspell" }
 
 func (h *HunspellAnalyzer) Health(ctx context.Context) error {
 	if h == nil || h.Runner == nil {
-		return errors.New("Hunspell не настроен")
+		return errors.New("анализатор Hunspell не настроен")
 	}
 	return h.Runner.Health(ctx)
 }
 
 func (h *HunspellAnalyzer) Analyze(ctx context.Context, in Input) (Result, error) {
 	if h == nil || h.Runner == nil {
-		return Result{Analyzer: "hunspell", Skipped: true, Error: "Hunspell не настроен"}, nil
+		return Result{Analyzer: "hunspell", Skipped: true, Error: "анализатор Hunspell не настроен"}, nil
 	}
 	runner := *h.Runner
 	if h.GameAllowlists != nil {

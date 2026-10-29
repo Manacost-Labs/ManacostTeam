@@ -19,7 +19,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/finding"
 )
 
-var ErrNotInstalled = errors.New("Vale не установлен или не найден в PATH")
+var ErrNotInstalled = errors.New("анализатор Vale не установлен или не найден в PATH")
 
 // DefaultFileName is used for every profile outside the allowlist, so an
 // unknown or hostile profile string never reaches the filesystem.
@@ -90,7 +90,7 @@ func (r *Runner) Health(parent context.Context) error {
 		return ErrNotInstalled
 	}
 	if err != nil {
-		return fmt.Errorf("Vale health check: %w: %s", err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("проверка Vale: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	return nil
 }
@@ -131,7 +131,7 @@ func (r *Runner) Check(parent context.Context, text, profile string) ([]finding.
 	}
 	// Vale exits 1 when it found style issues; JSON is still useful.
 	if err != nil && output.Len() == 0 {
-		return nil, fmt.Errorf("Vale: %w", err)
+		return nil, fmt.Errorf("ошибка Vale: %w", err)
 	}
 	var raw map[string][]valeFinding
 	mapErr := json.Unmarshal(output.Bytes(), &raw)

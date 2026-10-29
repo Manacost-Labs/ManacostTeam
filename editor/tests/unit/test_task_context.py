@@ -153,7 +153,7 @@ def test_http_context_routes_apply_game_and_preserve_legacy_rules(sidecar):
     shared_style = shared.pop("style_rules")
     legacy_style = legacy.pop("style_rules")
     assert legacy_style == house_style_rules()
-    assert shared_style[-len(legacy_style):] == legacy_style
+    assert shared_style[-len(legacy_style) :] == legacy_style
     assert shared == legacy
 
 

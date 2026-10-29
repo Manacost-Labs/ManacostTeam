@@ -103,9 +103,18 @@ def audit(args) -> int:
     from editorteam.integrity import arithmetic_issues
 
     for issue in arithmetic_issues(text):
-        report.add(Finding(id=issue["kind"], analyzer="integrity", category="internal-consistency",
-                           severity=issue["severity"], message=issue["message"],
-                           evidence=issue["evidence"], suggestion=issue["suggestion"], line=issue["line"]))
+        report.add(
+            Finding(
+                id=issue["kind"],
+                analyzer="integrity",
+                category="internal-consistency",
+                severity=issue["severity"],
+                message=issue["message"],
+                evidence=issue["evidence"],
+                suggestion=issue["suggestion"],
+                line=issue["line"],
+            )
+        )
     if confidence is not None:
         report.notes.append(
             f"профиль определён автоматически: {profile.id} (уверенность {confidence}); "
@@ -132,7 +141,8 @@ def audit(args) -> int:
                     confidence=0.6 if sev == "review" else 0.8,
                     message=hit["name"],
                     evidence=hit["text"],
-                    suggestion="Проверить функцию в контексте; сохранить уместное. Возможная правка: " + hit["fix"],
+                    suggestion="Проверить функцию в контексте; сохранить уместное. Возможная правка: "
+                    + hit["fix"],
                     line=hit["line"],
                     profile=profile.id,
                 )
@@ -423,16 +433,26 @@ def validate_edit(args) -> int:
         current_patch=args.current_patch,
         author=args.author,
         meaning=args.meaning,
-        editorial_review=json.loads(_read(Path(args.review))) if getattr(args, "review", None) else None,
-        source_handoff=json.loads(_read(Path(args.handoff))) if getattr(args, "handoff", None) else None,
-        source_snapshots=json.loads(_read(Path(args.sources))) if getattr(args, "sources", None) else None,
+        editorial_review=json.loads(_read(Path(args.review)))
+        if getattr(args, "review", None)
+        else None,
+        source_handoff=json.loads(_read(Path(args.handoff)))
+        if getattr(args, "handoff", None)
+        else None,
+        source_snapshots=json.loads(_read(Path(args.sources)))
+        if getattr(args, "sources", None)
+        else None,
     )
     if selected:
         result["task_context"] = selected["task_context"]
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        verdict = "REVIEW CONTRACT PASS" if result.get("independent_review_validated") else "DIAGNOSTICS PASS; independent editorial review required"
+        verdict = (
+            "REVIEW CONTRACT PASS"
+            if result.get("independent_review_validated")
+            else "DIAGNOSTICS PASS; independent editorial review required"
+        )
         print(verdict if result["accepted"] else "REJECTED")
         for error in result.get("editorial_review_errors", []):
             print(f"  [editorial-review] {error}")
@@ -530,7 +550,11 @@ def check_cmd(args) -> int:
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0 if result["accepted"] else 1
-    print("DIAGNOSTICS PASS; independent editorial review required" if result["accepted"] else "REJECTED")
+    print(
+        "DIAGNOSTICS PASS; independent editorial review required"
+        if result["accepted"]
+        else "REJECTED"
+    )
     seen = set()
     for item in result["violations"]:
         hint = item.get("suggestion") or CHECK_HINTS.get(item["kind"], "")
@@ -667,7 +691,11 @@ def claims_cmd(args) -> int:
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        print("DIAGNOSTICS PASS; independent editorial review required" if not violations else "REJECTED")
+        print(
+            "DIAGNOSTICS PASS; independent editorial review required"
+            if not violations
+            else "REJECTED"
+        )
         for item in violations:
             print(f"  [{item['kind']}:{item['field']}] {item['message']}")
         for item in warnings:
@@ -1178,7 +1206,10 @@ def build_parser() -> argparse.ArgumentParser:
         prog="editor-team", parents=[common], description="Редактура материалов по Hearthstone"
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("editorial-review", help="prepare/validate: содержательность, логика, источники и голос (отдельный --help)")
+    sub.add_parser(
+        "editorial-review",
+        help="prepare/validate: содержательность, логика, источники и голос (отдельный --help)",
+    )
 
     a = sub.add_parser("audit", help="полный разбор материала", parents=[common])
     a.add_argument("file")

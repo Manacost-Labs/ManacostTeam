@@ -142,7 +142,7 @@ func (c *AGUIClient) completeWithContext(ctx context.Context, msgs []Message, _ 
 	}
 	completion.Text = strings.TrimSpace(completion.Text)
 	completion.SourceText = strings.TrimSpace(completion.SourceText)
-	return Completion{Text: completion.Text, SourceText: completion.SourceText}, nil
+	return Completion(completion), nil
 }
 
 type aguiCompletion struct {

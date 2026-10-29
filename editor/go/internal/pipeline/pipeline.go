@@ -1386,12 +1386,8 @@ func examplesOf(in criticInput) []retrieval.StyleExample {
 	return out
 }
 
-// repair получает source, candidate и актуальные findings JSON-ом и должен
-// вернуть полный текст, исправив только отмеченные места.
-func (s *Service) repair(ctx context.Context, bundle rules.RuleBundle, source, candidate string, findings, previousFindings []analyzers.Finding, examples []retrieval.StyleExample, revisionBrief, revisionBase string, strengths ...[]StrongSpan) (string, error) {
-	return s.repairWithSources(ctx, bundle, source, candidate, findings, previousFindings, examples, revisionBrief, revisionBase, nil, strengths...)
-}
-
+// repairWithSources получает source, candidate и актуальные findings JSON-ом
+// и возвращает полный текст с исправлениями отмеченных мест.
 func (s *Service) repairWithSources(ctx context.Context, bundle rules.RuleBundle, source, candidate string, findings, previousFindings []analyzers.Finding, examples []retrieval.StyleExample, revisionBrief, revisionBase string, snapshots []editorialreview.SourceSnapshot, strengths ...[]StrongSpan) (string, error) {
 	var keep []StrongSpan
 	if len(strengths) > 0 {

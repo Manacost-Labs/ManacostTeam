@@ -1,18 +1,18 @@
 import json
+import socket
 import threading
 import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
-from http.server import ThreadingHTTPServer
+from contextlib import ExitStack, contextmanager
 
 import server
 
 
 @contextmanager
 def running_sidecar():
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
+    httpd = server.NLPHTTPServer(("127.0.0.1", 0), server.Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     try:
@@ -268,6 +268,13 @@ def test_busy_sidecar_rejects_new_work_instead_of_queueing():
     finally:
         for _ in acquired:
             server._analysis_slots.release()
+
+
+def test_listener_accepts_a_full_burst_before_dispatch():
+    with server.NLPHTTPServer(("127.0.0.1", 0), server.Handler) as httpd:
+        with ExitStack() as connections:
+            for _ in range(2 * server.MAX_INFLIGHT):
+                connections.enter_context(socket.create_connection(httpd.server_address, timeout=1))
 
 
 def test_parallel_requests_are_safe(monkeypatch):

@@ -89,9 +89,18 @@ def analyze(
     prof = P.load(profile or (g.profiles[0] if g.profiles else P.DEFAULT))
     report = Report(document="<текст>", profile=prof.id)
     for issue in arithmetic_issues(text):
-        report.add(Finding(id=issue["kind"], analyzer="integrity", category="internal-consistency",
-                           severity=issue["severity"], message=issue["message"],
-                           evidence=issue["evidence"], suggestion=issue["suggestion"], line=issue["line"]))
+        report.add(
+            Finding(
+                id=issue["kind"],
+                analyzer="integrity",
+                category="internal-consistency",
+                severity=issue["severity"],
+                message=issue["message"],
+                evidence=issue["evidence"],
+                suggestion=issue["suggestion"],
+                line=issue["line"],
+            )
+        )
 
     caveat = g.norms.caveat()
     if caveat:
@@ -110,7 +119,8 @@ def analyze(
                     confidence=0.6 if sev == "review" else 0.8,
                     message=hit["name"],
                     evidence=hit["text"],
-                    suggestion="Проверить функцию в контексте; сохранить уместное. Возможная правка: " + hit["fix"],
+                    suggestion="Проверить функцию в контексте; сохранить уместное. Возможная правка: "
+                    + hit["fix"],
                     line=hit["line"],
                     profile=prof.id,
                 )
@@ -558,8 +568,15 @@ def validate(
     if editorial_review is not None or source_handoff is not None or source_snapshots is not None:
         from .editorial_practices import validate as validate_review
 
-        errors = validate_review(after, editorial_review, original=before, owner="all",
-                                 handoff=source_handoff, snapshots=source_snapshots, require_snapshots=True)
+        errors = validate_review(
+            after,
+            editorial_review,
+            original=before,
+            owner="all",
+            handoff=source_handoff,
+            snapshots=source_snapshots,
+            require_snapshots=True,
+        )
         if source_handoff is not None and not errors:
             from .publication_review import validate_factual
 
@@ -575,18 +592,29 @@ def validate(
                 # the specifically proved corrections; retain every unrelated
                 # guard, including caller-supplied claim contracts.
                 result = validate(
-                    baseline, after, game, profile, mode=mode, depth=depth,
-                    declared_missing=declared_missing, claims_before=claims_before,
-                    claims_after=claims_after, current_meta_epoch=current_meta_epoch,
-                    current_patch=current_patch, evidence_requested=evidence_requested,
-                    author=author, meaning=meaning,
+                    baseline,
+                    after,
+                    game,
+                    profile,
+                    mode=mode,
+                    depth=depth,
+                    declared_missing=declared_missing,
+                    claims_before=claims_before,
+                    claims_after=claims_after,
+                    current_meta_epoch=current_meta_epoch,
+                    current_patch=current_patch,
+                    evidence_requested=evidence_requested,
+                    author=author,
+                    meaning=meaning,
                 )
                 result["diagnostic_baseline_sha256"] = article_hash(baseline)
                 result["review_original_sha256"] = article_hash(before)
         result["independent_review_required"] = bool(errors)
         result["independent_review_validated"] = not errors
         result["editorial_review_errors"] = errors
-        result["review_scope"] = "supplied_sources" if source_handoff is not None else "source_and_candidate"
+        result["review_scope"] = (
+            "supplied_sources" if source_handoff is not None else "source_and_candidate"
+        )
         if not errors and source_handoff is not None:
             result["source_verification"] = "supplied_sources_checked"
         result["accepted"] = result["accepted"] and not errors
@@ -1034,7 +1062,8 @@ def marker_lists() -> dict:
             {
                 "name": p["name"],
                 "examples": p.get("examples", []),
-                "fix": "Только при конкретной проблеме читателя; не запрет конструкции. " + p.get("fix", ""),
+                "fix": "Только при конкретной проблеме читателя; не запрет конструкции. "
+                + p.get("fix", ""),
             }
         )
     return out
@@ -1084,8 +1113,13 @@ def rules_for(
         elif r.decision == "allowed":
             keep.append(r.subject)
         elif r.preferred:
-            advice.append({"from": r.subject, "alternative": r.preferred,
-                           "reason": r.note or "Корпусная частота не запрещает авторское слово."})
+            advice.append(
+                {
+                    "from": r.subject,
+                    "alternative": r.preferred,
+                    "reason": r.note or "Корпусная частота не запрещает авторское слово.",
+                }
+            )
     from editorteam.editorial_practices import catalog
 
     out = {

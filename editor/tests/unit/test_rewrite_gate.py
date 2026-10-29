@@ -181,9 +181,7 @@ def test_form_violations_follow_profile_limits():
         {"tables_max": 1, "codes_max": 4, "repeated_facts_max": 0, "grade_labels": "forbidden"},
     )
     assert "form_fact_repeated" in kinds(warnings)
-    assert {"form_tables", "form_codes", "form_grade_labels"} == kinds(
-        violations
-    )
+    assert {"form_tables", "form_codes", "form_grade_labels"} == kinds(violations)
     # тот же текст без ограничений формы проходит
     v2, _, _ = gate.form_checks(
         text,

@@ -14,7 +14,9 @@ def fields(items):
 
 def test_lowercase_common_phrase_is_not_a_proven_card_identity():
     source = claims.extract("Сфера отправляет ненужную карту на самое дно колоды.")
-    violations, warnings, _ = claims.coverage(source, "Сфера отправляет ненужную карту вниз колоды.")
+    violations, warnings, _ = claims.coverage(
+        source, "Сфера отправляет ненужную карту вниз колоды."
+    )
     assert not any(v.get("claim") == "Самое дно" for v in violations)
     assert any(v.get("claim") == "Самое дно" for v in warnings)
     for text in ("Разыграйте Самое дно.", "Разыграйте карту самое дно."):

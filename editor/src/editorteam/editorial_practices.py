@@ -1,4 +1,5 @@
 """Evidence-bound contextual review. No classifier, word bans or automatic pass."""
+
 from __future__ import annotations
 
 import argparse
@@ -9,9 +10,22 @@ from pathlib import Path
 
 from .integrity import arithmetic_issues
 
-LOGIC = ("coherence", "causal_support", "scope_and_conditions", "reference_consistency", "information_gain")
-PRESERVATION = ("facts_numbers", "conditions_exceptions_negation", "modality", "entities_roles",
-                "author_voice", "quotations_markup", "strengths")
+LOGIC = (
+    "coherence",
+    "causal_support",
+    "scope_and_conditions",
+    "reference_consistency",
+    "information_gain",
+)
+PRESERVATION = (
+    "facts_numbers",
+    "conditions_exceptions_negation",
+    "modality",
+    "entities_roles",
+    "author_voice",
+    "quotations_markup",
+    "strengths",
+)
 
 
 def catalog() -> dict:
@@ -29,17 +43,33 @@ def identifiers(text: str) -> dict:
         value = re.sub(r"[ -]", "", match[1]).upper()
         valid = False
         if len(value) == 10 and value[:9].isdigit() and (value[-1].isdigit() or value[-1] == "X"):
-            valid = sum((10 - i) * (10 if c == "X" else int(c)) for i, c in enumerate(value)) % 11 == 0
+            valid = (
+                sum((10 - i) * (10 if c == "X" else int(c)) for i, c in enumerate(value)) % 11 == 0
+            )
         elif len(value) == 13 and value.isdigit():
-            valid = value.startswith(("978", "979")) and sum(int(c) * (1 if i % 2 == 0 else 3) for i, c in enumerate(value)) % 10 == 0
+            valid = (
+                value.startswith(("978", "979"))
+                and sum(int(c) * (1 if i % 2 == 0 else 3) for i, c in enumerate(value)) % 10 == 0
+            )
         isbn.append({"value": value, "checksum_valid": valid})
-    doi = list(dict.fromkeys(m.rstrip(".,;)") for m in re.findall(r"\b10\.\d{4,9}/[^\s<>\"]+", text)))
-    return {"isbn": isbn, "doi": doi,
-            "limitation": "Inventory requires catalog/resolver and metadata checks; DOI has no universal checksum. No network verification performed."}
+    doi = list(
+        dict.fromkeys(m.rstrip(".,;)") for m in re.findall(r"\b10\.\d{4,9}/[^\s<>\"]+", text))
+    )
+    return {
+        "isbn": isbn,
+        "doi": doi,
+        "limitation": "Inventory requires catalog/resolver and metadata checks; DOI has no universal checksum. No network verification performed.",
+    }
 
 
-def prepare(text: str, *, owner: str = "all", original: str | None = None, handoff: dict | None = None,
-            snapshots: list | None = None) -> dict:
+def prepare(
+    text: str,
+    *,
+    owner: str = "all",
+    original: str | None = None,
+    handoff: dict | None = None,
+    snapshots: list | None = None,
+) -> dict:
     if not isinstance(text, str) or not text.strip():
         raise ValueError("nonempty article required")
     if original is not None and (not isinstance(original, str) or not original.strip()):
@@ -48,7 +78,9 @@ def prepare(text: str, *, owner: str = "all", original: str | None = None, hando
         raise ValueError("invalid review owner")
     data = catalog()
     packet = {
-        "contract_version": 3, "owner": owner, "article_sha256": _hash(text),
+        "contract_version": 3,
+        "owner": owner,
+        "article_sha256": _hash(text),
         "principles": data["principles"],
         "practices": [p for p in data["practices"] if owner == "all" or p["owner"] == owner],
         "logic_dimensions": list(LOGIC) if owner != "fact_review" else [],
@@ -82,7 +114,9 @@ def prepare(text: str, *, owner: str = "all", original: str | None = None, hando
     if handoff is not None:
         from .publication_review import handoff_hash, validate_handoff
 
-        errors = validate_handoff(handoff, handoff.get("patch", "") if isinstance(handoff, dict) else "")
+        errors = validate_handoff(
+            handoff, handoff.get("patch", "") if isinstance(handoff, dict) else ""
+        )
         if errors:
             raise ValueError("; ".join(errors))
         packet["handoff_sha256"] = handoff_hash(handoff)
@@ -113,7 +147,9 @@ def _change_evidence(original: str, text: str, row: dict, field: str) -> list[st
     if original == text and entries is None:
         return []
     if not isinstance(entries, list) or not 1 <= len(entries) <= 16:
-        return [f"{field}/{row['id']}: change_evidence requires 1..16 contextual changed-span assessments"]
+        return [
+            f"{field}/{row['id']}: change_evidence requires 1..16 contextual changed-span assessments"
+        ]
     errors, changed = [], False
     for item in entries:
         if not isinstance(item, dict):
@@ -123,9 +159,14 @@ def _change_evidence(original: str, text: str, row: dict, field: str) -> list[st
         if not _nonempty(before) or before not in original:
             errors.append(f"{field}: change_evidence exact original_quote required")
         if not isinstance(after, str) or (after and after not in text):
-            errors.append(f"{field}: change_evidence exact candidate quote required (empty for deletion)")
+            errors.append(
+                f"{field}: change_evidence exact candidate quote required (empty for deletion)"
+            )
         changed |= isinstance(before, str) and isinstance(after, str) and before != after
-        if not isinstance(item.get("disposition"), str) or item["disposition"] not in {"preserved", "justified"}:
+        if not isinstance(item.get("disposition"), str) or item["disposition"] not in {
+            "preserved",
+            "justified",
+        }:
             errors.append(f"{field}: change_evidence unresolved or invalid disposition")
         for key in ("reason", "benefit", "meaning_risk"):
             if not _nonempty(item.get(key)):
@@ -135,7 +176,9 @@ def _change_evidence(original: str, text: str, row: dict, field: str) -> list[st
     return errors
 
 
-def _checks(text: str, rows, expected: set[str], field: str, *, na: set[str], original: str | None = None) -> list[str]:
+def _checks(
+    text: str, rows, expected: set[str], field: str, *, na: set[str], original: str | None = None
+) -> list[str]:
     errors, seen = [], set()
     if not isinstance(rows, list) or len(rows) > 256:
         return [f"{field}: expected bounded list"]
@@ -155,7 +198,11 @@ def _checks(text: str, rows, expected: set[str], field: str, *, na: set[str], or
             errors.append(f"{field}/{key}: invalid status")
         if not _nonempty(row.get("reason")):
             errors.append(f"{field}/{key}: concrete reason required")
-        if not isinstance(quote, str) or (quote and quote not in text) or (status in {"clear", "issue"} and not _nonempty(quote)):
+        if (
+            not isinstance(quote, str)
+            or (quote and quote not in text)
+            or (status in {"clear", "issue"} and not _nonempty(quote))
+        ):
             errors.append(f"{field}/{key}: exact candidate quote required")
         if status == "not_applicable" and key not in na:
             errors.append(f"{field}/{key}: core check cannot be skipped")
@@ -205,9 +252,14 @@ def _corrected_original(original: str, report: dict) -> str:
 def _original_facts(original: str, text: str, report: dict, handoff, snapshots) -> list[str]:
     row = report.get("original_factual_checks")
     if not isinstance(row, dict) or row.get("whole_text_checked") is not True:
-        return ["original_factual_checks: whole original must be checked separately from preservation"]
+        return [
+            "original_factual_checks: whole original must be checked separately from preservation"
+        ]
     errors = []
-    if not isinstance(row.get("internal_consistency"), str) or row["internal_consistency"] not in {"clear", "issue"}:
+    if not isinstance(row.get("internal_consistency"), str) or row["internal_consistency"] not in {
+        "clear",
+        "issue",
+    }:
         errors.append("original_factual_checks: internal_consistency required")
     agreement = row.get("source_agreement")
     expected = "supplied_sources_checked" if snapshots else "not_performed"
@@ -237,16 +289,34 @@ def _original_facts(original: str, text: str, report: dict, handoff, snapshots) 
             errors.append("original_factual_checks: unresolved original issue")
             continue
         correction, evidence = issue.get("correction_quote"), issue.get("evidence_quote")
-        if not _nonempty(correction) or correction not in text or (_nonempty(quote) and quote in text):
-            errors.append("original_factual_checks: corrected issue requires changed candidate evidence")
+        if (
+            not _nonempty(correction)
+            or correction not in text
+            or (_nonempty(quote) and quote in text)
+        ):
+            errors.append(
+                "original_factual_checks: corrected issue requires changed candidate evidence"
+            )
         source_id = issue.get("source_id")
-        if not isinstance(source_id, str) or not _nonempty(evidence) or evidence not in source_texts.get(source_id, ""):
-            errors.append("original_factual_checks: correction requires verified full source evidence")
+        if (
+            not isinstance(source_id, str)
+            or not _nonempty(evidence)
+            or evidence not in source_texts.get(source_id, "")
+        ):
+            errors.append(
+                "original_factual_checks: correction requires verified full source evidence"
+            )
     for hint in arithmetic_issues(original):
-        if not any(isinstance(item, dict) and isinstance(item.get("quote"), str)
-                   and (hint["evidence"] in item["quote"] or item["quote"] in hint["evidence"])
-                   and item["quote"].strip() for item in issues):
-            errors.append("original_factual_checks: original arithmetic inconsistency must be assessed explicitly")
+        if not any(
+            isinstance(item, dict)
+            and isinstance(item.get("quote"), str)
+            and (hint["evidence"] in item["quote"] or item["quote"] in hint["evidence"])
+            and item["quote"].strip()
+            for item in issues
+        ):
+            errors.append(
+                "original_factual_checks: original arithmetic inconsistency must be assessed explicitly"
+            )
     try:
         _corrected_original(original, report)
     except ValueError as error:
@@ -255,9 +325,19 @@ def _original_facts(original: str, text: str, report: dict, handoff, snapshots) 
 
 
 def _sources(handoff, rows) -> list[str]:
-    if not isinstance(handoff, dict) or not isinstance(handoff.get("sources"), list) or not handoff["sources"]:
-        return ["source_checks: approved handoff sources required; preservation is not source verification"]
-    sources = {s["source_id"]: s for s in handoff["sources"] if isinstance(s, dict) and isinstance(s.get("source_id"), str)}
+    if (
+        not isinstance(handoff, dict)
+        or not isinstance(handoff.get("sources"), list)
+        or not handoff["sources"]
+    ):
+        return [
+            "source_checks: approved handoff sources required; preservation is not source verification"
+        ]
+    sources = {
+        s["source_id"]: s
+        for s in handoff["sources"]
+        if isinstance(s, dict) and isinstance(s.get("source_id"), str)
+    }
     if len(sources) != len(handoff["sources"]):
         return ["source_checks: malformed or duplicate handoff sources"]
     if not isinstance(rows, list) or len(rows) > 128:
@@ -275,19 +355,35 @@ def _sources(handoff, rows) -> list[str]:
         if row.get("status") != "verified":
             errors.append(f"source_checks/{key}: unresolved source verification")
         quote = row.get("evidence_quote")
-        if not _nonempty(quote) or not isinstance(sources[key].get("quote"), str) or quote not in sources[key]["quote"]:
+        if (
+            not _nonempty(quote)
+            or not isinstance(sources[key].get("quote"), str)
+            or quote not in sources[key]["quote"]
+        ):
             errors.append(f"source_checks/{key}: exact approved evidence_quote required")
         for field in ("reason", "identity_check", "support_check"):
             if not _nonempty(row.get(field)):
                 errors.append(f"source_checks/{key}: {field} required")
-        if not isinstance(row.get("access"), str) or row["access"] not in {"live", "snapshot", "archive"}:
+        if not isinstance(row.get("access"), str) or row["access"] not in {
+            "live",
+            "snapshot",
+            "archive",
+        }:
             errors.append(f"source_checks/{key}: actual access method required")
     errors.extend(f"source_checks: missing {key}" for key in sorted(sources.keys() - seen))
     return errors
 
 
-def validate(text: str, report, *, owner: str = "all", handoff: dict | None = None, original: str | None = None,
-             snapshots: list | None = None, require_snapshots: bool = False) -> list[str]:
+def validate(
+    text: str,
+    report,
+    *,
+    owner: str = "all",
+    handoff: dict | None = None,
+    original: str | None = None,
+    snapshots: list | None = None,
+    require_snapshots: bool = False,
+) -> list[str]:
     try:
         packet = prepare(text, owner=owner, original=original, handoff=handoff, snapshots=snapshots)
     except (ValueError, TypeError, KeyError, UnicodeError) as error:
@@ -295,7 +391,9 @@ def validate(text: str, report, *, owner: str = "all", handoff: dict | None = No
     if not isinstance(report, dict):
         return ["editorial review must be an object"]
     errors = []
-    errors.extend(f"integrity: {issue['message']} {issue['suggestion']}" for issue in arithmetic_issues(text))
+    errors.extend(
+        f"integrity: {issue['message']} {issue['suggestion']}" for issue in arithmetic_issues(text)
+    )
     if report.get("status") != "pass":
         errors.append("editorial: reviewer did not pass the article")
     for field in ("article_sha256", "original_sha256", "handoff_sha256", "sources_sha256"):
@@ -304,14 +402,30 @@ def validate(text: str, report, *, owner: str = "all", handoff: dict | None = No
     ids = {p["id"] for p in packet["practices"]}
     errors += _checks(text, report.get("practice_checks"), ids, "practice_checks", na=ids)
     if owner != "fact_review":
-        errors += _checks(text, report.get("logic_checks"), set(LOGIC), "logic_checks", na={"causal_support"})
-        errors += _checks(text, report.get("preservation_checks"), set(PRESERVATION), "preservation_checks", na=set(), original=original)
+        errors += _checks(
+            text, report.get("logic_checks"), set(LOGIC), "logic_checks", na={"causal_support"}
+        )
+        errors += _checks(
+            text,
+            report.get("preservation_checks"),
+            set(PRESERVATION),
+            "preservation_checks",
+            na=set(),
+            original=original,
+        )
     if original is not None:
         errors += _original_facts(original, text, report, handoff, snapshots)
-    preservation_only = owner == "all" and handoff is None and snapshots is None and original is not None
+    preservation_only = (
+        owner == "all" and handoff is None and snapshots is None and original is not None
+    )
     if preservation_only:
-        if report.get("source_verification") != "not_performed" or report.get("source_checks") != []:
-            errors.append("source_checks: preservation-only review must declare not_performed and an empty source_checks list")
+        if (
+            report.get("source_verification") != "not_performed"
+            or report.get("source_checks") != []
+        ):
+            errors.append(
+                "source_checks: preservation-only review must declare not_performed and an empty source_checks list"
+            )
     elif owner != "literary_review":
         errors += _sources(handoff, report.get("source_checks"))
         if require_snapshots and snapshots is None:
@@ -324,9 +438,15 @@ def validate(text: str, report, *, owner: str = "all", handoff: dict | None = No
             validate_snapshots(snapshots)
             if isinstance(handoff, dict):
                 errors += _ground_sources(handoff, snapshots)
-            for row in report.get("source_checks", []) if isinstance(report.get("source_checks"), list) else []:
+            for row in (
+                report.get("source_checks", [])
+                if isinstance(report.get("source_checks"), list)
+                else []
+            ):
                 if isinstance(row, dict) and row.get("access") != "snapshot":
-                    errors.append("source_checks: supplied snapshots do not prove a live or archive retrieval by the reviewer")
+                    errors.append(
+                        "source_checks: supplied snapshots do not prove a live or archive retrieval by the reviewer"
+                    )
         except (KeyError, TypeError, ValueError) as error:
             errors.append(f"source_checks: invalid snapshots: {error}")
     return errors
@@ -338,7 +458,9 @@ def main(argv=None) -> int:
     parser.add_argument("--text", type=Path, required=True)
     parser.add_argument("--original", type=Path)
     parser.add_argument("--handoff", type=Path)
-    parser.add_argument("--sources", type=Path, help="collected full snapshots with provenance and SHA256")
+    parser.add_argument(
+        "--sources", type=Path, help="collected full snapshots with provenance and SHA256"
+    )
     parser.add_argument("--review", type=Path)
     parser.add_argument("--owner", choices=("all", "fact_review", "literary_review"), default="all")
     args = parser.parse_args(argv)
@@ -348,21 +470,39 @@ def main(argv=None) -> int:
         text = args.text.read_text(encoding="utf-8-sig")
         original = args.original.read_text(encoding="utf-8-sig") if args.original else None
         handoff = json.loads(args.handoff.read_text(encoding="utf-8-sig")) if args.handoff else None
-        snapshots = json.loads(args.sources.read_text(encoding="utf-8-sig")) if args.sources else None
+        snapshots = (
+            json.loads(args.sources.read_text(encoding="utf-8-sig")) if args.sources else None
+        )
         if args.action == "prepare":
-            result = prepare(text, owner=args.owner, original=original, handoff=handoff, snapshots=snapshots)
+            result = prepare(
+                text, owner=args.owner, original=original, handoff=handoff, snapshots=snapshots
+            )
         else:
             report = json.loads(args.review.read_text(encoding="utf-8-sig"))
-            errors = validate(text, report, owner=args.owner, original=original, handoff=handoff,
-                              snapshots=snapshots, require_snapshots=True)
+            errors = validate(
+                text,
+                report,
+                owner=args.owner,
+                original=original,
+                handoff=handoff,
+                snapshots=snapshots,
+                require_snapshots=True,
+            )
             if args.owner != "literary_review" and handoff is not None and not errors:
                 from .publication_review import validate_factual
 
                 errors += validate_factual(handoff, text, report)
-            result = {"status": "blocked" if errors else "pass", "errors": errors,
-                      "review_scope": "supplied_sources" if handoff is not None else "source_and_candidate",
-                      "source_verification": "supplied_sources_checked" if handoff is not None and not errors else "not_performed",
-                      "limitation": "Contract validation; semantic judgment remains the reviewer's responsibility."}
+            result = {
+                "status": "blocked" if errors else "pass",
+                "errors": errors,
+                "review_scope": "supplied_sources"
+                if handoff is not None
+                else "source_and_candidate",
+                "source_verification": "supplied_sources_checked"
+                if handoff is not None and not errors
+                else "not_performed",
+                "limitation": "Contract validation; semantic judgment remains the reviewer's responsibility.",
+            }
     except (OSError, ValueError, TypeError, UnicodeError) as error:
         result = {"status": "blocked", "errors": [str(error)]}
     print(json.dumps(result, ensure_ascii=False, indent=2))

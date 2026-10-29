@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -48,7 +49,83 @@ def _payload(user: str) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def _reply(stage: str, user: str) -> str:
+def _review(payload: dict[str, Any], system: str, repair: bool) -> dict[str, Any]:
+    """Supply test evidence for the actual review contract, never production judgments."""
+    source, candidate = str(payload["source"]), str(payload["candidate"])
+    practices = list(dict.fromkeys(re.findall(r"\[([a-z_]+)\|(?:fact|literary)_review\]", system)))
+    if len(practices) != 26:
+        raise ValueError("expected the complete practice catalog in the critic prompt")
+
+    def check(identifier: str) -> dict[str, Any]:
+        return {
+            "id": identifier,
+            "status": "clear",
+            "quote": candidate,
+            "reason": "Test fixture: this dimension has no unrelated defect.",
+        }
+
+    preservation = []
+    for identifier in (
+        "facts_numbers",
+        "conditions_exceptions_negation",
+        "modality",
+        "entities_roles",
+        "author_voice",
+        "quotations_markup",
+        "strengths",
+    ):
+        item = {**check(identifier), "original_quote": source}
+        if source != candidate and identifier in {"author_voice", "strengths"}:
+            item["change_evidence"] = [
+                {
+                    "original_quote": source,
+                    "quote": candidate,
+                    "disposition": "justified",
+                    "reason": "Test fixture: changed passage reviewed.",
+                    "benefit": "Test fixture: local readability.",
+                    "meaning_risk": "Test fixture: no unrelated loss.",
+                }
+            ]
+        preservation.append(item)
+    assessments = []
+    for edit in payload.get("local_edits") or []:
+        assessment = {
+            "edit_id": edit["id"],
+            "reading_quote": edit["candidate_context"],
+            "reading": "awkward" if repair else "natural",
+            "scope_quote": candidate,
+            "scope": "preserved",
+            "decision": "repair" if repair else "keep",
+            "reason": "Test fixture: local wording reviewed.",
+        }
+        if repair:
+            assessment["finding_rule_id"] = "clarity"
+        assessments.append(assessment)
+    return {
+        "practice_checks": [check(identifier) for identifier in practices],
+        "logic_checks": [
+            check(identifier)
+            for identifier in (
+                "coherence",
+                "causal_support",
+                "scope_and_conditions",
+                "reference_consistency",
+                "information_gain",
+            )
+        ],
+        "preservation_checks": preservation,
+        "source_checks": [],
+        "original_factual_checks": {
+            "whole_text_checked": True,
+            "internal_consistency": "clear",
+            "source_agreement": "not_performed",
+            "issues": [],
+        },
+        "edit_assessments": assessments,
+    }
+
+
+def _reply(stage: str, user: str, system: str) -> str:
     if stage == "analysis":
         return json.dumps(
             {
@@ -93,7 +170,14 @@ def _reply(stage: str, user: str) -> str:
         findings = (
             []
             if repairs
-            else [{"rule_id": "clarity", "severity": "warning", "message": "уточнить", "line": 1}]
+            else [
+                {
+                    "rule_id": "clarity",
+                    "severity": "warning",
+                    "message": f"Test fixture: уточнить «{candidate}»",
+                    "line": 1,
+                }
+            ]
         )
         return json.dumps(
             {
@@ -105,6 +189,7 @@ def _reply(stage: str, user: str) -> str:
                 "regressions": [],
                 "findings": findings,
                 "repair_required": bool(findings),
+                **_review(payload, system, bool(findings)),
             },
             ensure_ascii=False,
         )
@@ -118,6 +203,7 @@ def _reply(stage: str, user: str) -> str:
             "regressions": [],
             "findings": [],
             "repair_required": False,
+            **_review(payload, system, False),
         },
         ensure_ascii=False,
     )
@@ -167,7 +253,7 @@ class Handler(BaseHTTPRequestHandler):
         call = {"stage": stage, "system": system, "user": user, "model": payload.get("model")}
         with LOCK:
             CALLS.append(call)
-        content = _reply(stage, user)
+        content = _reply(stage, user, system)
         self._json(200, {"choices": [{"message": {"role": "assistant", "content": content}}]})
 
 

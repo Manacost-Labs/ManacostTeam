@@ -82,7 +82,10 @@ def test_json_has_stable_top_level_keys(capsys, bg_file):
         "findings",
         "analyzers_skipped",
         "notes",
-        "review_scope", "independent_review_required", "publication_ready", "source_verification",
+        "review_scope",
+        "independent_review_required",
+        "publication_ready",
+        "source_verification",
     }
 
 

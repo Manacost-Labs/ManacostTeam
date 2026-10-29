@@ -1,4 +1,5 @@
 """Narrow, inspectable consistency checks; no automatic factual corrections."""
+
 from __future__ import annotations
 
 import re
@@ -8,7 +9,8 @@ import re
 _RECORD = re.compile(
     r"\b(?:со\s+)?сч[её]т(?:ом)?\s+(?P<wins>\d{1,6})\s*[-–—:]\s*(?P<losses>\d{1,6})"
     r"\s*\(\s*(?P<approx>около\s+|примерно\s+)?(?P<pct>\d{1,3}(?:[.,]\d{1,2})?)"
-    r"\s*%\s*(?:винрейта|побед)\s*\)", re.I,
+    r"\s*%\s*(?:винрейта|побед)\s*\)",
+    re.I,
 )
 
 
@@ -27,19 +29,27 @@ def arithmetic_issues(text: str) -> list[dict]:
         displayed = match["pct"].replace(",", ".")
         expected = 100 * wins / (wins + losses)
         digits = len(displayed.partition(".")[2])
-        tolerance = 1.0 if match["approx"] else 0.5 * 10 ** -digits
+        tolerance = 1.0 if match["approx"] else 0.5 * 10**-digits
         if abs(expected - float(displayed)) <= tolerance + 1e-9:
             continue
-        issues.append({
-            "kind": "ARITHMETIC_INCONSISTENCY", "severity": "error",
-            "evidence": match[0], "line": text.count("\n", 0, match.start()) + 1,
-            "message": f"Счёт {wins}-{losses} даёт {expected:.2f}% побед, а в тексте {displayed}%; числа несовместимы при одном наборе игр.",
-            "suggestion": "Сверить исходный результат и процент с источником; уточнить выборку и ничьи. Не выбирать автоматически, какое число исправлять.",
-        })
+        issues.append(
+            {
+                "kind": "ARITHMETIC_INCONSISTENCY",
+                "severity": "error",
+                "evidence": match[0],
+                "line": text.count("\n", 0, match.start()) + 1,
+                "message": f"Счёт {wins}-{losses} даёт {expected:.2f}% побед, а в тексте {displayed}%; числа несовместимы при одном наборе игр.",
+                "suggestion": "Сверить исходный результат и процент с источником; уточнить выборку и ничьи. Не выбирать автоматически, какое число исправлять.",
+            }
+        )
     return issues
 
 
 def diagnostic_scope() -> dict:
     """Legacy accepted remains a deterministic diagnostic result only."""
-    return {"review_scope": "diagnostics_only", "independent_review_required": True,
-            "publication_ready": False, "source_verification": "not_performed"}
+    return {
+        "review_scope": "diagnostics_only",
+        "independent_review_required": True,
+        "publication_ready": False,
+        "source_verification": "not_performed",
+    }

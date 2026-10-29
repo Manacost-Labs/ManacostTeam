@@ -28,24 +28,40 @@ SPEC.loader.exec_module(bridge_module)
 def claude_stream(texts, *, stop="end_turn", error=False):
     events = []
     for i, text in enumerate(texts):
-        events.append({"type": "assistant", "uuid": str(i), "parent_tool_use_id": None,
-                       "message": {"id": f"msg{i}", "content": [{"type": "text", "text": text}]}})
-    events.append({"type": "result", "subtype": "success", "is_error": error,
-                   "stop_reason": stop, "result": texts[-1] if texts else ""})
+        events.append(
+            {
+                "type": "assistant",
+                "uuid": str(i),
+                "parent_tool_use_id": None,
+                "message": {"id": f"msg{i}", "content": [{"type": "text", "text": text}]},
+            }
+        )
+    events.append(
+        {
+            "type": "result",
+            "subtype": "success",
+            "is_error": error,
+            "stop_reason": stop,
+            "result": texts[-1] if texts else "",
+        }
+    )
     return "\n".join(json.dumps(e) for e in events)
 
 
 def test_claude_stream_keeps_prefix_before_automatic_continuation():
-    raw = claude_stream(['{"numbers":[1,2,', '3,4]}'])
+    raw = claude_stream(['{"numbers":[1,2,', "3,4]}"])
     assert json.loads(bridge_module.parse_claude_stream(raw)) == {"numbers": [1, 2, 3, 4]}
 
 
-@pytest.mark.parametrize("raw", [
-    claude_stream(["fragment"], stop="max_tokens"),
-    claude_stream(["API Error"], error=True),
-    '{"type":"assistant","message":{"content":[{"type":"text","text":"partial"}]}}',
-    claude_stream([]),
-])
+@pytest.mark.parametrize(
+    "raw",
+    [
+        claude_stream(["fragment"], stop="max_tokens"),
+        claude_stream(["API Error"], error=True),
+        '{"type":"assistant","message":{"content":[{"type":"text","text":"partial"}]}}',
+        claude_stream([]),
+    ],
+)
 def test_claude_stream_refuses_incomplete_or_failed_output(raw):
     with pytest.raises(ValueError):
         bridge_module.parse_claude_stream(raw)
@@ -54,25 +70,59 @@ def test_claude_stream_refuses_incomplete_or_failed_output(raw):
 def test_claude_stream_ignores_thinking_and_repeated_event_uuid():
     raw = claude_stream(["Полный текст"])
     first, result = raw.splitlines()
-    thinking = json.dumps({"type":"assistant", "uuid":"thought", "message":{"content":[{"type":"thinking","thinking":"private"}]}})
-    assert bridge_module.parse_claude_stream("\n".join([thinking, first, first, result])) == "Полный текст"
+    thinking = json.dumps(
+        {
+            "type": "assistant",
+            "uuid": "thought",
+            "message": {"content": [{"type": "thinking", "thinking": "private"}]},
+        }
+    )
+    assert (
+        bridge_module.parse_claude_stream("\n".join([thinking, first, first, result]))
+        == "Полный текст"
+    )
 
 
-@pytest.mark.parametrize("raw", ['[]', 'null', '{"type":"assistant","message":null}', '{"type":"assistant","message":{"content":[null]}}'])
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "[]",
+        "null",
+        '{"type":"assistant","message":null}',
+        '{"type":"assistant","message":{"content":[null]}}',
+    ],
+)
 def test_claude_stream_rejects_malformed_event_shape(raw):
     with pytest.raises(ValueError):
         bridge_module.parse_claude_stream(raw)
 
 
-@pytest.mark.parametrize("value,expected", [(0,400),(False,400),(True,400),(-1,400),("100",400),(128001,400),(1,200),(128000,200),(None,200)])
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (0, 400),
+        (False, 400),
+        (True, 400),
+        (-1, 400),
+        ("100", 400),
+        (128001, 400),
+        (1, 200),
+        (128000, 200),
+        (None, 200),
+    ],
+)
 def test_bridge_validates_explicit_token_budget(value, expected):
     class Stub(bridge_module.Backend):
         def run(self, system, prompt, timeout, max_tokens=64000):
             assert max_tokens == (64000 if value is None else value)
             return "ok", 0, ""
-    instance = bridge_module.Bridge(Stub("claude","model","",[],""),1,1)
-    code, _ = instance.complete({"messages":[{"role":"user","content":"x"}],"max_tokens":value})
+
+    instance = bridge_module.Bridge(Stub("claude", "model", "", [], ""), 1, 1)
+    code, _ = instance.complete(
+        {"messages": [{"role": "user", "content": "x"}], "max_tokens": value}
+    )
     assert code == expected
+
 
 ECHO = f"{shlex.quote(sys.executable)} -X utf8 -c \"import sys; print('```json\\n' + sys.stdin.read().upper() + '\\n```')\""
 FAIL = f"{shlex.quote(sys.executable)} -c \"import sys; sys.stderr.write('Not logged in - Please run /login'); sys.exit(2)\""
@@ -287,7 +337,9 @@ def test_claude_large_system_stays_out_of_argv_and_temp_file_is_cleaned(
         assert (reply, code, diagnostic) == ("", None, "timeout")
     else:
         assert (reply, code, diagnostic) == (
-            "ok" if outcome == "success" else "", 0 if outcome == "success" else 2, "diagnostic"
+            "ok" if outcome == "success" else "",
+            0 if outcome == "success" else 2,
+            "diagnostic",
         )
 
 
@@ -322,7 +374,9 @@ def test_claude_file_transport_launches_real_child_and_cleans_up(
     class ChildBackend(bridge_module.Backend):
         def argv(self, system, prompt, scratch, last_message):
             argv, stdin = super().argv(system, prompt, scratch, last_message)
-            return [sys.executable, "-X", "utf8", str(child), outcome, str(observed)] + argv[1:], stdin
+            return [sys.executable, "-X", "utf8", str(child), outcome, str(observed)] + argv[
+                1:
+            ], stdin
 
     system = "Правило: «мир» 世界🙂\r\n" * 4000
     prompt = "Источник и данные\n" * 3000

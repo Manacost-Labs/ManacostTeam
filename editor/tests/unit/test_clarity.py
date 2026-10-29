@@ -39,7 +39,8 @@ def test_ordinary_gifts_are_not_replaced_by_a_mechanic() -> None:
     for profile in ("analytics-article", "battlegrounds-article"):
         findings, _ = clarity.analyze(
             "Темные дары изменились. За просмотр Twitch можно получить подарки: "
-            "комплекты карт и сезонный пропуск для Полей сражений.", profile
+            "комплекты карт и сезонный пропуск для Полей сражений.",
+            profile,
         )
         assert "terminology.dark-gifts-generic" not in ids(findings)
         assert "подарки" not in clarity.model_rules(profile)["avoid"]

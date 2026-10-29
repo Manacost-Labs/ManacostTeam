@@ -22,7 +22,7 @@ import (
 	"github.com/Manacost-Labs/EditorTeam/go/internal/guards"
 )
 
-var ErrNotInstalled = errors.New("Hunspell не установлен или не найден в PATH")
+var ErrNotInstalled = errors.New("анализатор Hunspell не установлен или не найден в PATH")
 var ErrDictionaryUnavailable = errors.New("русский словарь Hunspell не задан")
 
 const DefaultTimeout = 30 * time.Second
@@ -95,7 +95,7 @@ func (r *Runner) Check(parent context.Context, text string) ([]finding.Finding, 
 		return nil, ErrNotInstalled
 	}
 	if err != nil {
-		return nil, fmt.Errorf("Hunspell: %w: %s", err, strings.TrimSpace(output.String()))
+		return nil, fmt.Errorf("ошибка Hunspell: %w: %s", err, strings.TrimSpace(output.String()))
 	}
 	return parse(text, output.String(), r.Allowlist), nil
 }
