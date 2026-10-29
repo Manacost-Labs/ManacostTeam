@@ -158,11 +158,13 @@ class CatalogTests(unittest.TestCase):
     def test_concurrent_edit_is_preserved_and_owned_snapshot_is_removed(self):
         self.capture_path.write_text(json.dumps(capture()), encoding="utf-8")
         original_reader = Path.read_bytes
+        # ingest resolves paths; macOS temporary directories may use /var -> /private/var.
+        selection = self.selection.resolve()
         concurrent = self.selection.read_bytes() + b"\n"
         reads = 0
         def read_bytes(path):
             nonlocal reads
-            if path == self.selection:
+            if path == selection:
                 reads += 1
                 if reads == 2:
                     path.write_bytes(concurrent)
