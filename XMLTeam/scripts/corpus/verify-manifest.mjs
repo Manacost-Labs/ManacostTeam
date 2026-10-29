@@ -23,4 +23,4 @@ for (const entry of manifest.entries) {
 console.log(`${manifest.entries.length} replays, ${bad} checksum mismatches`);
 console.log('modes:', modes);
 console.log('builds:', [...builds].sort((a, b) => a - b).join(', '));
-process.exit(bad === 0 ? 0 : 1);
+process.exitCode = bad === 0 ? 0 : 1;
