@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { PassThrough } = require('node:stream');
+const { spawnSync } = require('node:child_process');
 const test = require('node:test');
 
 const pairs = require('../pairs.js');
@@ -140,4 +141,122 @@ test('judge reply parser enforces the rubric protocol', () => {
   assert.throws(() => blind.parseJudgeReply(JSON.stringify({ ...ok, preferred: 'C' })), /preferred/);
   assert.throws(() => blind.parseJudgeReply(JSON.stringify({ ...ok, evidence: [] })), /evidence/);
   assert.throws(() => blind.parseJudgeReply('нет ответа'), /no JSON/);
+});
+
+test('explicit clean controls require equality while ordinary duplicates remain invalid', () => {
+  const dir = tmp('pairs-clean-');
+  assert.deepEqual(pairs.validatePair(writePair(dir, 'clean', { expected_edit: 'none' }, { draft: 'Совет.\n', reference: ' Совет. ' })), []);
+  assert.match(pairs.validatePair(writePair(dir, 'unmarked', {}, { draft: 'Совет.', reference: 'Совет.' })).join(';'), /equals draft/);
+  assert.match(pairs.validatePair(writePair(dir, 'changed-control', { expected_edit: 'none' })).join(';'), /requires.*equal/);
+  for (const [index, value] of ['some', '', true, null].entries()) {
+    assert.match(pairs.validatePair(writePair(dir, `bad-control-${index}`, { expected_edit: value })).join(';'), /expected_edit/);
+  }
+});
+
+test('owner restoration can create an explicit clean regression control through API and CLI', () => {
+  const dir = tmp('pairs-restored-');
+  const source = 'Сохраняйте ресурс при слабой позиции.';
+  const ai = 'Всегда сохраняйте ресурс.';
+  const common = { dir, type: 'GUIDE', topic: 'условие', date: '2026-10-25', source, ai, fixed: source };
+  assert.throws(() => pairs.createCase({ ...common, id: 'unmarked' }), /equals draft/);
+  const result = pairs.createCase({ ...common, id: 'restored', expectedEdit: 'none' });
+  const meta = JSON.parse(fs.readFileSync(path.join(result.dir, 'meta.json'), 'utf8'));
+  assert.equal(meta.origin, 'owner-correction');
+  assert.equal(meta.expected_edit, 'none');
+  assert.deepEqual(meta.regression.must_not_contain, [ai]);
+  assert.deepEqual(pairs.validatePair(result.dir), []);
+  const input = path.join(dir, 'source.md'), rejected = path.join(dir, 'ai.md');
+  fs.writeFileSync(input, source); fs.writeFileSync(rejected, ai);
+  const cli = spawnSync(process.execPath, [path.join(__dirname, '../pairs.js'), 'case', '--source', input, '--ai', rejected,
+    '--fixed', input, '--type', 'GUIDE', '--topic', 'условие', '--id', 'cli-control', '--dir', dir, '--expected-edit', 'none'], { encoding: 'utf8' });
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'cli-control/meta.json'), 'utf8')).expected_edit, 'none');
+});
+
+async function controlRun({ changed = false, winner = 'tie', synthetic = false, offline = false, offlineJudge = false, mixed = false, swapOrder = false } = {}) {
+  const pairsDir = tmp('pairs-control-run-'), out = path.join(tmp('pairs-control-out-'), 'run');
+  const id = synthetic ? 'synthetic-control' : 'control';
+  writePair(pairsDir, id, { expected_edit: 'none', ...(synthetic ? { origin: 'synthetic', synthetic: true } : {}) },
+    { draft: 'Сохраняйте ресурс при слабой позиции.', reference: 'Сохраняйте ресурс при слабой позиции.' });
+  if (mixed) writePair(pairsDir, 'ordinary');
+  const scores = Object.fromEntries(blind.RUBRIC.criteria.map(c => [c.id, 4]));
+  const judgeFn = async item => {
+    assert.deepEqual(Object.keys(item).sort(), ['A', 'B', 'criteria', 'id', 'source']);
+    assert.doesNotMatch(JSON.stringify(item), /expected_edit|reference_side|unchanged/);
+    const side = JSON.parse(fs.readFileSync(path.join(out, 'key.json'), 'utf8')).pairs.find(row => row.id === item.id);
+    const preferred = winner === 'tie' ? 'tie' : side.A === winner ? 'A' : 'B';
+    return { model: 'test-model', reply: { A: scores, B: scores, preferred, evidence: ['Условие сохранено; суждение fixture, не измерение качества модели.'] } };
+  };
+  const summary = await blind.runPairs({ pairsDir, outDir: out, editor: offline ? 'offline' : 'cmd',
+    editorCmd: changed ? "sed 's/Сохраняйте ресурс при слабой позиции./При слабой позиции сохраняйте ресурс./'" : 'cat',
+    ...(offlineJudge ? { judge: 'offline' } : { judgeFn }), swapOrder, random: () => 0 });
+  const report = JSON.parse(fs.readFileSync(path.join(out, 'judge/report.json'), 'utf8'));
+  return { summary, report, out, id };
+}
+
+test('clean controls are separate observations, not an editing metric or a quality verdict', async () => {
+  for (const changed of [false, true]) for (const winner of ['tie', 'ai', 'human']) {
+    const { summary, report, out } = await controlRun({ changed, winner, mixed: true });
+    assert.deepEqual(report.metric.model.case_ids, ['ordinary']);
+    assert.equal(report.metric.model.share, winner === 'human' ? 0 : 1);
+    const controls = report.control_results.model;
+    assert.deepEqual(controls.case_ids, ['control']);
+    assert.equal(controls.cases, 1);
+    assert.equal(controls.preferences[winner], 1);
+    assert.equal(controls.unchanged_outputs, changed ? 0 : 1);
+    assert.equal(controls.changed_outputs, changed ? 1 : 0);
+    assert.equal(controls.measured, true);
+    assert.equal(controls.quality_improvement_confirmed, false);
+    assert.equal(controls.accepted, undefined);
+    assert.deepEqual(summary.judge_control_results, controls);
+    const key = JSON.parse(fs.readFileSync(path.join(out, 'key.json'), 'utf8'));
+    assert.deepEqual(key.run.controls, [{ case_id: 'control', expected_edit: 'none', unchanged: !changed }]);
+    assert.doesNotMatch(fs.readFileSync(path.join(out, 'pairs.md'), 'utf8'), /expected_edit|reference_side/);
+    assert.match(fs.readFileSync(path.join(out, 'pairs.md'), 'utf8'), /Неизменённый исходник допустим/);
+    assert.match(fs.readFileSync(path.join(out, 'pairs.md'), 'utf8'), /равноценная формулировка/);
+  }
+});
+
+test('control-only and synthetic/offline runs cannot inflate the main measured metric', async () => {
+  for (const options of [{}, { synthetic: true }, { offline: true }, { offlineJudge: true }]) {
+    const { report } = await controlRun(options);
+    assert.equal(report.metric.model, null);
+    assert.equal(report.control_results.model.measured, !options.synthetic && !options.offline && !options.offlineJudge);
+    assert.equal(report.quality_improvement_confirmed, false);
+  }
+});
+
+test('control-only CLI reports unknown main metric and pending human reviews stay pending', async () => {
+  const pairsDir = tmp('pairs-control-cli-'), out = path.join(tmp('pairs-control-cli-out-'), 'run');
+  writePair(pairsDir, 'synthetic-clean', { expected_edit: 'none', origin: 'synthetic', synthetic: true },
+    { draft: 'Ясный совет.', reference: 'Ясный совет.' });
+  const cli = spawnSync(process.execPath, [path.join(__dirname, '../blind_review.js'), 'pairs', '--pairs', pairsDir, '--out', out], { encoding: 'utf8' });
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.match(cli.stdout, /ИИ не хуже человека: нет оценок/);
+  assert.match(cli.stdout, /наблюдение: без изменений 1, изменены 0/);
+  assert.match(cli.stdout, /НЕ ИЗМЕРЕНИЕ/);
+  const summary = JSON.parse(fs.readFileSync(path.join(out, 'private/summary.json'), 'utf8'));
+  assert.equal(summary.judge_metric, null);
+  const pending = blind.importRatings(path.join(out, 'ratings.template.json'), path.join(out, 'key.json'), path.join(out, 'pending'));
+  assert.equal(pending.rated, 0);
+  assert.deepEqual(pending.pending, ['synthetic-clean']);
+  assert.equal(pending.metric.human, null);
+  assert.equal(pending.control_results.human, null);
+  assert.equal(pending.human_review_status, 'pending');
+  assert.equal(pending.quality_improvement_confirmed, false);
+});
+
+test('human control results keep swapped presentations distinct without double-counting outputs', async () => {
+  const { out } = await controlRun({ changed: true, swapOrder: true });
+  const model = JSON.parse(fs.readFileSync(path.join(out, 'judge/ratings.json'), 'utf8'));
+  const ratings = model.map(row => ({ ...row, review_status: 'reviewed', reviewer: 'owner', reviewed_at: '2026-10-31T12:00:00Z' }));
+  const ratingsFile = path.join(out, 'human-ratings.json');
+  fs.writeFileSync(ratingsFile, JSON.stringify(ratings));
+  const report = blind.importRatings(ratingsFile, path.join(out, 'key.json'), path.join(out, 'human'));
+  assert.equal(report.metric.human, null);
+  assert.equal(report.control_results.human.cases, 1);
+  assert.equal(report.control_results.human.observations, 2);
+  assert.equal(report.control_results.human.changed_outputs, 1);
+  assert.equal(report.control_results.human.preferences.tie, 2);
+  assert.equal(report.control_results.human.measured, true);
 });

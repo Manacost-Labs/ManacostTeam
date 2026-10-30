@@ -14,7 +14,7 @@ const path = require('node:path');
 const PAIRS_DIR = path.join(__dirname, 'pairs');
 const TYPES = ['GUIDE', 'ANALYSIS', 'REPORT'];
 const ORIGINS = ['owner', 'owner-correction', 'synthetic'];
-const META_KEYS = new Set(['id', 'type', 'topic', 'date', 'origin', 'synthetic', 'notes', 'regression']);
+const META_KEYS = new Set(['id', 'type', 'topic', 'date', 'origin', 'synthetic', 'notes', 'regression', 'expected_edit']);
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 function readText(file) {
@@ -36,7 +36,6 @@ function validatePair(pairDir) {
   const metaRaw = readText(path.join(pairDir, 'meta.json'));
   if (!draft?.trim()) errors.push('draft.md missing or empty');
   if (!reference?.trim()) errors.push('reference.md missing or empty');
-  if (draft?.trim() && draft.trim() === reference?.trim()) errors.push('reference.md equals draft.md');
   if (metaRaw === null) return [...errors, 'meta.json missing'];
   let meta;
   try {
@@ -46,6 +45,11 @@ function validatePair(pairDir) {
   }
   if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return [...errors, 'meta.json must be an object'];
   for (const key of Object.keys(meta)) if (!META_KEYS.has(key)) errors.push(`meta.${key} is not a known field`);
+  if (meta.expected_edit !== undefined && meta.expected_edit !== 'none') errors.push('meta.expected_edit must be none when present');
+  const same = draft?.trim() && draft.trim() === reference?.trim();
+  if (meta.expected_edit === 'none') {
+    if (!same) errors.push('meta.expected_edit=none requires draft.md and reference.md to be equal');
+  } else if (same) errors.push('reference.md equals draft.md');
   if (meta.id !== name) errors.push(`meta.id must equal directory name ${name}`);
   if (!ID_RE.test(name)) errors.push('id must be a lowercase slug');
   if (!TYPES.includes(meta.type)) errors.push(`meta.type must be one of ${TYPES.join('|')}`);
@@ -107,12 +111,13 @@ function rejectedSentences(aiText, fixedText) {
   return [...new Set(sentences(aiText).filter((item) => !kept.has(norm(item)) && /\p{L}/u.test(item)))];
 }
 
-function createCase({ source, ai, fixed, type, topic, id, date, note, dir = PAIRS_DIR }) {
+function createCase({ source, ai, fixed, type, topic, id, date, note, expectedEdit, dir = PAIRS_DIR }) {
   const pairDir = path.join(dir, id);
   if (fs.existsSync(pairDir)) throw new Error(`pair exists: ${pairDir}`);
   const mustNotContain = rejectedSentences(ai, fixed);
   if (!mustNotContain.length) throw new Error('owner correction does not remove anything from the AI edit');
   const meta = { id, type, topic, date, origin: 'owner-correction', synthetic: false,
+    ...(expectedEdit !== undefined ? { expected_edit: expectedEdit } : {}),
     ...(note ? { notes: note } : {}), regression: { must_not_contain: mustNotContain } };
   fs.mkdirSync(pairDir, { recursive: true });
   fs.writeFileSync(path.join(pairDir, 'draft.md'), source);
@@ -157,12 +162,13 @@ function main(argv) {
       source: fs.readFileSync(option('--source'), 'utf8'), ai: fs.readFileSync(option('--ai'), 'utf8'),
       fixed: fs.readFileSync(option('--fixed'), 'utf8'), type: option('--type'), topic: option('--topic'),
       id: option('--id'), date: option('--date') || new Date().toISOString().slice(0, 10), note: option('--note'),
+      expectedEdit: option('--expected-edit'),
       dir: option('--dir') || PAIRS_DIR,
     });
     console.log(`case written: ${result.dir}\nmust_not_contain: ${result.must_not_contain.length} (сузьте в meta.json до точной фразы)`);
     return 0;
   }
-  console.error('usage: pairs.js validate [dir] | case --source f --ai f --fixed f --type GUIDE --topic t --id slug');
+  console.error('usage: pairs.js validate [dir] | case --source f --ai f --fixed f --type GUIDE --topic t --id slug [--expected-edit none]');
   return 2;
 }
 

@@ -34,6 +34,7 @@ const CRITERIA_RU = {
   readability: 'читаемость', naturalness: 'естественность русского', usefulness: 'полезность для игрока', voice: 'сохранение авторского голоса',
   conditions: 'сохранность условий и исключений', restraint: 'обоснованность вмешательства в сильные фрагменты',
 };
+const SOURCE_REVIEW_GUIDANCE = 'Неизменённый исходник допустим, если правка не приносит конкретной пользы. Допустима и другая равноценная формулировка: несовпадение с эталоном само по себе не дефект. Не обменивай факты, условия, исключения и степень уверенности на интересность. Авторский голос оценивай относительно исходника, а не общей живости. Обоснуй пользу или лишнее вмешательство конкретным фрагментом; одинаковые версии можно оценить как tie.';
 
 function loadResults(file) {
   const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -106,6 +107,7 @@ function prepare(file, outDir, random = randomBit, options = {}) {
   fs.writeFileSync(path.join(outDir, 'key.json'), JSON.stringify({ created_at: new Date().toISOString(), source_file: path.basename(file),
     ...(options.protocol ? { protocol: options.protocol, criteria, labels, run: options.run || {} } : {}), pairs: key }, null, 2) + '\n');
   const lines = ['# Слепая оценка редактуры', '', 'Оцените каждую пару по шкале 1–5 и укажите, какой вариант предпочли (A, B или tie). Названия вариантов скрыты; ключ хранится отдельно.',
+    SOURCE_REVIEW_GUIDANCE,
     'Подкрепите предпочтение конкретными фрагментами. Для пользы проверьте: что делать, почему, при каких условиях и когда выбрать иначе. Голос оценивается по связности мысли и узнаваемой позиции автора, а не счетчикам слов.',
     'Время измеряется отдельно: один редактор не получает последовательно обе версии одного материала. Используйте независимых редакторов и first_exposure. Переставленные пары — проверка устойчивости суждения, не замер скорости.',
     'Заполнять reviewed, reviewer и reviewed_at может только человек. Пустые строки остаются pending и не считаются ничьей. Модельный judge хранится отдельно.', '',
@@ -204,7 +206,10 @@ function importRatings(ratingsFile, keyFile, outDir) {
   const metric = key.protocol === 'pairs'
     ? Object.fromEntries(['human', 'model'].map((rater) => [rater, aiNotWorse(observations, rater, key.run || {})]))
     : undefined;
-  const report = { rated, skipped, pending, averages, preferences, observations, disagreements, ...(metric ? { metric, run: key.run || {} } : {}),
+  const controls = key.protocol === 'pairs'
+    ? Object.fromEntries(['human', 'model'].map(rater => [rater, controlResults(observations, rater, key.run || {})]))
+    : undefined;
+  const report = { rated, skipped, pending, averages, preferences, observations, disagreements, ...(metric ? { metric, control_results: controls, run: key.run || {} } : {}),
     human_attested_ratings: attested, human_review_status: attested ? 'recorded_requires_interpretation' : 'pending',
     legacy_unattested_ratings: rated - attested - modelRated, model_judge_ratings: modelRated, quality_improvement_confirmed: false, key_file: path.basename(keyFile) };
   fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify(report, null, 2) + '\n');
@@ -212,6 +217,8 @@ function importRatings(ratingsFile, keyFile, outDir) {
     `Разногласий по материалам: ${disagreements.length}. Улучшение качества автоматически не подтверждается.`,
     ...(skipped.length ? [`Пропущено без ключа: ${skipped.join(', ')}`] : []),
     ...(metric ? ['', '## ИИ не хуже человека', '', ...Object.entries(metric).map(([rater, value]) => `- ${rater === 'human' ? 'владелец' : 'LLM-судья'}: ${metricLine(value)}`)] : []),
+    ...(controls ? ['', '## Контроли без обязательной правки', '', 'Не входят в метрику улучшения редактуры. Изменение текста — наблюдение; предпочтение — отдельное суждение, не автоматическое подтверждение качества.',
+      ...Object.entries(controls).map(([rater, value]) => `- ${rater === 'human' ? 'владелец' : 'LLM-судья'}: ${controlLine(value)}`)] : []),
     '', '## Средние оценки (1–5)', '', `| Вариант | ${criteriaList.map((c) => labels[c] || c).join(' | ')} |`, `| --- | ${criteriaList.map(() => '---').join(' | ')} |`];
   for (const [variant, criteria] of Object.entries(averages)) {
     lines.push(`| ${variant} | ${criteriaList.map((c) => criteria[c] ?? '—').join(' | ')} |`);
@@ -227,9 +234,10 @@ function importRatings(ratingsFile, keyFile, outDir) {
 // (ничья — не хуже). Измерением считается только прогон настоящего
 // редактора на парах владельца и не offline-судьёй.
 function aiNotWorse(observations, rater, run) {
+  const controlIds = new Set((run.controls || []).map(row => row.case_id));
   const byCase = new Map();
   for (const row of observations) {
-    if (row.rater !== rater) continue;
+    if (row.rater !== rater || controlIds.has(row.case_id)) continue;
     const counts = byCase.get(row.case_id) || { ai: 0, human: 0, tie: 0 };
     counts[row.winner] = (counts[row.winner] || 0) + 1;
     byCase.set(row.case_id, counts);
@@ -241,6 +249,30 @@ function aiNotWorse(observations, rater, run) {
   const synthetic = (run.synthetic_ids || []).filter((id) => byCase.has(id));
   return { cases: caseIds.length, ai_not_worse: notWorse, share: Number((notWorse / caseIds.length).toFixed(3)), case_ids: caseIds,
     synthetic_cases: synthetic.length, measured: run.editor !== undefined && run.editor !== 'offline' && !offlineJudge && !synthetic.length };
+}
+
+// Output equality and reviewer preference answer different questions. Neither
+// control result is a verdict, and controls never boost the editing win rate.
+function controlResults(observations, rater, run) {
+  const controls = new Map((run.controls || []).map(row => [row.case_id, row]));
+  const rows = observations.filter(row => row.rater === rater && controls.has(row.case_id));
+  if (!rows.length) return null;
+  const caseIds = [...new Set(rows.map(row => row.case_id))].sort();
+  const preferences = { ai: 0, human: 0, tie: 0 };
+  for (const row of rows) preferences[row.winner] = (preferences[row.winner] || 0) + 1;
+  const synthetic = (run.synthetic_ids || []).filter(id => caseIds.includes(id));
+  const offlineJudge = rater === 'model' && rows.some(row => row.reviewer === 'judge:offline');
+  return { cases: caseIds.length, case_ids: caseIds, observations: rows.length, preferences,
+    unchanged_outputs: caseIds.filter(id => controls.get(id).unchanged === true).length,
+    changed_outputs: caseIds.filter(id => controls.get(id).unchanged === false).length,
+    synthetic_cases: synthetic.length,
+    measured: run.editor !== undefined && run.editor !== 'offline' && !offlineJudge && !synthetic.length,
+    quality_improvement_confirmed: false };
+}
+
+function controlLine(value) {
+  if (!value) return 'нет оценок';
+  return `материалов: ${value.cases}; наблюдение: без изменений ${value.unchanged_outputs}, изменены ${value.changed_outputs}; предпочтения (показов: ${value.observations}): ИИ ${value.preferences.ai}, эталон ${value.preferences.human}, tie ${value.preferences.tie}${value.measured ? '' : ' (НЕ ИЗМЕРЕНИЕ: offline или синтетические пары)'}`;
 }
 
 function metricLine(value) {
@@ -272,12 +304,13 @@ async function runEditor(mode, pair, options = {}) {
 
 function judgePrompt() {
   return [
-    'Ты слепой судья редактуры русскоязычных текстов о Hearthstone. Дан черновик и две отредактированные версии A и B.',
+    'Ты слепой судья редактуры русскоязычных текстов о Hearthstone. Дан черновик и две версии текста A и B.',
     'Не знаешь, кто их правил. Оцени каждую версию по рубрике «интересно / механично» целыми числами 1–5',
     `(1 — ${RUBRIC.scale.anchors['1']}; 5 — ${RUBRIC.scale.anchors['5']}):`,
     ...RUBRIC.criteria.map((c) => `- ${c.id}: ${c.question}`),
     'Затем выбери лучшую версию для игрока: "A", "B" или "tie". Порядок A/B случаен и ничего не значит.',
     'Новые факты, которых нет в черновике, — дефект, а не плюс.',
+    SOURCE_REVIEW_GUIDANCE,
     'Ответь только JSON: {"A":{<критерий>:n,...},"B":{...},"preferred":"A|B|tie","evidence":["конкретный фрагмент и почему"]}',
   ].join('\n');
 }
@@ -337,7 +370,8 @@ async function runPairs(options = {}) {
   }
   const resultsFile = path.join(privateDir, 'results.json');
   fs.writeFileSync(resultsFile, JSON.stringify({ results }, null, 2) + '\n');
-  const run = { editor, judge: options.judgeFn ? 'custom' : options.judge || 'offline', synthetic_ids: pairs.filter((p) => p.meta.synthetic).map((p) => p.meta.id) };
+  const run = { editor, judge: options.judgeFn ? 'custom' : options.judge || 'offline', synthetic_ids: pairs.filter((p) => p.meta.synthetic).map((p) => p.meta.id),
+    controls: pairs.filter(pair => pair.meta.expected_edit === 'none').map(pair => ({ case_id: pair.meta.id, expected_edit: 'none', unchanged: log.find(row => row.id === pair.meta.id).unchanged })) };
   prepare(resultsFile, outDir, options.random || randomBit, { swapOrder: options.swapOrder, criteria: RUBRIC_IDS, labels: RUBRIC_LABELS, protocol: 'pairs', run });
   const judge = options.judgeFn || (run.judge === 'api' ? apiJudge : run.judge === 'offline' ? offlineJudge : null);
   if (!judge) throw new Error(`unknown judge mode: ${run.judge}`);
@@ -351,7 +385,7 @@ async function runPairs(options = {}) {
   fs.mkdirSync(judgeDir, { recursive: true });
   fs.writeFileSync(path.join(judgeDir, 'ratings.json'), JSON.stringify(ratings, null, 2) + '\n');
   const judgeReport = importRatings(path.join(judgeDir, 'ratings.json'), path.join(outDir, 'key.json'), judgeDir);
-  const summary = { pairs: pairs.length, run, regressions: log.filter((row) => row.regression_hits.length), editor_log: log, judge_metric: judgeReport.metric.model };
+  const summary = { pairs: pairs.length, run, regressions: log.filter((row) => row.regression_hits.length), editor_log: log, judge_metric: judgeReport.metric.model, judge_control_results: judgeReport.control_results.model };
   fs.writeFileSync(path.join(privateDir, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
   return summary;
 }
@@ -381,6 +415,7 @@ async function rate(dir, io = {}) {
     const done = new Set(ratings.filter((row) => row.reviewer === reviewer).map((row) => row.id));
     const score = (value) => (/^[1-5]$/.test(value) ? Number(value) : undefined);
     const todo = blind.filter((item) => !done.has(item.id));
+    output.write(`${SOURCE_REVIEW_GUIDANCE}\n`);
     for (const [index, item] of todo.entries()) {
       const rubric = RUBRIC.criteria.filter((c) => item.criteria.includes(c.id));
       output.write(`\n===== ${index + 1}/${todo.length}: ${item.id} =====\n\n--- Черновик ---\n${item.source}\n\n--- A ---\n${item.A}\n\n--- B ---\n${item.B}\n\n`);
@@ -439,6 +474,7 @@ function main(argv) {
         const dir = option('--out', 'build/blind-pairs');
         console.log(`pairs: ${summary.pairs}; editor: ${summary.run.editor}; judge: ${summary.run.judge}`);
         console.log(`LLM-судья, ИИ не хуже человека: ${metricLine(summary.judge_metric)}`);
+        if (summary.run.controls.length) console.log(`Контроли без обязательной правки: ${controlLine(summary.judge_control_results)}`);
         if (summary.regressions.length) console.log(`регрессии (вернулись убранные владельцем фразы): ${summary.regressions.map((row) => row.id).join(', ')}`);
         console.log(`Главный сигнал — владелец: node evals/blind_review.js rate ${dir} --reviewer <имя>`);
         return 0;
