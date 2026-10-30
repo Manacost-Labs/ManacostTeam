@@ -1,0 +1,871 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-30",
+  "scope": "10 PDFs assigned from owner list",
+  "raw_policy": "Полные PDF и тексты только в gitignored build; в docs нет полных цитат или построчного пересказа источников.",
+  "segmentation": "Автоматические единицы-кандидаты на предложения; границы страниц/инициалы/ссылки/таблицы могут дробить или объединять фразы. Это не число чистых предложений.",
+  "offset_contract": "Unicode code points, zero-based [start,end), within normalized page text in Sxx.normalized.json; SHA256 UTF8 unit.",
+  "review_files": [
+    "papers-manual-review.json",
+    "root-review-S09.json",
+    "integration-review-S13-S14-S15-S18.json"
+  ],
+  "sources": [
+    {
+      "id": "S08",
+      "url": "https://dialogue-conf.org/wp-content/uploads/2026/06/KopylovaEVetal.098.pdf",
+      "title": "Correcting or Rewriting? An Expert Evaluation of LLM-Based GEC on Academic Learner Data",
+      "authors": "E. V. Kopylova; O. G. Tsegoeva; V. A. Berlin; A. S. Vyrenkova; Y. M. Kuvshinskaya",
+      "year": 2026,
+      "access_status": "text_available_pdf_available",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 10,
+      "indexed_units": 291,
+      "reviewed_units": 291,
+      "semantic_reviewed_units": 123,
+      "section_excluded_units": 99,
+      "structural_reviewed_units": 69,
+      "pending_ids": [],
+      "role_counts": {
+        "metadata": 58,
+        "method": 59,
+        "claim": 31,
+        "result": 18,
+        "extraction_fragment": 11,
+        "reference": 94,
+        "table": 6,
+        "example": 14
+      },
+      "decision_counts": {
+        "exclude": 168,
+        "context": 79,
+        "adapt": 38,
+        "defer": 6
+      },
+      "pdf_sha256": "a71561792d27daef357bad1edf53cb55fb7d973aa0d9d4420c8a0627b0d64c64",
+      "extracted_text_sha256": "b11b1ea75ae9f4cd297030394488ce3a4650f46cb5eaa6163a09ebdc3fafd4c3",
+      "normalized_pages_sha256": "693311d04a2f84c038ae7a0bac9bea9bfa91484b583cb6704bb9782de8083a7b",
+      "selected_evidence": [
+        {
+          "id": "S08-0092",
+          "page": 4,
+          "rule_ids": [
+            "sample_scope"
+          ]
+        },
+        {
+          "id": "S08-0118",
+          "page": 5,
+          "rule_ids": [
+            "separate_accuracy_and_structure"
+          ]
+        },
+        {
+          "id": "S08-0187",
+          "page": 9,
+          "rule_ids": [
+            "minimal_edit_scope"
+          ]
+        }
+      ],
+      "visual_pages_checked": [
+        5
+      ],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "ok",
+          "error": null
+        }
+      ],
+      "markdown": "S08.md",
+      "page_locator_note": "Физические страницы оригинального PDF, pypdf extraction; не все страницы просмотрены визуально.",
+      "markdown_sha256": "3c016ac686e9734cb7ecf9a7f6d0c262ad1fe2c1cdf9aee90d5dfb91db204715"
+    },
+    {
+      "id": "S09",
+      "url": "https://airi.net/upload/ai-writing-in-the-llm-era.pdf",
+      "title": "Написание статей по искусственному интеллекту в эпоху больших языковых моделей",
+      "authors": "Зоя Воловикова; Никита Сорокин; Артём Пшеницын; Егор Черепанов; Юрий Куратов; Дмитрий Юдин; Алексей Скрынник; Александр Панов; Иван Оселедец",
+      "year": 2025,
+      "access_status": "text_available_pdf_download_blocked",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 74,
+      "indexed_units": 876,
+      "reviewed_units": 876,
+      "semantic_reviewed_units": 721,
+      "section_excluded_units": 78,
+      "structural_reviewed_units": 77,
+      "pending_ids": [],
+      "role_counts": {
+        "metadata": 46,
+        "extraction_fragment": 31,
+        "claim": 210,
+        "reference": 47,
+        "method": 267,
+        "limitation": 20,
+        "example": 136,
+        "prompt": 87,
+        "table": 30,
+        "formula": 1,
+        "result": 1
+      },
+      "decision_counts": {
+        "context": 436,
+        "exclude": 281,
+        "adapt": 140,
+        "adopt": 16,
+        "defer": 3
+      },
+      "pdf_sha256": null,
+      "extracted_text_sha256": "fe6317e0e6f941274bdcfa2131e7ba0c20cec06389d6f6f43de1b1efa108fdc5",
+      "normalized_pages_sha256": "a54c888d2d0aaabd7e8f85f40f4934c78763c2114bab764ce7a54487b6c93fb0",
+      "selected_evidence": [
+        {
+          "id": "S09-0172",
+          "page": 14,
+          "rule_ids": [
+            "manual_verification"
+          ]
+        },
+        {
+          "id": "S09-0755",
+          "page": 65,
+          "rule_ids": [
+            "reject_word_blacklist"
+          ]
+        },
+        {
+          "id": "S09-0769",
+          "page": 65,
+          "rule_ids": [
+            "reject_artificial_roughness"
+          ]
+        },
+        {
+          "id": "S09-0790",
+          "page": 67,
+          "rule_ids": [
+            "reject_detection_claim"
+          ]
+        }
+      ],
+      "visual_pages_checked": [],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "failed",
+          "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>"
+        },
+        {
+          "route": "curl original PDF",
+          "status": "403"
+        }
+      ],
+      "markdown": "S09.md",
+      "page_locator_note": "Номера страниц восстановлены по последовательным печатным маркерам TinyFish. PDF визуально не сверен; оглавление разобрано по явным смещениям.",
+      "markdown_sha256": "7d552470aa31e63fcc138f6990b64e111ab79b6d007820f94c91f654a05a928d"
+    },
+    {
+      "id": "S10",
+      "url": "https://vestnik-filologiya-lingvodidaktika.mgpu.ru/wp-content/uploads/sites/6/2025/09/vishnevskaya-e-m-ivanova-a-m.pdf",
+      "title": "Понимание как диалог с текстом: генеративный искусственный интеллект в обучении переводу",
+      "authors": "Екатерина Михайловна Вишневская; Анна Михайловна Иванова",
+      "year": 2025,
+      "access_status": "text_available_pdf_available",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 13,
+      "indexed_units": 412,
+      "reviewed_units": 412,
+      "semantic_reviewed_units": 87,
+      "section_excluded_units": 265,
+      "structural_reviewed_units": 60,
+      "pending_ids": [],
+      "role_counts": {
+        "metadata": 55,
+        "method": 42,
+        "claim": 47,
+        "extraction_fragment": 5,
+        "example": 6,
+        "result": 1,
+        "table": 1,
+        "reference": 255
+      },
+      "decision_counts": {
+        "exclude": 325,
+        "context": 51,
+        "defer": 15,
+        "adapt": 21
+      },
+      "pdf_sha256": "d06842d163bf1b97d500dcf8ba39cbe908cf121ffdab95cb7b4171857642caa6",
+      "extracted_text_sha256": "d6489cc9910bc019845695d08a8cc2e99a553956473fa13cebf62147248958fb",
+      "normalized_pages_sha256": "914e25f22c00265ddfcb0f82eb17c3116c5fd5c85796918d47df70ae6faf2443",
+      "selected_evidence": [
+        {
+          "id": "S10-0072",
+          "page": 5,
+          "rule_ids": [
+            "sample_scope"
+          ]
+        },
+        {
+          "id": "S10-0075",
+          "page": 5,
+          "rule_ids": [
+            "preserve_translation_meaning"
+          ]
+        },
+        {
+          "id": "S10-0078",
+          "page": 5,
+          "rule_ids": [
+            "sample_scope"
+          ]
+        },
+        {
+          "id": "S10-0148",
+          "page": 11,
+          "rule_ids": [
+            "source_comparison"
+          ]
+        }
+      ],
+      "visual_pages_checked": [
+        5
+      ],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "ok",
+          "error": null
+        }
+      ],
+      "markdown": "S10.md",
+      "page_locator_note": "Физические страницы оригинального PDF, pypdf extraction; не все страницы просмотрены визуально.",
+      "markdown_sha256": "f9d538efc928aa3ba639f08206f5fa2b58bf94c40068e1e49e166266410deb81"
+    },
+    {
+      "id": "S11",
+      "url": "https://aclanthology.org/2024.lrec-main.692.pdf",
+      "title": "GPT-3.5 for Grammatical Error Correction",
+      "authors": "Anisia Katinskaia; Roman Yangarber",
+      "year": 2024,
+      "access_status": "text_available_pdf_available",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 13,
+      "indexed_units": 506,
+      "reviewed_units": 506,
+      "semantic_reviewed_units": 199,
+      "section_excluded_units": 281,
+      "structural_reviewed_units": 26,
+      "pending_ids": [],
+      "role_counts": {
+        "method": 60,
+        "result": 71,
+        "extraction_fragment": 16,
+        "claim": 37,
+        "metadata": 13,
+        "table": 18,
+        "prompt": 18,
+        "example": 21,
+        "limitation": 7,
+        "reference": 245
+      },
+      "decision_counts": {
+        "context": 168,
+        "adapt": 31,
+        "exclude": 307
+      },
+      "pdf_sha256": "88883ead763911c09aec2724e634bbcbabdd29b96495dfaa6f9b7e31be3da1c1",
+      "extracted_text_sha256": "f7bda6ea591cfb4d4182b7f9766acaa803d6c077c5825e9a893ddf6f0aae8da9",
+      "normalized_pages_sha256": "07cd48cdf93aa372307a01d3aae5a529d23fc96e91d36e9d3ca4202574946da9",
+      "selected_evidence": [
+        {
+          "id": "S11-0004",
+          "page": 1,
+          "rule_ids": [
+            "meaning_preservation"
+          ]
+        },
+        {
+          "id": "S11-0006",
+          "page": 1,
+          "rule_ids": [
+            "language_scope"
+          ]
+        },
+        {
+          "id": "S11-0013",
+          "page": 1,
+          "rule_ids": [
+            "metric_limit"
+          ]
+        },
+        {
+          "id": "S11-0014",
+          "page": 1,
+          "rule_ids": [
+            "model_scope"
+          ]
+        }
+      ],
+      "visual_pages_checked": [],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "ok",
+          "error": null
+        }
+      ],
+      "markdown": "S11.md",
+      "page_locator_note": "Физические страницы оригинального PDF, pypdf extraction; не все страницы просмотрены визуально.",
+      "markdown_sha256": "5563a434f6d1442a9c359d911c4e44dec76d0571f9e116fbe5b1ae53e23e0057"
+    },
+    {
+      "id": "S13",
+      "url": "https://aclanthology.org/2025.acl-demo.50.pdf",
+      "title": "GEC-METRICS: A Unified Library for Grammatical Error Correction Evaluation",
+      "authors": "Takumi Goto; Yusuke Sakai; Taro Watanabe",
+      "year": 2025,
+      "access_status": "text_available_pdf_available",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 11,
+      "indexed_units": 488,
+      "reviewed_units": 488,
+      "semantic_reviewed_units": 254,
+      "section_excluded_units": 216,
+      "structural_reviewed_units": 18,
+      "pending_ids": [],
+      "role_counts": {
+        "claim": 33,
+        "metadata": 14,
+        "table": 11,
+        "method": 154,
+        "limitation": 19,
+        "extraction_fragment": 4,
+        "example": 14,
+        "formula": 9,
+        "result": 22,
+        "reference": 206,
+        "prompt": 2
+      },
+      "decision_counts": {
+        "context": 195,
+        "adapt": 31,
+        "exclude": 262
+      },
+      "pdf_sha256": "5c5eb1c670f7bd64b911fc85405b174cfc24838ab3c1ea8f4974841601b0d446",
+      "extracted_text_sha256": "61fb0a87aad0fbddf7f14d6031cd82931ce7ec5030f9be6d986e4880398ab296",
+      "normalized_pages_sha256": "420e9a89e8d655ba01df3c85b00fe2efbe7b320939ed7e9c5e3edce531a77a79",
+      "selected_evidence": [
+        {
+          "id": "S13-0016",
+          "page": 1,
+          "rule_ids": [
+            "metric_limit"
+          ]
+        },
+        {
+          "id": "S13-0078",
+          "page": 3,
+          "rule_ids": [
+            "reproducible_evaluation"
+          ]
+        },
+        {
+          "id": "S13-0095",
+          "page": 4,
+          "rule_ids": [
+            "scope_exclusion"
+          ]
+        }
+      ],
+      "visual_pages_checked": [],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "ok",
+          "error": null
+        }
+      ],
+      "markdown": "S13.md",
+      "page_locator_note": "Физические страницы оригинального PDF, pypdf extraction; не все страницы просмотрены визуально.",
+      "markdown_sha256": "f6bd9ec4fb5f25e41dc90d30aa7544d0ce4898eeab5cd4b07eef0252cadab9b3"
+    },
+    {
+      "id": "S14",
+      "url": "https://aclanthology.org/2025.naacl-industry.20.pdf",
+      "title": "Navigating the Path of Writing: Outline-guided Text Generation with Large Language Models",
+      "authors": "Yukyung Lee; Soonwon Ka; Bokyung Son; Pilsung Kang; Jaewook Kang",
+      "year": 2025,
+      "access_status": "text_available_pdf_available",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 18,
+      "indexed_units": 494,
+      "reviewed_units": 494,
+      "semantic_reviewed_units": 233,
+      "section_excluded_units": 236,
+      "structural_reviewed_units": 25,
+      "pending_ids": [],
+      "role_counts": {
+        "claim": 62,
+        "table": 30,
+        "extraction_fragment": 4,
+        "limitation": 14,
+        "method": 93,
+        "formula": 3,
+        "metadata": 21,
+        "result": 34,
+        "reference": 204,
+        "prompt": 29
+      },
+      "decision_counts": {
+        "context": 163,
+        "adapt": 59,
+        "exclude": 272
+      },
+      "pdf_sha256": "75f66dfaadc0caf392fe08e21a4e59212b2f10b5c63e711ab5e83d6a24964e2c",
+      "extracted_text_sha256": "55e3065ac6d68520a633eb60beaf351ac6c81ae456fbc4a8d5dbdc72ea0845e8",
+      "normalized_pages_sha256": "93d19169cc1416f85fffbc8182d5190b269c7ff58b3530ed903f96de953c8487",
+      "selected_evidence": [
+        {
+          "id": "S14-0068",
+          "page": 4,
+          "rule_ids": [
+            "planning_tradeoff"
+          ]
+        },
+        {
+          "id": "S14-0071",
+          "page": 4,
+          "rule_ids": [
+            "section_function"
+          ]
+        },
+        {
+          "id": "S14-0090",
+          "page": 5,
+          "rule_ids": [
+            "language_scope"
+          ]
+        },
+        {
+          "id": "S14-0106",
+          "page": 5,
+          "rule_ids": [
+            "judge_limit"
+          ]
+        }
+      ],
+      "visual_pages_checked": [],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "ok",
+          "error": null
+        }
+      ],
+      "markdown": "S14.md",
+      "page_locator_note": "Физические страницы оригинального PDF, pypdf extraction; не все страницы просмотрены визуально.",
+      "markdown_sha256": "f85d687fdb520a451ceb836f9075c29769bb67efe51fd957da348ea269581f72"
+    },
+    {
+      "id": "S15",
+      "url": "https://aclanthology.org/2025.findings-acl.511.pdf",
+      "title": "A Cognitive Writing Perspective for Constrained Long-Form Text Generation",
+      "authors": "Kaiyang Wan; Honglin Mu; Rui Hao; Haoran Luo; Tianle Gu; Xiuying Chen",
+      "year": 2025,
+      "access_status": "text_available_pdf_available",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 13,
+      "indexed_units": 503,
+      "reviewed_units": 503,
+      "semantic_reviewed_units": 221,
+      "section_excluded_units": 259,
+      "structural_reviewed_units": 23,
+      "pending_ids": [],
+      "role_counts": {
+        "claim": 58,
+        "extraction_fragment": 18,
+        "table": 37,
+        "method": 82,
+        "example": 3,
+        "metadata": 5,
+        "result": 26,
+        "limitation": 22,
+        "reference": 252
+      },
+      "decision_counts": {
+        "context": 207,
+        "adapt": 23,
+        "exclude": 271,
+        "defer": 2
+      },
+      "pdf_sha256": "4b43bf994b372aa0d10f5921e7fb969e8f7d7621032b4ccc1ec59e1394d85968",
+      "extracted_text_sha256": "9a39ffddbf517dd380ebf876336647d828ce3d85031799971f4de69a7c242bf2",
+      "normalized_pages_sha256": "b95e6cdd59db2606e6fae0c24a2a3e5078fa45fc950df991d0796b984d289c91",
+      "selected_evidence": [
+        {
+          "id": "S15-0112",
+          "page": 5,
+          "rule_ids": [
+            "sample_scope"
+          ]
+        },
+        {
+          "id": "S15-0117",
+          "page": 5,
+          "rule_ids": [
+            "metric_scope"
+          ]
+        },
+        {
+          "id": "S15-0213",
+          "page": 9,
+          "rule_ids": [
+            "bounded_review"
+          ]
+        },
+        {
+          "id": "S15-0219",
+          "page": 9,
+          "rule_ids": [
+            "fact_check_separate"
+          ]
+        }
+      ],
+      "visual_pages_checked": [],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "ok",
+          "error": null
+        }
+      ],
+      "markdown": "S15.md",
+      "page_locator_note": "Физические страницы оригинального PDF, pypdf extraction; не все страницы просмотрены визуально.",
+      "markdown_sha256": "53912053da372e332aae691f69561b18e993743ef9edf920999cf9c0573913a6"
+    },
+    {
+      "id": "S16",
+      "url": "https://aclanthology.org/2024.personalize-1.8.pdf",
+      "title": "Personalized Text Generation with Fine-Grained Linguistic Control",
+      "authors": "Bashar Alhafni; Vivek Kulkarni; Dhruv Kumar; Vipul Raheja",
+      "year": 2024,
+      "access_status": "text_available_pdf_available",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 14,
+      "indexed_units": 470,
+      "reviewed_units": 470,
+      "semantic_reviewed_units": 149,
+      "section_excluded_units": 308,
+      "structural_reviewed_units": 13,
+      "pending_ids": [],
+      "role_counts": {
+        "claim": 52,
+        "example": 36,
+        "table": 12,
+        "formula": 2,
+        "method": 87,
+        "metadata": 13,
+        "result": 18,
+        "limitation": 7,
+        "reference": 240,
+        "prompt": 3
+      },
+      "decision_counts": {
+        "context": 129,
+        "adapt": 20,
+        "exclude": 321
+      },
+      "pdf_sha256": "d1dc77616f09c6f384fa5c633c106ed5d3aa69956a0fc7ee47a476aa2c9956ac",
+      "extracted_text_sha256": "63f5a5b6601054570717aa9d7a6545c2c1008be8a7a081aee5b3a572196c023b",
+      "normalized_pages_sha256": "99d46bb85a8856d3f383ecb62e24f5f29dd6ddd885874188cd8a379653e930d3",
+      "selected_evidence": [
+        {
+          "id": "S16-0028",
+          "page": 2,
+          "rule_ids": [
+            "voice_dimensions"
+          ]
+        },
+        {
+          "id": "S16-0052",
+          "page": 3,
+          "rule_ids": [
+            "sample_scope"
+          ]
+        },
+        {
+          "id": "S16-0210",
+          "page": 8,
+          "rule_ids": [
+            "language_scope"
+          ]
+        },
+        {
+          "id": "S16-0215",
+          "page": 8,
+          "rule_ids": [
+            "evaluation_limit"
+          ]
+        }
+      ],
+      "visual_pages_checked": [
+        2
+      ],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "ok",
+          "error": null
+        }
+      ],
+      "markdown": "S16.md",
+      "page_locator_note": "Физические страницы оригинального PDF, pypdf extraction; не все страницы просмотрены визуально.",
+      "markdown_sha256": "f6519491cce10700b39cf6b8ee56ad63ed1475cdbe30af39f8e07888395226bc"
+    },
+    {
+      "id": "S17",
+      "url": "https://aclanthology.org/2025.acl-long.353.pdf",
+      "title": "Personalized Text Generation with Contrastive Activation Steering",
+      "authors": "Jinghao Zhang; Yuting Liu; Wenjie Wang; Qiang Liu; Shu Wu; Liang Wang; Tat-Seng Chua",
+      "year": 2025,
+      "access_status": "text_available_pdf_available",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 14,
+      "indexed_units": 373,
+      "reviewed_units": 373,
+      "semantic_reviewed_units": 139,
+      "section_excluded_units": 224,
+      "structural_reviewed_units": 10,
+      "pending_ids": [],
+      "role_counts": {
+        "claim": 43,
+        "method": 39,
+        "result": 26,
+        "formula": 42,
+        "metadata": 15,
+        "table": 11,
+        "example": 17,
+        "limitation": 9,
+        "reference": 159,
+        "prompt": 12
+      },
+      "decision_counts": {
+        "adapt": 30,
+        "context": 109,
+        "exclude": 234
+      },
+      "pdf_sha256": "00dae6a5594f968964df6ac8fde9166dd4319e84a8f9f74d9d5dc75c66b2fb49",
+      "extracted_text_sha256": "5ba470898a489a280912d858c2a0cb1c3faf83af437bbf76c12ef22fd5d14972",
+      "normalized_pages_sha256": "b2b2c06bd307c2ae370ea35cc7f4e8740157d5131c5a18148dcf32920c7cdd5c",
+      "selected_evidence": [
+        {
+          "id": "S17-0003",
+          "page": 1,
+          "rule_ids": [
+            "style_content_boundary"
+          ]
+        },
+        {
+          "id": "S17-0081",
+          "page": 4,
+          "rule_ids": [
+            "metric_scope"
+          ]
+        },
+        {
+          "id": "S17-0152",
+          "page": 9,
+          "rule_ids": [
+            "method_limit"
+          ]
+        },
+        {
+          "id": "S17-0157",
+          "page": 9,
+          "rule_ids": [
+            "genre_scope"
+          ]
+        }
+      ],
+      "visual_pages_checked": [],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "ok",
+          "error": null
+        }
+      ],
+      "markdown": "S17.md",
+      "page_locator_note": "Физические страницы оригинального PDF, pypdf extraction; не все страницы просмотрены визуально.",
+      "markdown_sha256": "56167f1c65e12df52f9fba9df25d19542ff271a387254ec66f6296ed38948da9"
+    },
+    {
+      "id": "S18",
+      "url": "https://aclanthology.org/2026.findings-acl.428.pdf",
+      "title": "SuperWriter: Reflection-Driven Long-Form Generation with Large Language Models",
+      "authors": "Yuhao Wu; Yushi Bai; Zhiqiang Hu; Juanzi Li; Roy Ka-Wei Lee",
+      "year": 2026,
+      "access_status": "text_available_pdf_available",
+      "review_coverage": "all_indexed_units_decided",
+      "pages_indexed": 23,
+      "indexed_units": 710,
+      "reviewed_units": 710,
+      "semantic_reviewed_units": 296,
+      "section_excluded_units": 395,
+      "structural_reviewed_units": 19,
+      "pending_ids": [],
+      "role_counts": {
+        "claim": 34,
+        "extraction_fragment": 7,
+        "example": 25,
+        "method": 135,
+        "prompt": 170,
+        "table": 22,
+        "formula": 6,
+        "result": 18,
+        "metadata": 12,
+        "limitation": 27,
+        "reference": 254
+      },
+      "decision_counts": {
+        "context": 247,
+        "exclude": 438,
+        "adapt": 25
+      },
+      "pdf_sha256": "ceb933f357034fba23cac4bd9229b791040fd03dc194527b0b3e7c1b25db538a",
+      "extracted_text_sha256": "981b04d9d8d9dd4f1dedad2dc7a68a7884f80f3cb9802e8016700bacdd6cc164",
+      "normalized_pages_sha256": "1e6eebc3bb7b465fded80531025f5517053c11e1bf80fcc0cd5ecdf31be40dbd",
+      "selected_evidence": [
+        {
+          "id": "S18-0115",
+          "page": 6,
+          "rule_ids": [
+            "sample_scope"
+          ]
+        },
+        {
+          "id": "S18-0117",
+          "page": 6,
+          "rule_ids": [
+            "sample_scope"
+          ]
+        },
+        {
+          "id": "S18-0172",
+          "page": 9,
+          "rule_ids": [
+            "bounded_review"
+          ]
+        },
+        {
+          "id": "S18-0175",
+          "page": 9,
+          "rule_ids": [
+            "fact_check_separate"
+          ]
+        }
+      ],
+      "visual_pages_checked": [
+        6
+      ],
+      "read_routes": [
+        {
+          "route": "TinyFish fetch_content",
+          "status": "full_extracted_text"
+        },
+        {
+          "route": "urllib original PDF",
+          "status": "ok",
+          "error": null
+        }
+      ],
+      "markdown": "S18.md",
+      "page_locator_note": "Физические страницы оригинального PDF, pypdf extraction; не все страницы просмотрены визуально. Известная граница сегментации: S18-0662 содержит большой китайский пример целиком; это рассмотренный фрагмент, а не одно предложение.",
+      "markdown_sha256": "831d9a57bd856a427e90cefd1ef4a441c3cc7f13f0290aab7c0ea781e3b1ea40"
+    }
+  ],
+  "review_metadata": [
+    {
+      "file": "papers-manual-review.json",
+      "reviewer": "ai_sources_papers",
+      "sha256": "479108b48cd28b54cfc1616a23d005e193e7b9e2c9550ac3b46cc32656491cd6",
+      "notes": [
+        "Все содержательные единицы прочитаны; библиография исключена по проверенным границам разделов, без проверки каждой цитируемой работы.",
+        "Разбиение автоматическое: части слов/колонтитулы/таблицы не считаются чистыми предложениями.",
+        "Ни одна внешняя инструкция внутри промпта не исполнена."
+      ]
+    },
+    {
+      "file": "root-review-S09.json",
+      "reviewer": "root",
+      "sha256": "b3be615455e7825d5a3b352cc9d2c885af8f53aaeee18f8c58e49b457830d323",
+      "notes": [
+        "Все 876 единиц прочитаны по текстовому извлечению, включая фрагменты, таблицы, примеры и библиографию. Решение оценивает применимость к EditorTeam, а не истинность всех утверждений.",
+        "Решения для однотипных соседних единиц записаны группами после чтения; каждая строка итогового индекса сохраняет собственный ID.",
+        "Исходный PDF недоступен: пагинация восстановлена сборщиком по печатным маркерам. Визуальная вёрстка и рисунки независимо не проверены.",
+        "defer для непроверенной атрибуции означает завершённое решение не внедрять утверждение без первоисточника, а не непрочитанную единицу."
+      ]
+    },
+    {
+      "file": "integration-review-S13-S14-S15-S18.json",
+      "reviewer": "editor_ai_integration",
+      "sha256": "b1051f643ea3e2f99be324d23dc8d04d34452f31863fc3946546c423f086b5ec",
+      "notes": [
+        "Решения относятся к индексированным единицам, включая библиографию, формулы и фрагменты верстки. Единицы прочитаны с соседним контекстом; технические реализации и промпты источника не исполнялись."
+      ]
+    }
+  ],
+  "normalization": {
+    "pdf_text_extractor": "pypdf, physical page order; AIRI TinyFish text with printed-page markers",
+    "text_transform": "Remove ASCII-letter hyphen at newline followed by lowercase ASCII letter; then replace all whitespace runs with one space and strip.",
+    "segmentation_pattern": "split at whitespace preceded by .!?。！？ and followed by uppercase Latin/Cyrillic letter, digit, opening quote or [; page boundary terminates unit",
+    "completeness_caveat": "All normalized non-whitespace text is indexed; this does not certify perfect PDF reading order, visual coverage or linguistically exact sentence boundaries."
+  },
+  "totals": {
+    "indexed_units": 5123,
+    "reviewed_units": 5123,
+    "semantic_reviewed_units": 2422,
+    "section_excluded_units": 2361,
+    "structural_reviewed_units": 340,
+    "pending_units": 0
+  }
+}

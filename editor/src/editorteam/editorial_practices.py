@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from .integrity import arithmetic_issues
 
@@ -29,7 +30,85 @@ PRESERVATION = (
 
 
 def catalog() -> dict:
-    return json.loads(Path(__file__).with_suffix(".json").read_text(encoding="utf-8"))
+    data = json.loads(Path(__file__).with_suffix(".json").read_text(encoding="utf-8"))
+    _validate_research(data)
+    return data
+
+
+def _validate_research(data: dict) -> None:
+    """Only read sources can support contextual guidance, never authorship claims."""
+    sources = data.get("research_sources", [])
+    if not isinstance(sources, list):
+        raise ValueError("research_sources must be a list")
+    by_id = {}
+    for source in sources:
+        if not isinstance(source, dict):
+            raise ValueError("research source must be an object")
+        source_id = source.get("id")
+        if not isinstance(source_id, str) or not source_id.strip() or source_id in by_id:
+            raise ValueError("research source id must be nonempty and unique")
+        for key in ("url", "access_url"):
+            if key == "access_url" and source.get(key, "") == "":
+                continue
+            url = source.get(key)
+            try:
+                parsed = urlsplit(url) if isinstance(url, str) else None
+                valid = (
+                    parsed is not None
+                    and parsed.scheme in ("http", "https")
+                    and parsed.hostname
+                    and not any(c.isspace() for c in url)
+                )
+            except ValueError:
+                valid = False
+            if not valid:
+                raise ValueError(
+                    f"research source {source_id}: HTTP(S) URL with hostname required for {key}"
+                )
+        if source.get("status") not in ("read", "partial", "unavailable"):
+            raise ValueError(f"research source {source_id}: invalid access status")
+        if any(
+            not isinstance(source.get(key), str) or not source[key].strip()
+            for key in ("title", "scope", "review_coverage")
+        ):
+            raise ValueError(
+                f"research source {source_id}: title, scope and review_coverage required"
+            )
+        coverage = source["review_coverage"]
+        if coverage not in ("article", "selected_sections", "indexed_units", "unavailable") or (
+            (source["status"] == "unavailable") != (coverage == "unavailable")
+        ):
+            raise ValueError(f"research source {source_id}: inconsistent review coverage")
+        by_id[source_id] = source
+    seen = set()
+    for practice in data["practices"]:
+        checks = practice.get("research_checks", [])
+        if not isinstance(checks, list):
+            raise ValueError("research_checks must be a list")
+        for check in checks:
+            if not isinstance(check, dict) or any(
+                not isinstance(check.get(key), str) or not check[key].strip()
+                for key in ("id", "question", "acceptable", "action", "scope")
+            ):
+                raise ValueError(
+                    "research check requires id, question, acceptable, action and scope"
+                )
+            if check["id"] in seen:
+                raise ValueError(f"duplicate research check {check['id']}")
+            seen.add(check["id"])
+            refs = check.get("source_ids")
+            if (
+                not isinstance(refs, list)
+                or not refs
+                or any(
+                    not isinstance(ref, str) or ref not in by_id or by_id[ref]["status"] != "read"
+                    for ref in refs
+                )
+                or len(set(refs)) != len(refs)
+            ):
+                raise ValueError(
+                    f"research check {check['id']}: unique read source references required"
+                )
 
 
 def _hash(text: str) -> str:
@@ -82,6 +161,7 @@ def prepare(
         "owner": owner,
         "article_sha256": _hash(text),
         "principles": data["principles"],
+        "research_sources": data.get("research_sources", []),
         "practices": [p for p in data["practices"] if owner == "all" or p["owner"] == owner],
         "logic_dimensions": list(LOGIC) if owner != "fact_review" else [],
         "preservation_dimensions": list(PRESERVATION) if owner != "fact_review" else [],

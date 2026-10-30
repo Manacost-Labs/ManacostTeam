@@ -325,3 +325,110 @@ def test_cli_bad_handoff_returns_blocked_json_without_traceback(tmp_path, capsys
         == 1
     )
     assert '"status": "blocked"' in capsys.readouterr().out
+
+
+def test_research_checks_reach_prepare_without_changing_review_contract():
+    packet = prepare(TEXT, owner="literary_review")
+    assert packet["contract_version"] == 3
+    assert packet["research_sources"]
+    checks = [c for p in packet["practices"] for c in p.get("research_checks", [])]
+    assert checks
+    sources = {s["id"]: s for s in packet["research_sources"]}
+    for check in checks:
+        assert all(check.get(k) for k in ("id", "question", "acceptable", "action", "scope"))
+        assert check["source_ids"]
+        assert all(sources[s]["status"] == "read" for s in check["source_ids"])
+    # Ordinary parallelism/dashes still do not become an automatic finding.
+    assert validate(TEXT, assessment(), owner="literary_review") == []
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda d: d["practices"][0]["research_checks"][0].update(source_ids=["absent"]),
+        lambda d: d["research_sources"][0].update(status="unavailable"),
+        lambda d: d["research_sources"][0].update(status="partial"),
+        lambda d: d["research_sources"][0].update(review_coverage=""),
+        lambda d: d["research_sources"][0].update(review_coverage="unavailable"),
+        lambda d: d["research_sources"][0].update(review_coverage="anything"),
+        lambda d: d["research_sources"][0].update(url="http://?"),
+        lambda d: d["research_sources"][0].update(access_url="http://?"),
+        lambda d: d["practices"][0]["research_checks"][0].update(source_ids=["S01", "S01"]),
+        lambda d: d["research_sources"].append(d["research_sources"][0]),
+        lambda d: d["practices"][0]["research_checks"][0].update(scope=""),
+        lambda d: d["practices"][0]["research_checks"][0].update(source_ids=[]),
+    ],
+)
+def test_research_guidance_rejects_untraceable_or_unscoped_rules(mutation):
+    from editorteam.editorial_practices import _validate_research
+
+    data = {
+        "research_sources": [
+            {
+                "id": "S01",
+                "url": "https://example.org/source",
+                "status": "read",
+                "title": "Source",
+                "scope": "Editorial inference",
+                "review_coverage": "selected_sections",
+            }
+        ],
+        "practices": [
+            {
+                "research_checks": [
+                    {
+                        "id": "specificity",
+                        "question": "What changes?",
+                        "acceptable": "Genre permits it.",
+                        "action": "Ask for the missing detail.",
+                        "scope": "Editorial inference, not attribution.",
+                        "source_ids": ["S01"],
+                    }
+                ]
+            }
+        ],
+    }
+    _validate_research(data)
+    mutation(data)
+    with pytest.raises(ValueError):
+        _validate_research(data)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Не только атака, но и защита важны — сохраните ресурс, если нет угрозы.",
+        "Я берегу эту карту. Всегда. В этом матче это мой последний ответ.",
+        "Термин tempo приведен в цитате автора.",
+    ],
+)
+def test_research_does_not_turn_author_forms_into_automatic_issues(text):
+    assert validate(text, assessment(text=text), owner="literary_review") == []
+
+
+def test_unavailable_sources_can_be_indexed_without_supporting_rules():
+    from editorteam.editorial_practices import _validate_research
+
+    _validate_research(
+        {
+            "research_sources": [
+                {
+                    "id": "blocked",
+                    "url": "https://example.org/unavailable",
+                    "title": "Requested page",
+                    "status": "unavailable",
+                    "review_coverage": "unavailable",
+                    "scope": "No body read.",
+                }
+            ],
+            "practices": [],
+        }
+    )
+
+
+def test_empty_optional_access_url_is_treated_as_absent():
+    from editorteam.editorial_practices import _validate_research
+
+    data = catalog()
+    data["research_sources"][0]["access_url"] = ""
+    _validate_research(data)

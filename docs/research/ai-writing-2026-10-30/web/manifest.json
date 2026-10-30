@@ -1,0 +1,264 @@
+{
+  "schema_version": 1,
+  "task": "EditorTeam source analysis",
+  "accessed_at": "2026-10-30",
+  "sources": [
+    {
+      "id": "S01",
+      "url": "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing",
+      "title": "Wikipedia:Signs of AI writing - Wikipedia",
+      "published_at": null,
+      "author": null,
+      "accessed_at": "2026-10-30",
+      "access_status": "full_main_text_read",
+      "attempts": [
+        {
+          "route": "tinyfish",
+          "status": "success"
+        }
+      ],
+      "raw_path": "build/ai-writing-2026-10-30/web/S01.txt",
+      "raw_sha256": "f39eb5043a66974da57320b4b48d2f0dd83cc7357e40d9580def32f57520e130",
+      "main_text_read": true,
+      "main_text_sha256": "8db6fc7e6134fd4b70012fd4a5ffa1ab11db4012bb27a205eee80c5eb28ba224",
+      "markdown_path": "docs/research/ai-writing-2026-10-30/web/S01.md",
+      "index_unit_type": "sentence_candidates_and_fragments",
+      "indexed_units": 1037,
+      "individually_reviewed_units": 1037,
+      "pending_units": 0,
+      "pending_ids": [],
+      "read_status": "main_text_read_including_examples",
+      "semantic_review_scope": "applicability_not_independent_fact_verification",
+      "body_quote_words": 0,
+      "title_words": 6,
+      "review_method": "Full main text read in sections, decisions assigned to indexed spans and exceptions checked against individual units; examples assessed as illustrations, not independently verified claims."
+    },
+    {
+      "id": "S02",
+      "url": "https://www.pounce.so/signs-of-ai-writing",
+      "title": "Signs of AI Writing: How to Not Sound Like AI – Pounce",
+      "published_at": null,
+      "author": "Pounce",
+      "accessed_at": "2026-10-30",
+      "access_status": "full_main_text_read",
+      "attempts": [
+        {
+          "route": "tinyfish",
+          "status": "success"
+        }
+      ],
+      "raw_path": "build/ai-writing-2026-10-30/web/S02.txt",
+      "raw_sha256": "6e1b5069df1a81582cd49bb6e425dadd594fb883fe2beadaa4c656d9068c7dab",
+      "main_text_read": true,
+      "main_text_sha256": "e96361a54c15820e046f4dc0cc1b5b0000c2a680e2f50b86723c78b67ccb2d87",
+      "markdown_path": "docs/research/ai-writing-2026-10-30/web/S02.md",
+      "index_unit_type": "sentence_candidates_and_fragments",
+      "indexed_units": 113,
+      "individually_reviewed_units": 113,
+      "pending_units": 0,
+      "pending_ids": [],
+      "read_status": "main_text_read_including_examples",
+      "semantic_review_scope": "applicability_not_independent_fact_verification",
+      "body_quote_words": 0,
+      "title_words": 12,
+      "review_method": "Full main text read in sections, decisions assigned to indexed spans and exceptions checked against individual units; examples assessed as illustrations, not independently verified claims."
+    },
+    {
+      "id": "S03",
+      "url": "https://www.rbc.ru/life/news/69b261699a79471f525d3a96",
+      "title": "Как распознать созданный искусственным интеллектом текст. Признаки",
+      "published_at": "2026-03-12",
+      "author": null,
+      "accessed_at": "2026-10-30",
+      "access_status": "full_main_text_read",
+      "attempts": [
+        {
+          "route": "tinyfish",
+          "status": "HTTP 401"
+        },
+        {
+          "route": "web.open",
+          "status": "success"
+        }
+      ],
+      "raw_path": "build/ai-writing-2026-10-30/web/S03-web.txt",
+      "raw_sha256": "f3f8a2d42e86471d0fb295415634d8a6ee1bb5d54d521dfcfed52dff91f8ea69",
+      "main_text_read": true,
+      "main_text_sha256": "6fea758d5c89aec1208d879211c1ddb681a69bfb3655a3f12bef31bc43332110",
+      "markdown_path": "docs/research/ai-writing-2026-10-30/web/S03.md",
+      "index_unit_type": "sentence_candidates_and_fragments",
+      "indexed_units": 41,
+      "individually_reviewed_units": 41,
+      "pending_units": 0,
+      "pending_ids": [],
+      "read_status": "main_text_read_including_examples",
+      "semantic_review_scope": "applicability_not_independent_fact_verification",
+      "body_quote_words": 0,
+      "title_words": 7,
+      "review_method": "Full main text read in sections, decisions assigned to indexed spans and exceptions checked against individual units; examples assessed as illustrations, not independently verified claims."
+    },
+    {
+      "id": "S04",
+      "url": "https://gramota.ru/journal/stati/tekhnologii/chem-sgenerirovannye-teksty-vydayut-sebya",
+      "title": "Чем сгенерированные тексты (пока еще) выдают себя",
+      "published_at": "2025-11-20T19:43:00+03:00",
+      "author": "Антон Солдатов",
+      "accessed_at": "2026-10-30",
+      "access_status": "full_main_text_read",
+      "attempts": [
+        {
+          "route": "tinyfish",
+          "status": "success"
+        }
+      ],
+      "raw_path": "build/ai-writing-2026-10-30/web/S04.txt",
+      "raw_sha256": "0e50fb88ba14d8af17062a759cf0fc836a82194c77b5c21b19e42255346df6f1",
+      "main_text_read": true,
+      "main_text_sha256": "fcd4e11b0f523d9528605a760ab4310143624d5f81af7579d9356e5791ad34f7",
+      "markdown_path": "docs/research/ai-writing-2026-10-30/web/S04.md",
+      "index_unit_type": "sentence_candidates_and_fragments",
+      "indexed_units": 123,
+      "individually_reviewed_units": 123,
+      "pending_units": 0,
+      "pending_ids": [],
+      "read_status": "main_text_read_including_examples",
+      "semantic_review_scope": "applicability_not_independent_fact_verification",
+      "body_quote_words": 0,
+      "title_words": 7,
+      "review_method": "Full main text read in sections, decisions assigned to indexed spans and exceptions checked against individual units; examples assessed as illustrations, not independently verified claims."
+    },
+    {
+      "id": "S05",
+      "url": "https://gramota.ru/journal/stati/tekhnologii/raspoznaem-ii-tekst-na-chto-obratit-vnimanie",
+      "title": "Текст написан ИИ: чем он отличается от человеческого?",
+      "published_at": "2026-10-22T15:05:00+03:00",
+      "author": "Антон Солдатов",
+      "accessed_at": "2026-10-30",
+      "access_status": "full_main_text_read",
+      "attempts": [
+        {
+          "route": "tinyfish",
+          "status": "success"
+        }
+      ],
+      "raw_path": "build/ai-writing-2026-10-30/web/S05.txt",
+      "raw_sha256": "1d36c52214755cae023e10b297d2801448dd682c2dbb4cf5958aa4aa47c0b15b",
+      "main_text_read": true,
+      "main_text_sha256": "80765488d6bfe8503119f53f7309c53ac618c10af9c802a831410e7f6a1681c8",
+      "markdown_path": "docs/research/ai-writing-2026-10-30/web/S05.md",
+      "index_unit_type": "sentence_candidates_and_fragments",
+      "indexed_units": 97,
+      "individually_reviewed_units": 97,
+      "pending_units": 0,
+      "pending_ids": [],
+      "read_status": "main_text_read_including_examples",
+      "semantic_review_scope": "applicability_not_independent_fact_verification",
+      "body_quote_words": 0,
+      "title_words": 8,
+      "review_method": "Full main text read in sections, decisions assigned to indexed spans and exceptions checked against individual units; examples assessed as illustrations, not independently verified claims."
+    },
+    {
+      "id": "S06",
+      "url": "https://gramota.ru/journal/rekomenduem/kak-otlichit-tekst-napisannyy-neyrosetyu-ryad-kriteriev-predlozheny-na-khabre",
+      "title": "Как отличить текст, написанный нейросетью? Ряд критериев предложен на «Хабре»",
+      "published_at": "2024-06-06T10:42:00+03:00",
+      "author": "Портал «Грамота.ру»",
+      "accessed_at": "2026-10-30",
+      "access_status": "full_main_text_read",
+      "attempts": [
+        {
+          "route": "tinyfish",
+          "status": "success"
+        }
+      ],
+      "raw_path": "build/ai-writing-2026-10-30/web/S06.txt",
+      "raw_sha256": "374aba1e766be2652973a99cf8305c50a0945fe0be4aadb7402722ca046d274b",
+      "main_text_read": true,
+      "main_text_sha256": "ff89c61f287784cd53c4ae894fdb19cfbf746709ccb2a604b6ac6c29e27b9019",
+      "markdown_path": "docs/research/ai-writing-2026-10-30/web/S06.md",
+      "index_unit_type": "sentence_candidates_and_fragments",
+      "indexed_units": 17,
+      "individually_reviewed_units": 17,
+      "pending_units": 0,
+      "pending_ids": [],
+      "read_status": "main_text_read_including_examples",
+      "semantic_review_scope": "applicability_not_independent_fact_verification",
+      "body_quote_words": 0,
+      "title_words": 10,
+      "review_method": "Full main text read in sections, decisions assigned to indexed spans and exceptions checked against individual units; examples assessed as illustrations, not independently verified claims."
+    },
+    {
+      "id": "S07",
+      "url": "https://gramota.ru/journal/stati/zhizn-yazyka/slop-nizkokachestvennyy-ii-kontent",
+      "title": "Слоп: низкокачественный ИИ-контент",
+      "published_at": "2025-12-09T12:30:00+03:00",
+      "author": "Антон Солдатов",
+      "accessed_at": "2026-10-30",
+      "access_status": "full_main_text_read",
+      "attempts": [
+        {
+          "route": "tinyfish",
+          "status": "success"
+        }
+      ],
+      "raw_path": "build/ai-writing-2026-10-30/web/S07.txt",
+      "raw_sha256": "c4ce840cf31d7ca0fd88c501733b3ff6434930f450fdb1e6173feb780a7aefeb",
+      "main_text_read": true,
+      "main_text_sha256": "ee70c84812ee3497e87a3685abe758ca9043df914c226e30f352e7d9f5ab9521",
+      "markdown_path": "docs/research/ai-writing-2026-10-30/web/S07.md",
+      "index_unit_type": "sentence_candidates_and_fragments",
+      "indexed_units": 38,
+      "individually_reviewed_units": 38,
+      "pending_units": 0,
+      "pending_ids": [],
+      "read_status": "main_text_read_including_examples",
+      "semantic_review_scope": "applicability_not_independent_fact_verification",
+      "body_quote_words": 0,
+      "title_words": 3,
+      "review_method": "Full main text read in sections, decisions assigned to indexed spans and exceptions checked against individual units; examples assessed as illustrations, not independently verified claims."
+    },
+    {
+      "id": "S12",
+      "url": "https://www.reuters.com/media-center/how-ai-helps-power-trusted-news-at-reuters/",
+      "title": "How AI helps power trusted news at Reuters",
+      "published_at": "2023-07-12",
+      "author": "Reuters Communications",
+      "accessed_at": "2026-10-30",
+      "access_status": "full_main_text_read_official_alternate",
+      "attempts": [
+        {
+          "route": "tinyfish",
+          "status": "HTTP 401"
+        },
+        {
+          "route": "web.open",
+          "status": "non-retryable error"
+        },
+        {
+          "route": "web.open official alternate (parent agent)",
+          "status": "success",
+          "url": "https://reutersagency.com/media-centre/how-ai-helps-power-trusted-news-at-reuters"
+        }
+      ],
+      "raw_path": "build/ai-writing-2026-10-30/web/S12-web.txt",
+      "raw_sha256": "89960a3b7a30b158b9e8edfe6d881a636b38f8705c3a88bf05d68a89d1797a53",
+      "final_url": "https://reutersagency.com/media-centre/how-ai-helps-power-trusted-news-at-reuters",
+      "main_text_read": true,
+      "main_text_sha256": "597f0202a6fe632afc6ea9265725d26a3400929146300a1c6e11f8a14d77afb8",
+      "markdown_path": "docs/research/ai-writing-2026-10-30/web/S12.md",
+      "index_unit_type": "sentence_candidates_and_fragments",
+      "indexed_units": 34,
+      "individually_reviewed_units": 34,
+      "pending_units": 0,
+      "pending_ids": [],
+      "read_status": "main_text_read_including_examples",
+      "semantic_review_scope": "applicability_not_independent_fact_verification",
+      "body_quote_words": 0,
+      "title_words": 8,
+      "review_method": "Full main text read in sections, decisions assigned to indexed spans and exceptions checked against individual units; examples assessed as illustrations, not independently verified claims."
+    }
+  ],
+  "total_indexed_units": 1500,
+  "total_individually_reviewed_units": 1500,
+  "total_pending_units": 0
+}
