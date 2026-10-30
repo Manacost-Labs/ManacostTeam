@@ -123,6 +123,18 @@ def reviews(run):
         },
         "whole_article_checked": True,
     }
+    if "block_inventory" in task:
+        literary["paragraph_functions"] = [
+            {
+                "block_id": block["block_id"],
+                "block_sha256": block["sha256"],
+                "quote": block["text"],
+                "function": "Совет, его контекст или навигация.",
+                "disposition": "retain",
+                "reason": "Функция блока проверена в тестовом примере.",
+            }
+            for block in task["block_inventory"]["blocks"]
+        ]
     # Synthetic one-sentence evidence only; production never manufactures verdicts.
     from editorteam.editorial_practices import LOGIC, PRESERVATION, catalog
 
@@ -221,6 +233,7 @@ def test_historical_receipts_remain_readable_but_cannot_authorize_new_export(tmp
     state_path = run / "state.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["review_contract_version"] = version
+    state.pop("composition_contract")
     state_path.write_text(json.dumps(state), encoding="utf-8")
     fact, literary = reviews(run)
     for report in (fact, literary):
@@ -371,6 +384,7 @@ def test_legacy_run_without_version_is_readable_but_requires_current_review_for_
     run = prepared(tmp_path)
     state = status(run)
     state.pop("review_contract_version")
+    state.pop("composition_contract")
     (run / "state.json").write_text(json.dumps(state), encoding="utf-8")
     fact, literary = reviews(run)
     for key in ("strengths", "paragraph_functions", "reader_check", "whole_article_checked"):
@@ -689,3 +703,90 @@ def test_invalid_state_control_fields_fail_closed(tmp_path, field, value):
     (run / "state.json").write_text(json.dumps(state), encoding="utf-8")
     with pytest.raises(ValueError, match="state"):
         status(run)
+
+
+def test_existing_v3_without_composition_flag_keeps_previous_contract(tmp_path):
+    run = prepared(tmp_path)
+    state = status(run)
+    state.pop("composition_contract")
+    (run / "state.json").write_text(json.dumps(state), encoding="utf-8")
+    assert "block_inventory" not in next_task(run)
+    fact, literary = reviews(run)
+    assert "block_id" not in literary["paragraph_functions"][0]
+    submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
+    result = submit(
+        run, stage="literary_review", artifact=write(tmp_path, "literary.json", literary)
+    )
+    assert result["stage"] == "ready"
+    output = tmp_path / "legacy-v3.md"
+    export(run, output=output)
+    assert output.read_text() == TEXT
+
+
+def test_new_composition_run_rejects_partial_coverage_and_updates_inventory_after_repair(tmp_path):
+    run = prepared(tmp_path)
+    text = TEXT + "\n\nОбъяснение выбора.\n\nИсключение из совета."
+    revise(run, artifact=write(tmp_path, "longer.md", text))
+    task = next_task(run)
+    assert task["composition_contract"] == {"version": 1}
+    assert len(task["block_inventory"]["blocks"]) == 3
+    fact, literary = reviews(run)
+    submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
+    complete = json.loads(json.dumps(literary))
+    literary["paragraph_functions"] = literary["paragraph_functions"][:1]
+    result = submit(
+        run, stage="literary_review", artifact=write(tmp_path, "partial.json", literary)
+    )
+    assert any("missing paragraph function" in error for error in result["blocked"]["errors"])
+    assert next_task(run)["repair_brief"]["targets"] == []
+    with pytest.raises(ValueError, match="both reviews"):
+        export(run, output=tmp_path / "partial.md")
+    result = submit(
+        run,
+        stage="literary_review",
+        artifact=write(tmp_path, "complete.json", complete),
+        retry_review=True,
+    )
+    assert result["stage"] == "ready"
+    export(run, output=tmp_path / "complete.md")
+    old_hash = task["block_inventory"]["article_sha256"]
+    revise(
+        run,
+        artifact=write(
+            tmp_path, "repaired.md", text.replace("Объяснение выбора.", "Уточнение выбора.")
+        ),
+    )
+    assert next_task(run)["block_inventory"]["article_sha256"] != old_hash
+    assert set(status(run)["artifacts"]) == {"sources", "research", "draft"}
+
+
+def test_repair_brief_is_derived_from_current_rejected_review_only(tmp_path):
+    run = prepared(tmp_path)
+    fact, literary = reviews(run)
+    submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
+    literary["findings"] = [
+        {
+            "severity": "warning",
+            "category": "clarity",
+            "quote": "при слабой позиции",
+            "reason": "Неясное условие.",
+            "suggestion": "Уточнить условие по источнику.",
+            "benefit": "Понятна ситуация выбора.",
+            "meaning_risk": "Не расширять совет.",
+        }
+    ]
+    submit(run, stage="literary_review", artifact=write(tmp_path, "finding.json", literary))
+    task = next_task(run)
+    assert task["repair_brief"]["targets"][0]["block_ids"] == ["b0001"]
+    assert task["repair_brief"]["targets"][0]["quote"] == "при слабой позиции"
+    assert "text" not in task["repair_brief"]["targets"][0]["blocks"][0]
+
+
+@pytest.mark.parametrize("contract", [None, True, {"version": True}, {"version": 2}, {}])
+def test_invalid_composition_contract_is_not_silently_downgraded(tmp_path, contract):
+    run = prepared(tmp_path)
+    state = status(run)
+    state["composition_contract"] = contract
+    (run / "state.json").write_text(json.dumps(state), encoding="utf-8")
+    with pytest.raises(ValueError, match="composition contract"):
+        next_task(run)

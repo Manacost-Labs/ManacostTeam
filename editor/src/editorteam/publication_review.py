@@ -475,6 +475,7 @@ def validate_literary(
     *,
     keep_spans: list[dict] | None = None,
     require_extended: bool = False,
+    require_composition: bool = False,
     require_practices: bool = False,
     original: str | None = None,
     handoff: dict | None = None,
@@ -484,11 +485,20 @@ def validate_literary(
     errors = _report(text, report)
     if not isinstance(report, dict) or not _text(text):
         return errors
+    if require_composition:
+        from .publication_composition import block_inventory, validate_coverage
+
+        errors += validate_coverage(text, report.get("paragraph_functions"))
+        block_count = len(block_inventory(text)["blocks"])
+    else:
+        block_count = 0
     for key, explanation in (("strengths", "reason"), ("paragraph_functions", "function")):
         if key not in report and not require_extended:
             continue
         rows = report.get(key)
-        if not isinstance(rows, list) or len(rows) > 256:
+        if not isinstance(rows, list) or len(rows) > max(
+            256, block_count if key == "paragraph_functions" else 0
+        ):
             errors.append(f"literary: invalid {key}")
             continue
         for row in rows:
@@ -576,6 +586,7 @@ def validate_reviews(
     *,
     keep_spans: list[dict] | None = None,
     require_extended: bool = False,
+    require_composition: bool = False,
     require_practices: bool = False,
     original: str | None = None,
     snapshots: list | None = None,
@@ -593,6 +604,7 @@ def validate_reviews(
         literary,
         keep_spans=keep_spans,
         require_extended=require_extended,
+        require_composition=require_composition,
         require_practices=require_practices,
         original=original,
         handoff=handoff,

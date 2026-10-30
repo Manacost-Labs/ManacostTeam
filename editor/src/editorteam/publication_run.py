@@ -253,6 +253,13 @@ def _validate_state(state: dict) -> None:
         or "export" not in state
     ):
         raise ValueError("malformed publication state")
+    if "composition_contract" in state and (
+        not isinstance(state["composition_contract"], dict)
+        or set(state["composition_contract"]) != {"version"}
+        or type(state["composition_contract"].get("version")) is not int
+        or state["composition_contract"]["version"] != 1
+    ):
+        raise ValueError("unknown composition contract")
     for receipt in state["history"]:
         if (
             not isinstance(receipt, dict)
@@ -331,6 +338,7 @@ def init_run(run: Path, *, brief: str, patch: str, profile: str, shortcodes: str
     state = {
         "schema_version": 1,
         "review_contract_version": 3,
+        "composition_contract": {"version": 1},
         "brief": brief,
         "patch": patch,
         "profile": profile,
@@ -482,6 +490,41 @@ def next_task(run: Path) -> dict:
             "и поля review_schema. Проверяй содержательность, логику, источники и сохранение голоса. "
             "Не подменяй неизвестные данные выдумкой. issue/unverified требуют исправления или источника."
         )
+    if "composition_contract" in state:
+        from .publication_composition import block_inventory, repair_brief
+
+        task["composition_contract"] = state["composition_contract"]
+        task["composition_review_schema"] = {
+            "paragraph_functions": "One row per block_inventory block: {block_id,block_sha256,quote,function,disposition:retain|revise|structural,reason}. The quote must occur inside that exact block. No omitted or duplicate blocks. Structural is allowed only for heading, closed fenced code or isolated asset shortcode; lists, quotations and HTML containing prose require semantic review. Revise is unresolved and cannot pass.",
+            "limitation": "Coverage does not prove understanding or factual accuracy; the independent review still decides meaning and usefulness.",
+        }
+        if "draft" in state["artifacts"]:
+            current_text = _data(run, state, "draft").decode("utf-8")
+            task["block_inventory"] = block_inventory(current_text)
+            if state["blocked"]:
+                report = _json(_data(run, state, state["blocked"]["stage"]))
+                task["repair_brief"] = repair_brief(
+                    current_text,
+                    report,
+                    keep_spans=task["keep_spans"],
+                    expected_handoff_sha256=handoff_hash(_json(_data(run, state, "research"))),
+                )
+                task["instructions"] += (
+                    " repair_brief связывает замечания с текущими блоками. Соседи — только контекст; "
+                    "сохрани их полезное содержание, защищенные вставки и keep_spans. "
+                    "Не придумывай адрес правки для unresolved_targets: уточни отчет или основание."
+                )
+            elif stage == "literary_review":
+                task["instructions"] += (
+                    " Верни paragraph_functions для каждого блока block_inventory по composition_review_schema. "
+                    "Опиши вклад в задачу читателя; не считай заголовок, цитату или код доказательством факта."
+                )
+        elif stage == "draft":
+            task["instructions"] += (
+                " Перед сдачей сверь готовый текст с вопросами chapter_brief: каждый обязательный ответ "
+                "должен быть объяснен в статье, а не только перечислен в плане. "
+                "После сдачи весь Markdown будет автоматически разбит на блоки для независимого разбора."
+            )
     guidance = craft_guidance(stage)
     if guidance is not None:
         task["craft_guidance"] = guidance
@@ -679,6 +722,7 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
                     report,
                     keep_spans=_keep_spans(run, state),
                     require_extended=state.get("review_contract_version", 1) >= 2,
+                    require_composition="composition_contract" in state,
                     require_practices=state.get("review_contract_version", 1) >= 3,
                     handoff=handoff,
                     **review_context,
@@ -745,6 +789,7 @@ def export(run: Path, *, output: Path) -> dict:
             _json(_data(run, state, "literary_review")),
             keep_spans=_keep_spans(run, state),
             require_extended=state.get("review_contract_version", 1) >= 2,
+            require_composition="composition_contract" in state,
             require_practices=state.get("review_contract_version", 1) >= 3,
             original=_previous_draft(run, state)
             if state.get("review_contract_version", 1) >= 3

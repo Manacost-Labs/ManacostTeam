@@ -43,7 +43,17 @@ func reconstructionTargets(candidate string, findings []analyzers.Finding) []rec
 				target.Quotes = append(target.Quotes, q)
 			}
 		}
-		if f.Analyzer == "fact-review" {
+		if f.Analyzer == "reader-question" {
+			// Reader checks already validate the exact candidate evidence. Quotes
+			// in question/reason/function are review prose, never patch anchors.
+			var missing struct {
+				RepairOnly            bool                  `json:"repair_only"`
+				MissingReaderQuestion *ReaderQuestionTarget `json:"missing_reader_question"`
+			}
+			if json.Unmarshal([]byte(f.Evidence), &missing) != nil || !missing.RepairOnly || missing.MissingReaderQuestion == nil {
+				add(f.Evidence)
+			}
+		} else if f.Analyzer == "fact-review" {
 			var envelope struct {
 				FactReview
 				SanitizedReview *FactReview `json:"sanitized_review"`

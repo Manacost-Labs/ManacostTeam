@@ -179,6 +179,7 @@ type Result struct {
 	CriticVerdict            string                        `json:"critic_verdict,omitempty"`
 	Improvements             []Improvement                 `json:"improvements,omitempty"`
 	PracticeChecks           []editorialreview.Check       `json:"practice_checks,omitempty"`
+	ReaderQuestionChecks     []ReaderQuestionCheck         `json:"reader_question_checks,omitempty"`
 	LogicChecks              []editorialreview.Check       `json:"logic_checks,omitempty"`
 	PreservationChecks       []editorialreview.Check       `json:"preservation_checks,omitempty"`
 	SourceChecks             []editorialreview.SourceCheck `json:"source_checks,omitempty"`
@@ -626,6 +627,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		result.ScoresValid = true
 		result.CriticVerdict = critic.Verdict
 		result.PracticeChecks = append([]editorialreview.Check(nil), critic.PracticeChecks...)
+		result.ReaderQuestionChecks = append([]ReaderQuestionCheck(nil), critic.ReaderQuestionChecks...)
 		result.LogicChecks, result.PreservationChecks = critic.LogicChecks, critic.PreservationChecks
 		result.SourceChecks, result.OriginalFactualChecks = critic.SourceChecks, critic.OriginalFactualChecks
 		result.ReviewScope, result.SourceVerification = critic.ReviewScope, critic.SourceVerification
@@ -931,28 +933,30 @@ func appendUnique(values []string, more ...string) []string {
 // criticInput — данные для critic. Они уходят JSON-ом в user message, а не
 // инструкциями в system prompt.
 type criticInput struct {
-	NewArticle         bool                             `json:"new_article,omitempty"`
-	LocalEdits         []LocalEdit                      `json:"local_edits,omitempty"`
-	Source             string                           `json:"source"`
-	Candidate          string                           `json:"candidate"`
-	Diff               []Change                         `json:"diff"`
-	Mode               string                           `json:"mode"`
-	RevisionBase       string                           `json:"revision_base,omitempty"`
-	RevisionBrief      string                           `json:"revision_brief,omitempty"`
-	Analysis           Analysis                         `json:"analysis"`
-	Handoff            *ResearchHandoff                 `json:"research_handoff,omitempty"`
-	SourceSnapshots    []editorialreview.SourceSnapshot `json:"source_snapshots"`
-	SourceClaims       []map[string]any                 `json:"source_claims"`
-	ProtectedEntities  []string                         `json:"protected_entities"`
-	ToolFindings       []analyzers.Finding              `json:"tool_findings"`
-	StyleExamples      []promptExample                  `json:"style_examples"`
-	KeepSpans          []StrongSpan                     `json:"keep_spans,omitempty"`
-	RequiredSections   []string                         `json:"sections_required,omitempty"`
-	ReviewScope        string                           `json:"review_scope,omitempty"`
-	SourceVerification string                           `json:"source_verification,omitempty"`
+	RequiredReaderQuestions []ReaderQuestionTarget           `json:"required_reader_questions,omitempty"`
+	NewArticle              bool                             `json:"new_article,omitempty"`
+	LocalEdits              []LocalEdit                      `json:"local_edits,omitempty"`
+	Source                  string                           `json:"source"`
+	Candidate               string                           `json:"candidate"`
+	Diff                    []Change                         `json:"diff"`
+	Mode                    string                           `json:"mode"`
+	RevisionBase            string                           `json:"revision_base,omitempty"`
+	RevisionBrief           string                           `json:"revision_brief,omitempty"`
+	Analysis                Analysis                         `json:"analysis"`
+	Handoff                 *ResearchHandoff                 `json:"research_handoff,omitempty"`
+	SourceSnapshots         []editorialreview.SourceSnapshot `json:"source_snapshots"`
+	SourceClaims            []map[string]any                 `json:"source_claims"`
+	ProtectedEntities       []string                         `json:"protected_entities"`
+	ToolFindings            []analyzers.Finding              `json:"tool_findings"`
+	StyleExamples           []promptExample                  `json:"style_examples"`
+	KeepSpans               []StrongSpan                     `json:"keep_spans,omitempty"`
+	RequiredSections        []string                         `json:"sections_required,omitempty"`
+	ReviewScope             string                           `json:"review_scope,omitempty"`
+	SourceVerification      string                           `json:"source_verification,omitempty"`
 }
 
 type criticResult struct {
+	ReaderQuestionChecks  []ReaderQuestionCheck         `json:"reader_question_checks,omitempty"`
 	EditAssessments       []EditAssessment              `json:"edit_assessments,omitempty"`
 	NoNewFacts            bool                          `json:"no_new_facts"`
 	UnsupportedAdditions  []string                      `json:"unsupported_additions"`
@@ -1019,6 +1023,7 @@ var scoreKeys = []string{"factual_preservation", "meaning_preservation", "clarit
 // allowlist, все восемь оценок как целые числа в диапазоне 0–10.
 func parseCritic(text string) (criticResult, error) {
 	var raw struct {
+		ReaderQuestionChecks  []ReaderQuestionCheck         `json:"reader_question_checks"`
 		EditAssessments       []EditAssessment              `json:"edit_assessments"`
 		NoNewFacts            *bool                         `json:"no_new_facts"`
 		UnsupportedAdditions  []string                      `json:"unsupported_additions"`
@@ -1045,6 +1050,7 @@ func parseCritic(text string) (criticResult, error) {
 	}
 	out := criticResult{NoNewFacts: *raw.NoNewFacts, UnsupportedAdditions: raw.UnsupportedAdditions, RepairRequired: raw.RepairRequired, StrengthChanges: raw.StrengthChanges, EditAssessments: raw.EditAssessments, PracticeChecks: raw.PracticeChecks, ReviewScope: raw.ReviewScope, SourceVerification: raw.SourceVerification}
 	out.LogicChecks, out.PreservationChecks = raw.LogicChecks, raw.PreservationChecks
+	out.ReaderQuestionChecks = raw.ReaderQuestionChecks
 	out.SourceChecks, out.OriginalFactualChecks = raw.SourceChecks, raw.OriginalFactualChecks
 	for _, item := range raw.Improvements {
 		if strings.TrimSpace(item.Category) == "" || strings.TrimSpace(item.Reason) == "" {
@@ -1106,7 +1112,7 @@ func parseCritic(text string) (criticResult, error) {
 		if !out.RepairRequired {
 			return criticResult{}, errors.New("verdict repair требует repair_required=true")
 		}
-		if len(repairable(out.Findings)) == 0 && !hasPracticeIssue(out.PracticeChecks) && !editorialreview.HasUnresolved(out.LogicChecks, out.PreservationChecks) && !hasOriginalIssues(out.OriginalFactualChecks) {
+		if len(repairable(out.Findings)) == 0 && !hasPracticeIssue(out.PracticeChecks) && !editorialreview.HasUnresolved(out.LogicChecks, out.PreservationChecks) && !hasOriginalIssues(out.OriginalFactualChecks) && !hasOpenReaderQuestions(out.ReaderQuestionChecks) {
 			return criticResult{}, errors.New("verdict repair без исправимых findings")
 		}
 	}
@@ -1194,7 +1200,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 		if err != nil {
 			return "", err
 		}
-		payload, err := json.Marshal(map[string]any{"draft": req.Text, "research_handoff": authorEvidence, "condition_ledger": conditionLedger(req.Handoff), "canonical_names": sourceCardNames(req.Handoff), "style_examples": promptExamples(examples), "editorial_rules": map[string]any{"style": bundle.StyleRules, "terminology": bundle.TerminologyRules, "language": bundle.Language, "corrections": bundle.Corrections, "sections_required": bundle.SectionsRequired}})
+		payload, err := json.Marshal(map[string]any{"draft": req.Text, "research_handoff": authorEvidence, "required_reader_questions": requiredReaderQuestions(req.Handoff), "condition_ledger": conditionLedger(req.Handoff), "canonical_names": sourceCardNames(req.Handoff), "style_examples": promptExamples(examples), "editorial_rules": map[string]any{"style": bundle.StyleRules, "terminology": bundle.TerminologyRules, "language": bundle.Language, "corrections": bundle.Corrections, "sections_required": bundle.SectionsRequired}})
 		if err != nil {
 			return "", err
 		}
@@ -1209,7 +1215,7 @@ func (s *Service) rewrite(ctx context.Context, req Request, bundle rules.RuleBun
 			"После черновика проверь функцию каждого абзаца, порядок объяснения и повторы. Конкретность, шутки, обращения и длина фраз зависят от задачи; одинаковая структура абзацев не нужна. Не заявляй личный опыт или тестирование без источника. " +
 			"Построй связный русский текст, убери повторы между главами, выдержи жанр и единый голос; соблюдай editorial_rules. Corrections.required — применимая норма, advisory — контекстный пример, не запрет. Fact corrections не доказывают текущий игровой факт. " +
 			"style_examples показывают только форму; факты бери исключительно из handoff. Верни только готовый материал."
-		return s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+editorialreview.Prompt()+craftInstruction+precisionInstruction+proseInstruction("reconstruct")+reconstructionReviewInstruction("reconstruct")+publicationAuthorInstruction+"\nsource_snapshots позволяют проверить handoff; они не разрешают добавлять новые факты сверх него. Противоречия должны быть разрешены перед приёмкой.", examples)}, {Role: "user", Content: withSourceSnapshots(string(payload), req.SourceSnapshots)}})
+		return s.complete(ctx, []llm.Message{{Role: "system", Content: s.styleSystem(system+editorialreview.Prompt()+craftInstruction+precisionInstruction+proseInstruction("reconstruct")+reconstructionReviewInstruction("reconstruct")+publicationAuthorInstruction+readerQuestionAuthorInstruction+"\nsource_snapshots позволяют проверить handoff; они не разрешают добавлять новые факты сверх него. Противоречия должны быть разрешены перед приёмкой.", examples)}, {Role: "user", Content: withSourceSnapshots(string(payload), req.SourceSnapshots)}})
 	}
 	raw, _ := json.Marshal(analysis)
 	system := s.styleSystem(bundle.Prompt()+"\nАНАЛИЗ (наблюдения, не обязательный план; проверь выводы по исходнику, не добавляй факты из анализа):\n"+string(raw)+"\nРедактируй текст из поля text сообщения пользователя. Верни только готовый текст. Режим "+req.Mode+". Сохрани названия, числа, ссылки, отрицания, осторожность, разметку и голос автора. Сохрани смысл и голос strengths. Это не запрет исправлять внутри них грамматику, повтор или тяжёлый синтаксис: меняй только место с конкретной пользой для читателя, сохраняя условия и степень уверенности. В edit/rewrite можно разделить длинный абзац по смене мысли и сохранить соседние удачные формулировки; не сокращай ради самого сокращения. Сохрани сноски: звёздочка со следующим неразрывным пробелом — буквальный знак сноски; при обычном пробеле экранируй звёздочку обратной косой чертой, чтобы не получить список. Не добавляй новые карты, факты или выводы. Правильность мысли не запрещает улучшать её форму. Если после проверки структуры и синтаксиса конкретной пользы нет, верни текст без изменений.", examples)
@@ -1239,6 +1245,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	applyReviewScopeInput(&in)
 	if in.Mode == "reconstruct" {
 		in.RequiredSections = append([]string(nil), bundle.SectionsRequired...)
+		in.RequiredReaderQuestions = requiredReaderQuestions(in.Handoff)
 	}
 	if in.Mode == "edit" || in.Mode == "rewrite" {
 		in.LocalEdits = localEdits(in.Source, in.Candidate)
@@ -1248,7 +1255,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}
 	}
 	messages := []llm.Message{
-		{Role: "system", Content: s.styleSystem(bundle.Prompt()+editorialreview.Prompt()+criticInstruction+editorialreview.ContractPrompt()+originalReviewInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief)+revisionBaseInstruction(in.RevisionBase)+reconstructionReviewInstruction(in.Mode)+publicationCriticInstruction(in.Mode), examplesOf(in))},
+		{Role: "system", Content: s.styleSystem(bundle.Prompt()+editorialreview.Prompt()+criticInstruction+editorialreview.ContractPrompt()+originalReviewInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief)+revisionBaseInstruction(in.RevisionBase)+reconstructionReviewInstruction(in.Mode)+publicationCriticInstruction(in.Mode)+readerQuestionReviewInstruction(in.Mode), examplesOf(in))},
 		{Role: "user", Content: string(payload)},
 	}
 	started := time.Now()
@@ -1267,7 +1274,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
 	out.Findings = append(out.Findings, contextualFindings(in, out)...)
 	if out.Verdict != "" {
-		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out), validateContextualReview(in, out))
+		parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out), validateContextualReview(in, out), applyReaderQuestionReview(in, &out))
 	}
 	if parseErr == nil {
 		s.logStage(ctx, "critic", started, attempt, "")
@@ -1293,7 +1300,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
 		out.Findings = append(out.Findings, contextualFindings(in, out)...)
 		if out.Verdict != "" {
-			parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out), validateContextualReview(in, out))
+			parseErr = errors.Join(parseErr, validateStrengthChanges(in, out), validateEditAssessments(in, out), validatePracticeChecks(in, out), validateContextualReview(in, out), applyReaderQuestionReview(in, &out))
 		}
 		if parseErr == nil {
 			s.logStage(ctx, "critic_retry", started, attempt, "")

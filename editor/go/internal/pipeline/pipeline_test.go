@@ -23,7 +23,10 @@ type trace struct{ events []string }
 func (t *trace) add(event string) { t.events = append(t.events, event) }
 
 type fakeLLM struct {
-	omitContextualReview bool
+	// Writing tests unrelated to reader closure receive explicit synthetic
+	// attestations. Dedicated closure tests disable this automatic fixture.
+	omitReaderQuestionReview bool
+	omitContextualReview     bool
 	// Most fixtures test other gates. Supply grounded local-review fixtures;
 	// dedicated retry tests disable this to exercise missing/invalid evidence.
 	omitLocalReview bool
@@ -67,7 +70,10 @@ func (f *fakeLLM) Complete(_ context.Context, messages []llm.Message, _ int) (st
 	if stage == "critic" {
 		// Critic fixtures quote the real source and candidate so that
 		// ValidateImprovements can verify them like a real reply.
-		var payload struct{ Source, Candidate, Mode string }
+		var payload struct {
+			Source, Candidate, Mode string
+			RequiredReaderQuestions []ReaderQuestionTarget `json:"required_reader_questions"`
+		}
 		if len(messages) > 1 && json.Unmarshal([]byte(messages[1].Content), &payload) == nil {
 			reply = strings.ReplaceAll(reply, "__SOURCE__", jsonEscape(payload.Source))
 			reply = strings.ReplaceAll(reply, "__CANDIDATE__", jsonEscape(payload.Candidate))
@@ -103,6 +109,15 @@ func (f *fakeLLM) Complete(_ context.Context, messages []llm.Message, _ int) (st
 			}
 			if !f.omitContextualReview {
 				reply = reviewfixture.Complete(reply, messages[1].Content)
+			}
+			if !f.omitReaderQuestionReview && len(payload.RequiredReaderQuestions) > 0 && json.Unmarshal([]byte(reply), &fields) == nil && fields != nil && fields["reader_question_checks"] == nil {
+				var checks []ReaderQuestionCheck
+				for _, q := range payload.RequiredReaderQuestions {
+					checks = append(checks, ReaderQuestionCheck{QuestionID: q.QuestionID, CandidateQuote: payload.Candidate, Function: "Fixture: answers the assigned reader task.", Status: "answered", Reason: "Fixture: reader closure is outside the gate under test.", ClaimIDs: q.ClaimIDs})
+				}
+				fields["reader_question_checks"], _ = json.Marshal(checks)
+				encoded, _ := json.Marshal(fields)
+				reply = string(encoded)
 			}
 		}
 	}
