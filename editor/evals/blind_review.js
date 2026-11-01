@@ -34,7 +34,8 @@ const CRITERIA_RU = {
   readability: 'читаемость', naturalness: 'естественность русского', usefulness: 'полезность для игрока', voice: 'сохранение авторского голоса',
   conditions: 'сохранность условий и исключений', restraint: 'обоснованность вмешательства в сильные фрагменты',
 };
-const SOURCE_REVIEW_GUIDANCE = 'Неизменённый исходник допустим, если правка не приносит конкретной пользы. Допустима и другая равноценная формулировка: несовпадение с эталоном само по себе не дефект. Не обменивай факты, условия, исключения и степень уверенности на интересность. Авторский голос оценивай относительно исходника, а не общей живости. Обоснуй пользу или лишнее вмешательство конкретным фрагментом; одинаковые версии можно оценить как tie.';
+const SOURCE_REVIEW_GUIDANCE = 'Неизменённый исходник допустим, если правка не приносит конкретной пользы. Допустима и другая равноценная формулировка: несовпадение с эталоном само по себе не дефект. Не обменивай факты, условия, исключения и степень уверенности на интересность. Авторский голос оценивай относительно исходника, а не общей живости. Обоснуй пользу или лишнее вмешательство конкретным фрагментом; одинаковые версии можно оценить как tie. '
+  + 'Прежде чем сообщать о потере имени, карты, числа или примера, сверь оба текста целиком. Если деталь перенесена в другой абзац, проверь, сохранила ли она смысл.';
 
 function loadResults(file) {
   const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -92,13 +93,16 @@ function prepare(file, outDir, random = randomBit, options = {}) {
   const labels = options.labels || CRITERIA_RU;
   const blind = [];
   const key = [];
+  const privateCaseIds = options.protocol === 'pairs';
   for (const pair of pairs) {
     const flip = random() === 1;
     const [first, second] = flip ? [1, 0] : [0, 1];
-    blind.push({ id: pair.id, source: pair.source, A: pair.outputs[first], B: pair.outputs[second], criteria });
-    key.push({ id: pair.id, A: pair.variants[first], B: pair.variants[second] });
+    // A case slug can name an owner correction or an expected no-op.
+    const id = privateCaseIds ? crypto.randomUUID() : pair.id;
+    blind.push({ id, source: pair.source, A: pair.outputs[first], B: pair.outputs[second], criteria });
+    key.push({ id, ...(privateCaseIds ? { case_id: pair.id } : {}), A: pair.variants[first], B: pair.variants[second] });
     if (options.swapOrder) {
-      const id = `${pair.id}::swapped`;
+      const id = privateCaseIds ? crypto.randomUUID() : `${pair.id}::swapped`;
       blind.push({ id, source: pair.source, A: pair.outputs[second], B: pair.outputs[first], criteria });
       key.push({ id, case_id: pair.id, order: 'swapped', A: pair.variants[second], B: pair.variants[first] });
     }
@@ -111,7 +115,7 @@ function prepare(file, outDir, random = randomBit, options = {}) {
     'Подкрепите предпочтение конкретными фрагментами. Для пользы проверьте: что делать, почему, при каких условиях и когда выбрать иначе. Голос оценивается по связности мысли и узнаваемой позиции автора, а не счетчикам слов.',
     'Время измеряется отдельно: один редактор не получает последовательно обе версии одного материала. Используйте независимых редакторов и first_exposure. Переставленные пары — проверка устойчивости суждения, не замер скорости.',
     'Заполнять reviewed, reviewer и reviewed_at может только человек. Пустые строки остаются pending и не считаются ничьей. Модельный judge хранится отдельно.', '',
-    ...(options.protocol === 'pairs' ? ['Исходник — черновик. Один из вариантов — правка человека, другой — правка ИИ. Рубрика «интересно / механично», 1 — механично, 5 — интересно:', '',
+    ...(options.protocol === 'pairs' ? ['Сравните версии с исходником по рубрике «интересно / механично». Оцените каждую от 1 до 5.', '',
       ...RUBRIC.criteria.map((c) => `- ${c.label}: ${c.question}`), ''] : [])];
   for (const item of blind) {
     lines.push(`## ${item.id}`, '', '### Исходник', '', item.source, '', '### Вариант A', '', item.A, '', '### Вариант B', '', item.B, '');

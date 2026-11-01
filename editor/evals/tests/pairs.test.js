@@ -239,7 +239,8 @@ test('control-only CLI reports unknown main metric and pending human reviews sta
   assert.equal(summary.judge_metric, null);
   const pending = blind.importRatings(path.join(out, 'ratings.template.json'), path.join(out, 'key.json'), path.join(out, 'pending'));
   assert.equal(pending.rated, 0);
-  assert.deepEqual(pending.pending, ['synthetic-clean']);
+  const presented = JSON.parse(fs.readFileSync(path.join(out, 'pairs.json'), 'utf8'));
+  assert.deepEqual(pending.pending, presented.map(row => row.id));
   assert.equal(pending.metric.human, null);
   assert.equal(pending.control_results.human, null);
   assert.equal(pending.human_review_status, 'pending');
@@ -247,7 +248,14 @@ test('control-only CLI reports unknown main metric and pending human reviews sta
 });
 
 test('human control results keep swapped presentations distinct without double-counting outputs', async () => {
-  const { out } = await controlRun({ changed: true, swapOrder: true });
+  const { out, id } = await controlRun({ changed: true, swapOrder: true });
+  const key = JSON.parse(fs.readFileSync(path.join(out, 'key.json'), 'utf8'));
+  assert.deepEqual(key.pairs.map(row => row.case_id), [id, id]);
+  for (const file of ['pairs.json', 'pairs.md', 'ratings.template.json']) {
+    const shown = fs.readFileSync(path.join(out, file), 'utf8');
+    assert.ok(!shown.includes(id) && !shown.includes('::swapped'), `${file} reveals control or presentation order`);
+    assert.doesNotMatch(shown, /Один из вариантов — правка человека/);
+  }
   const model = JSON.parse(fs.readFileSync(path.join(out, 'judge/ratings.json'), 'utf8'));
   const ratings = model.map(row => ({ ...row, review_status: 'reviewed', reviewer: 'owner', reviewed_at: '2026-10-31T12:00:00Z' }));
   const ratingsFile = path.join(out, 'human-ratings.json');
@@ -258,5 +266,6 @@ test('human control results keep swapped presentations distinct without double-c
   assert.equal(report.control_results.human.observations, 2);
   assert.equal(report.control_results.human.changed_outputs, 1);
   assert.equal(report.control_results.human.preferences.tie, 2);
+  assert.deepEqual(report.control_results.human.case_ids, [id]);
   assert.equal(report.control_results.human.measured, true);
 });

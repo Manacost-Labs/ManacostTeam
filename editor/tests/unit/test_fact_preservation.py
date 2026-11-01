@@ -69,6 +69,65 @@ def test_negation_changes_are_detected_in_both_directions(before, after):
     assert any(item["field"] == "negation" for item in semantic_diff.compare(before, after))
 
 
+def test_archived_terran_absence_survives_change_from_future_to_present():
+    before = (
+        "Колеса СМЕРТИ!!! у него чаще всего не будет, так что нужно лишь убирать "
+        "со стола всё, что сыграет Лок."
+    )
+    after = (
+        "Колеса СМЕРТИ!!! у него чаще всего нет, так что убирайте со стола всё, "
+        "что сыграет Лок."
+    )
+    assert semantic_diff.compare(before, after) == []
+    assert semantic_diff.compare(after, before) == []
+
+
+def test_existence_flip_before_a_comma_is_still_a_factual_change():
+    absent = "У него в руке карты для ответа нет, так что разыграйте угрозу."
+    present = "У него в руке карта для ответа есть, так что разыграйте угрозу."
+    assert semantic_diff.negation_flips(absent, present)
+    assert semantic_diff.negation_flips(present, absent)
+
+
+@pytest.mark.parametrize("prefix", ["Нет, ", "«Нет, "])
+def test_reply_no_cannot_mask_a_changed_verb_or_contrast(prefix):
+    negative = prefix + "Бранн не удваивает боевой клич Мастера брони."
+    positive = prefix + "Бранн удваивает боевой клич Мастера брони."
+    assert semantic_diff.negation_flips(negative, positive)
+    assert semantic_diff.negation_flips(positive, negative)
+    assert semantic_diff.negation_type(prefix + "берите Грязную крысу, а не Гадюку.") == "contrast"
+
+
+@pytest.mark.parametrize(
+    "original,changed",
+    [
+        ("У Воина нет карт в руке, он добирает карту.",
+         "У Воина есть карты в руке, он не добирает карту."),
+        ("У Воина нет карт в руке, он будет атаковать.",
+         "У Воина есть карты в руке, он не будет атаковать."),
+        ("У Воина АоЕ чаще всего нет, у Мага АоЕ чаще всего будет.",
+         "У Воина АоЕ чаще всего есть, у Мага АоЕ чаще всего не будет."),
+    ],
+)
+def test_moving_absence_to_another_predicate_is_a_flip(original, changed):
+    assert semantic_diff.negation_flips(original, changed)
+    assert semantic_diff.negation_flips(changed, original)
+
+
+def test_shared_factual_absence_cannot_mask_another_changed_verb():
+    before = "Запаса брони у Воина нет, Бранн не удваивает боевой клич Мастера брони."
+    after = "Запаса брони у Воина нет, Бранн удваивает боевой клич Мастера брони."
+    assert semantic_diff.negation_flips(before, after)
+    assert semantic_diff.negation_flips(after, before)
+
+
+def test_removing_only_reply_no_does_not_change_play_advice():
+    assert semantic_diff.negation_flips(
+        "Нет, Бранн удваивает боевой клич Мастера брони.",
+        "Бранн удваивает боевой клич Мастера брони.",
+    ) == []
+
+
 def test_moving_negation_to_a_different_clause_is_not_preservation():
     before = "Бранн не удваивает боевой клич Мастера брони, но повторяет хрип."
     after = "Бранн удваивает боевой клич Мастера брони, но не повторяет хрип."
@@ -101,6 +160,34 @@ def test_real_negation_beside_a_link_or_in_its_label_still_blocks(wrapper):
     after = wrapper.format("Бранн удваивает боевой клич Мастера брони.")
     assert semantic_diff.negation_flips(before, after)
     assert semantic_diff.negation_flips(after, before)
+
+
+def test_budget_decklist_image_filenames_do_not_add_game_numbers():
+    before = "## Бюджетный Жрец\n\nДля этой сборки нужны две копии Очищения."
+    after = (
+        "## Бюджетный Жрец\n\n[Состав колоды «Комбо Жрец»]"
+        "(https://old.kolodahearthstone.ru/design/user/budj-prist-2.jpg)\n\n"
+        "Для этой сборки нужны две копии Очищения.\n\n[Состав колоды «Жрец на немоте»]"
+        "(https://old.kolodahearthstone.ru/design/user/budj-prist-3.jpg)"
+    )
+    assert semantic_diff.compare(before, after) == []
+
+
+@pytest.mark.parametrize("before,after", [
+    ("[2 копии](https://example.org/list-2.jpg)", "[3 копии](https://example.org/list-2.jpg)"),
+    ("[Состав](https://example.org/list(2).jpg)**2** копии",
+     "[Состав](https://example.org/list(2).jpg)**3** копии"),
+    ("[Состав](https://example.org/list-2.jpg)[2 копии](https://example.org/card-1.jpg)",
+     "[Состав](https://example.org/list-2.jpg)[3 копии](https://example.org/card-1.jpg)"),
+])
+def test_visible_fact_in_or_immediately_after_link_is_still_counted(before, after):
+    assert any(row["field"] == "numbers" for row in semantic_diff.compare(before, after))
+
+
+def test_changed_or_lost_image_url_is_a_link_issue_without_a_numeric_fact_issue():
+    before = "[Состав](https://example.org/list-2.jpg)"
+    for after in ("Состав", "[Состав](https://example.org/list-3.jpg)"):
+        assert {row["field"] for row in semantic_diff.compare(before, after)} == {"links"}
 
 
 def test_same_numbers_cannot_be_swapped_between_facts():

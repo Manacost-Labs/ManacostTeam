@@ -11,7 +11,8 @@ from collections import Counter
 from html import unescape
 from pathlib import Path
 
-NEGATION = re.compile(r"\b(?:не|нельзя|никогда|not|never|don't|do\s+not)\b", re.IGNORECASE)
+NEGATION = re.compile(r"\b(?:не|нет|нельзя|никогда|not|never|don't|do\s+not)\b", re.IGNORECASE)
+_REPLY_NO = re.compile(r'^[\s«„“"—–-]*нет\s*,', re.IGNORECASE)
 URL_TARGET = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
 TOKENS = re.compile(r"[a-zа-яёа-я0-9]+", re.IGNORECASE)
 NUMBERS = re.compile(r"(?<!\w)\d+(?:[.,]\d+)?%?(?!\w)")
@@ -48,6 +49,35 @@ _CONTRAST = re.compile(
 )
 
 
+def _negation_markers(text: str) -> set[str]:
+    # Ignore only a leading reply («Нет, ...»), not the predicate in «карты нет, так что ...».
+    prose = _REPLY_NO.sub("", URL_TARGET.sub(" ", text))
+    return set(NEGATION.findall(prose.casefold()))
+
+
+def _negation_changed(left: str, right: str) -> bool:
+    before, after = _negation_markers(left), _negation_markers(right)
+    if ("нет" in before) != ("нет" in after):
+        # «Нет» negates existence. Only accept «не будет» in the same lexical
+        # position at a clause boundary. «Не будет атаковать» negates an action.
+        present, future = (left, right) if "нет" in before else (right, left)
+        present = _REPLY_NO.sub("", URL_TARGET.sub(" ", present.casefold()))
+        future = _REPLY_NO.sub("", URL_TARGET.sub(" ", future.casefold()))
+        ending = r"\b(?=\s*(?:[,.;:!?…]|$))"
+        absent = re.search(r"\bнет" + ending, present)
+        copula = re.search(r"\bне\s+будет" + ending, future)
+        if not absent or not copula:
+            return True
+        context = TOKENS.findall(present[:absent.start()])
+        if not context or context != TOKENS.findall(future[:copula.start()]):
+            return True
+        before = _negation_markers(present[:absent.start()] + present[absent.end():])
+        after = _negation_markers(future[:copula.start()] + future[copula.end():])
+        return bool(before) != bool(after)
+    # A shared absence must not hide a separately negated verb.
+    return bool(before - {"нет"}) != bool(after - {"нет"})
+
+
 def negation_type(sentence: str) -> str:
     """Что за отрицание в предложении исходника: fact, contrast или rhetorical.
 
@@ -60,12 +90,12 @@ def negation_type(sentence: str) -> str:
     Требовать сохранить два последних вида нельзя: тогда переплавка тащит в
     текст риторику источника, а именно её и надо вычищать.
     """
-    if _META_NEGATION.search(sentence) and not NEGATION.search(
+    if _META_NEGATION.search(sentence) and not _negation_markers(
         _CONTRAST.sub(" ", _META_NEGATION.sub(" ", sentence))
     ):
         return "rhetorical"
     leftover = _CONTRAST.sub(" ", sentence)
-    if NEGATION.search(sentence) and not NEGATION.search(leftover):
+    if _negation_markers(sentence) and not _negation_markers(leftover):
         return "contrast"
     return "fact"
 
@@ -112,8 +142,7 @@ def negation_flips(before: str, after: str) -> list[dict]:
             if (
                 similarity < 0.6
                 or not best
-                or bool(NEGATION.search(URL_TARGET.sub(" ", source)))
-                == bool(NEGATION.search(URL_TARGET.sub(" ", best)))
+                or not _negation_changed(source, best)
             ):
                 continue
             left, right = (best, source) if reverse else (source, best)
@@ -233,6 +262,51 @@ def comparison_drift(before: str, after: str) -> list[dict]:
     return issues
 
 
+def _http_targets(text: str):
+    """Yield original destination spans and normalized URLs, leaving link labels visible."""
+    cursor = 0
+    while match := URL_TARGET.search(text, cursor):
+        raw = match.group()
+        start, end = match.span()
+        bounded = start > 0 and end < len(text) and (
+            (text[start - 1] == "<" and text[end] == ">")
+            or (text[start - 1] in "\"'" and text[end] == text[start - 1])
+        )
+        if text[max(0, match.start() - 2) : match.start()] == "](":
+            # A Markdown destination ends at its unmatched ')', even when
+            # punctuation/emphasis follows. Keep balanced URL parentheses
+            # and literal '*' inside the destination unchanged.
+            depth = 0
+            for index, char in enumerate(raw):
+                if char == "(":
+                    depth += 1
+                elif char == ")":
+                    if depth == 0:
+                        raw = raw[:index]
+                        bounded = True
+                        break
+                    depth -= 1
+        url = unescape(raw)
+        if not bounded:
+            url = url.rstrip(".,;:!?…»")
+            for opening, closing in (("(", ")"), ("[", "]"), ("{", "}")):
+                while url.endswith(closing) and url.count(closing) > url.count(opening):
+                    url = url[:-1].rstrip(".,;:!?…»")
+        cursor = start + len(raw)
+        # Keep visible terminal punctuation when removing a bare citation from prose.
+        span_end = cursor if bounded else start + len(raw.rstrip(".,;:!?…»"))
+        yield start, span_end, url
+
+
+def _without_http_targets(text: str) -> str:
+    parts, cursor = [], 0
+    for start, end, _ in _http_targets(text):
+        parts.extend((text[cursor:start], " "))
+        cursor = end
+    parts.append(text[cursor:])
+    return "".join(parts)
+
+
 def link_drift(before: str, after: str) -> list[dict]:
     """Preserve HTTP citation destinations, including timestamps/fragments.
 
@@ -240,39 +314,9 @@ def link_drift(before: str, after: str) -> list[dict]:
     destination changes need an explicit factual update, not a style edit.
     """
 
-    def urls(text):
-        found = set()
-        for match in re.finditer(r"https?://[^\s<>\"']+", text, re.I):
-            raw = match.group()
-            start, end = match.span()
-            bounded = start > 0 and end < len(text) and (
-                (text[start - 1] == "<" and text[end] == ">")
-                or (text[start - 1] in "\"'" and text[end] == text[start - 1])
-            )
-            if text[max(0, match.start() - 2) : match.start()] == "](":
-                # A Markdown destination ends at its unmatched ')', even when
-                # punctuation/emphasis follows. Keep balanced URL parentheses
-                # and literal '*' inside the destination unchanged.
-                depth = 0
-                for index, char in enumerate(raw):
-                    if char == "(":
-                        depth += 1
-                    elif char == ")":
-                        if depth == 0:
-                            raw = raw[:index]
-                            bounded = True
-                            break
-                        depth -= 1
-            url = unescape(raw)
-            if not bounded:
-                url = url.rstrip(".,;:!?…»")
-                for opening, closing in (("(", ")"), ("[", "]"), ("{", "}")):
-                    while url.endswith(closing) and url.count(closing) > url.count(opening):
-                        url = url[:-1].rstrip(".,;:!?…»")
-            found.add(url)
-        return found
-
-    lost = sorted(urls(before) - urls(after))
+    before_urls = {url for _, _, url in _http_targets(before)}
+    after_urls = {url for _, _, url in _http_targets(after)}
+    lost = sorted(before_urls - after_urls)
     return (
         [
             {
@@ -422,10 +466,12 @@ def compare(
     current_patch: str | None = None,
     allowed_removed_numbers: list[str] | None = None,
 ) -> list[dict]:
+    visible_before = _without_http_targets(before_text)
+    visible_after = _without_http_targets(after_text)
     return [
         *negation_flips(before_text, after_text),
-        *number_drift(before_text, after_text, allowed_removed_numbers),
-        *comparison_drift(before_text, after_text),
+        *number_drift(visible_before, visible_after, allowed_removed_numbers),
+        *comparison_drift(visible_before, visible_after),
         *link_drift(before_text, after_text),
         *claim_contract_drift(claims_before, claims_after),
         *freshness_issues(claims_before, current_meta_epoch, current_patch),
