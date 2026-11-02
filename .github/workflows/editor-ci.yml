@@ -105,8 +105,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node --test evals/tests/evals.test.js
-      - run: node --test evals/tests/pairs.test.js
+      - run: node --test evals/tests/*.test.js
       - run: node evals/pairs.js validate
       - run: npx promptfoo validate -c evals/promptfooconfig.yaml
       - run: npx promptfoo validate -c evals/promptfooconfig.pipeline.yaml

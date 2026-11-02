@@ -54,10 +54,17 @@ def _codex_events(raw):
     return events
 
 
-def _config_warning(item):
+def _config_warning(item, *, before_turn=False):
     message = item.get("message", "")
-    return (item.get("type") == "error" and isinstance(message, str)
-            and message.startswith("Codex is ignoring ")
+    if item.get("type") != "error" or not isinstance(message, str):
+        return False
+    if before_turn and re.fullmatch(
+        r"Ignoring malformed agent role definition: agent role file [^\r\n]+ "
+        r"may only contain ASCII letters, digits, spaces, hyphens, and underscores",
+        message,
+    ):
+        return True
+    return (message.startswith("Codex is ignoring ")
             and "unrecognized configuration settings" in message.splitlines()[0])
 
 
@@ -68,11 +75,14 @@ def _codex_capacity_failure(proc, last_message):
         events = _codex_events(proc.stdout)
         if not events or events[-1].get("type") != "turn.failed":
             return False
+        started = False
         for event in events:
             kind = event.get("type")
+            if kind == "turn.started":
+                started = True
             if kind in {"thread.started", "turn.started"}:
                 continue
-            if kind == "item.completed" and _config_warning(event.get("item", {})):
+            if kind == "item.completed" and _config_warning(event.get("item", {}), before_turn=not started):
                 continue
             if kind == "error" and event.get("message") == CODEX_CAPACITY:
                 continue
@@ -111,15 +121,19 @@ def parse_codex_stream(raw, last_reply):
     if not events or events[-1].get("type") != "turn.completed":
         raise ValueError("CLI response is incomplete or failed")
     replies = []
+    started = False
     for event in events[:-1]:
         kind = event.get("type")
+        if kind == "turn.started":
+            started = True
         if kind in {"thread.started", "turn.started"}:
             continue
         if kind not in {"item.started", "item.updated", "item.completed"}:
             raise ValueError("unexpected CLI stream event")
         item = event.get("item", {})
-        if kind == "item.completed" and _config_warning(item):
+        if kind == "item.completed" and _config_warning(item, before_turn=not started):
             continue
+        started = True
         if item.get("type") not in {"reasoning", "agent_message"}:
             raise ValueError("unexpected CLI tool or error in text-only transport")
         if kind == "item.completed" and item.get("type") == "agent_message":

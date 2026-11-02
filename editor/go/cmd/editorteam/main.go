@@ -43,10 +43,42 @@ func (noopCompleter) Complete(_ context.Context, msgs []llm.Message, _ int) (str
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	cfg, err := config.Load()
+	if len(os.Args) > 1 && os.Args[1] == "calibrate-critic" {
+		var pipe *pipeline.Service
+		if err == nil {
+			pipe, _ = configuredServices(cfg, log)
+		}
+		if runErr := calibrateCritic(context.Background(), os.Args[2:], pipe); runErr != nil {
+			log.Error("калибровка критика", "ошибка", runErr)
+			os.Exit(1)
+		}
+		return
+	}
 	if err != nil {
 		log.Error("настройки", "ошибка", err)
 		os.Exit(1)
 	}
+	_, server := configuredServices(cfg, log)
+	srv := &http.Server{Addr: cfg.Addr, Handler: server.Routes(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: cfg.RequestTimeout, WriteTimeout: cfg.RequestTimeout}
+	go func() {
+		log.Info("сервис запущен", "адрес", cfg.Addr, "провайдер", cfg.Provider, "модель", cfg.Model)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("сервер", "ошибка", err)
+			os.Exit(1)
+		}
+	}()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("остановка", "ошибка", err)
+	}
+	log.Info("остановлен")
+}
+
+func configuredServices(cfg *config.Config, log *slog.Logger) (*pipeline.Service, *api.Server) {
 	an := analyzer.New(cfg.AnalyzerURL, cfg.RequestTimeout)
 	var completer llm.Completer
 	switch cfg.Provider {
@@ -100,23 +132,7 @@ func main() {
 	pipe.SetPromptVariant(cfg.PromptVariant)
 	server := api.New(cfg, ed, an, log)
 	server.SetPipeline(pipe)
-	srv := &http.Server{Addr: cfg.Addr, Handler: server.Routes(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: cfg.RequestTimeout, WriteTimeout: cfg.RequestTimeout}
-	go func() {
-		log.Info("сервис запущен", "адрес", cfg.Addr, "провайдер", cfg.Provider, "модель", cfg.Model)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("сервер", "ошибка", err)
-			os.Exit(1)
-		}
-	}()
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-	<-stop
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Error("остановка", "ошибка", err)
-	}
-	log.Info("остановлен")
+	return pipe, server
 }
 
 func loadAllowlists(game string) []string {

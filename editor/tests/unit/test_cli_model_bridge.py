@@ -25,6 +25,35 @@ assert SPEC and SPEC.loader
 SPEC.loader.exec_module(bridge_module)
 
 
+def test_codex_ignored_role_warning_before_turn_keeps_complete_reply():
+    start = {"type": "turn.started"}
+    warning = {
+        "type": "item.completed",
+        "item": {
+            "type": "error",
+            "message": (
+                "Ignoring malformed agent role definition: agent role file 'example' "
+                "may only contain ASCII letters, digits, spaces, hyphens, and underscores"
+            ),
+        },
+    }
+    finish = [
+        {"type": "item.completed", "item": {"type": "agent_message", "text": "Ответ"}},
+        {"type": "turn.completed"},
+    ]
+
+    def parse(events):
+        return bridge_module.parse_codex_stream("\n".join(map(json.dumps, events)), "Ответ")
+
+    assert parse([warning, start, *finish]) == "Ответ"
+    with pytest.raises(ValueError):
+        parse([start, warning, *finish])
+    with pytest.raises(ValueError):
+        parse([finish[0], warning, finish[1]])
+    with pytest.raises(ValueError):
+        parse([warning, start, {"type": "turn.failed"}])
+
+
 def claude_stream(texts, *, stop="end_turn", error=False):
     events = []
     for i, text in enumerate(texts):

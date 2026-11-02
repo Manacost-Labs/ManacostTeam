@@ -83,6 +83,7 @@ func RequestIDFrom(ctx context.Context) string {
 type Request struct {
 	// Internal fallback: exact previous draft, review only, no new repair budget.
 	reviewOnly       bool
+	reviewBase       string
 	reviewStrengths  []StrongSpan
 	TaskContext      json.RawMessage                  `json:"task_context,omitempty"`
 	Text             string                           `json:"text"`
@@ -449,8 +450,8 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		}
 	}
 	result.Attempts = 1
-	revisionBase := ""
-	if req.ReviseCandidate || req.reviewOnly {
+	revisionBase := req.reviewBase
+	if req.ReviseCandidate {
 		revisionBase = req.CandidateText
 	}
 
@@ -703,6 +704,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		// original supplied draft gets one full independent review, no mutations.
 		previousReq := req
 		previousReq.ReviseCandidate, previousReq.reviewOnly = false, true
+		previousReq.reviewBase = req.CandidateText
 		previousReq.reviewStrengths = append([]StrongSpan(nil), analysis.Strengths...)
 		report := &RevisionFallback{CandidateSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte(req.CandidateText))), AttemptReasons: append([]string(nil), result.RejectionReasons...)}
 		previous, err := s.Run(ctx, previousReq)
