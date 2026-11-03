@@ -24,6 +24,7 @@ func TestIntroducedEchoEvidence(t *testing.T) {
 		{"fifth_word", "В матчах участвуют все команды и приглашённые игроки.", "В матчах играют все команды и приглашённые игроки.", 1},
 		{"too_far", "В матчах участвуют все команды и несколько особо приглашённых игроков.", "В матчах играют все команды и несколько особо приглашённых игроков.", 0},
 		{"advisory_not_linguistic_proof", "На берегу стоит дерево.", "На берегу стоит береза.", 1},
+		{"hyphenated_compound", "Растут деревья.", "Берёза-то растёт на берегу.", 0},
 		{"unicode_case_yo", "Дерево зеленое.", "Ёлочка елочная", 1},
 		{"identical_word", "Слова рядом.", "Игроки игроки", 0},
 		{"source_reversed_pair", "Игроки играют.", "Играют игроки.", 0},
@@ -72,5 +73,71 @@ func TestEchoAssessmentCannotSilentlyIgnorePair(t *testing.T) {
 	out.EditAssessments = []EditAssessment{a}
 	if err := validateEditAssessments(in, out); err != nil {
 		t.Fatal("diagnostic became blanket lexical ban", err)
+	}
+}
+
+func TestIncidentalEchoRequiresAnchoredPairAndStillChecksScope(t *testing.T) {
+	source := "Берёза, которую весной посадили ребята из нашего кружка, растёт на берегу."
+	candidate := "На берегу растёт берёза, которую весной посадили ребята из нашего кружка."
+	in := criticInput{Mode: "edit", Source: source, Candidate: candidate}
+	in.LocalEdits = localEdits(source, candidate)
+	a := make([]EditAssessment, len(in.LocalEdits))
+	var found int
+	for i, e := range in.LocalEdits {
+		a[i] = EditAssessment{EditID: e.ID, ReadingQuote: candidate, Reading: "natural", ScopeQuote: candidate, Scope: "preserved", Decision: "keep", Reason: "Указаны то же место и дерево."}
+		for _, pair := range e.Echoes {
+			if pair.First != "берегу" || pair.Second != "береза" {
+				t.Fatalf("unexpected fixture pair: %+v", pair)
+			}
+			a[i].EchoDecisions = append(a[i].EchoDecisions, EchoDecision{Quote: pair.Quote, Verdict: "incidental", Reason: "«Берегу» указывает место, «берёза» называет дерево. Связь со сказуемым ясна."})
+			found++
+		}
+	}
+	if found != 1 {
+		t.Fatalf("expected one observed pair, got %d", found)
+	}
+	out := criticResult{Verdict: "accept", EditAssessments: a}
+	if err := validateEditAssessments(in, out); err != nil {
+		t.Fatal(err)
+	}
+	for i := range a {
+		if len(a[i].EchoDecisions) == 0 {
+			continue
+		}
+		d := &a[i].EchoDecisions[0]
+		d.Verdict = "accidental"
+		if err := validateEditAssessments(in, out); err == nil {
+			t.Fatal("accepted an awkward echo")
+		}
+		d.Verdict = "incidental"
+		a[i].Scope, a[i].ScopeQuote = "lost", source
+		if err := validateEditAssessments(in, out); err == nil {
+			t.Fatal("sound verdict excused loss of scope")
+		}
+		a[i].Scope, a[i].ScopeQuote = "preserved", candidate
+		originalReason := d.Reason
+		d.Reason = "Хорошее предложение."
+		if err := validateEditAssessments(in, out); err == nil {
+			t.Fatal("ungrounded reason excused echo")
+		}
+		d.Reason = "Слова «берегу-берёза» не равны точным формам пары."
+		if err := validateEditAssessments(in, out); err == nil {
+			t.Fatal("word fragments inside a compound counted as evidence")
+		}
+		d.Reason, d.Quote = originalReason, "пары в тексте нет"
+		if err := validateEditAssessments(in, out); err == nil {
+			t.Fatal("accepted a fabricated pair")
+		}
+	}
+}
+func TestEchoRubricChangesOnlyForObservedPairs(t *testing.T) {
+	base := localReviewInstruction("edit", nil)
+	ordinary := localReviewInstruction("edit", []LocalEdit{{ID: 1}})
+	if base != ordinary || !strings.HasSuffix(base, soundEchoInstruction) || strings.Contains(base, "incidental") {
+		t.Fatal("changed echo-free request")
+	}
+	observed := localReviewInstruction("edit", []LocalEdit{{ID: 1}, {ID: 2, Echoes: []SoundEcho{{Quote: "цитата пары"}}}})
+	if !strings.Contains(observed, "incidental") || strings.Contains(observed, "если сокращение породило однокоренное эхо") {
+		t.Fatal("conflicting rubric on observed pair")
 	}
 }

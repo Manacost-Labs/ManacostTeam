@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -53,14 +54,7 @@ func walkNearbyEchoes(text string, visit func(SoundEcho)) {
 			return
 		}
 		raw := text[start:end]
-		normalized := strings.TrimFunc(raw, func(r rune) bool { return !unicode.IsLetter(r) })
-		for _, r := range normalized {
-			if !unicode.In(r, unicode.Cyrillic) {
-				normalized = ""
-				break
-			}
-		}
-		words = append(words, word{raw, strings.ReplaceAll(strings.ToLower(normalized), "ё", "е"), start, end})
+		words = append(words, word{raw, normalizeEchoWord(raw), start, end})
 		start = -1
 	}
 	for i, r := range text {
@@ -107,6 +101,16 @@ func walkNearbyEchoes(text string, visit func(SoundEcho)) {
 	}
 }
 
+func normalizeEchoWord(raw string) string {
+	word := strings.TrimFunc(raw, func(r rune) bool { return !unicode.IsLetter(r) })
+	for _, r := range word {
+		if !unicode.In(r, unicode.Cyrillic) {
+			return ""
+		}
+	}
+	return strings.ReplaceAll(strings.ToLower(word), "ё", "е")
+}
+
 func sharedInnerConsonant(a, b []rune) bool {
 	for _, r := range a[:min(4, len(a))] {
 		if strings.ContainsRune("аеёиоуыэюяьъ", r) {
@@ -127,24 +131,33 @@ func validateEchoDecisions(e LocalEdit, a EditAssessment) error {
 	}
 	seen := map[string]bool{}
 	for _, d := range a.EchoDecisions {
-		found := false
+		var matched SoundEcho
 		for _, echo := range e.Echoes {
 			if normalizeSpace(d.Quote) == echo.Quote {
-				found = true
+				matched = echo
+				break
 			}
 		}
-		if !found || seen[normalizeSpace(d.Quote)] || strings.TrimSpace(d.Reason) == "" {
+		if matched.Quote == "" || seen[normalizeSpace(d.Quote)] || strings.TrimSpace(d.Reason) == "" {
 			return fmt.Errorf("edit_assessments[%d]: invalid echo quote or missing contextual reason", e.ID)
 		}
 		seen[normalizeSpace(d.Quote)] = true
 		switch d.Verdict {
 		case "functional", "unrelated":
+		case "incidental":
+			words := strings.Fields(d.Reason)
+			for i, word := range words {
+				words[i] = normalizeEchoWord(word)
+			}
+			if !slices.Contains(words, matched.First) || !slices.Contains(words, matched.Second) {
+				return fmt.Errorf("edit_assessments[%d]: incidental reason must name both observed words and explain their roles", e.ID)
+			}
 		case "accidental":
 			if a.Decision != "repair" || a.Reading != "awkward" || !strings.Contains(normalizeSpace(a.ReadingQuote), normalizeSpace(d.Quote)) {
 				return fmt.Errorf("edit_assessments[%d]: accidental echo requires awkward + repair and reading_quote containing the pair", e.ID)
 			}
 		default:
-			return fmt.Errorf("edit_assessments[%d]: echo verdict must be functional, unrelated or accidental", e.ID)
+			return fmt.Errorf("edit_assessments[%d]: echo verdict must be functional, unrelated, incidental or accidental", e.ID)
 		}
 	}
 	return nil
@@ -155,3 +168,10 @@ sound_echoes — новые близкие слова с общим начало
 Рассмотри оба слова пары вместе, а не только сочетаемость нового глагола с дополнением. functional — повтор помогает различить понятия, сохраняет точный термин или условие; назови его конкретную задачу. unrelated — одинаковые буквы не создают заметного повтора по звучанию и смыслу; объясни различие. accidental — новая замена без необходимости повторяет корень соседнего слова. Простота или краткость нового глагола сама по себе не оправдывает такого эха. Если для второго слова важен точный термин, сохрани его и исправь только необязательную замену рядом. Не заменяй все повторяющиеся слова синонимами.
 Наличие похожей пары в source, исправленное согласование или точность одного слова не доказывают функциональность пары целиком. Проверь, нужен ли именно этот корень в обоих словах: фиксированный термин или временную опору сохраняй, а необязательный глагол можно изменить локально без изменения события. Наследованное эхо не называй новой регрессией; если оно мешает чтению и устранимо без потери смысла, оно тоже требует адресного repair. accidental включает такое оставшееся созвучие, а не только новое. При полезном повторе назови, что потеряется при его устранении; не обосновывай functional одной верностью source.
 При accidental нужны reading=awkward, decision=repair и адресный finding; reading_quote и сообщение finding должны включать цитату пары. Остальные полезные правки, абзацы и условия сохраняются. При functional/unrelated отдельный repair из-за созвучия не нужен.`
+
+// Use the revised rubric only when a pair was supplied. Without observations
+// the critic receives the unchanged previous prompt.
+const observedEchoInstruction = `
+sound_echoes — диагностические пары слов, не доказательство общего корня или дефекта. Для каждой переданной пары в соответствующем edit_assessment укажи echo_decisions:[{quote,verdict,reason}]. quote точно совпадает с цитатой пары. При echoes_truncated проверь также остальной фрагмент.
+functional — повтор выполняет задачу: назови, что потеряется при замене. unrelated — сходное написание не даёт заметного созвучия. incidental — созвучие слышно, но слова выполняют разные задачи и фраза читается естественно. В reason приведи оба слова в переданных формах, поясни роль каждого и почему читателю легко понять их связь. Не выдавай созвучие за похвалу фразе или за автоматически полезный повтор. accidental — повтор мешает чтению: укажи, где спотыкается фраза или затрудняется понимание. В таком случае обязательны reading=awkward, decision=repair и связанное finding; reading_quote и сообщение finding включают цитату пары. Сохрани точный термин и измени локально ненужный повтор. Наследованный дефект не объявляй новой регрессией.
+Оценка звучания касается только этой пары. Независимо проверь смысл, условия, управление и всю фразу: incidental не оправдывает scope=lost, reading=awkward или другое нерешённое замечание.`

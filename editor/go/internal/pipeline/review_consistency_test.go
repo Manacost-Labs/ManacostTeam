@@ -27,6 +27,22 @@ func TestAcceptCannotContradictAnyQualitativeAssessment(t *testing.T) {
 	}
 }
 
+func TestOrdinaryCriticDistinguishesEquivalentEditsAndMandatoryRules(t *testing.T) {
+	model := &fakeLLM{replies: []string{criticJSONNoImprovement()}}
+	service := New(model, nil, "fixture")
+	input := criticInput{Mode: "edit", Source: "Доступ закрыт до понедельника.", Candidate: "До понедельника доступ закрыт."}
+	out, err := service.critic(context.Background(), rules.RuleBundle{}, input, 1)
+	if err != nil || out.Verdict != "accept" || len(out.Improvements) != 0 {
+		t.Fatalf("independent verdict on equivalent edit: %+v, %v", out, err)
+	}
+	system := model.messages[0][0].Content
+	for _, instruction := range []string{"Какой случай допускает source и исключает candidate?", "Какой допускает candidate и исключает source?", "reason применимой строки scope_and_conditions", "Обязательную норму бери из применимых правил издания или явного задания", "Если новое утверждение не подтверждено", "не снижай оценку лишь из-за отсутствия улучшения"} {
+		if !strings.Contains(system, instruction) {
+			t.Errorf("missing production instruction %q", instruction)
+		}
+	}
+}
+
 func TestCorrectionsCannotOverlapOrCascade(t *testing.T) {
 	in := criticInput{Source: "A B. C D.", Candidate: "C X. E D.", SourceSnapshots: []editorialreview.SourceSnapshot{{SourceID: "s", Text: "Evidence."}}}
 	review := &OriginalFactualChecks{WholeTextChecked: true, InternalConsistency: "clear", SourceAgreement: "issue", Issues: []OriginalIssue{

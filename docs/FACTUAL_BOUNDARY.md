@@ -58,7 +58,7 @@ compiler не доказывает истинность самого источ�
 Если исходник сомнителен, отметьте вопрос для проверки, а не «исправляйте» факт
 молчаливой догадкой. Не усиливайте вероятностный вывод до гарантии.
 
-В Go `/v2/edit` (`prompt_version: editorteam-go-v62`) critic обязан вернуть
+В Go `/v2/edit` (`prompt_version: editorteam-go-v65`) critic обязан вернуть
 `no_new_facts` (boolean) и `unsupported_additions` (array). Отсутствие или null
 не считается успешной проверкой. При false либо непустом списке правка
 отклоняется с `unsupported_factual_addition`, клиент получает исходный текст.

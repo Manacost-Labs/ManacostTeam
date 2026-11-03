@@ -92,11 +92,16 @@ func CalibrateCritic(ctx context.Context, s *Service, packet CalibrationPacket) 
 		default:
 			// The ordinary revision_brief field carries the editorial task as data;
 			// reference describes original intent, not a verified factual source.
+			criterion := "Проверь сохранение смысла: сопоставь допустимые ситуации в обоих направлениях, включая ход событий и дополнительные свойства. Если формулировки расходятся хотя бы в одном направлении, укажи эту разницу, даже когда их обычный результат совпадает. Стилистическая доводка и типографика сами по себе не меняют смысл. Это проверка пары, не допуск к публикации."
+			if item.Task == "compound" {
+				criterion = "Проверь вместе грамматику, синтаксис и сохранение замысла. Reference поясняет роль участников и связи в испорченном исходнике, но не задаёт обязательную формулировку и не разрешает добавлять новые сведения. Требуй исправить реальный оставшийся дефект, даже если остальные исправлены."
+			}
 			brief, _ := json.Marshal(struct {
+				Criterion string `json:"criterion"`
 				Task      string `json:"task"`
 				Brief     string `json:"brief,omitempty"`
 				Reference string `json:"reference,omitempty"`
-			}{item.Task, item.Brief, item.Reference})
+			}{criterion, item.Task, item.Brief, item.Reference})
 			result, err := s.Run(ctx, Request{Text: item.Source, CandidateText: item.Candidate, Mode: "edit", RevisionBrief: string(brief), reviewOnly: true})
 			switch {
 			case err != nil:

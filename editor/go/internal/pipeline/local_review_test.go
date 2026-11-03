@@ -54,7 +54,7 @@ func TestCriticRetryReportsBothStrengthAndLocalEvidenceErrors(t *testing.T) {
 
 func TestLocalReviewDoesNotExpandOtherModes(t *testing.T) {
 	for _, mode := range []string{"proofread", "facts_only", "reconstruct"} {
-		if localReviewInstruction(mode) != "" {
+		if localReviewInstruction(mode, nil) != "" {
 			t.Fatal(mode)
 		}
 		if err := validateEditAssessments(criticInput{Mode: mode, LocalEdits: localEdits("старое", "новое")}, criticResult{}); err != nil {

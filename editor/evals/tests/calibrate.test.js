@@ -270,6 +270,23 @@ test('shipped controls retain traceable archive excerpts and a topic-controlled 
   assert.ok(crossed, 'voice controls must distinguish the models of writing on the same task');
 });
 
+test('archive holdout pairs use new articles and have an unambiguous full-article replacement', () => {
+  const root = path.resolve(__dirname, '../../..');
+  const dir = path.join(root, 'editor/evals/cases');
+  const used = new Set(read(path.join(dir, 'source-mechanisms.json')).map(item => item.provenance));
+  const holdout = read(path.join(dir, 'critic-archive-holdout.json'));
+  const articles = new Set();
+  for (const item of holdout) {
+    assert.ok(!used.has(item.provenance), 'article already in initial benchmark: ' + item.id);
+    assert.match(item.provenance, /^editor\/corpus-archive\/guides\/[\w-]+\.md$/);
+    const original = fs.readFileSync(path.join(root, item.provenance), 'utf8');
+    assert.equal(original.split(item.source).length, 2, 'missing or ambiguous passage: ' + item.id);
+    assert.deepEqual(item.variants.map(v => v.expected).sort(), ['accept', 'repair']);
+    articles.add(item.provenance);
+  }
+  assert.equal(articles.size, 3);
+});
+
 test('HTTP judge can send its payload only to loopback and refuses endpoint credentials', async t => {
   const r = run(), seen = [];
   t.mock.method(globalThis, 'fetch', async (url, req) => {

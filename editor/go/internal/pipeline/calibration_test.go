@@ -50,6 +50,34 @@ func TestCalibrationUsesOnlyProductionCriticOnExactSuppliedPair(t *testing.T) {
 		})
 	}
 }
+
+// The scope travels through the same review brief a normal client can supply.
+// It never changes the evidence scope or the production critic response contract.
+func TestCalibrationScopesMeaningAndCompoundBeforeTheVerdict(t *testing.T) {
+	for _, tc := range []struct{ task, criterion string }{
+		{"meaning", "сопоставь допустимые ситуации в обоих направлениях"},
+		{"compound", "Проверь вместе грамматику, синтаксис и сохранение замысла"},
+	} {
+		t.Run(tc.task, func(t *testing.T) {
+			item := calibrationItem(tc.task)
+			item.Source = "Перед началом раунда каждый участник проверяет свой конверт."
+			item.Candidate = "Каждый участник проверяет свой конверт до начала раунда."
+			model := &fakeLLM{replies: []string{criticJSONNoImprovement()}}
+			report, err := CalibrateCritic(context.Background(), New(model, nil, "fixture"), CalibrationPacket{Items: []CalibrationItem{item}})
+			if err != nil || len(model.messages) != 1 || report.Rows[0].Decision != "accept" {
+				t.Fatalf("raw verdict without improvement evidence: %+v, %v", report, err)
+			}
+			args := lastUserJSON(t, model.messages[0])
+			var brief map[string]string
+			if err := json.Unmarshal([]byte(args["revision_brief"].(string)), &brief); err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(brief["criterion"], tc.criterion) || args["review_scope"] != "source_and_candidate" || args["mode"] != "edit" {
+				t.Fatalf("wrong task or evidence scope: %v, %v", brief, args["review_scope"])
+			}
+		})
+	}
+}
 func TestCalibrationCountsOnlyValidatedVerdicts(t *testing.T) {
 	item := calibrationItem("meaning")
 	cases := []struct {
