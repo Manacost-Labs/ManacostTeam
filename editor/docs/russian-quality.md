@@ -13,8 +13,66 @@
 - Candidate-промпт рассматривает вводные и канцелярские обороты по контексту;
   сохраняет точные цитаты и удачные фрагменты.
 
-Это техническая подготовка. Прирост качества статей пока не измерен.
-WP/Go runtime, модель и опубликованные навыки не переключались.
+Прирост качества статей пока не измерен. WP/Go runtime и модель не переключались.
+Агентный авторский путь поддерживает opt-in банк; helper включён в подготовленные
+EditorTeam 1.15.3 / Manacost Publish 1.12.2 (общий выпуск 1.20.3).
+
+## Сквозной рабочий путь
+
+На стадии `draft` агентной публикации можно получить задание с примерами:
+
+```sh
+# Из editor; профиль примеров должен совпадать с profile текущего run.
+.venv/bin/python -m editorteam.publication_run next ../build/my-publication \
+  --example-bank ../build/language-bank/approved.json \
+  --game hearthstone --editorial-mode GUIDE
+```
+
+Этот необязательный режим требует Node.js; без флага путь остаётся прежним.
+Canonical Node-selector общий для eval-provider и native task: проверки
+approval/split/контекста не расходятся. В задании фиксируются ID и SHA256 банка.
+Для подбора используется текущий draft либо brief с принятым chapter_brief;
+источники handoff исключаются. Примеры передаются только автору; на стадиях
+источников и независимых reviews этот флаг отклоняется. Состояние run не меняется.
+
+После появления реальной редакторской правки сохраните три версии:
+
+```sh
+node evals/example_bank.js capture --draft ../build/draft.md \
+  --ai ../build/ai.md --final ../build/final.md \
+  --source 'путь или URL статьи' --reason 'какую проблему устранил редактор' \
+  --game hearthstone --profile guide --mode GUIDE --real-source \
+  --out ../build/language-bank/article-001
+node evals/example_bank.js verify-capture --input ../build/language-bank/article-001
+```
+
+Команда пишет в новый приватный каталог draft.md, ai.md, final.md,
+manifest.json с хешами и review.json. Исходные байты, включая CRLF, сохраняются.
+Пример учится на AI → final, а черновик остаётся для будущего сравнения.
+Это запись кандидата: `approval=null`, human_approved=false. Её наличие
+не доказывает, что финальную версию написал или проверил человек. Подтверждение
+по-прежнему выполняется отдельно. Подмену snapshot выявляет verify-capture.
+Для настоящей оценочной пары используйте сохранённые draft/final и существующий
+`pairs.js case` после человеческой проверки. Синтетические capture помечайте
+явным `--synthetic`; они не становятся рабочими примерами. Capture требует
+ровно один флаг: --real-source или --synthetic. Объявление реального источника
+не является подтверждением редакторской проверки. Первоначальный review.json
+заморожен целиком, включая причину и контекст; для исправлений и одобрения
+используйте новый файл вне capture-каталога. Хеши выявляют частичные изменения,
+но не аутентифицируют происхождение: согласованная замена всех файлов и
+манифеста требует отдельного защищённого журнала, как в плане production.
+
+Итоговый технический gate, без модельных API-вызовов:
+
+```sh
+node evals/russian_stage.js --out ../build/language-stage/status.json --technical-only
+```
+
+Он запускает Node-регрессии и тесты native publication, сохраняет результаты
+и отдельные статусы банка, модели и human acceptance. Флаг --technical-only
+разрешает exit 0 только для технической части. Без него отсутствие human
+acceptance даёт exit 2; техническая ошибка — exit 1. Реальный модельный и
+человеческий замеры не выводятся из успешных тестов.
 
 ## Подтверждение примеров
 
@@ -127,7 +185,7 @@ node evals/cases/russian.js --check
 Контракты узкие, лексические, с заданными альтернативами; они не заменяют
 смысловую и литературную проверку и не доказывают улучшение модели.
 
-Проверено 5 ноября 2026: 52 Node-теста; полный Python gate — 998 passed,
+Первый срез 5 ноября 2026: 52 Node-теста; Python gate — 998 passed,
 38 skipped, 5 subtests passed (37 пропусков требуют Vale, один — optional
 Potato в основном Python-окружении). Ruff, `promptfoo validate`, actionlint,
 формат существующих пар и воспроизводимость skill-архивов прошли.
@@ -137,3 +195,11 @@ Potato в основном Python-окружении). Ruff, `promptfoo validate
 не настроены; использованы локальный профиль, поиск по исходникам и read-only
 GPT-6 Luna Scout/review. Реальных пар у владельца пока нет; собирать их нужно
 из будущих редакторских правок, сохраняя черновик и финальную версию.
+
+Сквозной срез: 57 Node-тестов, 1000 Python passed / 38 skipped / 5 subtests,
+250 корневых тестов; wheel и оба skill-пакета содержат canonical helper,
+14 прежних архивов byte-identical. Native selector проверен в распакованных
+EditorTeam/Publish, включая отклонение pending-банка; capture/verify проверены
+на явно синтетическом материале. Итоговый локальный отчёт:
+`build/language-stage/status-final.json` — technical PASSED,
+human/model NOT_RUN, реальных пар 0/20. Данные отчёта не заменяют приёмку.

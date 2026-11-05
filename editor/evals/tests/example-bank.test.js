@@ -125,6 +125,50 @@ test('the committed seed has recorded provenance and no inferred approvals', () 
   assert.throws(() => bank.exportApproved(seed), /approved/);
 });
 
+test('capture freezes draft/AI/final bytes and prepares only pending learning data', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'language-capture-'));
+  try {
+    const files = { draft: 'Исходный черновик.\r\n', ai: 'Вариант модели.\n', final: 'Финальная правка.\n' };
+    for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(directory, `${name}.md`), text);
+    const output = path.join(directory, 'captured');
+    bank.capture({ draft: path.join(directory, 'draft.md'), ai: path.join(directory, 'ai.md'), final: path.join(directory, 'final.md'), out: output,
+      source: 'synthetic-fixture', game: 'hearthstone', profile: 'guide', editorial_mode: 'GUIDE', reason: 'Тест протокола', synthetic: true });
+    for (const [name, text] of Object.entries(files)) assert.equal(fs.readFileSync(path.join(output, `${name}.md`), 'utf8'), text);
+    const pending = JSON.parse(fs.readFileSync(path.join(output, 'review.json'), 'utf8'));
+    assert.equal(pending.examples[0].before, files.ai);
+    assert.equal(pending.examples[0].after, files.final);
+    assert.equal(pending.examples[0].status, 'pending');
+    assert.equal(pending.examples[0].approval, null);
+    assert.equal(pending.examples[0].synthetic, true);
+    assert.throws(() => bank.capture({ out: output }), /exist/);
+    const manifest = JSON.parse(fs.readFileSync(path.join(output, 'manifest.json'), 'utf8'));
+    assert.equal(manifest.human_approved, false);
+    assert.equal(manifest.artifacts.draft.sha256, require('node:crypto').createHash('sha256').update(files.draft).digest('hex'));
+    assert.equal(bank.verifyCapture(output).valid, true);
+    const frozenReview = fs.readFileSync(path.join(output, 'review.json'));
+    const modified = JSON.parse(frozenReview);
+    modified.examples[0].context = 'Подмена контекста.';
+    fs.writeFileSync(path.join(output, 'review.json'), JSON.stringify(modified));
+    assert.throws(() => bank.verifyCapture(output), /hash/);
+    fs.writeFileSync(path.join(output, 'review.json'), frozenReview);
+    fs.appendFileSync(path.join(output, 'draft.md'), 'Подмена.');
+    assert.throws(() => bank.verifyCapture(output), /hash/);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('capture requires an explicit real or synthetic source declaration', () => {
+  assert.throws(() => bank.capture({ out: 'not-written' }), /real-source|synthetic/);
+  assert.throws(() => bank.capture({ out: 'not-written', realSource: true, synthetic: true }), /real-source|synthetic/);
+});
+
+test('canonical selection CLI uses stdin and is ready for native publication tasks', () => {
+  const { execFileSync } = require('node:child_process');
+  const result = JSON.parse(execFileSync(process.execPath, [path.join(__dirname, '../example_bank.js'), 'select'], {
+    input: JSON.stringify({ bank: bank.exportApproved(approved()), vars: { game: 'hearthstone', profile: 'constructed-guide', editorial_mode: 'GUIDE', text: 'Как объяснить добор карт игроку?' } }), encoding: 'utf8',
+  }));
+  assert.equal(result.length, 1);
+});
+
 test('prompt provider sends approved examples only when enabled and records the exact examples', async () => {
   const Provider = require('../providers/prompt-direct.js');
   const prompt = fs.readFileSync(path.join(__dirname, '../prompts/candidate.txt'), 'utf8').trim();

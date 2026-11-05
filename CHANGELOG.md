@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- `editor`: сквозной native author task с opt-in языковыми примерами; canonical Node-helper поставляется и в Python wheel, и в skill-пакетах. Приватный capture draft/AI/final с явным типом источника и проверкой хешей; readiness-gate отдельно отмечает технические проверки и отсутствующий human замер.
 - `editor`: банк языковых правок (10 записанных кандидатов без выдуманного human approval), подбор подтверждённых примеров в eval-provider, защита holdout и hash одобрения. 14 синтетических регрессий русского языка, контекстная редактура candidate-промпта и A/B-конфигурация для существующего blind review/Potato. Качество реальных статей пока не измерено.
 - `research`: opt-in BGE reranker для сохранённого JSON Scrape.do, отдельное ML-окружение, закреплённые веса, сохранение исходных позиций/URL и discovery-only; реальный offline smoke и контрактные тесты. Production-поиск и skill-пакеты не переключались.
 - `repo`: PNG-логотип ManacostTeam, созданный встроенным imagegen; добавлен в README и назначен иконкой проекта в T3.

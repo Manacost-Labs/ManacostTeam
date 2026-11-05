@@ -34,7 +34,7 @@ editor-team = "editorteam.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-editorteam = ["editorial_practices.json", "card_texts_ru.json"]
+editorteam = ["editorial_practices.json", "card_texts_ru.json", "example_bank.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

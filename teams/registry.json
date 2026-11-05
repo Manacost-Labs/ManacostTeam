@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.15.2",
+      "version": "1.15.3",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -333,7 +333,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.12.1",
+      "version": "1.12.2",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -419,9 +419,13 @@
         {
           "source": "editor/src/editorteam/integrity.py",
           "destination": "python/editorteam/integrity.py"
+        },
+        {
+          "source": "editor/src/editorteam/example_bank.js",
+          "destination": "python/editorteam/example_bank.js"
         }
       ]
     }
   ],
-  "release_version": "1.20.2"
+  "release_version": "1.20.3"
 }

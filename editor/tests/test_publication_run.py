@@ -1,5 +1,6 @@
 import hashlib
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,109 @@ def test_explicit_preferences_and_initial_task(tmp_path):
         init_run(run, brief="Other", patch="test", profile="guide", shortcodes="off")
     with pytest.raises(ValueError):
         init_run(tmp_path / "bad", brief="Guide", patch="test", profile="guide", shortcodes="")
+
+
+def test_opt_in_language_examples_reach_only_author_task(tmp_path):
+    from unittest.mock import patch
+
+    run = prepared(tmp_path)
+    state_path = run / "state.json"
+    original_state = state_path.read_text()
+    state = json.loads(state_path.read_text())
+    state["stage"] = "draft"
+    state["artifacts"].pop("draft")
+    state["history"] = [receipt for receipt in state["history"] if receipt["stage"] != "draft"]
+    state_path.write_text(json.dumps(state))
+    old_state = state_path.read_bytes()
+    baseline = next_task(run)
+    assert "language_examples" not in baseline
+    with patch(
+        "editorteam.publication_run._language_examples",
+        return_value={
+            "bank_sha256": "test",
+            "example_ids": ["fixture"],
+            "examples": [{"before": "A", "after": "B"}],
+        },
+    ) as selected:
+        task = next_task(
+            run, example_bank=tmp_path / "bank.json", game="hearthstone", editorial_mode="GUIDE"
+        )
+        assert task["language_examples"]["example_ids"] == ["fixture"]
+        assert "только для формы" in task["instructions"]
+        assert selected.call_args.args[1]["profile"] == "guide"
+    assert state_path.read_bytes() == old_state
+    state_path.write_text(original_state)
+    with pytest.raises(ValueError, match="draft"):
+        next_task(
+            run, example_bank=tmp_path / "bank.json", game="hearthstone", editorial_mode="GUIDE"
+        )
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="optional Node language bank helper")
+def test_language_bank_uses_canonical_selector_in_packaged_layout(tmp_path, monkeypatch):
+    from editorteam import publication_run
+
+    # Test-only human-shaped data, not a real editor approval.
+    row = dict(
+        id="fixture",
+        before="осуществлять добор",
+        after="добирать карты",
+        reason="Прямой глагол",
+        context="Действие игрока",
+        game="hearthstone",
+        profile="guide",
+        editorial_mode="GUIDE",
+        scope="local",
+        split="train",
+        synthetic=False,
+        source="synthetic-test-fixture",
+        source_sha256="a" * 64,
+        status="approved",
+    )
+    fields = [
+        "id",
+        "before",
+        "after",
+        "reason",
+        "context",
+        "game",
+        "profile",
+        "editorial_mode",
+        "scope",
+        "split",
+        "synthetic",
+        "source",
+        "source_sha256",
+    ]
+    digest = hashlib.sha256(
+        json.dumps([row[key] for key in fields], ensure_ascii=False, separators=(",", ":")).encode()
+    ).hexdigest()
+    row["approval"] = dict(
+        human_confirmed=True,
+        reviewer="synthetic-test-reviewer",
+        reviewed_at="2026-11-05T12:00:00Z",
+        reviewed_sha256=digest,
+    )
+    bank = write(tmp_path, "bank.json", {"schema_version": 1, "examples": [row]})
+    helper = Path(publication_run.__file__).with_name("example_bank.js")
+    shutil.copyfile(helper, tmp_path / "example_bank.js")
+    monkeypatch.setattr(publication_run, "__file__", str(tmp_path / "publication_run.py"))
+    query = dict(
+        text="Как объяснить добор карт игроку?",
+        game="hearthstone",
+        profile="guide",
+        editorial_mode="GUIDE",
+    )
+    result = publication_run._language_examples(bank, query)
+    assert result["example_ids"] == ["fixture"]
+    assert result["bank_sha256"] == hashlib.sha256(bank.read_bytes()).hexdigest()
+    assert result["examples"][0]["after"] == row["after"]
+    with pytest.raises(ValueError, match="eligible"):
+        publication_run._language_examples(bank, {**query, "exclude_sources": [row["source"]]})
+    row["after"] = "Подмена."
+    write(tmp_path, "bank.json", {"schema_version": 1, "examples": [row]})
+    with pytest.raises(ValueError, match="rejected"):
+        publication_run._language_examples(bank, query)
 
 
 TEXT = "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. https://example.org/guide"
