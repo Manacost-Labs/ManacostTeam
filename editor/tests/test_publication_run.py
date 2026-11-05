@@ -870,11 +870,13 @@ def test_continuation_cannot_drop_sources_or_overwrite_parent(tmp_path):
 
 
 @pytest.mark.skipif(not shutil.which("node"), reason="optional Node language bank helper")
-def test_feedback_captures_real_bytes_as_pending_and_restarts_reviews(tmp_path):
+@pytest.mark.parametrize("newline", ["\n", "\r\n"], ids=["lf", "crlf"])
+def test_feedback_captures_real_bytes_as_pending_and_restarts_reviews(tmp_path, newline):
     from editorteam.publication_run import feedback
 
     run = prepared(tmp_path)
-    final = write(tmp_path, "editor-final.md", "# Совет\n\n" + TEXT)
+    final = tmp_path / "editor-final.md"
+    final.write_bytes((f"# Совет{newline}{newline}" + TEXT).encode("utf-8"))
     output = tmp_path / "capture"
     feedback(
         run,
@@ -885,8 +887,10 @@ def test_feedback_captures_real_bytes_as_pending_and_restarts_reviews(tmp_path):
         editorial_mode="GUIDE",
         synthetic=True,
     )
-    row = json.loads((output / "review.json").read_text())["examples"][0]
-    assert row["before"] == TEXT and row["after"] == final.read_text()
+    row = json.loads((output / "review.json").read_text(encoding="utf-8"))["examples"][0]
+    assert row["before"] == TEXT
+    assert row["after"].encode("utf-8") == final.read_bytes()
+    assert (output / "final.md").read_bytes() == final.read_bytes()
     assert row["status"] == "pending" and row["approval"] is None and row["synthetic"]
     assert (output / "draft.md").read_text() == TEXT
     assert status(run)["stage"] == "fact_review"
