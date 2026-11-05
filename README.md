@@ -10,15 +10,15 @@
 
 ## Состав
 
-Последний опубликованный GitHub release: [ManacostTeam 1.20.4](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.20.4).
+Последний опубликованный GitHub release: [ManacostTeam 1.20.5](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.20.5).
 [Аудит качества, изменения и проверки](docs/QUALITY_AUDIT.md).
 [Доступ к источникам: практики ParsesUnix и Koloda](docs/RESEARCH_SOURCE_COLLECTOR_2026_10_21.md).
 [Браузерные маршруты и проверка всех 39 источников](docs/BROWSER_SOURCE_AUDIT_2026_10_21.md).
 [Повторная проверка 23 утверждений и сравнение 12 текстов](docs/CORPUS_RECHECK_2026_10_15.md).
 
-Пакеты 1.20.4 опубликованы и проверены установкой из GitHub Release. Production-развёртывание проходит отдельную приёмку. [План production-подготовки](docs/PRODUCTION_READINESS.md).
+Пакеты 1.20.5 опубликованы и проверены установкой из GitHub Release. Production-развёртывание проходит отдельную приёмку. [План production-подготовки](docs/PRODUCTION_READINESS.md).
 
-Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). ZIP/.skill для ChatGPT и Claude собираются командой `python tools/build_team_skills.py`; контрольные суммы и индекс подготовленного выпуска — в [release/team-skills/1.20.4](release/team-skills/1.20.4/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
+Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). ZIP/.skill для ChatGPT и Claude собираются командой `python tools/build_team_skills.py`; контрольные суммы и индекс подготовленного выпуска — в [release/team-skills/1.20.5](release/team-skills/1.20.5/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
 
 [Улучшения EditorTeam и ResearchTeam в 1.1.0](docs/EDITOR_RESEARCH_QUALITY.md):
 защита смысла при редактуре, очередь поиска по пробелам и передача полезных
