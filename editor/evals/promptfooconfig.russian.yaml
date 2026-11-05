@@ -1,0 +1,38 @@
+# Synthetic language regressions, not a human quality benchmark.
+# Same candidate prompt/model: without vs with explicitly approved examples.
+description: "Russian prose: conditions, restraint, language and approved examples"
+prompts:
+  - id: file://prompts/candidate.txt
+    label: candidate
+providers:
+  - id: file://providers/prompt-direct.js
+    label: "candidate без примеров"
+    config:
+      examples: "off"
+  - id: file://providers/prompt-direct.js
+    label: "candidate с одобренными примерами"
+    config:
+      examples: "on"
+tests: file://cases/russian.js
+defaultTest:
+  options:
+    provider: "{{ env.EDITOR_EVAL_JUDGE_PROVIDER }}"
+  assert:
+    - type: javascript
+      value: file://assertions/deterministic.js
+      metric: preservation
+    - type: javascript
+      value: file://assertions/russian.js
+      metric: russian-regressions
+    - type: llm-rubric
+      value: file://assertions/judge/naturalness.txt
+      metric: judge-naturalness
+      weight: 0
+    - type: llm-rubric
+      value: file://assertions/judge/restraint.txt
+      metric: judge-restraint
+      weight: 0
+    - type: llm-rubric
+      value: file://assertions/judge/conditions.txt
+      metric: judge-conditions
+      weight: 0

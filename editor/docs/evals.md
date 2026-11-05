@@ -1,5 +1,7 @@
 # Evaluation через Promptfoo
 
+[Русская проза: банк подтверждённых примеров, 14 языковых регрессий и слепая оценка](russian-quality.md).
+
 Быстрый режим `prompt-direct` в `evals/promptfooconfig.yaml` сравнивает два полных
 системных prompt: `baseline` воспроизводит бережную редактуру до
 нового pipeline, `candidate` добавляет практическую пользу, защиту
