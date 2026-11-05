@@ -29,6 +29,17 @@ WordPress обрабатывает до 6000 Unicode-символов с общ�
   отдельный adapter к Anthropic Messages API; сервис обслуживает radar
   из `hs-data-api`. Он не считается WordPress-интеграцией без трассировки.
   Существующий radar-контур и его оплату не менять при подготовке staging.
+- На hs-manacost установлен отдельный MU-plugin `hs-editor-ai` 1.1.1:
+  `/var/www/koloda/data/www/hs-manacost.ru/wp-content/mu-plugins/hs-editor-ai.php`.
+  Его provider использует `claude-opus-5-5` через Anthropic Messages API.
+  На Koloda обнаружен regular plugin в
+  `/var/www/koloda/data/www/kolodahearthstone.ru/wp-content/plugins/hs-editor-ai`
+  и MU access adapter. Nginx `zz-kolodahearthstone.com.conf` подтверждает
+  этот document root для `kolodahearthstone.com`; оба provider-файла используют
+  Opus 5.5 через Anthropic Messages API.
+  Существующие WP-возможности, включая jobs, сохраняются: лимиты нового
+  короткого server-сценария не заменяют работающий плагин без миграции.
+  WordPress checkout обоих сайтов содержит чужие изменения и защищён от правок.
 - Диск VPS занят на 89%. Staging требует дискового бюджета; корпуса,
   расшифровки, backups и существующие worktree не очищаются.
 - Защищены незакоммиченные изменения в трёх
@@ -100,5 +111,16 @@ WP-права, nonce, экранирование и отсутствие сек�
 
 - Read-only baseline Mac/VPS и границы согласованы.
 - Исходный package failure воспроизведён; asset/version regression test добавлен.
-- Подготовка 1.20.2 начата. Публикация, полный inventory, staging, human review
-  и production deploy ещё не подтверждены.
+- Выпуск [1.20.2](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.20.2)
+  опубликован: 21 asset, проверка SHA256 издателем, 16 переиспользованных
+  skill-архивов сохранили прежние хеши. Код/манифест: `5d94ff8` в `origin/main`.
+- Прошли 250 root-тестов, packages gate, 12 release-contract тестов, actionlint
+  и Gitleaks staged diff. Два обязательных read-only gate выполнены на 5.6 Luna;
+  по последующему указанию владельца дальнейшие сабагенты используют GPT-6 Luna.
+- Установка editor-team/translate-team из GitHub Release проверена в новом
+  временном каталоге при отключённых локальных archive dirs; bundled resolver
+  успешно выбрал Hearthstone. Репозиторий/данные VPS не изменялись.
+- Runtime health подтвердил 7/7 анализаторов существующего EditorTeam.
+  Это техническая доступность, а не проверка качества текста.
+- Подробный inventory/backup, защищённый журнал источников, staging,
+  слепая human review и production-переключение ещё не выполнены.
