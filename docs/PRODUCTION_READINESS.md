@@ -148,3 +148,8 @@ WP-права, nonce, экранирование и отсутствие сек�
   проверка snapshots и полной review-записи, машинный readiness-report.
   Human acceptance остаётся NOT_RUN (реальных пар 0/20); технический gate
   сам по себе не разрешает production и не подтверждает прирост качества.
+
+- Выпуск [1.20.3](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.20.3)
+  опубликован из `31ad68c`: 21 asset, SHA256 проверены. EditorTeam 1.15.3 и
+  Manacost Publish 1.12.2 установлены из GitHub при отключённых локальных
+  архивах; canonical helper совпал побайтно. Human acceptance — NOT_RUN, 0/20.
