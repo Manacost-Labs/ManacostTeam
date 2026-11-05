@@ -38,6 +38,12 @@ For Chinese Hearthstone questions, load [Chinese Hearthstone intelligence](refer
 
 ## Route the request
 
+For reader-facing generation, use the [bounded reader-question loop](references/reader-research-loop.md).
+Run `scripts/reader_research.py next RUN_DIRECTORY`, execute its next search
+command, inspect original materials and record grounded observations/followups.
+Repeat within budget before writing. Search discovery alone never answers a
+question or approves a claim. Keep Scrape.do/RedditAPI priorities and owner coverage.
+
 For deep/exhaustive work, use [broad platform search](references/broad-platform-search.md): separate section-level X, Reddit, YouTube and general-web passes, EN/RU variants, creator searches, practical examples and contrary evidence. Plan queries with scripts/plan_queries.py and audit actual access with scripts/platform_coverage.py. For Hearthstone research search in waves with scripts/search_waves.py: EN/RU/ZH queries with localized card names, one executor per source class, link following, a refutation pass, and a configurable saturation stop ([search waves](references/search-strategy.md#search-waves)). Do not equate query generation with executed searches or platform coverage with independent corroboration.
 
 Use the additive [reader-question and progress contract](references/research-progress.md)

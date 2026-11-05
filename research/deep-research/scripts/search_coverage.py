@@ -28,6 +28,7 @@ from search_support import (
     canonical_url,
     normalize_query,
     quote_in_text,
+    request_key,
     url_host,
 )
 
@@ -61,6 +62,8 @@ def reader_questions(plan: dict[str, Any]) -> list[dict[str, Any]]:
             raise ValueError("reader question status must be open, partial, answered or excluded")
         if question.get("priority", "material") not in {"critical", "material", "contextual"}:
             raise ValueError("reader question priority must be critical, material or contextual")
+        if question.get("target_platform", "web") not in {"web", "reddit", "x", "youtube"}:
+            raise ValueError("reader question target_platform must be web, reddit, x or youtube")
         if question.get("status") == "excluded" and not question.get("gap"):
             raise ValueError("excluded reader question requires gap explaining the exclusion")
     return questions
@@ -90,7 +93,7 @@ def source_followups(queries: list[dict[str, Any]], sources: list[dict[str, Any]
             if parent is None:
                 raise ValueError("followup parent_question_id must link a reader question")
             normalized = normalize_query(followup["question"])
-            key = (parent["question_id"], normalized)
+            key = (parent["question_id"], normalized, followup.get("target_platform", parent.get("target_platform", "web")))
             if key in seen:
                 continue
             seen.add(key)
@@ -99,6 +102,7 @@ def source_followups(queries: list[dict[str, Any]], sources: list[dict[str, Any]
                     "section_id": parent.get("section_id"), "reader_question_id": parent["question_id"],
                     "origin_query_id": record["query_id"], "origin_source_ids": inspected,
                     "queue_reason": followup["why_it_matters"], "gap": followup.get("gap") or followup["why_it_matters"]}
+            item["target_platform"] = followup.get("target_platform", parent.get("target_platform", "web"))
             reader_questions({"reader_questions": [item]})
             result.append(item)
     return result
@@ -229,17 +233,17 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
             result_links += len(linked)
     status_counter.update(str(record.get("status")) for record in queries)
 
-    executed_keys = {normalize_query(str(record.get("query", ""))) for record in executed_queries}
+    executed_keys = {request_key(record) for record in executed_queries}
     unexecuted = [
         str(record.get("query_id", "?"))
         for record in planned
-        if normalize_query(str(record.get("query", ""))) not in executed_keys
+        if request_key(record) not in executed_keys
     ]
-    successful_keys = {normalize_query(str(record.get("query", ""))) for record in successful_queries}
+    successful_keys = {request_key(record) for record in successful_queries}
     unresolved_directions = [
         str(record.get("query_id", "?")) for record in planned
         if record.get("status", "planned") == "planned"
-        and normalize_query(str(record.get("query", ""))) not in successful_keys
+        and request_key(record) not in successful_keys
     ]
 
     # --- branches ----------------------------------------------------------
