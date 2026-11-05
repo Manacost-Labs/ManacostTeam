@@ -51,6 +51,9 @@ For article and guide work, the validated evidence is then converted into a plai
 
 ## How it works
 
+Optional local pilot: [BGE reranking of saved Scrape.do search results](evaluation/reranking/README.md).
+It preserves discovery provenance and does not change collection or evidence gates.
+
 ```text
 Question and scope
   ↓

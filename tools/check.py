@@ -103,6 +103,7 @@ CHECKS = {
         "research",
         [
             unit_tests("deep-research/tests"),
+            unit_tests("evaluation/reranking"),
             [sys.executable, "deep-research/scripts/audit_skill.py"],
         ],
     ),

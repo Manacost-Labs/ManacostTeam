@@ -40,6 +40,7 @@ jobs:
             echo "a credential value appears in the tree" >&2; exit 1
           fi
       - run: python -m unittest discover -s deep-research/tests -p "test_*.py"
+      - run: python -m unittest discover -s evaluation/reranking -p "test_*.py"
       - run: python deep-research/scripts/audit_skill.py
       - run: python deep-research/scripts/validate_benchmark.py evaluation/benchmark --stage release
       - run: python deep-research/scripts/score_semantic_gold.py evaluation/gold/semantic-cases.jsonl evaluation/gold/semantic-predictions.jsonl

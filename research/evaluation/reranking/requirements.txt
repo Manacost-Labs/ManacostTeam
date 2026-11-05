@@ -1,0 +1,2 @@
+# Optional local pilot; never installed into the collector or production runtime.
+sentence-transformers==5.7.0

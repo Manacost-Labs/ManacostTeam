@@ -133,3 +133,8 @@ WP-права, nonce, экранирование и отсутствие сек�
   Ruff, staged Gitleaks и воспроизводимость пакетов проверены.
 - Подробный inventory/backup, защищённый журнал источников, staging,
   слепая human review и production-переключение ещё не выполнены.
+- Добавлен [локальный BGE-пилот](../research/evaluation/reranking/README.md):
+  ранжирование сохранённых кандидатов Scrape.do, SHA256 входа, закреплённая
+  ревизия весов, сохранение provenance и discovery-only. Реальный offline
+  inference проверен; качество реального поиска ещё не измерено. Пилот
+  не включён в production и опубликованные skill-архивы.
