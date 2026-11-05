@@ -31,6 +31,8 @@ REQUIRED = {
     "scripts/research_ops.py",
     "scripts/search_support.py",
     "scripts/plan_queries.py",
+    "scripts/reader_research.py",
+    "tests/test_reader_research.py",
     "scripts/search_coverage.py",
     "scripts/fetch_source.py",
     "scripts/registry_seed.py",

@@ -257,3 +257,21 @@ def infer_game_mode(context: object) -> str:
     if any(word in text for word in ("standard", "wild", "twist", "constructed", "стандарт", "вольн")):
         return "constructed"
     return "all"
+
+
+def request_key(record: dict) -> tuple[str, str]:
+    """Distinct target venues are distinct requests, even with identical words."""
+    # Deferred import keeps the base URL/text helpers independently importable.
+    from source_classes import source_class
+
+    platform = record.get("target_platform")
+    if platform not in {"web", "reddit", "x", "youtube"}:
+        family = record.get("family")
+        platform = family if family in {"reddit", "x", "youtube"} else "web"
+    if platform == "web":
+        for site in re.findall(r"(?:^|\s)site:([^\s]+)", str(record.get("query", "")), re.IGNORECASE):
+            lane = source_class("https://" + site)
+            if lane in {"reddit", "x", "youtube"}:
+                platform = lane
+                break
+    return platform, normalize_query(str(record.get("query", "")))

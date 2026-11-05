@@ -60,6 +60,18 @@ def test_plain_manacost_rules_load_house_style_without_task_context():
     assert server.voice_signature() in text and server.voice_signature()
 
 
+def test_voice_instructions_reach_runtime_without_losing_source_boundaries():
+    server.voice_signature.cache_clear()
+    signature = server.voice_signature()
+    assert len(signature) <= server.VOICE_BUDGET
+    assert "Ремарка" in signature
+    assert "ирония допустима" in signature
+    assert "Не выдумывайте" in signature
+    # The final source restriction must survive the signature's prompt budget.
+    assert signature.endswith("Числа и уверенность исходника сохраняются.")
+    assert "Не добавлять юмор при правке" not in signature
+
+
 def test_other_game_and_news_profile_get_nothing(has_corpus: None) -> None:
     assert server.corpus_examples(QUERY, "wow", "wow-guide")["examples"] == []
     assert server.corpus_examples(QUERY, "hearthstone", "news")["examples"] == []

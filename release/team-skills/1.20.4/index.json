@@ -3,10 +3,10 @@
   "teams": 7,
   "skills": 9,
   "archives": {
-    "editor-team-1.15.4.zip": "ed50ad619da6bc285aa531efa1705d02bef792bfd27a6db1c8028f054b315edf",
-    "editor-team-1.15.4.skill": "ed50ad619da6bc285aa531efa1705d02bef792bfd27a6db1c8028f054b315edf",
-    "research-team-1.11.1.zip": "04c75f84038d8362b68c223b8f3803ed2d3d8f2792df7c577d458f2a12129927",
-    "research-team-1.11.1.skill": "04c75f84038d8362b68c223b8f3803ed2d3d8f2792df7c577d458f2a12129927",
+    "editor-team-1.15.4.zip": "3ad6d659b37f107131b34fc7ec59d38ef8c7d57d5336846b919c195589fe64c3",
+    "editor-team-1.15.4.skill": "3ad6d659b37f107131b34fc7ec59d38ef8c7d57d5336846b919c195589fe64c3",
+    "research-team-1.11.1.zip": "33df5b676765d42acea0d5620d5a01307e08291c81b395ef99cd5215b45c8b87",
+    "research-team-1.11.1.skill": "33df5b676765d42acea0d5620d5a01307e08291c81b395ef99cd5215b45c8b87",
     "svg-team-1.0.1.zip": "2280d80ca18c50fbb87cb78484c937ccf0dffea5f179b5447a7203aead5faef6",
     "svg-team-1.0.1.skill": "2280d80ca18c50fbb87cb78484c937ccf0dffea5f179b5447a7203aead5faef6",
     "translate-team-1.2.1.zip": "8987adc65efdb4eb33e5487a5ee2620e8b74bf8977618a3e7a756c12161f9114",
@@ -19,9 +19,9 @@
     "marketing-team-1.0.1.skill": "1ed6e95b060140b55221934f0cbafe4ab38cd00c394a8e094322c6d4e4a4215a",
     "card-shortcodes-1.0.3.zip": "f7d0b5da65b54fd684effda4aed05b718340d82b700a0563386e4399de60c291",
     "card-shortcodes-1.0.3.skill": "f7d0b5da65b54fd684effda4aed05b718340d82b700a0563386e4399de60c291",
-    "manacost-publish-1.12.3.zip": "a4f8a7466ae1a3fcf1ddc64ad444add4c0f97318cae0707fd4f6abebf2f49b48",
-    "manacost-publish-1.12.3.skill": "a4f8a7466ae1a3fcf1ddc64ad444add4c0f97318cae0707fd4f6abebf2f49b48",
-    "manacost-team-1.20.4-plugin.zip": "68633954e156c030fc2ed2a9b8cd42a113fd7ec81b8745d37124740ccd82f062"
+    "manacost-publish-1.12.3.zip": "73de5e867d0c080008c1d46a7e9feaf515f8b4f5122becf8806787e19cd1eb12",
+    "manacost-publish-1.12.3.skill": "73de5e867d0c080008c1d46a7e9feaf515f8b4f5122becf8806787e19cd1eb12",
+    "manacost-team-1.20.4-plugin.zip": "2bd73a6f9abfe56a01f9febec0a6335b4f69ddbf18da5d672d1f0bf8a440f0cf"
   },
   "download_base": "https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.20.4/"
 }

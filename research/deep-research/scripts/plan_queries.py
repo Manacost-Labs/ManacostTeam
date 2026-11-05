@@ -26,7 +26,7 @@ from platform_coverage import (
     planned_scopes,
     query_platform,
 )
-from search_support import QUERY_FAMILIES, QUERY_PASSES, next_id, normalize_query
+from search_support import QUERY_FAMILIES, QUERY_PASSES, next_id, normalize_query, request_key
 from search_coverage import reader_questions, source_followups
 
 PLAN_FILE = "query-plan.jsonl"
@@ -506,8 +506,8 @@ def question_queue(plan: dict[str, Any], executed: list[dict[str, Any]], sources
                            "queue_reason": question.get("queue_reason") or question.get("gap") or question["question"]})
     priority = {"critical": 0, "material": 1, "contextual": 2}
     candidates.sort(key=lambda item: priority.get(item.get("priority", "material"), 1))
-    done = {normalize_query(str(record.get("query", ""))) for record in executed if record.get("status") != "planned"}
-    pending = {normalize_query(str(record.get("query", ""))): record for record in planned if record.get("status") == "planned"}
+    done = {request_key(record) for record in executed if record.get("status") != "planned"}
+    pending = {request_key(record): record for record in planned if record.get("status") == "planned"}
     ids = {str(record.get("query_id")) for record in planned + executed}
     seen_questions = set()
     seen_queries = set(done)
@@ -516,13 +516,13 @@ def question_queue(plan: dict[str, Any], executed: list[dict[str, Any]], sources
     for candidate in candidates:
         if sections and candidate.get("section_id") not in sections:
             continue
-        question_key = (candidate["reader_question_id"], normalize_query(candidate["question"]))
+        question_key = (candidate["reader_question_id"], normalize_query(candidate["question"]), candidate.get("target_platform", "web"))
         if question_key in seen_questions:
             continue
         seen_questions.add(question_key)
         for language in languages:
             query = localized_phrase(candidate.get("search_phrases", {}), language)
-            key = normalize_query(query)
+            key = request_key({"query": query, "target_platform": candidate.get("target_platform", "web")})
             if key in seen_queries:
                 # One search may answer several reader questions. Deduplicate
                 # the request, never its question/section/source provenance.
@@ -544,6 +544,10 @@ def question_queue(plan: dict[str, Any], executed: list[dict[str, Any]], sources
             record = {"query_id": query_id, "status": "planned", "pass": "gap", "family": "general", "target_platform": "web",
                       "language": language, "query": query, "topic": candidate["question"], "planned_at": previous.get("planned_at") if previous else utc_now(),
                       "reader_question_id": candidate["reader_question_id"], "queue_reason": candidate["queue_reason"]}
+            platform = key[0]
+            record["target_platform"] = platform
+            if platform != "web":
+                record["family"] = platform
             record["reader_question_ids"] = [candidate["reader_question_id"]]
             record["priority"] = candidate.get("priority", "material")
             if candidate.get("origin_query_id"):
@@ -582,8 +586,8 @@ def apply_budget(records: list[dict[str, Any]], executed: list[dict[str, Any]], 
     if type(limit) is not int or limit < 1:
         raise ValueError("research_budget.max_queries / --max-queries must be a positive integer")
     attempted = [record for record in executed if record.get("status") not in {"planned", "skipped"}]
-    done_keys = {normalize_query(str(record.get("query", ""))) for record in attempted}
-    pending_ids = {record.get("query_id") for record in planned if record.get("status") == "planned" and normalize_query(str(record.get("query", ""))) not in done_keys}
+    done_keys = {request_key(record) for record in attempted}
+    pending_ids = {record.get("query_id") for record in planned if record.get("status") == "planned" and request_key(record) not in done_keys}
     available = max(0, limit - len(attempted) - len(pending_ids))
     remaining_attempts = max(0, limit - len(attempted))
     chosen = []

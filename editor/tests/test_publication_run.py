@@ -19,6 +19,22 @@ def test_explicit_preferences_and_initial_task(tmp_path):
         init_run(tmp_path / "bad", brief="Guide", patch="test", profile="guide", shortcodes="")
 
 
+def test_research_task_and_prose_guidance_connect_specificity_with_pleasant_russian(tmp_path):
+    from editorteam.publication_run import INSTRUCTIONS, craft_guidance
+
+    assert "reader_research.py" in INSTRUCTIONS["research"]
+    assert "reader_questions" in INSTRUCTIONS["research"]
+    assert "reader_research.py" in INSTRUCTIONS["sources"]
+    assert "до фиксации" in INSTRUCTIONS["sources"]
+    assert "новый запуск" in INSTRUCTIONS["research"]
+    guidance = craft_guidance("draft")
+    prose = next(item["task"] for item in guidance["editorial_passes"] if item["id"] == "prose")
+    assert "выразительн" in prose
+    assert "метафор" in prose
+    assert "огов" in prose
+    assert "квот" in prose
+
+
 def test_opt_in_language_examples_reach_only_author_task(tmp_path):
     from unittest.mock import patch
 
