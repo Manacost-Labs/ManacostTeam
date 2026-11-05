@@ -1,0 +1,2 @@
+# Optional local human-review UI only. Not an EditorTeam runtime dependency.
+potato-annotation==2.14.0

@@ -328,6 +328,75 @@ node evals/blind_review.js import build/blind/ratings.json --key build/blind/key
 раскрывает ключ и строит `report.json` и `report.md` со средними по
 вариантам и распределением предпочтений.
 
+## Potato: локальная слепая оценка в браузере
+
+Potato 2.14.0 подключён как необязательный интерфейс к существующим
+`pairs.json` → `ratings.json` → `blind_review.js import`. Код и формулы
+слепого сравнения остаются прежними. Potato (GPLv3) устанавливается отдельно,
+не входит в runtime редактора и не вызывает модель в этой конфигурации.
+
+Из корня монорепозитория подготовьте отдельное окружение:
+
+```bash
+uv venv build/potato/.venv --python 3.13
+uv pip install --python build/potato/.venv/bin/python -r editor/evals/potato-requirements.txt
+```
+
+Сначала получите замороженные пары существующей командой `blind_review.js pairs`
+с реальным редактором и реальными парами владельца. Затем:
+
+```bash
+python3 editor/evals/potato_review.py export --pairs build/blind-pairs/pairs.json --out build/potato/review
+build/potato/.venv/bin/python editor/evals/potato_review.py serve --project build/potato/review --port 8765
+```
+
+Откройте `http://127.0.0.1:8765`, создайте локального оценщика и войдите.
+Сравните A/B, поставьте оценки 1–5 по каждому критерию, приведите конкретную
+цитату/причину и подтвердите «Лично оценено человеком». Названия моделей,
+вариантов и `key.json` не экспортируются: manifest содержит только SHA256 ключа.
+По умолчанию ключ читается рядом с `pairs.json`; если он перенесён, при
+экспорте укажите `--key PATH`. A/B уже перемешаны прежним helper;
+повторное перемешивание в Potato отключено, чтобы не перепутать стороны.
+Тексты экранируются; HTML статьи/модели не исполняется.
+
+Импорт выполняется отдельно владельцем ключа; не давайте ключ оценщику:
+
+```bash
+python3 editor/evals/potato_review.py import --project build/potato/review --pairs build/blind-pairs/pairs.json --key build/blind-pairs/key.json --out build/blind-pairs/potato-human
+```
+
+Helper читает `annotations/*/user_state.json` и `annotation_history.jsonl`:
+имя — из локального аккаунта, время — из журнала действий. Launcher всегда
+устанавливает UTC: Potato хранит локальные времена без timezone. Не запускайте
+этот проект напрямую без launcher с другой временной зоной.
+Импорт отвергает изменённые пары/данные, неверный ключ, неизвестные ID,
+дубли оценщика, machine-origin, недопустимые баллы и отсутствие подтверждения.
+Пары без подтверждения остаются pending, а не ничьей. Исходные и итоговые
+каталоги не перезаписываются; повторный импорт делайте в новый каталог.
+`ratings.json` сохраняет reviewer/timestamp/evidence; прежний validator
+создаёт `report.json` и `report.md`. Для сравнения прогонов используйте прежний
+`blind_review.js gate`; интерфейс не объявляет прирост качества самостоятельно.
+Аккаунт и подтверждение — метаданные оценщика, не независимая аутентификация
+его личности. Не записывайте модельные оценки под человеческим аккаунтом.
+Допускаются несколько оценщиков: `reviewed` считает отдельные отзывы,
+а `pending` — материалы без единого завершённого отзыва. Поэтому сумма
+этих двух чисел при нескольких оценщиках может превышать число материалов.
+
+Данные, пароли локальных аккаунтов и SQLite Potato остаются в ignored `build/`.
+Сервер слушает только loopback и ограничивает файловый sandbox каталогом
+проекта оценки. VPS/WordPress и публичный endpoint этим изменением не создаются.
+
+Проверка без optional runtime: `editor/.venv/bin/python -m pytest -q editor/tests/unit/test_potato_review.py`.
+Живая проверка версии Potato, регистрации, HTTP-сохранения и импорта:
+
+```bash
+build/potato/.venv/bin/python -m unittest discover -s editor/tests/unit -p test_potato_review.py -v
+```
+
+Все тестовые материалы синтетические. Для демонстрации можно создать отдельный
+run `node editor/evals/blind_review.js pairs --editor offline --judge offline --out build/potato/demo-blind`;
+такой run имеет отметку «НЕ ИЗМЕРЕНИЕ», независимо от выставленных баллов.
+
 ## Пары черновик → эталон
 
 Главная метрика качества — доля пар, где правка ИИ не хуже правки владельца

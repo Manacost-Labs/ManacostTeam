@@ -11,6 +11,7 @@
 | Выбрать модуль, исходник и тесты | [Как менять проект](../CONTRIBUTING.md) |
 | Установить навыки, сервер или WordPress | [INSTALL](INSTALL.md) |
 | Довести существующие интеграции до production | [План и критерии приёмки](PRODUCTION_READINESS.md) |
+| Оценить текст и улучшить поиск | [Potato и слепой review](../editor/docs/evals.md#potato-локальная-слепая-оценка-в-браузере), [проверенные инструменты](SEARCH_TEXT_TOOLS_2026-11-05.md) |
 | Понять общий процесс и переносимые пакеты | [TEAM_STANDARD](TEAM_STANDARD.md), [каталог Teams](../teams/README.md) |
 | Изменить игру, редакционный профиль или формат контекста | [TASK_CONTEXT](TASK_CONTEXT.md) |
 | Подготовить статью в Codex | [PUBLICATION_QUICKSTART](PUBLICATION_QUICKSTART.md) |
