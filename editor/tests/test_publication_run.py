@@ -58,11 +58,16 @@ def test_opt_in_language_examples_reach_only_author_task(tmp_path):
         },
     ) as selected:
         task = next_task(
-            run, example_bank=tmp_path / "bank.json", game="hearthstone", editorial_mode="GUIDE"
+            run,
+            example_bank=tmp_path / "bank.json",
+            game="hearthstone",
+            editorial_mode="GUIDE",
+            editorial_function="decision",
         )
         assert task["language_examples"]["example_ids"] == ["fixture"]
         assert "только для формы" in task["instructions"]
         assert selected.call_args.args[1]["profile"] == "guide"
+        assert selected.call_args.args[1]["editorial_function"] == "decision"
     assert state_path.read_bytes() == old_state
     state_path.write_text(original_state)
     with pytest.raises(ValueError, match="draft"):
@@ -809,3 +814,133 @@ def test_invalid_state_control_fields_fail_closed(tmp_path, field, value):
     (run / "state.json").write_text(json.dumps(state), encoding="utf-8")
     with pytest.raises(ValueError, match="state"):
         status(run)
+
+
+def test_continue_research_preserves_parent_and_requires_new_reviews(tmp_path):
+    from editorteam.publication_run import continue_research
+
+    parent = prepared(tmp_path)
+    before = {str(p.relative_to(parent)): p.read_bytes() for p in parent.rglob("*") if p.is_file()}
+    child = tmp_path / "continued"
+    continue_research(parent, output=child, questions=["Когда условие меняет выбор?"])
+    task = next_task(child)
+    assert task["stage"] == "sources"
+    assert task["continuation"]["questions"] == ["Когда условие меняет выбор?"]
+    assert Path(task["continuation"]["draft"]).read_text() == TEXT
+    sources = Path(task["continuation"]["sources"])
+    submit(child, stage="sources", artifact=sources)
+    submit(child, stage="research", artifact=write(tmp_path, "continued-handoff.json", handoff()))
+    assert next_task(child)["stage"] == "draft"
+    assert "fact_review" not in status(child)["artifacts"]
+    with pytest.raises(ValueError, match="reviews"):
+        export(child, output=tmp_path / "not-ready.md")
+    assert before == {
+        str(p.relative_to(parent)): p.read_bytes() for p in parent.rglob("*") if p.is_file()
+    }
+    sources.write_text("[]")
+    with pytest.raises(ValueError, match="drift"):
+        next_task(child)
+
+
+def test_continuation_cannot_drop_sources_or_overwrite_parent(tmp_path):
+    from editorteam.publication_run import continue_research
+
+    parent = prepared(tmp_path)
+    for output in (parent, parent / "nested"):
+        with pytest.raises(ValueError):
+            continue_research(parent, output=output, questions=["Почему?"])
+    child = tmp_path / "continued"
+    with pytest.raises(ValueError):
+        continue_research(parent, output=child, questions=[""])
+    assert not child.exists()
+    continue_research(parent, output=child, questions=["Почему?"])
+    original = json.loads(Path(next_task(child)["continuation"]["sources"]).read_text())
+    changed = {**original[0], "url": "https://example.org/different"}
+    with pytest.raises(ValueError, match="preserve"):
+        submit(child, stage="sources", artifact=write(tmp_path, "changed-sources.json", [changed]))
+    changed_text = "Подменённый текст источника."
+    changed = {
+        **original[0],
+        "text": changed_text,
+        "sha256": hashlib.sha256(changed_text.encode()).hexdigest(),
+    }
+    with pytest.raises(ValueError, match="preserve"):
+        submit(child, stage="sources", artifact=write(tmp_path, "changed-text.json", [changed]))
+    assert status(child)["stage"] == "sources"
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="optional Node language bank helper")
+@pytest.mark.parametrize("newline", ["\n", "\r\n"], ids=["lf", "crlf"])
+def test_feedback_captures_real_bytes_as_pending_and_restarts_reviews(tmp_path, newline):
+    from editorteam.publication_run import feedback
+
+    run = prepared(tmp_path)
+    final = tmp_path / "editor-final.md"
+    final.write_bytes((f"# Совет{newline}{newline}" + TEXT).encode("utf-8"))
+    output = tmp_path / "capture"
+    feedback(
+        run,
+        artifact=final,
+        output=output,
+        reason="Уточнил подачу",
+        game="hearthstone",
+        editorial_mode="GUIDE",
+        synthetic=True,
+    )
+    row = json.loads((output / "review.json").read_text(encoding="utf-8"))["examples"][0]
+    assert row["before"] == TEXT
+    assert row["after"].encode("utf-8") == final.read_bytes()
+    assert (output / "final.md").read_bytes() == final.read_bytes()
+    assert row["status"] == "pending" and row["approval"] is None and row["synthetic"]
+    assert (output / "draft.md").read_text() == TEXT
+    assert status(run)["stage"] == "fact_review"
+    assert status(run)["draft_revisions"] == 1
+    before = (run / "state.json").read_bytes()
+    with pytest.raises(ValueError):
+        feedback(
+            run,
+            artifact=write(tmp_path, "another.md", TEXT + "\nЕщё."),
+            output=output,
+            reason="Правка",
+            game="hearthstone",
+            editorial_mode="GUIDE",
+            synthetic=True,
+        )
+    assert (run / "state.json").read_bytes() == before
+
+
+def test_feedback_requires_explicit_source_kind_before_mutation(tmp_path):
+    from editorteam.publication_run import feedback
+
+    run = prepared(tmp_path)
+    before = (run / "state.json").read_bytes()
+    with pytest.raises(ValueError):
+        feedback(
+            run,
+            artifact=write(tmp_path, "final.md", TEXT + "\nПравка."),
+            output=tmp_path / "capture",
+            reason="Правка",
+            game="hearthstone",
+            editorial_mode="GUIDE",
+        )
+    assert (run / "state.json").read_bytes() == before
+    assert not (tmp_path / "capture").exists()
+
+
+def test_exhausted_revision_budget_never_creates_feedback_capture(tmp_path):
+    from editorteam.publication_run import feedback
+
+    run = prepared(tmp_path)
+    for index in range(2):
+        revise(run, artifact=write(tmp_path, f"revision-{index}.md", f"# Ревизия {index}\n{TEXT}"))
+    with pytest.raises(ValueError, match="budget"):
+        feedback(
+            run,
+            artifact=write(tmp_path, "final.md", TEXT + "\nФинал."),
+            output=tmp_path / "capture",
+            reason="Правка",
+            game="hearthstone",
+            editorial_mode="GUIDE",
+            synthetic=True,
+        )
+    assert not (tmp_path / "capture").exists()

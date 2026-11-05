@@ -1,0 +1,27 @@
+{
+  "version": "1.20.10",
+  "teams": 7,
+  "skills": 9,
+  "archives": {
+    "editor-team-1.15.10.zip": "1c1cec0952fe75d06b5cd331de05091f17d06ea2c780cbfaeb574d2555479bf5",
+    "editor-team-1.15.10.skill": "1c1cec0952fe75d06b5cd331de05091f17d06ea2c780cbfaeb574d2555479bf5",
+    "research-team-1.11.5.zip": "fdf57d16fd1c7c9d300475c52610f1a3ab2639ad2b1befdf051365545fc5b2b6",
+    "research-team-1.11.5.skill": "fdf57d16fd1c7c9d300475c52610f1a3ab2639ad2b1befdf051365545fc5b2b6",
+    "svg-team-1.0.1.zip": "2280d80ca18c50fbb87cb78484c937ccf0dffea5f179b5447a7203aead5faef6",
+    "svg-team-1.0.1.skill": "2280d80ca18c50fbb87cb78484c937ccf0dffea5f179b5447a7203aead5faef6",
+    "translate-team-1.2.2.zip": "8a1d59b064b4e0e16705e87a1c10c73d6554a22559c724ee00032cd02e400487",
+    "translate-team-1.2.2.skill": "8a1d59b064b4e0e16705e87a1c10c73d6554a22559c724ee00032cd02e400487",
+    "xml-team-1.0.1.zip": "97f2180376d6c994b7ec436f388c1f0938a0a2ec4093c6335a63109d08a263f9",
+    "xml-team-1.0.1.skill": "97f2180376d6c994b7ec436f388c1f0938a0a2ec4093c6335a63109d08a263f9",
+    "job-team-1.0.1.zip": "ab8e64710d5685aabbff5cae27e6843be687cc7c85ae732587f9746776be4547",
+    "job-team-1.0.1.skill": "ab8e64710d5685aabbff5cae27e6843be687cc7c85ae732587f9746776be4547",
+    "marketing-team-1.0.1.zip": "1ed6e95b060140b55221934f0cbafe4ab38cd00c394a8e094322c6d4e4a4215a",
+    "marketing-team-1.0.1.skill": "1ed6e95b060140b55221934f0cbafe4ab38cd00c394a8e094322c6d4e4a4215a",
+    "card-shortcodes-1.0.3.zip": "f7d0b5da65b54fd684effda4aed05b718340d82b700a0563386e4399de60c291",
+    "card-shortcodes-1.0.3.skill": "f7d0b5da65b54fd684effda4aed05b718340d82b700a0563386e4399de60c291",
+    "manacost-publish-1.12.8.zip": "773dfeaba3004e47d148bccbc77cd2c7159c59e7272898e563d27a84057256ef",
+    "manacost-publish-1.12.8.skill": "773dfeaba3004e47d148bccbc77cd2c7159c59e7272898e563d27a84057256ef",
+    "manacost-team-1.20.10-plugin.zip": "de80a19d0031f78b99967410e25259d875446c94a0253bb401fc631ae752cbd8"
+  },
+  "download_base": "https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.20.10/"
+}
