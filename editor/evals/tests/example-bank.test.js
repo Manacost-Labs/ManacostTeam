@@ -19,6 +19,34 @@ function approved() {
   return bank.approve(review, review.examples[0].id, 'synthetic-test-reviewer', true, '2026-11-05T12:00:00Z');
 }
 
+test('function retrieval works without word overlap and preserves contextual exclusions', () => {
+  const review = prepared();
+  review.examples[0].synthetic = false;
+  review.examples[0].editorial_function = 'decision';
+  const checked = bank.approve(review, review.examples[0].id, 'fixture-reviewer', true);
+  const exported = bank.exportApproved(checked);
+  const vars = { text: 'Совершенно другая тема.', game: 'hearthstone', profile: 'constructed-guide', editorial_mode: 'GUIDE', editorial_function: 'decision' };
+  assert.equal(bank.select(exported, vars).length, 1);
+  for (const patch of [{ editorial_function: 'opening' }, { game: 'wow' }, { editorial_mode: 'REPORT' }, { exclude_sources: [exported.examples[0].source] }]) {
+    assert.equal(bank.select(exported, { ...vars, ...patch }).length, 0);
+  }
+  assert.throws(() => bank.select(exported, { ...vars, editorial_function: 'invented' }), /function/);
+});
+
+test('function is approval-bound, optional for legacy rows and validated before preparation', () => {
+  const legacy = approved();
+  assert.equal(bank.exportApproved(legacy).examples.length, 1);
+  const changed = structuredClone(legacy);
+  changed.examples[0].editorial_function = 'opening';
+  assert.throws(() => bank.exportApproved(changed), /hash|approval/);
+  const checked = bank.approve(changed, changed.examples[0].id, 'fixture-reviewer', true);
+  checked.examples[0].editorial_function = 'aside';
+  assert.throws(() => bank.exportApproved(checked), /hash|approval/);
+  assert.throws(() => bank.prepare([{ was: 'А', became: 'Б', reason: 'Причина', editorial_function: 'unknown' }], {
+    source: 'fixture', source_sha256: 'a'.repeat(64), game: 'hearthstone', profile: 'guide', editorial_mode: 'GUIDE',
+  }), /function/);
+});
+
 test('recorded corrections are pending until an explicit human attestation', () => {
   const review = prepared();
   assert.equal(review.examples[0].status, 'pending');
@@ -132,7 +160,7 @@ test('capture freezes draft/AI/final bytes and prepares only pending learning da
     for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(directory, `${name}.md`), text);
     const output = path.join(directory, 'captured');
     bank.capture({ draft: path.join(directory, 'draft.md'), ai: path.join(directory, 'ai.md'), final: path.join(directory, 'final.md'), out: output,
-      source: 'synthetic-fixture', game: 'hearthstone', profile: 'guide', editorial_mode: 'GUIDE', reason: 'Тест протокола', synthetic: true });
+      source: 'synthetic-fixture', game: 'hearthstone', profile: 'guide', editorial_mode: 'GUIDE', reason: 'Тест протокола', synthetic: true, editorial_function: 'aside' });
     for (const [name, text] of Object.entries(files)) assert.equal(fs.readFileSync(path.join(output, `${name}.md`), 'utf8'), text);
     const pending = JSON.parse(fs.readFileSync(path.join(output, 'review.json'), 'utf8'));
     assert.equal(pending.examples[0].before, files.ai);
@@ -140,6 +168,7 @@ test('capture freezes draft/AI/final bytes and prepares only pending learning da
     assert.equal(pending.examples[0].status, 'pending');
     assert.equal(pending.examples[0].approval, null);
     assert.equal(pending.examples[0].synthetic, true);
+    assert.equal(pending.examples[0].editorial_function, 'aside');
     assert.throws(() => bank.capture({ out: output }), /exist/);
     const manifest = JSON.parse(fs.readFileSync(path.join(output, 'manifest.json'), 'utf8'));
     assert.equal(manifest.human_approved, false);

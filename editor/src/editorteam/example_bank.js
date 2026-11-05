@@ -5,8 +5,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const FIELDS = ['id', 'before', 'after', 'reason', 'context', 'game', 'profile', 'editorial_mode', 'scope', 'split', 'synthetic', 'source', 'source_sha256'];
+const FUNCTIONS = ['opening', 'decision', 'explanation', 'aside', 'transition', 'conclusion'];
 const sha = (text) => crypto.createHash('sha256').update(text).digest('hex');
-const digest = (row) => sha(JSON.stringify(FIELDS.map((key) => row[key])));
+// Absent optional metadata keeps existing attestations byte-compatible.
+const digest = (row) => sha(JSON.stringify([...FIELDS.map((key) => row[key]),
+  ...(Object.hasOwn(row, 'editorial_function') ? [['editorial_function', row.editorial_function]] : [])]));
 const norm = (text) => text.normalize('NFKC').toLocaleLowerCase('ru').replace(/ё/g, 'е').replace(/\s+/gu, ' ').trim();
 
 function timestamp(value) {
@@ -20,6 +23,7 @@ function validate(document) {
   if (document?.schema_version !== 1 || !Array.isArray(document.examples)) throw new Error('invalid example bank');
   const ids = new Set();
   for (const row of document.examples) {
+    if (Object.hasOwn(row, 'editorial_function') && !FUNCTIONS.includes(row.editorial_function)) throw new Error('invalid editorial function');
     for (const key of FIELDS.filter((key) => !['context', 'synthetic'].includes(key))) {
       if (typeof row[key] !== 'string' || !row[key].trim()) throw new Error(`nonempty ${key} required`);
     }
@@ -44,6 +48,7 @@ function prepare(corrections, context) {
     before: row.was, after: row.became, reason: row.reason, context: row.context || '',
     game: context.game, profile: context.profile, editorial_mode: context.editorial_mode,
     scope: row.scope || 'local', split: 'train', synthetic: context.synthetic === true,
+    ...(Object.hasOwn(row, 'editorial_function') ? { editorial_function: row.editorial_function } : {}),
     source: context.source, source_sha256: context.source_sha256,
     status: 'pending', approval: null,
   })) });
@@ -73,11 +78,13 @@ function exportApproved(document) {
 
 function select(document, vars) {
   validate(document);
+  if (Object.hasOwn(vars, 'editorial_function') && !FUNCTIONS.includes(vars.editorial_function)) throw new Error('invalid editorial function');
   if (document.examples.some((row) => row.status !== 'approved' || row.synthetic || row.split !== 'train')) throw new Error('use an exported approved training bank');
   const source = norm(String(vars.text || ''));
   const words = (text) => new Set(norm(text).match(/[\p{L}\p{N}]{4,}/gu) || []);
   const wanted = words(source);
   return document.examples.filter((row) => row.game === vars.game && row.profile === vars.profile && row.editorial_mode === vars.editorial_mode
+    && (!vars.editorial_function || row.editorial_function === vars.editorial_function)
     && row.id !== vars.id && row.source !== vars.source_url && row.source_sha256 !== vars.source_sha256
     && !(vars.exclude_sources || []).includes(row.source)
     && ![row.before, row.after].some((text) => {
@@ -86,7 +93,7 @@ function select(document, vars) {
     })
     && [row.before, row.after, row.reason, row.context].join('').length <= 1800)
     .map((row) => ({ row, score: [...words(`${row.before} ${row.after} ${row.context}`)].filter((word) => wanted.has(word)).length }))
-    .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score || a.row.id.localeCompare(b.row.id))
+    .filter(({ score }) => vars.editorial_function || score > 0).sort((a, b) => b.score - a.score || a.row.id.localeCompare(b.row.id))
     .slice(0, 3).map(({ row }) => structuredClone(row));
 }
 
@@ -107,7 +114,8 @@ function capture(options) {
     artifacts[name] = { file: `${name}.md`, sha256: sha(bytes) };
   }
   const sourceHash = sha(JSON.stringify(artifacts));
-  const review = prepare([{ was: texts.ai, became: texts.final, reason: options.reason, context: options.context || '', scope: 'local' }], {
+  const review = prepare([{ was: texts.ai, became: texts.final, reason: options.reason, context: options.context || '', scope: 'local',
+    ...(options.editorial_function !== undefined ? { editorial_function: options.editorial_function } : {}) }], {
     ...options, source_sha256: sourceHash,
   });
   fs.mkdirSync(options.out, { mode: 0o700 });
@@ -151,6 +159,7 @@ function main(argv) {
   if (command === 'capture') {
     console.log(JSON.stringify(capture({ draft: option('--draft'), ai: option('--ai'), final: option('--final'), out: option('--out'),
       source: option('--source'), reason: option('--reason'), context: option('--context'), game: option('--game'), profile: option('--profile'),
+      editorial_function: option('--editorial-function'),
       editorial_mode: option('--mode'), synthetic: argv.includes('--synthetic'), realSource: argv.includes('--real-source') })));
     return;
   }

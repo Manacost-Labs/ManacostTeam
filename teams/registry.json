@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.15.9",
+      "version": "1.15.10",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -333,7 +333,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.12.7",
+      "version": "1.12.8",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -427,5 +427,5 @@
       ]
     }
   ],
-  "release_version": "1.20.9"
+  "release_version": "1.20.10"
 }
