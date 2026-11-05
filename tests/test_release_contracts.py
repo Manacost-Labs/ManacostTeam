@@ -127,6 +127,38 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertTrue((next_output / "manacost-team-1.0.1-plugin.zip").exists())
         self.assertTrue((self.history / "1.0.1/index.json").exists())
 
+    def test_changed_asset_needs_a_new_skill_version_and_preserves_history(self):
+        asset = self.root / "cards.json"
+        asset.write_text('{"cards": ["old"]}\n', encoding="utf-8")
+        self.registry["skills"][0]["resources"] = [
+            {"source": "cards.json", "destination": "assets/cards.json"}
+        ]
+        self.write_registry(self.registry)
+        original = builder.build(self.root, self.output)
+        history_before = (self.manifest / "index.json").read_bytes()
+        asset.write_text('{"cards": ["new"]}\n', encoding="utf-8")
+        self.registry["release_version"] = "1.0.1"
+        self.write_registry(self.registry)
+        next_output = self.builds / "1.0.1"
+        with self.assertRaisesRegex(ValueError, "immutable"):
+            builder.build(self.root, next_output)
+        self.assertFalse(next_output.exists())
+        self.registry["skills"][0]["version"] = "1.0.1"
+        for filename in ("SKILL.md", "skill.yaml"):
+            path = self.source / filename
+            path.write_text(
+                path.read_text(encoding="utf-8").replace("1.0.0", "1.0.1"),
+                encoding="utf-8",
+            )
+        self.write_registry(self.registry)
+        updated = builder.build(self.root, next_output)
+        self.assertNotEqual(
+            original["archives"]["example-1.0.0.zip"],
+            updated["archives"]["example-1.0.1.zip"],
+        )
+        self.assertEqual((self.manifest / "index.json").read_bytes(), history_before)
+        builder.build(self.root, next_output, check=True)
+
     def test_check_rejects_unexpected_files_and_nested_directories(self):
         builder.build(self.root, self.output)
         for name, directory in [("unintended.txt", False), ("private", True)]:

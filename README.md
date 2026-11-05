@@ -8,15 +8,15 @@
 
 ## Состав
 
-Последний опубликованный GitHub release: [ManacostTeam 1.8.0](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.8.0).
+Последний опубликованный GitHub release: [ManacostTeam 1.18.0](https://github.com/Manacost-Labs/ManacostTeam/releases/tag/v1.18.0).
 [Аудит качества, изменения и проверки](docs/QUALITY_AUDIT.md).
 [Доступ к источникам: практики ParsesUnix и Koloda](docs/RESEARCH_SOURCE_COLLECTOR_2026_10_21.md).
 [Браузерные маршруты и проверка всех 39 источников](docs/BROWSER_SOURCE_AUDIT_2026_10_21.md).
 [Повторная проверка 23 утверждений и сравнение 12 текстов](docs/CORPUS_RECHECK_2026_10_15.md).
 
-В репозитории подготовлены пакеты 1.20.1; отдельная публикация GitHub release и развёртывание не выполнялись.
+В репозитории подготовлены пакеты 1.20.2; публикация и развёртывание проходят отдельную проверку. [План production-подготовки](docs/PRODUCTION_READINESS.md).
 
-Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). ZIP/.skill для ChatGPT и Claude собираются командой `python tools/build_team_skills.py`; контрольные суммы и индекс подготовленного выпуска — в [release/team-skills/1.20.1](release/team-skills/1.20.1/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
+Семь направлений работают по [общему стандарту](docs/TEAM_STANDARD.md). ZIP/.skill для ChatGPT и Claude собираются командой `python tools/build_team_skills.py`; контрольные суммы и индекс подготовленного выпуска — в [release/team-skills/1.20.2](release/team-skills/1.20.2/). Все команды и версии — в [каталоге Teams](teams/README.md). EditorTeam также имеет отдельный skill `card-shortcodes` (команда `/card-shortcodes` в настроенном Claude Code), который добавляет подсветку карт без редактуры текста.
 
 [Улучшения EditorTeam и ResearchTeam в 1.1.0](docs/EDITOR_RESEARCH_QUALITY.md):
 защита смысла при редактуре, очередь поиска по пробелам и передача полезных

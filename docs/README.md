@@ -10,6 +10,7 @@
 | --- | --- |
 | Выбрать модуль, исходник и тесты | [Как менять проект](../CONTRIBUTING.md) |
 | Установить навыки, сервер или WordPress | [INSTALL](INSTALL.md) |
+| Довести существующие интеграции до production | [План и критерии приёмки](PRODUCTION_READINESS.md) |
 | Понять общий процесс и переносимые пакеты | [TEAM_STANDARD](TEAM_STANDARD.md), [каталог Teams](../teams/README.md) |
 | Изменить игру, редакционный профиль или формат контекста | [TASK_CONTEXT](TASK_CONTEXT.md) |
 | Подготовить статью в Codex | [PUBLICATION_QUICKSTART](PUBLICATION_QUICKSTART.md) |

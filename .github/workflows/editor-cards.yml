@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 defaults:
   run:
@@ -23,14 +23,15 @@ jobs:
       - run: python .claude/skills/hs-edit/scripts/update_cards.py
       - name: Validate snapshot
         run: python -c "import json; d=json.load(open('.claude/skills/hs-edit/assets/cards-ru.json', encoding='utf-8')); assert len(d['карты']) > 6000; print(d['_снято'], len(d['карты']))"
-      - name: Commit changed snapshot
+      - name: Describe candidate
         run: |
-          if git diff --quiet -- .claude/skills/hs-edit/assets/cards-ru.json; then
-            echo "snapshot is unchanged"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .claude/skills/hs-edit/assets/cards-ru.json
-          git commit -m "chore(editor): refresh card snapshot $(date -u +%Y-%m-%d)"
-          git push
+          git diff --stat -- .claude/skills/hs-edit/assets/cards-ru.json >> "$GITHUB_STEP_SUMMARY"
+          echo 'Candidate only: import this snapshot in a versioned EditorTeam release, then run packages checks. Published package bytes must remain immutable.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload candidate snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-card-snapshot-candidate
+          path: editor/.claude/skills/hs-edit/assets/cards-ru.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

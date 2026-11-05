@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.15.1",
+      "version": "1.15.2",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -423,5 +423,5 @@
       ]
     }
   ],
-  "release_version": "1.20.1"
+  "release_version": "1.20.2"
 }
