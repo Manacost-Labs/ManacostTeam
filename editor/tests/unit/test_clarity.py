@@ -54,6 +54,22 @@ def test_creature_type_replaces_tribe_term() -> None:
     assert "terminology.minion-type" in ids(findings)
 
 
+def test_creature_replaces_fighter_term() -> None:
+    findings, _ = clarity.analyze(
+        "Сильного временного бойца незачем продавать ради слабого мурлока.",
+        "battlegrounds-article",
+    )
+    assert "terminology.minion-fighter" in ids(findings)
+
+
+def test_creature_term_is_clean() -> None:
+    findings, _ = clarity.analyze(
+        "Сильное временное существо незачем продавать ради слабого мурлока.",
+        "battlegrounds-article",
+    )
+    assert "terminology.minion-fighter" not in ids(findings)
+
+
 def test_official_battlegrounds_terms_are_clean() -> None:
     findings, _ = clarity.analyze(
         "Темные дары помогают выбрать направление. Темный дар связан с типом существа.",

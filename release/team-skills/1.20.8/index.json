@@ -1,0 +1,27 @@
+{
+  "version": "1.20.8",
+  "teams": 7,
+  "skills": 9,
+  "archives": {
+    "editor-team-1.15.8.zip": "8346fb03af53d082583533268c949ef7c6ed2ad6798417cef10eb588e18efc74",
+    "editor-team-1.15.8.skill": "8346fb03af53d082583533268c949ef7c6ed2ad6798417cef10eb588e18efc74",
+    "research-team-1.11.5.zip": "fdf57d16fd1c7c9d300475c52610f1a3ab2639ad2b1befdf051365545fc5b2b6",
+    "research-team-1.11.5.skill": "fdf57d16fd1c7c9d300475c52610f1a3ab2639ad2b1befdf051365545fc5b2b6",
+    "svg-team-1.0.1.zip": "2280d80ca18c50fbb87cb78484c937ccf0dffea5f179b5447a7203aead5faef6",
+    "svg-team-1.0.1.skill": "2280d80ca18c50fbb87cb78484c937ccf0dffea5f179b5447a7203aead5faef6",
+    "translate-team-1.2.2.zip": "8a1d59b064b4e0e16705e87a1c10c73d6554a22559c724ee00032cd02e400487",
+    "translate-team-1.2.2.skill": "8a1d59b064b4e0e16705e87a1c10c73d6554a22559c724ee00032cd02e400487",
+    "xml-team-1.0.1.zip": "97f2180376d6c994b7ec436f388c1f0938a0a2ec4093c6335a63109d08a263f9",
+    "xml-team-1.0.1.skill": "97f2180376d6c994b7ec436f388c1f0938a0a2ec4093c6335a63109d08a263f9",
+    "job-team-1.0.1.zip": "ab8e64710d5685aabbff5cae27e6843be687cc7c85ae732587f9746776be4547",
+    "job-team-1.0.1.skill": "ab8e64710d5685aabbff5cae27e6843be687cc7c85ae732587f9746776be4547",
+    "marketing-team-1.0.1.zip": "1ed6e95b060140b55221934f0cbafe4ab38cd00c394a8e094322c6d4e4a4215a",
+    "marketing-team-1.0.1.skill": "1ed6e95b060140b55221934f0cbafe4ab38cd00c394a8e094322c6d4e4a4215a",
+    "card-shortcodes-1.0.3.zip": "f7d0b5da65b54fd684effda4aed05b718340d82b700a0563386e4399de60c291",
+    "card-shortcodes-1.0.3.skill": "f7d0b5da65b54fd684effda4aed05b718340d82b700a0563386e4399de60c291",
+    "manacost-publish-1.12.7.zip": "060cb80f6e90771782ef920a47cc273d4e48208996c3266e89021db74ede63ea",
+    "manacost-publish-1.12.7.skill": "060cb80f6e90771782ef920a47cc273d4e48208996c3266e89021db74ede63ea",
+    "manacost-team-1.20.8-plugin.zip": "0a34136713e616bdedf168846d3b74d7a804f48df03333b6830d14ddcd9efe07"
+  },
+  "download_base": "https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.20.8/"
+}
