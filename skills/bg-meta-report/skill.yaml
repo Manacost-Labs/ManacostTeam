@@ -1,0 +1,4 @@
+id: workflow/bg-meta-report
+namespace: workflow
+version: "0.1.0"
+entrypoint: SKILL.md

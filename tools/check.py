@@ -76,6 +76,13 @@ CHECKS = {
             unit_tests(pattern="test_funmeta*.py"),
         ],
     ),
+    "bg-meta-report": (
+        "Локальный workflow /bg-meta-report",
+        ".",
+        [
+            unit_tests(pattern="test_bg_meta_report.py"),
+        ],
+    ),
     "meta-report": (
         "Локальный workflow /meta-report",
         ".",
