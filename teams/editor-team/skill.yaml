@@ -1,4 +1,4 @@
 name: editor-team
-version: "1.15.10"
+version: "1.15.11"
 team: EditorTeam
 entrypoint: SKILL.md
