@@ -55,6 +55,9 @@ paragraph_functions на вступление и пять logic_checks с той
   Из установленного пути проверены доставка плана/всех блоков и полный
   синтетический review → export без изменения байтов статьи. Артефакты —
   ignored build/structure-smoke-20261109; это проверка исполнения, не модельное A/B.
+- Итоговый main: Python 1050 passed, 38 skipped, 5 subtests passed; Go 617
+  tests/subtests и 18 пакетов без ошибок, vet/build прошли; корневой unittest
+  257 tests, OK, 1 skipped. Повторная проверка пакетов, diff и gitleaks прошла.
 
 Платные модельные API, публикация GitHub Release, deploy и Docker не запускались.
 Проверки показывают полный охват и согласованность ссылок; они не измеряют
