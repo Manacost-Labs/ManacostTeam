@@ -29,6 +29,11 @@ class MetaReportTests(unittest.TestCase):
         artifact = self.run / "author-context.json"
         write_json(artifact, {
             "schema_version": 1, "profile": "meta-report",
+            "article_plan": {
+                "reader_question": "Synthetic report question.", "main_answer": "Synthetic report answer.",
+                "sections": [{"id": "report", "question": "Synthetic class choices?", "contribution": "Synthetic coverage.",
+                              "depends_on": [], "claim_ids": [r["claim_id"] for r in self.handoff["claims"]]}],
+            },
             "requirements": [{"id": "scope", "instruction": "Preserve synthetic scope."}],
             "style_examples": [], "style_note": "Synthetic fixture, no prose comparison.",
         })

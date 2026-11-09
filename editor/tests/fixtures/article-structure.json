@@ -1,0 +1,49 @@
+[
+  {
+    "name": "nested-list-remains-with-parent",
+    "text": "Ввод.\n\n- Первый\n    - Вложенный\n    - Ещё",
+    "blocks": [
+      {"id": "b001", "kind": "text", "quote": "Ввод."},
+      {"id": "b002", "kind": "list", "quote": "- Первый\n    - Вложенный\n    - Ещё"}
+    ]
+  },
+  {
+    "name": "nbsp-is-not-markdown-heading-space",
+    "text": "Ввод.\n# Тема\nПродолжение.",
+    "blocks": [
+      {"id": "b001", "kind": "text", "quote": "Ввод.\n# Тема\nПродолжение."}
+    ]
+  },
+  {
+    "name": "mixed-markdown-crlf-fence-and-html",
+    "text": "# Тема\r\nПервый абзац\r\nпродолжение.\n\n- Первый\n  пояснение.\n- Второй\n\n```md\n# не заголовок\n\n<p>код</p>\n```\n<p>Один.</p><p>Два.</p>",
+    "blocks": [
+      {"id": "b001", "kind": "heading", "quote": "# Тема"},
+      {"id": "b002", "kind": "text", "quote": "Первый абзац\r\nпродолжение."},
+      {"id": "b003", "kind": "list", "quote": "- Первый\n  пояснение."},
+      {"id": "b004", "kind": "list", "quote": "- Второй"},
+      {"id": "b005", "kind": "code", "quote": "```md\n# не заголовок\n\n<p>код</p>\n```"},
+      {"id": "b006", "kind": "text", "quote": "<p>Один.</p>"},
+      {"id": "b007", "kind": "text", "quote": "<p>Два.</p>"}
+    ]
+  },
+  {
+    "name": "valid-html-boundaries-not-custom-tag-prefixes",
+    "text": "<h1/>\n<pя>Текст.</pя>\n<p attr=\"x\">Другой.</p>",
+    "blocks": [
+      {"id": "b001", "kind": "heading", "quote": "<h1/>\n<pя>Текст.</pя>"},
+      {"id": "b002", "kind": "text", "quote": "<p attr=\"x\">Другой.</p>"}
+    ]
+  },
+  {
+    "name": "empty-heading-crlf-and-nested-html",
+    "text": "#\r\nТекст.\n<div><p>Текст в HTML.</p></div>",
+    "blocks": [
+      {"id": "b001", "kind": "heading", "quote": "#"},
+      {"id": "b002", "kind": "text", "quote": "Текст."},
+      {"id": "b003", "kind": "text", "quote": "<div>"},
+      {"id": "b004", "kind": "text", "quote": "<p>Текст в HTML.</p>"},
+      {"id": "b005", "kind": "text", "quote": "</div>"}
+    ]
+  }
+]

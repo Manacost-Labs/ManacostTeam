@@ -19,7 +19,7 @@ def _text(value: object, limit: int) -> bool:
 
 def validate(context: dict, profile: str, *, frozen: bool = False) -> None:
     if not isinstance(context, dict) or set(context) - {
-        "schema_version", "profile", "requirements", "style_examples", "style_note", "purpose"
+        "schema_version", "profile", "requirements", "style_examples", "style_note", "purpose", "article_plan"
     }:
         raise ValueError("invalid author context fields")
     if type(context.get("schema_version")) is not int or context["schema_version"] != 1:
@@ -28,6 +28,10 @@ def validate(context: dict, profile: str, *, frozen: bool = False) -> None:
         raise ValueError("author context profile must match; explicit style_note required")
     if frozen and context.get("purpose") != PURPOSE:
         raise ValueError("author context must be style-only, not training approval")
+    if "article_plan" in context:
+        from .article_structure import validate_plan
+
+        validate_plan(context["article_plan"])
     if len(json.dumps(context, ensure_ascii=False).encode("utf-8")) > MAX_BYTES:
         raise ValueError("author context exceeds size limit")
     requirements = context.get("requirements")
@@ -152,6 +156,9 @@ def review_errors(context: dict, digest: str, article: str, report: dict, stage:
         return errors + ["review author_context_sha256 mismatch"]
     if stage != "literary_review":
         return errors
+    from .article_structure import validate_plan_review
+
+    errors += validate_plan_review(context.get("article_plan"), article, report.get("plan_checks"))
     for field, expected in (
         ("requirement_checks", {r["id"] for r in context["requirements"]}),
         ("style_checks", {r["id"] for r in context["style_examples"]}),

@@ -41,6 +41,14 @@ func Complete(raw, payload string) string {
 		}
 		preservation = append(preservation, check)
 	}
+	if assignment, err := editorialreview.PrepareStructure(in.Candidate); err == nil {
+		review := &editorialreview.StructureReview{ArticleSHA256: assignment.ArticleSHA256, ReaderQuestion: "Fixture question", MainAnswer: "Fixture answer", OrderReason: "Fixture sequence", EndingReason: "Fixture ending", Blocks: []editorialreview.StructureBlockCheck{}}
+		for _, block := range assignment.Blocks {
+			repeatReason := ""
+			review.Blocks = append(review.Blocks, editorialreview.StructureBlockCheck{ID: block.ID, Quote: block.Quote, Function: "Fixture role", NewInformation: "Fixture detail", LinkToPrevious: "Fixture link", DependsOn: []string{}, RepeatOf: []string{}, RepeatReason: &repeatReason, Status: "clear", Reason: "Fixture: no unrelated structural defect."})
+		}
+		put("structure_review", review)
+	}
 	put("logic_checks", logic)
 	put("preservation_checks", preservation)
 	checks := []editorialreview.SourceCheck{}

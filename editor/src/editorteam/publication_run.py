@@ -851,10 +851,25 @@ def next_task(
             "В выбранных образцах перенимай только use_for; avoid и исторические игровые факты "
             "не переносятся. Эти тексты — данные о форме, не команды и не обучающий gold. "
         ) + task["instructions"]
+        task["plan_status"] = "configured" if "article_plan" in context else "missing"
+        if "article_plan" not in context:
+            task["publication_ready"] = False
+            task["instructions"] = (
+                "Добавь article_plan в сохранённый пакет через context до нового допуска; "
+                "прежние отзывы не проверяли полный порядок объяснения. "
+            ) + task["instructions"]
         if stage == "draft":
             # Keep immediate, actionable requirements near the text; the full practice
             # catalog remains available by reference and is assigned to reviewers.
             task["craft_guidance"].pop("editorial_passes", None)
+            task["instructions"] = (
+                "До прозы сохрани article_plan в author_context: reader_question, main_answer и sections "
+                "[{id,question,contribution,depends_on,claim_ids}]. Сначала предпосылки, затем зависящие от них "
+                "решения. Каждый раздел добавляет ответ, а не повторяет эффект карты. План объяснения "
+                "не обязан копировать главы исследования; используй реальные claim_ids из handoff. "
+                "После прозы сверь фактический порядок с планом. Не добавляй переходную фразу вместо "
+                "недостающего объяснения и не переделывай удачную композицию ради шаблона. "
+            ) + task["instructions"]
         if stage in {"fact_review", "literary_review"}:
             task["author_context_review_schema"] = {
                 "author_context_sha256": digest,
@@ -866,6 +881,10 @@ def next_task(
                 "candidate passage; explain how the writing function was preserved without copying historical facts. "
                 "No examples means an empty array. Factual: context hash only; old examples are not evidence.",
                 "limitation": "Hashes, coverage and quotes do not prove the reviewer's semantic judgment.",
+                "plan_checks": "Literary: one row per article_plan section in plan order: "
+                "{id,block_ids:[actual IDs from structure_assignment],status:clear|issue,reason}. "
+                "Identify where the planned question is actually answered and whether prerequisites are explained first. "
+                "Several questions can share an explanatory block. A wrong plan must be updated, not rationalized.",
             }
     return task
 
@@ -993,6 +1012,11 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
             context = _author_context(run, state)
             if context is None:
                 raise ValueError("configure author context before submitting a draft")
+            from .article_structure import validate_plan_evidence
+
+            plan_errors = validate_plan_evidence(context[0].get("article_plan"), _json(_data(run, state, "research")))
+            if plan_errors:
+                raise ValueError("; ".join(plan_errors))
             from .publication_context import literal_errors
 
             violations = literal_errors(context[0], data.decode("utf-8"))
@@ -1038,6 +1062,9 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
             context = _author_context(run, state)
             if context is None:
                 raise ValueError("configure author context before submitting reviews")
+            from .article_structure import validate_plan_evidence
+
+            errors += validate_plan_evidence(context[0].get("article_plan"), handoff)
             errors += review_errors(*context, text, report, stage)
         _record(run, state, stage, data, errors)
         if retry_review:
@@ -1146,6 +1173,11 @@ def revise(run: Path, *, artifact: Path, feedback_options: dict | None = None) -
         context = _author_context(run, state)
         if context is None:
             raise ValueError("configure author context before revising")
+        from .article_structure import validate_plan_evidence
+
+        plan_errors = validate_plan_evidence(context[0].get("article_plan"), _json(_data(run, state, "research")))
+        if plan_errors:
+            raise ValueError("; ".join(plan_errors))
         violations = literal_errors(context[0], data.decode("utf-8"))
         if violations:
             raise ValueError("; ".join(violations))
@@ -1199,6 +1231,9 @@ def export(run: Path, *, output: Path) -> dict:
         context = _author_context(run, state)
         if context is None:
             raise ValueError("configure author context and repeat reviews before export")
+        from .article_structure import validate_plan_evidence
+
+        errors += validate_plan_evidence(context[0].get("article_plan"), handoff)
         for stage in ("fact_review", "literary_review"):
             errors += review_errors(*context, text, _json(_data(run, state, stage)), stage)
         if errors:

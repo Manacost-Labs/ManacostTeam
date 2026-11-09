@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from test_article_structure import article_plan, structure_assessment
 
 from editorteam.publication_run import (
     configure_context,
@@ -202,6 +203,7 @@ def prepared(tmp_path):
     init_run(run, brief="Гайд", patch="test", profile="guide", shortcodes="off")
     configure_context(run, artifact=write(tmp_path, "task-context.json", {
         "schema_version": 1, "profile": "guide",
+        "article_plan": article_plan(),
         "requirements": [{"id": "conditions", "instruction": "Сохрани условие и исключение."}],
         "style_examples": [], "style_note": "Одно предложение в тесте, сравнение стиля не требуется.",
     }))
@@ -262,6 +264,11 @@ def reviews(run):
         "whole_article_checked": True,
     }
     if "author_context_sha256" in task:
+        literary["structure_review"] = structure_assessment(Path(task["inputs"]["draft"]).read_text(encoding="utf-8"))
+        literary["plan_checks"] = [
+            {"id": row["id"], "block_ids": ["b001"], "status": "clear", "reason": "Synthetic answer covers the planned question."}
+            for row in task["author_context"].get("article_plan", {}).get("sections", [])
+        ]
         for report in (factual, literary):
             report["author_context_sha256"] = task["author_context_sha256"]
         literary["requirement_checks"] = [
@@ -553,6 +560,10 @@ def test_shared_handoff_metadata_survives_saved_receipts_and_next_task(tmp_path)
     init_run(run, brief=h["brief"], patch=h["patch"], profile=h["style_profile"], shortcodes="off")
     configure_context(run, artifact=write(tmp_path, "context.json", {
         "schema_version": 1, "profile": h["style_profile"],
+        "article_plan": {**article_plan(), "sections": [{
+            **article_plan()["sections"][0],
+            "claim_ids": list({key for row in h["chapters"] for key in row["required_claim_ids"]}),
+        }]},
         "requirements": [{"id": "scope", "instruction": "Preserve source scope."}],
         "style_examples": [], "style_note": "Metadata transport fixture only.",
     }))

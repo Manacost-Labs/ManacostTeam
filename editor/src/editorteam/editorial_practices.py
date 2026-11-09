@@ -78,7 +78,7 @@ def prepare(
         raise ValueError("invalid review owner")
     data = catalog()
     packet = {
-        "contract_version": 3,
+        "contract_version": 4,
         "owner": owner,
         "article_sha256": _hash(text),
         "principles": data["principles"],
@@ -99,6 +99,18 @@ def prepare(
         },
         "limitation": "This packet is a review assignment, not a verdict. Schema validation cannot establish semantic truth.",
     }
+    if owner != "fact_review":
+        from .article_structure import inventory
+
+        packet["structure_assignment"] = inventory(text)
+        packet["review_schema"]["structure_review"] = (
+            "{article_sha256,reader_question,main_answer,order_reason,ending_reason,blocks:["
+            "{id,quote,function,new_information,link_to_previous,depends_on:[],repeat_of:[],repeat_reason,status:clear|issue|unverified,reason}]}. "
+            "Cover every assigned block exactly once in actual order. Quote this block, not the opening. "
+            "depends_on/repeat_of name earlier block IDs; explain deliberate reprises instead of banning them. "
+            "Check whether premises precede actionable advice and the ending answers the original question. "
+            "An issue blocks acceptance; no fabricated clear verdict or connective phrase to hide a missing reason."
+        )
     if original is not None:
         packet["original_sha256"] = _hash(original)
         packet["review_schema"]["original_factual_checks"] = (
@@ -402,6 +414,9 @@ def validate(
     ids = {p["id"] for p in packet["practices"]}
     errors += _checks(text, report.get("practice_checks"), ids, "practice_checks", na=ids)
     if owner != "fact_review":
+        from .article_structure import validate_review
+
+        errors += validate_review(text, report.get("structure_review"))
         errors += _checks(
             text, report.get("logic_checks"), set(LOGIC), "logic_checks", na={"causal_support"}
         )

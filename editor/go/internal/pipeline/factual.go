@@ -17,13 +17,14 @@ func ReviewFactualEdit(ctx context.Context, model llm.Completer, source, candida
 }
 
 type EditReview struct {
-	PracticeChecks        []editorialreview.Check       `json:"practice_checks"`
-	LogicChecks           []editorialreview.Check       `json:"logic_checks"`
-	PreservationChecks    []editorialreview.Check       `json:"preservation_checks"`
-	SourceChecks          []editorialreview.SourceCheck `json:"source_checks"`
-	OriginalFactualChecks *OriginalFactualChecks        `json:"original_factual_checks"`
-	ReviewScope           string                        `json:"review_scope"`
-	SourceVerification    string                        `json:"source_verification"`
+	StructureReview       *editorialreview.StructureReview `json:"structure_review"`
+	PracticeChecks        []editorialreview.Check          `json:"practice_checks"`
+	LogicChecks           []editorialreview.Check          `json:"logic_checks"`
+	PreservationChecks    []editorialreview.Check          `json:"preservation_checks"`
+	SourceChecks          []editorialreview.SourceCheck    `json:"source_checks"`
+	OriginalFactualChecks *OriginalFactualChecks           `json:"original_factual_checks"`
+	ReviewScope           string                           `json:"review_scope"`
+	SourceVerification    string                           `json:"source_verification"`
 	reviewedSource        string
 	preservationSource    string
 }
@@ -52,7 +53,7 @@ func ReviewEdit(ctx context.Context, model llm.Completer, source, candidate stri
 	if err != nil {
 		return nil, err
 	}
-	report := &EditReview{PracticeChecks: verdict.PracticeChecks, LogicChecks: verdict.LogicChecks, PreservationChecks: verdict.PreservationChecks, SourceChecks: verdict.SourceChecks, OriginalFactualChecks: verdict.OriginalFactualChecks, ReviewScope: verdict.ReviewScope, SourceVerification: verdict.SourceVerification}
+	report := &EditReview{StructureReview: verdict.StructureReview, PracticeChecks: verdict.PracticeChecks, LogicChecks: verdict.LogicChecks, PreservationChecks: verdict.PreservationChecks, SourceChecks: verdict.SourceChecks, OriginalFactualChecks: verdict.OriginalFactualChecks, ReviewScope: verdict.ReviewScope, SourceVerification: verdict.SourceVerification}
 	if verdict.Verdict != "accept" || !verdict.NoNewFacts || len(verdict.UnsupportedAdditions) > 0 {
 		return report, fmt.Errorf("не подтверждены факты, логика, смысл и голос; добавления: %v; замечания: %v", verdict.UnsupportedAdditions, verdict.Findings)
 	}
