@@ -31,7 +31,7 @@ READER_QUESTIONS = (
     "Какие 1–3 сборки реально играются и через какие кор-карты?",
     "Когда переходить и чего это стоит по темпу?",
     "Порядок действий в ходу и главная механическая ловушка.",
-    "Сцена или ошибка со стрима для истории.",
+    "Подтверждённая ситуация или ошибка, объясняющая решение; история со стрима необязательна.",
     "Контрпример: где сборка проигрывает и кто ее держит.",
 )
 REQUIRED_SECTIONS = {
@@ -227,10 +227,9 @@ def check_article(article: Path, races: tuple[str, ...] | None = None) -> dict:
                 errors.append(f"числа в тир-листе героев: {line[:60]}")
     if "Удачи в таверне" not in text[-400:]:
         warnings.append("нет финального «Удачи в таверне!»")
-    stories = sum(1 for p in text.split("\n\n") if re.search(r"\bстрим", p, re.IGNORECASE))
-    if stories < 3:
-        warnings.append(f"историй со стримов {stories}; ориентир — 3–5")
     return {"ok": not errors, "errors": errors, "warnings": warnings,
+            "scope": "structure_and_style_signals", "publication_ready": False,
+            "required_reviews": ["fact_review", "literary_review"],
             "races": sorted(race_sections)}
 
 
