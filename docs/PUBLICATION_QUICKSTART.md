@@ -56,12 +56,16 @@ $manacost-publish Продолжи запуск из [абсолютный пу�
 ```powershell
 $env:PYTHONUTF8 = '1'
 python teams/manacost-publish/scripts/publish.py init build/publication-runs/my-article --brief 'Тема, аудитория и границы статьи' --patch 'проверенный-патч-или-период' --profile battlegrounds-guide --shortcodes off
+python teams/manacost-publish/scripts/publish.py context build/publication-runs/my-article --artifact build/local-inputs/author-context.json
 python teams/manacost-publish/scripts/publish.py next build/publication-runs/my-article
 python teams/manacost-publish/scripts/publish.py status build/publication-runs/my-article
 ```
 
 `next` возвращает роль, инструкции, пути к сохранённым входам и хеши. Это
 задание для Codex, а не свидетельство выполненного поиска или генерации.
+Перед `context` подготовьте [требования и выбранные образцы](PUBLICATION_CONTEXT.md).
+Без них нельзя принять черновик. При продолжении пакет восстанавливается
+автоматически; новое замечание требует обновить пакет и повторить reviews.
 Новый init устанавливает review_contract_version=3; старый run без этого поля
 читается как v1 для истории. Для v1/v2 next сообщает publication_ready=false
 и current_review_required=true, а export блокируется. Для нового допуска

@@ -25,6 +25,15 @@ def write_json(path, value):
 
 
 class MetaReportTests(unittest.TestCase):
+    def configure_context(self):
+        artifact = self.run / "author-context.json"
+        write_json(artifact, {
+            "schema_version": 1, "profile": "meta-report",
+            "requirements": [{"id": "scope", "instruction": "Preserve synthetic scope."}],
+            "style_examples": [], "style_note": "Synthetic fixture, no prose comparison.",
+        })
+        return meta.configure_context(self.run, artifact=artifact)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -232,6 +241,11 @@ class MetaReportTests(unittest.TestCase):
         self.assertIn("meta_report", task["inputs"])
         draft = self.run / "candidate.md"
         draft.write_text(self.material(), encoding="utf-8")
+        self.assertEqual(meta.next_task(self.run)["context_status"], "missing")
+        with self.assertRaisesRegex(ValueError, "configure author context"):
+            meta.submit(self.run, stage="draft", artifact=draft)
+        self.configure_context()
+        self.assertEqual(meta.next_task(self.run)["context_status"], "configured")
         self.assertEqual(meta.submit(self.run, stage="draft", artifact=draft)["stage"], "fact_review")
         with self.assertRaisesRegex(ValueError, "both reviews"):
             meta.export(self.run, self.run / "final.md")
@@ -424,6 +438,7 @@ class MetaReportTests(unittest.TestCase):
         meta.prepare(self.run)
         draft = self.run / "candidate.md"
         draft.write_text(self.material(), encoding="utf-8")
+        self.configure_context()
         meta.submit(self.run, stage="draft", artifact=draft)
         review = self.run / "factual.json"
         write_json(review, {})
@@ -448,6 +463,7 @@ class MetaReportTests(unittest.TestCase):
         article = self.material()
         draft = self.run / "candidate.md"
         draft.write_text(article, encoding="utf-8")
+        self.configure_context()
         meta.submit(self.run, stage="draft", artifact=draft)
         review = self.run / "negative.json"
         validator = meta.runtimes()[1]
@@ -524,6 +540,7 @@ class MetaReportTests(unittest.TestCase):
         meta.prepare(self.run)
         draft = self.run / "model.md"
         draft.write_text(self.material() + "\n\nModel coverage 90%, unknown 10%; estimate 60%, bounds 54% to 64%.\n", encoding="utf-8")
+        self.configure_context()
         state = meta.submit(self.run, stage="draft", artifact=draft)
         self.assertEqual(state["stage"], "fact_review")
         self.assertIn("both reviews", str(self.assert_export_blocked()))

@@ -5,7 +5,15 @@ from pathlib import Path
 
 import pytest
 
-from editorteam.publication_run import export, init_run, next_task, revise, status, submit
+from editorteam.publication_run import (
+    configure_context,
+    export,
+    init_run,
+    next_task,
+    revise,
+    status,
+    submit,
+)
 
 
 def test_explicit_preferences_and_initial_task(tmp_path):
@@ -192,6 +200,11 @@ def handoff():
 def prepared(tmp_path):
     run = tmp_path / "run"
     init_run(run, brief="Гайд", patch="test", profile="guide", shortcodes="off")
+    configure_context(run, artifact=write(tmp_path, "task-context.json", {
+        "schema_version": 1, "profile": "guide",
+        "requirements": [{"id": "conditions", "instruction": "Сохрани условие и исключение."}],
+        "style_examples": [], "style_note": "Одно предложение в тесте, сравнение стиля не требуется.",
+    }))
     rows = [
         {
             "id": "one",
@@ -248,6 +261,14 @@ def reviews(run):
         },
         "whole_article_checked": True,
     }
+    if "author_context_sha256" in task:
+        for report in (factual, literary):
+            report["author_context_sha256"] = task["author_context_sha256"]
+        literary["requirement_checks"] = [
+            {"id": row["id"], "status": "met", "quote": TEXT, "reason": "Тестовый совет сохраняет условие и исключение."}
+            for row in task["author_context"]["requirements"]
+        ]
+        literary["style_checks"] = []
     # Synthetic one-sentence evidence only; production never manufactures verdicts.
     from editorteam.editorial_practices import LOGIC, PRESERVATION, catalog
 
@@ -530,6 +551,11 @@ def test_shared_handoff_metadata_survives_saved_receipts_and_next_task(tmp_path)
     h = fixture["handoff"]
     run = tmp_path / "run"
     init_run(run, brief=h["brief"], patch=h["patch"], profile=h["style_profile"], shortcodes="off")
+    configure_context(run, artifact=write(tmp_path, "context.json", {
+        "schema_version": 1, "profile": h["style_profile"],
+        "requirements": [{"id": "scope", "instruction": "Preserve source scope."}],
+        "style_examples": [], "style_note": "Metadata transport fixture only.",
+    }))
     text = fixture["source_text"]
     rows = [
         {

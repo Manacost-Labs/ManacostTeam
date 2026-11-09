@@ -795,6 +795,12 @@ def export(run, output):
     return runtimes()[0].export(run / "publication", output=Path(output))
 
 
+def configure_context(run, *, artifact):
+    run = Path(run)
+    accepted(run)
+    return runtimes()[0].configure_context(run / "publication", artifact=Path(artifact))
+
+
 def main(argv=None):
     # Windows pipes may inherit a legacy or ASCII encoding even on resumed runs.
     for stream in (sys.stdout, sys.stderr):
@@ -802,7 +808,7 @@ def main(argv=None):
             stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("init", "check", "prepare", "next", "status", "compare", "analysis", "inspect-statistics", "submit", "revise", "export"):
+    for name in ("init", "check", "prepare", "next", "status", "compare", "analysis", "inspect-statistics", "submit", "revise", "export", "context"):
         command = sub.add_parser(name)
         command.add_argument("run", type=Path)
         if name == "init":
@@ -811,7 +817,7 @@ def main(argv=None):
             command.add_argument("--rank", default="all-ranks")
             command.add_argument("--region", default="all-regions")
             command.add_argument("--window-hours", type=int, default=24)
-        if name in {"submit", "revise"}:
+        if name in {"submit", "revise", "context"}:
             command.add_argument("--artifact", required=True, type=Path)
         if name == "submit":
             command.add_argument("--stage", required=True, choices=("draft", "fact_review", "literary_review"))
@@ -843,6 +849,8 @@ def main(argv=None):
             result = submit(run, **args)
         elif command == "revise":
             result = revise(run, args["artifact"])
+        elif command == "context":
+            result = configure_context(run, **args)
         else:
             result = export(run, args["output"])
         print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
