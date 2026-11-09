@@ -123,6 +123,23 @@ class BgMetaReportTest(unittest.TestCase):
         self.assertEqual(result["errors"], [])
         self.assertTrue(result["ok"])
 
+    def test_format_check_does_not_require_stream_anecdotes(self):
+        text = GOOD.replace("Игрок на стриме показал деталь.", "")
+        text = text.replace("история со стрима", "изменение после патча")
+        text = text.replace("третий стрим", "условие выбора")
+        result = check_article(self.article(text), ("Альфа",))
+        self.assertTrue(result["ok"])
+        self.assertFalse(any("стрим" in warning for warning in result["warnings"]))
+
+    def test_format_success_is_not_editorial_approval(self):
+        # Intentionally empty advice can pass structural checks. Do not certify it.
+        text = GOOD.replace("Проза о сборке, третий стрим.", "Покупайте полезных существ.")
+        result = check_article(self.article(text), ("Альфа",))
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["scope"], "structure_and_style_signals")
+        self.assertIs(result["publication_ready"], False)
+        self.assertEqual(result["required_reviews"], ["fact_review", "literary_review"])
+
     def test_article_gates(self):
         cases = {
             "нет раздела расы": GOOD.replace("### Альфа", "### Гамма"),

@@ -419,6 +419,16 @@ def test_craft_guidance_reaches_applicable_stages_without_changing_evidence(tmp_
     assert repair["stage"] == "draft"
     assert repair["craft_guidance"]["role"] == "write"
     assert repair["chapter_brief"] == packet
+    expected = {
+        "substance", "advice_basis", "genre", "plain_language",
+        "boards", "owner_corrections", "delivery",
+    }
+    for current in (task, repair):
+        checks = current["craft_guidance"]["reader_quality_checks"]
+        assert {check["id"] for check in checks} == expected
+        assert all(check["task"].strip() for check in checks)
+    repair["craft_guidance"]["reader_quality_checks"].clear()
+    assert next_task(run)["craft_guidance"]["reader_quality_checks"]
     # A task is a fresh snapshot; a caller cannot change future task policy.
     repair["craft_guidance"]["principles"].clear()
     assert next_task(run)["craft_guidance"]["principles"]
@@ -427,6 +437,7 @@ def test_craft_guidance_reaches_applicable_stages_without_changing_evidence(tmp_
     for stage in ("sources", "research"):
         assert craft_guidance(stage)["role"] == "research"
         assert craft_guidance(stage)["is_factual_evidence"] is False
+        assert "reader_quality_checks" not in craft_guidance(stage)
     assert craft_guidance("ready") is None
 
 
