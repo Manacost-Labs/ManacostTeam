@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.15.13",
+      "version": "1.15.14",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -111,6 +111,10 @@
         {
           "source": "docs/PUBLICATION_CONTEXT.md",
           "destination": "references/publication-context.md"
+        },
+        {
+          "source": "docs/ARTICLE_STRUCTURE.md",
+          "destination": "references/article-structure.md"
         }
       ]
     },
@@ -118,7 +122,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.11.8",
+      "version": "1.11.9",
       "source": "teams/research-team",
       "resources": [
         {
@@ -156,6 +160,10 @@
         {
           "source": "docs/PUBLICATION_CONTEXT.md",
           "destination": "references/publication-context.md"
+        },
+        {
+          "source": "docs/ARTICLE_STRUCTURE.md",
+          "destination": "references/article-structure.md"
         }
       ]
     },
@@ -341,7 +349,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.12.11",
+      "version": "1.12.12",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -439,9 +447,17 @@
         {
           "source": "editor/src/editorteam/publication_context.py",
           "destination": "python/editorteam/publication_context.py"
+        },
+        {
+          "source": "docs/ARTICLE_STRUCTURE.md",
+          "destination": "references/article-structure.md"
+        },
+        {
+          "source": "editor/src/editorteam/article_structure.py",
+          "destination": "python/editorteam/article_structure.py"
         }
       ]
     }
   ],
-  "release_version": "1.20.13"
+  "release_version": "1.20.14"
 }

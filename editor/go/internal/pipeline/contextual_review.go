@@ -168,20 +168,28 @@ func validateOriginalChecks(in criticInput, review *OriginalFactualChecks) error
 func validateContextualReview(in criticInput, out criticResult) error {
 	err := errors.Join(
 		editorialreview.ValidateDimensions(in.Candidate, in.Source, out.LogicChecks, out.PreservationChecks, in.NewArticle),
+		editorialreview.ValidateStructure(in.Candidate, out.StructureReview),
 		editorialreview.ValidateSourceChecks(in.SourceSnapshots, out.SourceChecks),
 		validateOriginalChecks(in, out.OriginalFactualChecks),
 	)
 	if out.SourceChecks == nil {
 		err = errors.Join(err, errors.New("source_checks: explicit array required, including [] when no snapshots supplied"))
 	}
-	if out.Verdict == "accept" && (editorialreview.HasUnresolved(out.LogicChecks, out.PreservationChecks) || editorialreview.HasUnresolvedSources(out.SourceChecks) || hasOriginalIssues(out.OriginalFactualChecks)) {
-		err = errors.Join(err, errors.New("accept contradicts unresolved logic, preservation, source or original-fact checks"))
+	if out.Verdict == "accept" && (editorialreview.HasUnresolved(out.LogicChecks, out.PreservationChecks) || editorialreview.HasUnresolvedStructure(out.StructureReview) || editorialreview.HasUnresolvedSources(out.SourceChecks) || hasOriginalIssues(out.OriginalFactualChecks)) {
+		err = errors.Join(err, errors.New("accept contradicts unresolved structure, logic, preservation, source or original-fact checks"))
 	}
 	return err
 }
 
 func contextualFindings(in criticInput, out criticResult) []analyzers.Finding {
 	findings := practiceFindings(in.Candidate, append(append([]editorialreview.Check{}, out.LogicChecks...), out.PreservationChecks...))
+	if out.StructureReview != nil {
+		for _, block := range out.StructureReview.Blocks {
+			if block.Status != "clear" {
+				findings = append(findings, analyzers.Finding{Analyzer: "critic", RuleID: "article_structure." + block.ID, Severity: "warning", Message: block.Reason, Evidence: block.Quote})
+			}
+		}
+	}
 	for _, check := range out.SourceChecks {
 		if check.Status != "verified" {
 			findings = append(findings, analyzers.Finding{Analyzer: "critic", RuleID: "source_verification." + check.SourceID, Severity: "error", Message: check.Reason, Tags: []string{"analyzer_unavailable"}})

@@ -103,6 +103,17 @@ def _review(payload: dict[str, Any], system: str, repair: bool) -> dict[str, Any
         assessments.append(assessment)
     return {
         "practice_checks": [check(identifier) for identifier in practices],
+        "structure_review": {
+            "article_sha256": payload["structure_assignment"]["article_sha256"],
+            "reader_question": "Fixture question.", "main_answer": "Fixture answer.",
+            "order_reason": "Fixture order.", "ending_reason": "Fixture ending.",
+            "blocks": [{
+                "id": b["id"], "quote": b["quote"], "function": "Fixture function.",
+                "new_information": "Fixture contribution.", "link_to_previous": "Fixture connection.",
+                "depends_on": [], "repeat_of": [], "repeat_reason": "",
+                "status": "clear", "reason": "Synthetic test only.",
+            } for b in payload["structure_assignment"]["blocks"]],
+        },
         "logic_checks": [
             check(identifier)
             for identifier in (

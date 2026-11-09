@@ -4,6 +4,7 @@ import hashlib
 import json
 
 import pytest
+from test_article_structure import article_plan
 from test_publication_run import TEXT, prepared, reviews, write
 
 from editorteam import publication_run as run_api
@@ -14,6 +15,7 @@ def context_file(tmp_path, *, requirements=None):
     return write(tmp_path, "context.json", {
         "schema_version": 1,
         "profile": "guide",
+        "article_plan": article_plan(),
         "requirements": requirements or [{"id": "plain", "instruction": "Объясни решение без технического отчёта."}],
         "style_note": "Выбранный для этой задачи образец, не одобренный обучающий эталон.",
         "style_examples": [{

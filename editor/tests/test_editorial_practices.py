@@ -3,6 +3,7 @@
 import copy
 
 import pytest
+from test_article_structure import structure_assessment
 
 from editorteam.editorial_practices import (
     catalog,
@@ -19,6 +20,7 @@ def assessment(owner="literary_review", text=TEXT):
     return {
         "status": "pass",
         "article_sha256": packet["article_sha256"],
+        "structure_review": structure_assessment(text),
         "practice_checks": [
             {
                 "id": p["id"],
