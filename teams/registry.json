@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.15.12",
+      "version": "1.15.13",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -107,6 +107,10 @@
         {
           "source": "docs/EDITORIAL_PRACTICES.md",
           "destination": "references/editorial-practices.md"
+        },
+        {
+          "source": "docs/PUBLICATION_CONTEXT.md",
+          "destination": "references/publication-context.md"
         }
       ]
     },
@@ -114,7 +118,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.11.7",
+      "version": "1.11.8",
       "source": "teams/research-team",
       "resources": [
         {
@@ -148,6 +152,10 @@
         {
           "source": "docs/EDITORIAL_PRACTICES.md",
           "destination": "references/editorial-practices.md"
+        },
+        {
+          "source": "docs/PUBLICATION_CONTEXT.md",
+          "destination": "references/publication-context.md"
         }
       ]
     },
@@ -333,7 +341,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.12.10",
+      "version": "1.12.11",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -423,9 +431,17 @@
         {
           "source": "editor/src/editorteam/example_bank.js",
           "destination": "python/editorteam/example_bank.js"
+        },
+        {
+          "source": "docs/PUBLICATION_CONTEXT.md",
+          "destination": "references/publication-context.md"
+        },
+        {
+          "source": "editor/src/editorteam/publication_context.py",
+          "destination": "python/editorteam/publication_context.py"
         }
       ]
     }
   ],
-  "release_version": "1.20.12"
+  "release_version": "1.20.13"
 }

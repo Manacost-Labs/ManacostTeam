@@ -193,10 +193,16 @@ format, rank, region, периоду и population. `universe=selected-decks` о
 ```powershell
 python skills/meta-report/scripts/meta_report.py check RUN
 python skills/meta-report/scripts/meta_report.py prepare RUN
+python skills/meta-report/scripts/meta_report.py context RUN --artifact RUN/author-context.json
 python skills/meta-report/scripts/meta_report.py next RUN
 python skills/meta-report/scripts/meta_report.py submit RUN --stage draft --artifact RUN/article.md
 python skills/meta-report/scripts/meta_report.py next RUN
 ```
+
+До черновика собери требования владельца и отрывки образцов того же жанра по
+`docs/PUBLICATION_CONTEXT.md`; profile здесь `meta-report`. Команда `context`
+сохраняет их в публикационном запуске. Литературный отзыв проверяет каждый
+пункт и образец; новые замечания требуют обновить пакет и повторить reviews.
 
 Дальше `next` возвращает роли и входы для двух независимых reviewer. Передай
 субагенту инструкции текущего этапа, candidate/handoff/source paths и требуемую
