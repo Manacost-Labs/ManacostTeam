@@ -1,12 +1,9 @@
-# Server Skills Policy
+# EditorTeam Agent Instructions
 
-This repository is the canonical source for the skills that are maintained by
-Manacost Labs on the Debian server.
-
-The server entrypoints `/srv/projects/AGENTS.md` and
-`/home/debian/server/AGENTS.md` are intended to point to this same file. Keep
-this file in the repository; do not edit either entrypoint as a separate policy
-copy. Install them with `scripts/install-server-entrypoints.sh`.
+These instructions apply to the EditorTeam module in any checkout. Use the
+repository's own instructions, skills, and verification commands on the current
+machine. Skill selection is described in `.agents/README.md` and
+`.agents/profile.yaml`, relative to this file.
 
 ## Authority and precedence
 
@@ -17,9 +14,9 @@ When several instructions apply, use this order:
 
 1. system and platform instructions;
 2. developer and security instructions;
-3. `/srv/projects/AGENTS.md` (the server entrypoint, when installed);
-4. the nearest project `AGENTS.md`;
-5. the selected profile in `profiles/`;
+3. user instructions;
+4. the repository root `AGENTS.md` and the nearest module `AGENTS.md`;
+5. the selected project profile;
 6. the smallest set of skill files needed for the task.
 
 More specific project rules remain authoritative for that project. A skill is
@@ -28,10 +25,11 @@ flows, or unrelated repositories.
 
 ## Mandatory execution contract
 
-This is the server's main AI execution policy. It applies to every coding,
-review, debugging, design, infrastructure, and documentation task performed
-under `/srv/projects`, `/home/debian/server`, or a project reached through
-those entrypoints.
+This policy applies to coding, review, debugging, design, infrastructure,
+and documentation tasks in EditorTeam. Editorial workflows retain their own
+content review requirements. This file adds no mandatory sub-agent stages or
+fixed model requirement; delegation follows the user request and the selected
+workflow.
 
 "Always use" means: always evaluate every applicable skill, linter, quality
 tool, and MCP listed below, and actually invoke the applicable ones. It does
@@ -92,26 +90,22 @@ is a result that can be checked with evidence.
 
 Before searching code or proposing a patch, the agent must:
 
-1. read `/srv/projects/AGENTS.md` and the nearest project `AGENTS.md`;
-2. run the Context Scout gate described below, before selecting skills,
-   tools, or MCPs;
-3. identify the project root and select its profile with
-   `scripts/skillctl plan <project-root>`; use `server` for shared-server
-   work and the detected project profile for application work;
-4. load the smallest applicable set from the selected profile with
-   `scripts/skillctl list <profile>` and resolve each canonical skill with
-   `scripts/skillctl resolve <skill-id>`;
-5. use `using-agent-skills` to decide applicability and
+1. read the repository root `AGENTS.md`, README, and the nearest module
+   `AGENTS.md`;
+2. identify the checkout root and select applicable skills from
+   `editor/.agents/profile.yaml`; read their local `SKILL.md` files using
+   `editor/.agents/README.md`;
+3. use `using-agent-skills` to decide applicability and
    `planning-and-task-breakdown` for every non-trivial task. The plan must
    state scope, files, dependencies, acceptance criteria, verification, and
    safe parallel/sequential boundaries;
-6. run `git status --short`, `git diff --name-only`, and `git worktree list`
+4. run `git status --short`, `git diff --name-only`, and `git worktree list`
    before any edit. Record the starting changed paths and treat them as
    protected work owned by the user or another session;
-7. if the project has `.codegraph/`, run `codegraph explore "<question>"`
+5. if the project has `.codegraph/`, run `codegraph explore "<question>"`
    before broad text search. Use Serena for symbol-aware navigation when its
    MCP is available and the task involves a non-trivial code relationship;
-8. state the MCP decision before implementation: which applicable MCPs will
+6. state the MCP decision before implementation: which applicable MCPs will
    be used, what each will verify, and why an applicable MCP is unavailable if
    it cannot be called.
 
@@ -122,78 +116,9 @@ CI changes, `ci-cd-and-automation` is mandatory. For code changes,
 `git-workflow-and-versioning` is mandatory. For a large context, long-running
 task, or context handoff, also load the relevant context-engineering skill.
 
-### Mandatory 5.6 Luna sub-agent gates
-
-For every task that can change code, configuration, dependencies,
-infrastructure, tests, documentation, or release state, use two explicit
-sub-agent gates. The required model/alias for both gates is **`5.6 Luna`**.
-Use the native sub-agent/thread mechanism exposed by the current client, or
-the configured dev-team mechanism when it supports model selection. These
-gates are part of execution, not optional background advice.
-
-#### Gate A: context before implementation
-
-Before choosing skills, tools, or MCPs, start one read-only Context Scout on
-`5.6 Luna`. It must not edit files, access secrets, commit, push, deploy, or
-change external state. Ask it to return a compact `CONTEXT BRIEF` containing:
-
-- task goal, scope, non-goals, and acceptance criteria;
-- repository root, applicable `AGENTS.md` files, profile, and active-session
-  or worktree ownership signals;
-- baseline changed paths and protected paths;
-- relevant files, symbols, tests, architecture constraints, and dependencies;
-- risks, unknowns, likely regressions, and the smallest useful verification;
-- recommended skills, tools, and MCPs with a reason for each.
-
-The main agent must validate this brief against local repository evidence. The
-brief never replaces the mandatory `AGENTS.md` read, worktree check, or the
-main agent's responsibility for selecting and invoking applicable skills and
-tools.
-
-#### Gate B: documentation and micro-review after implementation
-
-After implementation and focused tests, but before the final quality gate,
-start a second independent documentation/review sub-agent on `5.6 Luna`.
-Give it the implementation diff and the Context Brief. Its code review is
-read-only by default; it may write only the explicitly assigned documentation
-described below. It must:
-
-- write or update only the task-scoped documentation, ADR, README, or handoff
-  notes explicitly assigned to it; never invent behavior that the code does
-  not implement;
-- review the code for small errors, edge cases, stale context, test gaps,
-  dead code, inconsistent naming, and unclear handoff details;
-- report architecture, cleanliness, security, and performance concerns even
-  when they are outside the requested fix, clearly marked as follow-up;
-- return a `REVIEW BRIEF` with documentation changes, findings by severity,
-  evidence, test gaps, residual risks, and recommended next actions.
-
-The reviewer must not modify another session's paths, authentication/sign-in
-files, secrets, production copies, or unrelated documents. Documentation edits
-must be disjoint from concurrent work or explicitly coordinated before the
-reviewer writes them. Code findings are advisory until the main agent verifies
-and resolves them.
-
-#### Model availability and final ownership
-
-Attempt the exact `5.6 Luna` alias and record the result. Never claim that a
-sub-agent ran when the client did not expose or execute it. If the alias is
-unavailable, record `5.6 Luna: unavailable`; for low-risk work use the closest
-available read-only reviewer only when safe, and for high-risk, production,
-authentication, migration, or security-sensitive work stop and request a
-model/coordination decision before editing.
-
-The main agent remains accountable for the final result. Before responding it
-must inspect both briefs, resolve all Critical/Required findings, and perform
-the final checks for correctness, bugs, code cleanliness/readability,
-architecture, security, performance, and repository hygiene. Run focused tests
-first, then the project gate and applicable browser/API/CI/security checks.
-Record skipped checks and the reason; do not turn an unavailable sub-agent or
-failed check into an unqualified pass.
-
 ### 2. Parallel-session safety protocol
 
-Several Codex sessions may work on the same server. A clean checkout is not a
+Several agent sessions may work in the same checkout. A clean checkout is not a
 prerequisite when another session is active, but ownership must be explicit:
 
 - before **each** patch, repeat `git status --short` and compare
@@ -280,13 +205,13 @@ it; do not silently substitute a weaker check.
 
 #### Security, CI, and maintenance
 
-- Run `/home/debian/server/tools/ai-quality/bin/ai-check` as the common gate
-  when the project has no stronger `make check`; if `make check` exists, run
-  that project entrypoint first because it is the source of truth.
-- Run `/home/debian/server/tools/ai-quality/bin/ai-security-check staged` for
-  staged-change checks and the same command with `quick` or `full` according
-  to risk. Never print secret values or scan production dumps into the task
-  output.
+- Run the relevant repository checks from the checkout root:
+  `python3 tools/check.py editor` for Python changes and
+  `python3 tools/check.py editor-go` for Go changes, with their dependencies
+  installed. See `CONTRIBUTING.md` for other scopes and focused checks.
+- Review the staged diff for secrets and use applicable security scanners
+  available in the current environment. Never print secret values or scan
+  production dumps into the task output.
 - Use Gitleaks, OSV-Scanner, Trivy, Semgrep, and CodeQL for the languages and
   risk areas they cover. CodeQL requires a project database and build; do not
   report CodeQL coverage without creating/analyzing that database.
@@ -330,16 +255,13 @@ Every implementation handoff must include:
    not changed;
 3. focused tests for the changed behavior, with RED/GREEN evidence when code
    behavior changed;
-4. the project gate: `make check`, or
-   `/home/debian/server/tools/ai-quality/bin/ai-check` when no project gate
-   exists;
+4. the relevant repository check selected from `CONTRIBUTING.md` and
+   `python3 tools/check.py --list`;
 5. conditional browser, API, performance, dependency, CI, and security
    checks from the routing matrix;
 6. a final `git status --short` and `git diff --name-only` comparison against
    the baseline;
-7. the `CONTEXT BRIEF` and `REVIEW BRIEF`, including the actual `5.6 Luna`
-   availability/execution status;
-8. failures, baseline debt, skipped tools with reasons, residual risks, and
+7. failures, baseline debt, skipped tools with reasons, residual risks, and
    the exact next action.
 
 Do not disable a failing check, weaken a rule, or label a partial scan as a
@@ -370,11 +292,8 @@ use that did not actually happen. Do not paste raw logs, repeat the full
 plan, list every inspected file, or add generic advice. Expand only when the
 user asks for detail or a failure requires it.
 
-When response text is available to the shell or CI, validate it with
-`scripts/skillctl check-response < response-file>`; use `--trivial` only for
-genuinely trivial work. The validator does not store or transmit response
-content. When no response capture is available, apply the same checklist
-manually before sending.
+Check the response against the actual changes and verification results before
+sending it.
 
 Prefer one canonical skill over copies in `.agents/skills`, `.claude/skills`,
 and `.codex/skills`. Those directories are migration sources until their
@@ -383,7 +302,7 @@ as part of a skill import.
 
 ## Skill contract
 
-Every canonical skill must:
+When maintaining the upstream skill catalog, every canonical skill must:
 
 - live below `skills/<namespace>/<skill-id>/`;
 - contain a `SKILL.md` with frontmatter `name` and `description`;
@@ -393,14 +312,10 @@ Every canonical skill must:
 - use repository-relative references or clearly mark external references;
 - be small enough to load for one task.
 
-The machine-readable index is `registry.yaml`. The server inventory and source
-hashes are in `inventory/skills.tsv`. Run `scripts/validate-registry.sh` after
-changing either one.
-
-Use `scripts/skillctl list <profile>` to inspect a profile and
-`scripts/skillctl resolve <skill-id>` to locate one canonical skill. These
-commands are read-only. Use `scripts/skillctl audit <project-root>` before any
-project migration to identify canonical matches and local drift.
+For this checkout, use `editor/.agents/profile.yaml` and the local skills in
+`editor/.agents/skills/`. Their upstream source and revision are recorded in
+`editor/.agents/README.md`; external catalog tooling is not a prerequisite
+for EditorTeam tasks.
 
 ## Safe migration
 
@@ -412,13 +327,13 @@ Only the last state permits removing a project-local copy, and only in a
 separate change after the project has passed its own checks. Conflicting files
 keep explicit namespaces until a human chooses the winning version.
 
-The `server` profile includes the `engineering` profile. Agents must select
-the relevant engineering skills at preflight and apply every selected skill;
-the profile is not a passive list of files. Loading remains task-scoped so
-unrelated guidance does not dilute the active task's context.
+Select the relevant engineering skills from the EditorTeam profile at
+preflight and apply them. Loading remains task-scoped so unrelated guidance
+does not dilute the active task's context.
 
 ## External catalogs
 
 Vendor and platform catalogs remain dependencies, not copied source. They are
-listed in `registry.yaml` and must not be silently edited or vendored into this
-repository. Local project skills are the first candidates for canonicalization.
+identified by their source metadata and must not be silently edited or vendored
+into this repository. Local project skills are the first candidates for
+canonicalization.
