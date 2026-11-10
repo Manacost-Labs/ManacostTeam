@@ -11,6 +11,7 @@ Exit code is 1 only with ``--strict`` and at least one blocking finding.
 """
 
 from __future__ import annotations
+from claim_semantics import strategy_decision_coverage
 
 import argparse
 import json
@@ -622,10 +623,18 @@ def analyze(root: Path, registry_path: Path | None = None) -> dict[str, Any]:
         errors.append("required query languages have no successful search: " + ", ".join(missing_languages))
     if unresolved:
         warnings.append(f"{len(unresolved)} reader questions remain open or partial; preserve their gaps")
+    strategy = strategy_decision_coverage(
+        {**plan, "strategy_review": manifest.get("strategy_review") is True or plan.get("strategy_review") is True},
+        {item["claim_id"]: item for item in claims if isinstance(item.get("claim_id"), str)},
+        {item["evidence_id"]: item for item in evidence if isinstance(item.get("evidence_id"), str)},
+        {item["source_id"]: item for item in sources if isinstance(item.get("source_id"), str)},
+    )
+    errors.extend(strategy["gaps"])
     incomplete = bool(errors or unresolved or unresolved_directions or any(not item["saturated"] for branch, item in saturation.items() if section_status.get(branch) != "excluded"))
 
     return {
         "research_id": manifest.get("research_id"),
+        "player_decisions": strategy,
         "depth": depth,
         "coverage_enabled": coverage_enabled,
         "completion_status": "incomplete" if incomplete else "search_exhausted",

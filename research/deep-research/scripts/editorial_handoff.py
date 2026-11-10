@@ -10,11 +10,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
 from search_support import quote_in_text
+from claim_semantics import CLAIM_CONTRACT_VERSION, NO_REASON, claim_errors, strategy_decision_coverage
 
 SUPPORTED = {"supported", "supported_with_conditions"}
 CARD_FIELDS = {
@@ -26,6 +28,7 @@ CARD_FIELDS = {
     "exception",
     "example",
     "counterexample",
+    "outcome",
 }
 
 
@@ -97,6 +100,12 @@ def decision_cards(chapter: dict, claims: dict) -> tuple[list[str], list[str]]:
                 errors.append(f"{identity}/{name}: chapter claim_ids required")
                 continue
             approved = {ref for cid in ids for ref in claims[cid]["evidence_refs"]}
+            if name == "reason":
+                kinds = [claims[cid].get("claim_kind") for cid in ids]
+                if any(kind == "observation" for kind in kinds):
+                    errors.append(f"{identity}/reason: observation cannot explain a cause")
+                elif any(kind not in {"mechanic", "opinion"} for kind in kinds):
+                    errors.append(f"{identity}/reason: mechanic or attributed opinion required")
             if (
                 not isinstance(refs, list)
                 or not refs
@@ -331,6 +340,12 @@ def decision_coverage(plan: dict[str, Any], supported_ids: set[str]) -> dict[str
 def compile_handoff(
     root: Path, plan: dict[str, Any]
 ) -> tuple[dict[str, Any], dict[str, Any]]:
+    plan = deepcopy(plan)
+    manifest_path = root / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.is_file() else {}
+    contract = manifest.get("claim_contract_version")
+    if manifest.get("strategy_review") is True:
+        plan["strategy_review"] = True
     claims, evidence, sources = (
         records(root, name) for name in ("claims", "evidence", "sources")
     )
@@ -343,6 +358,8 @@ def compile_handoff(
     )
     contradiction_gaps = []
     output_claims, output_sources, issues = [], {}, []
+    if contract is not None and contract != CLAIM_CONTRACT_VERSION:
+        issues.append("unsupported claim_contract_version")
     requested = {
         cid
         for ch in plan.get("chapters", [])
@@ -350,6 +367,13 @@ def compile_handoff(
     }
     for cid in sorted(requested):
         claim = claims.get(cid, {})
+        if claim.get("reason") and "claim_kind" not in claim:
+            issues.append(f"{cid}: claim_kind required before passing a reason to the editor")
+            continue
+        semantic_errors = claim_errors(claim, evidence, sources, required=contract == CLAIM_CONTRACT_VERSION)
+        if semantic_errors:
+            issues.extend(f"{cid}: {error}" for error in semantic_errors)
+            continue
         confidence = str(claim.get("confidence", "")).lower()
         if (
             claim.get("status") not in SUPPORTED
@@ -542,15 +566,34 @@ def compile_handoff(
                 "status": claim["status"],
                 "evidence_refs": refs,
                 "research_context": context,
+                **({"claim_kind": claim["claim_kind"],
+                    "reason": NO_REASON if claim["claim_kind"] == "observation" else claim.get("reason", ""),
+                    **({"attribution": claim["attribution"]} if claim["claim_kind"] == "opinion" else {})}
+                   if "claim_kind" in claim else {}),
             }
         )
     report = decision_coverage(plan, {claim["claim_id"] for claim in output_claims})
+    strategy = strategy_decision_coverage(plan, claims, evidence, sources)
+    if strategy["required"]:
+        report["player_decisions"] = strategy
+        report["blocking"].extend(strategy["gaps"])
+        report["gap_queue"].extend({"question": gap, "reason": "missing_player_decision",
+                                     "search_rounds_remaining": 1} for gap in strategy["gaps"])
     report["gap_queue"].extend(contradiction_gaps)
     report["warnings"].extend(row["question"] for row in contradiction_gaps)
     by_id = {claim["claim_id"]: claim for claim in output_claims}
     for chapter in plan.get("chapters", []):
         card_errors, card_gaps = decision_cards(chapter, by_id)
         issues.extend(card_errors)
+        # Even a blocked handoff must not deliver an invented observation cause.
+        for card in chapter.get("decision_cards", []):
+            if not isinstance(card, dict) or not isinstance(card.get("fields"), dict):
+                continue
+            reason = card["fields"].get("reason", {})
+            ids = reason.get("claim_ids", []) if isinstance(reason, dict) else []
+            if any(claims.get(cid, {}).get("claim_kind") not in ("mechanic", "opinion")
+                   for cid in ids if isinstance(cid, str)):
+                card["fields"].pop("reason", None)
         report["warnings"].extend(card_gaps)
         report["gap_queue"].extend(
             {
@@ -596,6 +639,8 @@ def compile_handoff(
         "chapters": plan.get("chapters", []),
         "decisions": plan.get("decisions", []),
         "editorial_context": plan.get("editorial_context", {}),
+        **({"claim_contract_version": contract} if contract is not None else {}),
+        **({"player_decisions": strategy} if strategy["required"] else {}),
     }
     return handoff, report
 

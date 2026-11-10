@@ -159,6 +159,18 @@ Capture claim-sized evidence with a stable locator, publication date, access dat
 
 Split claims into independently falsifiable assertions with [claim-record.md](references/templates/claim-record.md). Do not make one citation appear to support more than its source establishes.
 
+New runs enable `claim_contract_version: "1.0"`: assign every claim exactly
+`claim_kind: mechanic | observation | opinion` under [claim semantics](references/claim-semantics.md).
+Mechanics need inspected card/rule evidence, observations need a sample and slice,
+and opinions need a named author and supporting source. Never invent a cause for
+an observation or promote an unsupported researcher's inference to a mechanic.
+For Battlegrounds and deck strategy reviews, initialize with `--strategy-review`
+and complete the mandatory strong-player decision track in that reference:
+local transcript archive first, then inspected games/streams with moment, action,
+alternative, outcome and timestamp or transcript quote. Reuse observed decision
+cards; their existing `kind` is independent of `claim_kind`. Missing decisions
+mean «блок советов писать не из чего», not permission for generic advice.
+
 In a coverage-enabled `editor-ready` bundle, preserve the planned destination while collecting evidence: queries receive section links, while evidence, claim, and community records use `main`, `useful_data`, `appendix`, or `omit`. An omitted record must state `output_omit_reason`, and a `useful_data` record must declare one or more allowed `useful_data_types`. Every non-rejected critical or material claim must route to `main`, and every section marked `covered` must have at least one `supported`, `supported_with_conditions`, or `contested` `main` claim. Do not wait until prose editing to reconstruct which section a useful record was meant to serve.
 
 ### 4. Validate before concluding

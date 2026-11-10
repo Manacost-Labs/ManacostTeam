@@ -58,3 +58,18 @@ Saturation needs three consecutive distinct inspected materials with no useful c
 Retain author/publisher/type, publication/update/content/access dates, period/patch/season, evidence locators and timestamps, `lineage_id`, `upstream_sources`, limitations, expertise and conflicts. Statistics can additionally use `statistical_context` with `sample_size`, `population`, `rank`, `time_window`, `filters`, `methodology`; unknown values stay unknown. A community lead is not a population statistic. Copies of one upstream source do not establish independent corroboration.
 
 The planner and report validate structure and links. They do not translate, search the web, inspect sources or prove conclusions on behalf of the researcher. Current freshness uses the separate [freshness contract](freshness-policy.md).
+
+## Claim semantics and player decisions
+
+Follow [claim semantics](claim-semantics.md): new bundles enable
+claim_contract_version 1.0 and require claim_kind = mechanic, observation or
+opinion. Keep a sample/slice for observations, named attribution for opinions
+and rule evidence for mechanics. Do not invent observation causes. This field
+is independent of the existing observed/derived/illustrative decision-card kind.
+
+Battlegrounds and deck strategy reviews enable strategy_review in manifest/plan.
+Start in research/library/transcripts/, then inspect strong-player games/streams:
+moment, action, alternative, outcome and URL with timecode or transcript quote
+go into existing observed decision cards. Search coverage requires this track
+per chapter. Missing decisions remain «блок советов писать не из чего» in the
+handoff, never generic advice.

@@ -254,3 +254,21 @@ For a coverage-enabled `editor-ready` final stage:
 An incomplete but honest run can validate structurally; its handoff must remain `not_ready` for strong downstream claims.
 
 When `fingerprint_policy` is `required`, an unverified mutable source blocks final validation. `when-permitted` emits a warning. Use `off` only when persistence is explicitly unnecessary or prohibited; it cannot satisfy the 1.0 release benchmark for mutable sources.
+
+## Additive claim semantics and strategy decision contract
+
+New initialization enables claim_contract_version: "1.0" without changing the
+bundle schema version. Every claim then needs claim_kind = mechanic, observation
+or opinion; legacy bundles without either field remain readable. Explicit kinds
+are validated even in legacy bundles. See [claim semantics](claim-semantics.md)
+for rule_evidence_ids, observation_scope, attribution and reason restrictions.
+Checks apply at working/final stages and never replace semantic review.
+editorial_handoff.py preserves claim_kind and blocks observation causes, including
+reasons embedded in existing decision cards.
+
+Use init_research_run.py --strategy-review for Battlegrounds/deck strategy
+reviews. Manifest and plan carry strategy_review: true. Reuse observed decision
+cards with moment, player/player_basis and situation/options/action/outcome
+fields. Search coverage and editorial coverage require this track per chapter.
+An incomplete bundle may disclose gaps; a final complete bundle cannot omit
+decisions. The handoff explicitly says «блок советов писать не из чего».

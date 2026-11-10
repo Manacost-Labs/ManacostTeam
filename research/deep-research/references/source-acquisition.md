@@ -142,3 +142,14 @@ All results retain `evidence_validated=false`. The existing snapshot → Source
 → Evidence → Claim chain, exact quotations, freshness checks and semantic
 auditor remain required before an editorial handoff. A route health report is
 an operational record, not a factual review or a percentage of reliable facts.
+
+## Strategy evidence boundary
+
+Acquisition does not classify a claim. Apply [claim semantics](claim-semantics.md):
+mechanic needs inspected rule/card evidence, observation needs sample and slice
+without invented causality, opinion needs a named author and inspected source.
+For Battlegrounds and deck strategy reviews, search research/library/transcripts/
+first and inspect concrete strong-player decisions with moment, action,
+alternative, outcome, URL and timecode or transcript quote. A collected VOD
+page or RSS entry does not close the decision track. Missing decisions remain
+«блок советов писать не из чего» in the handoff and coverage gaps.

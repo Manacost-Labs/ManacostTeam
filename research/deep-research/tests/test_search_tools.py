@@ -245,8 +245,8 @@ class SearchCoverageTest(unittest.TestCase):
         write_jsonl(
             run_dir / "claims.jsonl",
             [
-                {"claim_id": "CLM-0001", "claim": "critical thing", "importance": "critical", "status": "supported", "confidence": "HIGH", "supporting_evidence_ids": ["EVD-0001", "EVD-0002"], "challenging_evidence_ids": []},
-                {"claim_id": "CLM-0002", "claim": "material thing", "importance": "material", "status": "supported", "confidence": "MEDIUM", "supporting_evidence_ids": ["EVD-0001"], "challenging_evidence_ids": [], "challenge_search": {"query_ids": ["QRY-0002"], "result": "none_found"}},
+                {"claim_id": "CLM-0001", "claim": "critical thing", "claim_kind": "observation", "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"}, "importance": "critical", "status": "supported", "confidence": "HIGH", "supporting_evidence_ids": ["EVD-0001", "EVD-0002"], "challenging_evidence_ids": []},
+                {"claim_id": "CLM-0002", "claim": "material thing", "claim_kind": "observation", "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"}, "importance": "material", "status": "supported", "confidence": "MEDIUM", "supporting_evidence_ids": ["EVD-0001"], "challenging_evidence_ids": [], "challenge_search": {"query_ids": ["QRY-0002"], "result": "none_found"}},
             ],
         )
 
@@ -460,7 +460,7 @@ class Schema12Test(unittest.TestCase):
         )
         write_jsonl(
             run_dir / "claims.jsonl",
-            [{"claim_id": "CLM-0001", "claim": "critical thing", "importance": "critical", "status": "supported", "confidence": "HIGH", "supporting_evidence_ids": ["EVD-0001"], "challenging_evidence_ids": [], "challenge_search": {"query_ids": ["QRY-0002"], "result": "none_found"}}],
+            [{"claim_id": "CLM-0001", "claim": "critical thing", "claim_kind": "observation", "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"}, "importance": "critical", "status": "supported", "confidence": "HIGH", "supporting_evidence_ids": ["EVD-0001"], "challenging_evidence_ids": [], "challenge_search": {"query_ids": ["QRY-0002"], "result": "none_found"}}],
         )
 
     def test_anchored_and_challenged_bundle_passes_working(self) -> None:
@@ -863,8 +863,8 @@ class SaturationTest(unittest.TestCase):
                 {"evidence_id": "EVD-0002", "source_id": "SRC-0002", "claim_ids": ["CLM-0002"], "relationship": "supporting", "locator": "p", "evidence_type": "statistic", "faithful_paraphrase": "y"},
             ])
             write_jsonl(run_dir / "claims.jsonl", [
-                {"claim_id": "CLM-0001", "claim": "a", "importance": "critical", "status": "supported", "confidence": "HIGH", "supporting_evidence_ids": ["EVD-0001"], "challenging_evidence_ids": [], "challenge_search": {"query_ids": ["QRY-0004"], "result": "none_found"}},
-                {"claim_id": "CLM-0002", "claim": "b", "importance": "material", "status": "supported", "confidence": "MEDIUM", "supporting_evidence_ids": ["EVD-0002"], "challenging_evidence_ids": []},
+                {"claim_id": "CLM-0001", "claim": "a", "claim_kind": "observation", "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"}, "importance": "critical", "status": "supported", "confidence": "HIGH", "supporting_evidence_ids": ["EVD-0001"], "challenging_evidence_ids": [], "challenge_search": {"query_ids": ["QRY-0004"], "result": "none_found"}},
+                {"claim_id": "CLM-0002", "claim": "b", "claim_kind": "observation", "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"}, "importance": "material", "status": "supported", "confidence": "MEDIUM", "supporting_evidence_ids": ["EVD-0002"], "challenging_evidence_ids": []},
             ])
             report = search_coverage.analyze(run_dir)
             self.assertEqual(report["yield_by_query"], {"QRY-0001": 1, "QRY-0002": 1, "QRY-0003": 0, "QRY-0004": 0, "QRY-0005": 0})
@@ -887,7 +887,7 @@ class SaturationTest(unittest.TestCase):
             evidence.append({"evidence_id": "EVD-0003", "source_id": "SRC-0003", "claim_ids": ["CLM-0003"], "relationship": "supporting", "locator": "12:30", "evidence_type": "opinion", "faithful_paraphrase": "z"})
             write_jsonl(run_dir / "evidence.jsonl", evidence)
             claims = read_jsonl(run_dir / "claims.jsonl")
-            claims.append({"claim_id": "CLM-0003", "claim": "c", "importance": "supporting", "status": "supported", "confidence": "LOW", "supporting_evidence_ids": ["EVD-0003"], "challenging_evidence_ids": []})
+            claims.append({"claim_id": "CLM-0003", "claim": "c", "claim_kind": "observation", "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"}, "importance": "supporting", "status": "supported", "confidence": "LOW", "supporting_evidence_ids": ["EVD-0003"], "challenging_evidence_ids": []})
             write_jsonl(run_dir / "claims.jsonl", claims)
             report = search_coverage.analyze(run_dir)
             self.assertEqual(report["yield_by_query"]["QRY-0007"], 1)
@@ -1072,7 +1072,7 @@ class ModelTrialTest(unittest.TestCase):
                 {"evidence_id": "EVD-0001", "source_id": "SRC-0001", "claim_ids": ["CLM-0001"], "relationship": "supporting", "locator": "p1", "evidence_type": "fact", "faithful_paraphrase": "x", "exact_excerpt": "Source: SRC-0001 URL: https://us.forums.blizzard.com"},
             ])
             write_jsonl(bundle / "claims.jsonl", [
-                {"claim_id": "CLM-0001", "claim": "critical thing", "importance": "critical", "status": "supported", "confidence": "HIGH", "supporting_evidence_ids": ["EVD-0001"], "challenging_evidence_ids": [], "challenge_search": {"query_ids": ["QRY-0003"], "result": "none_found"}},
+                {"claim_id": "CLM-0001", "claim": "critical thing", "claim_kind": "observation", "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"}, "importance": "critical", "status": "supported", "confidence": "HIGH", "supporting_evidence_ids": ["EVD-0001"], "challenging_evidence_ids": [], "challenge_search": {"query_ids": ["QRY-0003"], "result": "none_found"}},
             ])
             manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
             manifest["current_context"]["client_patch"] = "36.4"
