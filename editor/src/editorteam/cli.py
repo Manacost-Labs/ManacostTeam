@@ -1287,8 +1287,12 @@ def owner_eval_cmd(args) -> int:
         print("owner-eval: нужна папка набора", file=sys.stderr)
         return 2
     folder = Path(args.dataset)
-    if not (folder / "labels.json").exists():
-        print(f"owner-eval: нет {folder / 'labels.json'}", file=sys.stderr)
+    if not folder.is_dir():
+        print(f"owner-eval: нет папки {folder}", file=sys.stderr)
+        return 2
+    labeled = OwnerEval.is_labeled(folder)
+    if not labeled and not OwnerEval.clean_files(folder):
+        print(f"owner-eval: в {folder} нет labels.json и хороших текстов (*.md, *.txt)", file=sys.stderr)
         return 2
     context = _author_context(Path(args.author_context), args.profile) if args.author_context else None
     options = _argparse.Namespace(
@@ -1299,11 +1303,17 @@ def owner_eval_cmd(args) -> int:
         report = _audit_report(text, name, options, context)
         return [f.to_dict() for f in report.findings]
 
-    result = OwnerEval.evaluate(folder, run)
+    if labeled:
+        result = OwnerEval.evaluate(folder, run)
+    else:
+        result = OwnerEval.evaluate_clean(folder, run)
+    result["profile"] = args.profile
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
-    else:
+    elif labeled:
         print(OwnerEval.render(result))
+    else:
+        print(OwnerEval.render_clean(result))
     return 0
 
 
@@ -1531,7 +1541,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="audit на размеченных отклонениях владельца: что помечено, что ложно",
         parents=[common],
     )
-    oe.add_argument("dataset", nargs="?", help="папка с labels.json, versions/ и gold/")
+    oe.add_argument(
+        "dataset",
+        nargs="?",
+        help="папка с labels.json, versions/ и gold/; без labels.json — набор хороших текстов "
+        "(*.md, *.txt в корне и gold/)",
+    )
     oe.add_argument("--profile", choices=P.available(), default="battlegrounds-article")
     oe.add_argument("--author-context", help="author-context.json с требованиями владельца")
     oe.add_argument(

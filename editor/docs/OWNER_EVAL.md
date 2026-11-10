@@ -79,6 +79,41 @@ build/owner-rejections/<тема>-<дата>/
   добавьте в один из этих словарей, иначе она получит `needs_reviewer`
   без причины.
 
+## Набор хороших текстов
+
+Чтобы мерить новые проверки на текстах без претензий (гайд, эталон, принятая
+версия), `labels.json` не нужен. Каталог содержит только тексты:
+
+```text
+<каталог>/
+  *.md, *.txt        хорошие тексты в корне
+  gold/*.md|*.txt    эталоны (необязательно)
+```
+
+```bash
+# гайд по колоде: в этом профиле работают owner.paragraph_starts и owner.forbidden_literal
+PYTHONUTF8=1 editor-team owner-eval build/gold-references --profile constructed-guide
+PYTHONUTF8=1 editor-team owner-eval build/gold-references --profile constructed-guide --format json
+```
+
+Без `labels.json` каждый файл прогоняется один раз. Для каждого файла
+выводятся число находок новых проверок `error / review`, разбивка по пяти id
+(`card_paraphrase.retelling`, `owner.overused_word`, `owner.section_repeat`,
+`owner.paragraph_starts`, `owner.forbidden_literal`), строки находок (стр., id,
+цитата) и итог. JSON содержит те же данные: `files[имя].new_checks`,
+`files[имя].by_id`, `files[имя].new_findings`, `totals`, `profile`.
+
+Флаг `--profile` задаёт набор проверок. Пять id не равны одному профилю:
+`card_paraphrase.retelling`, `owner.overused_word` и `owner.section_repeat`
+работают только в профилях Полей сражений (`battlegrounds-guide`,
+`battlegrounds-article`); в `constructed-guide` ноль по этим id ничего не
+говорит о тексте.
+
+Как читать результат: всё найденное на хорошем тексте — кандидат в ложное
+срабатывание. Владелец к этим текстам претензий не имел, поэтому решение
+(поправить проверку или оставить находку) принимает редактор. Находка не
+доказывает ошибку текста, отсутствие находки не доказывает его качество.
+
 ## Что добавлено в audit
 
 Проверки работают в профилях `battlegrounds-guide` и `battlegrounds-article`.

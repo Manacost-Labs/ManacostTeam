@@ -106,3 +106,82 @@ def test_cli_owner_eval_json(tmp_path, capsys):
     assert [r["id"] for r in result["rejections"]] == ["R1", "R2"]
     assert result["rejections"][1]["status"] == "needs_reviewer"
     assert main(["owner-eval", str(tmp_path / "нет")]) == 2
+
+
+BREAKDOWN = {
+    "card_paraphrase.retelling", "owner.overused_word", "owner.section_repeat",
+    "owner.paragraph_starts", "owner.forbidden_literal",
+}
+
+
+def good_dataset(tmp_path):
+    """Набор хороших текстов: без labels.json, *.md в корне и *.txt в gold/."""
+    (tmp_path / "gold").mkdir()
+    (tmp_path / "good.md").write_text(TEXT, encoding="utf-8")
+    (tmp_path / "gold" / "g.txt").write_text("### Эталон\nЧисто.\n", encoding="utf-8")
+    (tmp_path / "notes.json").write_text("{}", encoding="utf-8")
+    return tmp_path
+
+
+def test_clean_set_counts_each_file_and_breakdown(tmp_path):
+    folder = good_dataset(tmp_path)
+    calls = []
+
+    def run(text, name):
+        calls.append(name)
+        if name == "good.md":
+            return [
+                finding("owner.overused_word", 3, "стек", lemma="стек"),
+                finding("clarity.thesis.missing", 1),
+            ]
+        return [
+            finding("owner.section_repeat", 2),
+            {"id": "owner.forbidden_literal", "severity": "error", "line": 5,
+             "evidence": "стека", "meta": {}},
+        ]
+
+    assert not E.is_labeled(folder)
+    result = E.evaluate_clean(folder, run)
+    assert sorted(calls) == ["g.txt", "good.md"]
+    assert result["mode"] == "clean"
+    assert set(result["files"]) == {"good.md", "gold/g.txt"}
+    good = result["files"]["good.md"]
+    assert good["new_checks"] == {"error": 0, "review": 1}
+    assert set(good["by_id"]) == BREAKDOWN
+    assert good["by_id"]["owner.overused_word"] == 1
+    assert good["by_id"]["owner.section_repeat"] == 0
+    gold = result["files"]["gold/g.txt"]
+    assert gold["new_checks"] == {"error": 1, "review": 1}
+    assert gold["by_id"]["owner.section_repeat"] == 1
+    assert result["totals"]["error"] == 1
+    assert result["totals"]["review"] == 2
+    assert result["totals"]["by_id"]["owner.overused_word"] == 1
+    assert set(result["totals"]["by_id"]) == BREAKDOWN
+    table = E.render_clean(result)
+    assert "good.md" in table and "gold/g.txt" in table
+    assert "owner.section_repeat" in table and "итого: 2 текст(ов), error 1 / review 2" in table
+
+
+def test_labels_decide_the_mode(tmp_path):
+    assert E.is_labeled(dataset(tmp_path))
+    clean = tmp_path / "clean"
+    clean.mkdir()
+    (clean / "a.md").write_text("# Гайд\n", encoding="utf-8")
+    assert not E.is_labeled(clean)
+    assert [name for name, _ in E.clean_files(clean)] == ["a.md"]
+
+
+def test_cli_owner_eval_clean_set(tmp_path, capsys):
+    folder = good_dataset(tmp_path)
+    assert main(["owner-eval", str(folder), "--format", "json", "--profile", "constructed-guide"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["mode"] == "clean"
+    assert result["profile"] == "constructed-guide"
+    assert set(result["files"]) == {"good.md", "gold/g.txt"}
+    assert set(result["totals"]["by_id"]) == BREAKDOWN
+    assert main(["owner-eval", str(folder)]) == 0
+    text = capsys.readouterr().out
+    assert "good.md" in text and "gold/g.txt" in text and "итого: 2 текст(ов)" in text
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert main(["owner-eval", str(empty)]) == 2
