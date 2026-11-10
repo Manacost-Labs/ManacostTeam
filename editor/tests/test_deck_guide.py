@@ -376,3 +376,29 @@ def test_audit_reports_the_new_check_as_review_for_deck_guides(tmp_path):
     findings = [f for f in owner_findings(text, "constructed-guide") if f["id"] == "owner.paragraph_starts"]
     assert len(findings) == 1 and findings[0]["severity"] == "review"
     assert owner_findings(text, "news") == []
+
+
+def test_only_supported_observed_cards_form_the_pack_and_handoff_gaps_pass_through():
+    inference = {**card("EXP-2", "order"), "status": "inference", "kind": "derived"}
+    handoff_with_gap = pack_handoff(card("EXP-1", "trap"), inference)
+    handoff_with_gap["experience_coverage"] = {"gaps": ["раздел мастерства писать не из чего"]}
+    summary = experience_summary(handoff_with_gap)
+    assert summary["cards"] == 1 and summary["coverage"]["order"] == []
+    assert not summary["mastery_allowed"] and "писать не из чего" in summary["note"]
+    assert summary["handoff_gaps"] == ["раздел мастерства писать не из чего"]
+    assert experience_summary(handoff())["handoff_gaps"] == []
+
+
+def test_research_shaped_experience_card_is_accepted_with_its_extra_fields():
+    rich = {
+        **card("EXP-1", "threshold"),
+        "condition": "в колоде осталось 8–10 карт",
+        "reason": "добор и обмен успевают прийти",
+        "error_cost": "прокрутка встаёт",
+        "threshold": {"value": 10, "unit": "карт"},
+        "experience_source": {"kind": "author_note", "source_id": "SRC-1", "evidence_id": "EV-1"},
+        "first_person": True,
+    }
+    result = pack_handoff(rich)
+    assert validate_handoff(result, "test") == []
+    assert experience_summary(result)["first_person_card_ids"] == ["EXP-1"]

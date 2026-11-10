@@ -28,8 +28,12 @@
   `owner_eval.NEEDS_REVIEWER`.
 - **Handoff**: необязательные `advice_form` (шесть форм) и `first_person`
   (bool) в `decision_cards`; Python и Go отклоняют неизвестную форму, старые
-  bundle проходят. Пакет опыта читается из `chapters[*].decision_cards`;
-  сводка покрытия считается по карточкам, поле сводки в handoff не требуется.
+  bundle проходят. Пакет опыта читается из `chapters[*].decision_cards` (форма
+  research: `condition`, `reason`, `steps`, `threshold`, `experience_source`
+  остаются на карточке как есть); в пакет попадают только карточки
+  `status=supported`, `kind=observed`, как в `experience_coverage` research.
+  Сводка считается по карточкам; `experience_coverage.gaps` из handoff
+  передаётся автору как `handoff_gaps`, сам контейнер `experience_by_form` не нужен.
 - **Проверка** `owner.paragraph_starts` (review): серия ≥ 10 абзацев одного
   раздела «Название — …» с допуском одного постороннего абзаца либо ≥ 6 подряд
   с одним первым словом. Профили Полей сражений и `constructed-guide`. Числа
@@ -48,9 +52,10 @@
 - `owner.paragraph_starts` в архиве срабатывает на 172 из 297 гайдов:
   «Карта — роль и условие» — собственная форма автора. Структура не отличает роль от
   пустой оценки; находка лишь отправляет автора на проверку серии.
-- Имя контейнера пакета опыта в handoff не было задано контрактом; принято
-  `decision_cards[*].advice_form`. Если research положит пакет в другое место,
-  править нужно `article_structure.experience_cards`.
+- Контейнер пакета опыта сверен с коммитом research 3fd6ded: карточки лежат в
+  `chapters[*].decision_cards`, сводки — в `experience_coverage` и
+  `experience_by_form`. Если форма карточек изменится, править нужно
+  `article_structure.experience_cards`.
 - Новых Python-модулей нет: `article_structure.py` и `owner_review.py` уже в
   ресурсах manacost-publish. Шаблон гайда по колоде попадает в EditorTeam вместе
   с каталогом `references`; для manacost-publish его нужно добавить в ресурсы
@@ -59,8 +64,8 @@
 ## Проверки
 
 Из `editor` с `PYTHONUTF8=1 PYTHONIOENCODING=utf-8`:
-`.venv/Scripts/python -m pytest -q` — **1126 passed, 38 skipped, 5 subtests
-passed** (было 1097; +29 в `tests/test_deck_guide.py`), 443,98 с.
+`.venv/Scripts/python -m pytest -q` — **1128 passed, 38 skipped, 5 subtests
+passed** (было 1097; +31 в `tests/test_deck_guide.py`), 423,21 с.
 Ruff `src tests sidecars/nlp` — чисто. Go из `editor/go`: `go.exe vet ./...` —
 exit 0, `go.exe test ./...` — 18 пакетов ok. Корневой
 `python -m unittest discover -s tests -q`: 225 тестов, 2 ошибки setUpClass

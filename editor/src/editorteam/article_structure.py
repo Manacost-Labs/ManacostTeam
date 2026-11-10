@@ -136,7 +136,11 @@ def experience_cards(handoff) -> list[dict]:
         for chapter in (chapters if isinstance(chapters, list) else [])
         if isinstance(chapter, dict)
         for card in (chapter.get("decision_cards") or [])
-        if isinstance(card, dict) and card.get("advice_form") in ADVICE_FORMS
+        if isinstance(card, dict)
+        and card.get("advice_form") in ADVICE_FORMS
+        # как у research: в пакет попадают только подтверждённые наблюдения
+        and card.get("status") == "supported"
+        and card.get("kind") == "observed"
     ]
 
 
@@ -153,6 +157,14 @@ def experience_summary(handoff) -> dict:
         "first_person_card_ids": [c.get("card_id") for c in cards if c.get("first_person") is True],
         "mastery_card_ids": mastery,
         "mastery_allowed": bool(mastery),
+        # пробелы, которые research записал в handoff, показываются автору как есть
+        "handoff_gaps": [
+            gap
+            for gap in (handoff.get("experience_coverage") or {}).get("gaps", [])
+            if isinstance(gap, str)
+        ]
+        if isinstance(handoff, dict) and isinstance(handoff.get("experience_coverage"), dict)
+        else [],
         "note": ""
         if mastery
         else "раздел мастерства писать не из чего: нет карточек с порогом или порядком действий",
