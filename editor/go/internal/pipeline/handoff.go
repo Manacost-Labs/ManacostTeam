@@ -135,6 +135,10 @@ type DecisionCard struct {
 	Question string                   `json:"question"`
 	Fields   map[string]GroundedField `json:"fields"`
 	Gaps     []string                 `json:"gaps"`
+	// Пакет опыта игрока (необязателен; в старых bundle нет): форма совета и
+	// признак ответа автора-игрока.
+	AdviceForm  string `json:"advice_form,omitempty"`
+	FirstPerson *bool  `json:"first_person,omitempty"`
 }
 
 func validateDecisionCards(chapter ResearchChapter, claims []ResearchClaim, ready bool) error {
@@ -157,6 +161,11 @@ func validateDecisionCards(chapter ResearchChapter, claims []ResearchClaim, read
 		seen[card.ID] = true
 		if card.Kind != "observed" && card.Kind != "derived" && card.Kind != "illustrative" {
 			return fmt.Errorf("invalid card kind")
+		}
+		switch card.AdviceForm {
+		case "", "threshold", "order", "prohibition", "fallback", "trap", "skill_gated":
+		default:
+			return fmt.Errorf("invalid card advice_form")
 		}
 		if card.Status != "supported" && card.Status != "inference" && card.Status != "disputed" && card.Status != "unknown" {
 			return fmt.Errorf("invalid card status")

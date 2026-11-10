@@ -101,7 +101,7 @@ INSTRUCTIONS = {
 }
 
 
-def craft_guidance(stage: str) -> dict | None:
+def craft_guidance(stage: str, deck_guide: bool = False) -> dict | None:
     """Conditional craft cues, separate from the evidence-bearing chapter brief."""
     role = {
         "sources": "research",
@@ -198,6 +198,10 @@ def craft_guidance(stage: str) -> dict | None:
     from .owner_review import CLAIM_GUIDANCE, DELETION_GUIDANCE
 
     common.append(CLAIM_GUIDANCE)
+    if deck_guide and role != "research":
+        from .owner_review import DECK_GUIDE_GUIDANCE
+
+        common.append(DECK_GUIDE_GUIDANCE)
     deletion = {"id": "deletion_pass", "task": DELETION_GUIDANCE}
     passes = [research] if role == "research" else [deletion] if role == "delete" else [author, deletion, prose]
     reader_quality_checks = [
@@ -752,7 +756,11 @@ def next_task(
             "и поля review_schema. Проверяй содержательность, логику, источники и сохранение голоса. "
             "Не подменяй неизвестные данные выдумкой. issue/unverified требуют исправления или источника."
         )
-    guidance = craft_guidance(stage)
+    from .owner_review import is_deck_guide
+
+    saved_context = _author_context(run, state)
+    deck_guide = is_deck_guide(saved_context[0]) if saved_context else False
+    guidance = craft_guidance(stage, deck_guide)
     if guidance is not None:
         task["craft_guidance"] = guidance
         task["instructions"] += (
@@ -773,6 +781,22 @@ def next_task(
             "Контрдоказательства не являются поддержкой. Полные snapshots доступны через inputs.sources. "
             "Пакет не подтверждает истинность автоматически; не переноси внутренние IDs в статью."
         )
+        if deck_guide:
+            from .article_structure import ROLES as PLAN_ROLES
+            from .article_structure import experience_summary
+            from .owner_review import DECK_GUIDE_GUIDANCE
+
+            task["deck_guide"] = {
+                "guidance": DECK_GUIDE_GUIDANCE,
+                "section_roles": list(PLAN_ROLES),
+                "experience_pack": experience_summary(handoff),
+            }
+            task["instructions"] += (
+                " deck_guide.experience_pack — что можно писать из опыта игрока: разделы мастерства строй только "
+                "на mastery_card_ids; при mastery_allowed=false раздел мастерства не пиши. "
+                "Порог и порядок действий из карточки переноси без изменения чисел и последовательности. "
+                "Первое лицо — только для first_person_card_ids."
+            )
     if "draft" in state["artifacts"]:
         task["article_sha256"] = article_hash(_data(run, state, "draft").decode("utf-8"))
     if "research" in state["artifacts"] and "draft" in state["artifacts"]:
@@ -888,6 +912,13 @@ def next_task(
                 "После прозы сверь фактический порядок с планом. Не добавляй переходную фразу вместо "
                 "недостающего объяснения и не переделывай удачную композицию ради шаблона. "
             ) + task["instructions"]
+            if deck_guide:
+                task["instructions"] = (
+                    "Гайд по колоде: у плана genre=deck_guide, у каждого раздела role "
+                    "(intro, mechanics, cards, builds, mulligan, early, mastery, against, conclusion) и card_ids — "
+                    "карточки опыта игрока, которые раздел использует. Раздел mechanics («как работает колода») идёт "
+                    "сразу после вступления и входит в depends_on каждого раздела, который на него опирается. "
+                ) + task["instructions"]
         if stage in {"fact_review", "literary_review"}:
             task["author_context_review_schema"] = {
                 "author_context_sha256": digest,
@@ -1094,6 +1125,11 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
         else:
             handoff, text = _context(run, state)
             report = _json(data)
+            from .owner_review import is_deck_guide
+
+            context = _author_context(run, state)
+            if context is None:
+                raise ValueError("configure author context before submitting reviews")
             review_context = (
                 {
                     "original": _previous_draft(run, state),
@@ -1119,6 +1155,7 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
                     require_practices=state.get("review_contract_version", 1) >= 3,
                     handoff=handoff,
                     require_owner=True,
+                    deck_guide=is_deck_guide(context[0]),
                     **review_context,
                 )
             )
@@ -1126,12 +1163,8 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
                 handoff
             ):
                 errors.append("review handoff_sha256 mismatch")
-            from .publication_context import review_errors
-
-            context = _author_context(run, state)
-            if context is None:
-                raise ValueError("configure author context before submitting reviews")
             from .article_structure import validate_plan_evidence
+            from .publication_context import review_errors
 
             errors += validate_plan_evidence(context[0].get("article_plan"), handoff)
             errors += review_errors(*context, text, report, stage)
@@ -1294,6 +1327,12 @@ def export(run: Path, *, output: Path) -> dict:
         replayed, cut_errors = validate_deletion(before, report)
         if cut_errors or replayed != text:
             raise ValueError("deletion_pass: receipt does not reproduce current draft")
+        from .owner_review import is_deck_guide
+
+        context = _author_context(run, state)
+        if context is None:
+            raise ValueError("configure author context and repeat reviews before export")
+        deck_guide = is_deck_guide(context[0])
         errors = validate_reviews(
             handoff,
             text,
@@ -1308,21 +1347,18 @@ def export(run: Path, *, output: Path) -> dict:
             snapshots=_json(_data(run, state, "sources"))
             if state.get("review_contract_version", 1) >= 3
             else None,
+            deck_guide=deck_guide,
         )
         if errors:
             raise ValueError("; ".join(errors))
-        from .publication_context import review_errors
-
-        context = _author_context(run, state)
-        if context is None:
-            raise ValueError("configure author context and repeat reviews before export")
         from .article_structure import validate_plan_evidence
+        from .publication_context import review_errors
 
         errors += validate_plan_evidence(context[0].get("article_plan"), handoff)
         from .owner_review import validate_genre, validate_rubric
 
         literary = _json(_data(run, state, "literary_review"))
-        errors += validate_rubric(text, literary.get("owner_checks"))
+        errors += validate_rubric(text, literary.get("owner_checks"), deck_guide=deck_guide)
         errors += validate_genre(text, context[0], literary)
         for stage in ("fact_review", "literary_review"):
             errors += review_errors(*context, text, _json(_data(run, state, stage)), stage)

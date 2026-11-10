@@ -230,6 +230,131 @@ def section_repeats(text: str, morph, prose: Callable[[str], str] | None = None)
     return out
 
 
+# ── Однообразные начала абзацев ───────────────────────────────────────────
+
+# В большом гайде по колоде эталона 13 абзацев подряд открывались «Карта — …»,
+# часть из них пустые («ключевое заклинание, без него колода не существует»).
+# Сигнал — серия абзацев одного раздела с одной схемой начала:
+#   title: «Короткое название — …», допускается один посторонний абзац подряд;
+#   word:  одно и то же первое слово («Если…», «Это…»), строго подряд.
+# Калибровка 2026-11-10 (corpus-archive 297, corpus-bg 45, эталоны владельца 6,
+# принятая версия, гайд-эталон по колоде) — в editor/docs/OWNER_EVAL.md.
+OPENING_MIN_TITLES = 10
+OPENING_MAX_GAP = 1
+# «Карта — роль и условие» — собственная форма автора: серия сама по себе
+# срабатывала на 172 из 297 гайдов архива. Сигнал нужен там, где в серии есть
+# пустые записи в одну короткую фразу («ключевая карта, без неё никак»):
+# не меньше двух абзацев до 14 слов. Так: архив 47 из 297, corpus-bg 3 из 45,
+# гайд-эталон по колоде срабатывает (записи в 11 и 14 слов).
+OPENING_SHORT_WORDS = 14
+OPENING_MIN_SHORT = 2
+OPENING_MIN_SAME_WORD = 6
+_OPEN_TITLE_WORDS = 4
+_OPEN_DASH = re.compile(r"[—–]|\s-\s")
+_OPEN_WORD = re.compile(r"[А-Яа-яЁёA-Za-z0-9]+(?:[-’'][А-Яа-яЁёA-Za-z0-9]+)*")
+
+
+def _opening(paragraph: str) -> tuple[str, str] | None:
+    """(схема, ключ) начала абзаца или None. Схема: «title» либо «word»."""
+    head = paragraph.lstrip("«\"“ ")
+    if not head or not (head[0].isupper() or head[0].isdigit()):
+        return None
+    dash = _OPEN_DASH.search(head[:80])
+    if dash:
+        title = head[: dash.start()].strip()
+        words = _OPEN_WORD.findall(title)
+        if title and 1 <= len(words) <= _OPEN_TITLE_WORDS and not re.search(r"[.!?:;]", title):
+            return "title", "—"
+    first = _OPEN_WORD.match(head)
+    if first and len(first[0]) >= 2:
+        return "word", first[0].lower().replace("ё", "е")
+    return None
+
+
+def _paragraphs(text: str) -> list[tuple[int, str]]:
+    """(строка, первая строка абзаца): блоки между пустыми строками."""
+    out, start, buffer = [], 0, []
+    for n, line in enumerate(text.split("\n") + [""], 1):
+        if line.strip():
+            if not buffer:
+                start = n
+            buffer.append(line)
+        elif buffer:
+            out.append((start, buffer[0]))
+            buffer = []
+    return out
+
+
+def paragraph_openings(text: str) -> list[dict]:
+    """Серии однообразных начал в пределах раздела.
+
+    Заголовок, список, таблица, цитата и замаскированный код обрывают серию.
+    Нужен текст после маскировки с сохранёнными заголовками. Морфология не
+    нужна, поэтому проверка работает и в минимальном runtime.
+    """
+    out: list[dict] = []
+    titles: list[tuple[int, str, int]] = []  # (строка, начало, слов в абзаце)
+    words: list[tuple[int, str, str]] = []  # (строка, слово, начало)
+    gap = 0
+
+    def close_titles() -> None:
+        short = [(n, q) for n, q, size in titles if size <= OPENING_SHORT_WORDS]
+        if len(titles) >= OPENING_MIN_TITLES and len(short) >= OPENING_MIN_SHORT:
+            out.append(
+                {
+                    "line": titles[0][0],
+                    "last_line": titles[-1][0],
+                    "count": len(titles),
+                    "short": len(short),
+                    "scheme": "title",
+                    "key": "название — …",
+                    "quotes": [q for _, q in short[:3]],
+                }
+            )
+        titles.clear()
+
+    def close_words() -> None:
+        if len(words) >= OPENING_MIN_SAME_WORD:
+            out.append(
+                {
+                    "line": words[0][0],
+                    "last_line": words[-1][0],
+                    "count": len(words),
+                    "scheme": "word",
+                    "key": words[0][1],
+                    "quotes": [q for _, _, q in words[:3]],
+                }
+            )
+        words.clear()
+
+    for n, block in _paragraphs(text):
+        if _HEADING.match(block) or _LIST_ITEM.match(block) or block.lstrip().startswith((">", "|")):
+            close_titles()
+            close_words()
+            gap = 0
+            continue
+        clean = _strip(block).strip()
+        opening = _opening(clean) if len(clean) >= 20 else None
+        quote = clean[:70]
+        if opening and opening[0] == "title":
+            titles.append((n, quote, len(clean.split())))
+            gap = 0
+        elif titles:
+            gap += 1
+            if gap > OPENING_MAX_GAP:
+                close_titles()
+                gap = 0
+        if opening and opening[0] == "word":
+            if words and words[-1][1] != opening[1]:
+                close_words()
+            words.append((n, opening[1], quote))
+        else:
+            close_words()
+    close_titles()
+    close_words()
+    return out
+
+
 # ── Запрещённые владельцем слова ──────────────────────────────────────────
 
 

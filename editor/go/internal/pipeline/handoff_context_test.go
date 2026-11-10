@@ -117,3 +117,26 @@ func TestDecisionCardRejectsUnsupportedField(t *testing.T) {
 		t.Fatal("unknown card evidence accepted")
 	}
 }
+
+func TestDecisionCardAcceptsOptionalAdviceFormAndRejectsUnknown(t *testing.T) {
+	build := func(form any) ResearchHandoff {
+		var payload map[string]any
+		_ = json.Unmarshal(richHandoffJSON(t), &payload)
+		card := payload["chapters"].([]any)[0].(map[string]any)["decision_cards"].([]any)[0].(map[string]any)
+		if form != nil {
+			card["advice_form"], card["first_person"] = form, false
+		}
+		data, _ := json.Marshal(payload)
+		var h ResearchHandoff
+		_ = json.Unmarshal(data, &h)
+		return h
+	}
+	for _, form := range []any{nil, "threshold", "order", "prohibition", "fallback", "trap", "skill_gated"} {
+		if h := build(form); h.Validate() != nil {
+			t.Fatalf("form %v rejected: %v", form, h.Validate())
+		}
+	}
+	if h := build("tip"); h.Validate() == nil {
+		t.Fatal("unknown advice_form accepted")
+	}
+}

@@ -16,7 +16,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from search_support import quote_in_text
-from claim_semantics import CLAIM_CONTRACT_VERSION, NO_REASON, claim_errors, strategy_decision_coverage
+from claim_semantics import CLAIM_CONTRACT_VERSION, NO_REASON, claim_errors, strategy_decision_coverage, experience_errors, experience_coverage, inspected
 
 SUPPORTED = {"supported", "supported_with_conditions"}
 CARD_FIELDS = {
@@ -217,7 +217,7 @@ def counterevidence_context(root, claim, evidence, sources, audits, ids=None):
             {
                 "evidence_id": eid,
                 "original_source_id": sid,
-                "url": source["url"],
+                "url": source.get("url", source.get("final_url", "")),
                 "quote": quote,
                 "locator": item.get("locator", ""),
                 "content_sha256": digest,
@@ -346,6 +346,9 @@ def compile_handoff(
     contract = manifest.get("claim_contract_version")
     if manifest.get("strategy_review") is True:
         plan["strategy_review"] = True
+    for key in ("profile", "genre", "article_type", "style_profile"):
+        if key not in plan and key in manifest:
+            plan[key] = manifest[key]
     claims, evidence, sources = (
         records(root, name) for name in ("claims", "evidence", "sources")
     )
@@ -404,9 +407,7 @@ def compile_handoff(
                 or not quote.strip()
                 or source.get("access_integrity")
                 not in {"full_text", "full", "inspected", "transcript"}
-                or parsed.scheme not in {"http", "https"}
-                or not parsed.hostname
-                or parsed.username is not None
+                or not inspected(source)
             ):
                 issues.append(
                     f"{cid}/{eid}: inspected source and verbatim quote required"
@@ -466,7 +467,7 @@ def compile_handoff(
             output_sources[eid] = {
                 "source_id": eid,
                 "original_source_id": sid,
-                "url": source["url"],
+                "url": source.get("url", source.get("final_url", "")),
                 "quote": quote,
                 "locator": item.get("locator", ""),
                 "content_sha256": digest,
@@ -579,10 +580,28 @@ def compile_handoff(
         report["blocking"].extend(strategy["gaps"])
         report["gap_queue"].extend({"question": gap, "reason": "missing_player_decision",
                                      "search_rounds_remaining": 1} for gap in strategy["gaps"])
+    experience = experience_coverage(plan, claims, evidence, sources)
+    # Only evidence that passed snapshot and semantic review may reach the package.
+    for form, cards in experience["by_form"].items():
+        experience["by_form"][form] = [card for card in cards
+            if card["experience_source"]["evidence_id"] in output_sources
+            and all(cid in {row["claim_id"] for row in output_claims}
+                    for cid in card["fields"]["action"]["claim_ids"])]
+    experience["counts"] = {form: len(cards) for form, cards in experience["by_form"].items()}
+    experience["missing_forms"] = [form for form, count in experience["counts"].items() if not count]
+    experience["gaps"] = ["раздел мастерства писать не из чего"] if experience["required"] and not any(experience["counts"].values()) else []
+    if experience["required"]:
+        report["experience_coverage"] = {k: v for k, v in experience.items() if k != "by_form"}
+        report["blocking"].extend(experience["gaps"])
+        report["gap_queue"].extend({"question": gap, "reason": "missing_player_experience", "search_rounds_remaining": 1} for gap in experience["gaps"])
+        report["warnings"].extend("Нет формы опыта: " + form for form in experience["missing_forms"])
     report["gap_queue"].extend(contradiction_gaps)
     report["warnings"].extend(row["question"] for row in contradiction_gaps)
     by_id = {claim["claim_id"]: claim for claim in output_claims}
     for chapter in plan.get("chapters", []):
+        for card in chapter.get("decision_cards", []):
+            if isinstance(card, dict):
+                issues.extend(f"{card.get('card_id', '?')}: {error}" for error in experience_errors(card, claims, evidence, sources))
         card_errors, card_gaps = decision_cards(chapter, by_id)
         issues.extend(card_errors)
         # Even a blocked handoff must not deliver an invented observation cause.
@@ -641,6 +660,7 @@ def compile_handoff(
         "editorial_context": plan.get("editorial_context", {}),
         **({"claim_contract_version": contract} if contract is not None else {}),
         **({"player_decisions": strategy} if strategy["required"] else {}),
+        **({"experience_coverage": {k: v for k, v in experience.items() if k != "by_form"}, "experience_by_form": experience["by_form"]} if experience["required"] else {}),
     }
     return handoff, report
 

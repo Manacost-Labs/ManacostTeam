@@ -10,6 +10,9 @@ editor/docs/OWNER_EVAL.md). Для каждого отклонения берё�
 Категории, которые без модели не ловятся (слабый совет, нелогичное
 сравнение, жанр и длина, непонятный частный случай), получают статус
 `needs_reviewer`, даже если какая-то находка случайно задела фрагмент.
+
+Папка без `labels.json` — набор хороших текстов: `evaluate_clean` считает
+находки новых проверок по каждому файлу (корень и `gold/`), без статусов.
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ DETERMINISTIC = {
     "duplication": ("owner.section_repeat",),
     "overused_word": ("owner.overused_word", "owner.forbidden_literal"),
     "forbidden_word": ("owner.forbidden_literal",),
+    "uniform_openings": ("owner.paragraph_starts",),
 }
 
 # Почему категория остаётся рецензенту: это записывается в отчёт.
@@ -53,6 +57,13 @@ NEEDS_REVIEWER = {
     "too_short_weak_heroes": "достаточность раздела — оценка содержания",
     "unsupported_or_false_claim": "нужна сверка фактов с игрой",
     "section_rejected_structure": "вкус владельца к блоку целиком",
+    # рубрика гайда по колоде (genre=deck_guide); эталон — гайд про Раза ОнД
+    "advice_has_condition_and_reason": "наличие условия и причины у совета — оценка смысла, "
+    "а не поиск слов «если/потому что»",
+    "mastery_has_threshold_or_order": "порог или порядок действий в разделе мастерства "
+    "сверяются с карточкой опыта игрока: числа и последовательность без изменений",
+    "term_before_definition": "порядок объяснения терминов — смысловая проверка; "
+    "план и depends_on страхуют раздел «как работает колода», но не каждый термин",
 }
 
 # Keep historic owner labels readable while assigning the same reviewer rubric.
@@ -67,6 +78,16 @@ REVIEW_CATEGORY = {
 }
 
 NEW_CHECKS = ("owner.", "card_paraphrase.retelling")
+
+# Разбивка находок новых проверок по id: эти пять строк выводятся всегда, даже с нулями.
+BREAKDOWN_IDS = (
+    "card_paraphrase.retelling",
+    "owner.overused_word",
+    "owner.section_repeat",
+    "owner.paragraph_starts",
+    "owner.forbidden_literal",
+)
+TEXT_SUFFIXES = (".md", ".txt")
 
 _MARKUP = re.compile(r"\[/?hs_(?:bg|card)\b[^\]]*\]|\*\*|__|`", re.I)
 
@@ -141,10 +162,18 @@ def judge(rejection: dict, text: str, findings: list[dict]) -> dict:
     }
 
 
+def _by_id(new: list[dict]) -> dict:
+    counts = {fid: 0 for fid in BREAKDOWN_IDS}
+    for f in new:
+        counts[f["id"]] = counts.get(f["id"], 0) + 1
+    return counts
+
+
 def _summary(findings: list[dict]) -> dict:
     new = [f for f in findings if _matches(f["id"], NEW_CHECKS)]
     return {
         "new_checks": {s: sum(1 for f in new if f["severity"] == s) for s in ("error", "review")},
+        "by_id": _by_id(new),
         "new_findings": [
             {"id": f["id"], "severity": f["severity"], "line": f.get("line"),
              "evidence": (f.get("evidence") or "")[:160]}
@@ -154,6 +183,18 @@ def _summary(findings: list[dict]) -> dict:
             s: sum(1 for f in findings if f["severity"] == s)
             for s in ("error", "likely", "review", "info")
         },
+    }
+
+
+def _totals(summaries: list[dict]) -> dict:
+    by_id = {fid: 0 for fid in BREAKDOWN_IDS}
+    for s in summaries:
+        for fid, n in s["by_id"].items():
+            by_id[fid] = by_id.get(fid, 0) + n
+    return {
+        "error": sum(s["new_checks"]["error"] for s in summaries),
+        "review": sum(s["new_checks"]["review"] for s in summaries),
+        "by_id": by_id,
     }
 
 
@@ -194,6 +235,54 @@ def evaluate(folder: Path, run_audit: Callable[[str, str], list[dict]]) -> dict:
             s: sum(v["new_checks"][s] for v in clean.values()) for s in ("error", "review")
         },
     }
+
+
+def is_labeled(folder: Path) -> bool:
+    return (folder / "labels.json").exists()
+
+
+def clean_files(folder: Path) -> list[tuple[str, Path]]:
+    """Хорошие тексты без разметки: *.md и *.txt в корне и в gold/. Имя — как в отчёте."""
+    found = [
+        (p.name, p) for p in sorted(folder.glob("*")) if p.is_file() and p.suffix in TEXT_SUFFIXES
+    ]
+    gold = folder / "gold"
+    if gold.is_dir():
+        found += [
+            (f"gold/{p.name}", p)
+            for p in sorted(gold.glob("*"))
+            if p.is_file() and p.suffix in TEXT_SUFFIXES
+        ]
+    return found
+
+
+def evaluate_clean(folder: Path, run_audit: Callable[[str, str], list[dict]]) -> dict:
+    """Набор без labels.json: каждый хороший текст прогоняется один раз, отклонений нет."""
+    files = {}
+    for name, path in clean_files(folder):
+        files[name] = _summary(run_audit(path.read_text(encoding="utf-8"), path.name))
+    return {
+        "mode": "clean",
+        "dataset": str(folder),
+        "files": files,
+        "totals": _totals(list(files.values())),
+    }
+
+
+def render_clean(result: dict) -> str:
+    files = result["files"]
+    out = [f"owner-eval: хорошие тексты ({len(files)}), {result['dataset']}", ""]
+    for name, v in files.items():
+        new = v["new_checks"]
+        out.append(f"{name:<44} error {new['error']} / review {new['review']}")
+        out.append("    " + ", ".join(f"{fid} {n}" for fid, n in v["by_id"].items()))
+        for f in v["new_findings"]:
+            out.append(f"    стр.{f['line'] or '?'} {f['id']} ({f['severity']}): {f['evidence']}")
+    t = result["totals"]
+    out.append(f"\nитого: {len(files)} текст(ов), error {t['error']} / review {t['review']}")
+    out.append("    " + ", ".join(f"{fid} {n}" for fid, n in t["by_id"].items()))
+    out.append("Находка на хорошем тексте — кандидат в ложное срабатывание; решение за редактором.")
+    return "\n".join(out)
 
 
 def render(result: dict) -> str:

@@ -396,6 +396,8 @@ def _audit_report(text: str, document: str, args, author_context: dict | None = 
 
 
 BG_PROFILES = ("battlegrounds-guide", "battlegrounds-article")
+# Однообразные начала абзацев ищутся ещё и в гайдах по колодам.
+OPENING_PROFILES = (*BG_PROFILES, "constructed-guide")
 
 
 def _author_context(path: Path, profile: str | None) -> dict:
@@ -425,6 +427,29 @@ def _owner_checks(text: str, profile, report: Report, author_context: dict | Non
                     line=hit["line"],
                     profile=profile.id,
                     meta={"requirement": hit["requirement"], "count": hit["count"]},
+                )
+            )
+    if profile.id in OPENING_PROFILES and profile.enabled("owner_checks"):
+        for hit in Owner.paragraph_openings(_masked_with_headings(text)):
+            what = (
+                f"{hit['count']} абзацев открываются схемой «название — …»"
+                if hit["scheme"] == "title"
+                else f"{hit['count']} абзацев подряд начинаются со слова «{hit['key']}»"
+            )
+            report.add(
+                Finding(
+                    id="owner.paragraph_starts",
+                    analyzer="owner",
+                    category="repetition",
+                    severity="review",
+                    confidence=0.5,
+                    message=f"{what} (стр.{hit['line']}–{hit['last_line']})",
+                    evidence=" / ".join(hit["quotes"]),
+                    suggestion="у каждого абзаца своя роль в решении: назови, зачем берут карту или "
+                    "когда действуют; пустую оценку («ключевая», «незаменимая») убери, остальное начни по-разному",
+                    line=hit["line"],
+                    profile=profile.id,
+                    meta={"count": hit["count"], "scheme": hit["scheme"], "last_line": hit["last_line"]},
                 )
             )
     if profile.id not in BG_PROFILES or not profile.enabled("owner_checks"):
@@ -1262,8 +1287,12 @@ def owner_eval_cmd(args) -> int:
         print("owner-eval: нужна папка набора", file=sys.stderr)
         return 2
     folder = Path(args.dataset)
-    if not (folder / "labels.json").exists():
-        print(f"owner-eval: нет {folder / 'labels.json'}", file=sys.stderr)
+    if not folder.is_dir():
+        print(f"owner-eval: нет папки {folder}", file=sys.stderr)
+        return 2
+    labeled = OwnerEval.is_labeled(folder)
+    if not labeled and not OwnerEval.clean_files(folder):
+        print(f"owner-eval: в {folder} нет labels.json и хороших текстов (*.md, *.txt)", file=sys.stderr)
         return 2
     context = _author_context(Path(args.author_context), args.profile) if args.author_context else None
     options = _argparse.Namespace(
@@ -1274,11 +1303,17 @@ def owner_eval_cmd(args) -> int:
         report = _audit_report(text, name, options, context)
         return [f.to_dict() for f in report.findings]
 
-    result = OwnerEval.evaluate(folder, run)
+    if labeled:
+        result = OwnerEval.evaluate(folder, run)
+    else:
+        result = OwnerEval.evaluate_clean(folder, run)
+    result["profile"] = args.profile
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
-    else:
+    elif labeled:
         print(OwnerEval.render(result))
+    else:
+        print(OwnerEval.render_clean(result))
     return 0
 
 
@@ -1506,7 +1541,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="audit на размеченных отклонениях владельца: что помечено, что ложно",
         parents=[common],
     )
-    oe.add_argument("dataset", nargs="?", help="папка с labels.json, versions/ и gold/")
+    oe.add_argument(
+        "dataset",
+        nargs="?",
+        help="папка с labels.json, versions/ и gold/; без labels.json — набор хороших текстов "
+        "(*.md, *.txt в корне и gold/)",
+    )
     oe.add_argument("--profile", choices=P.available(), default="battlegrounds-article")
     oe.add_argument("--author-context", help="author-context.json с требованиями владельца")
     oe.add_argument(

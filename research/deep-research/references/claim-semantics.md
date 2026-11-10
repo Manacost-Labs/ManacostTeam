@@ -103,3 +103,42 @@ Handoff несёт `claim_kind` на верхнем уровне каждого 
 валидатор оставляет честный неполный запуск читаемым с предупреждением, но
 не допускает `complete` на финальном этапе с этим пробелом. Изученные площадки
 и заполненная матрица поиска не заменяют конкретных решений игроков.
+
+
+## Пакет опыта игрока
+
+Для `constructed-guide` задайте `profile: constructed-guide` в plan или manifest;
+для обзора стратегии используйте `strategy_review: true`. Handoff группирует
+карточки в `experience_by_form`; `experience_coverage` содержит counts и
+missing_forms. Пробелы нельзя заполнять догадками. Если карточек нет, пишите
+«раздел мастерства писать не из чего» и сохраняйте gap_queue. Старые карточки
+без `advice_form` читаются без классификации.
+
+В дополнение к обычным полям observed/supported decision card укажите:
+
+- `advice_form`: threshold, order, prohibition, fallback, trap или skill_gated;
+- `first_person`: true только для author_note, иначе false;
+- `condition`, `reason` (или «причина не названа»), при наличии `error_cost`;
+  действие находится в существующем `fields.action` с claim/evidence;
+- для order — непустой список `steps`; для threshold —
+  `threshold: {value: число, unit: строка}`; для skill_gated — `audience`;
+- `experience_source` с `source_id`, `evidence_id` и `kind`: author_note,
+  transcript или xml_replay; Evidence должно подтверждать действие.
+
+Для author_note укажите `author`, дату `date` в ISO и дословную `quote`,
+совпадающую с Evidence. Source имеет source_type `author_note`, проверенный
+снимок и хеш. Для transcript нужен прочитанный Source видео или стрима и
+таймкод Evidence либо цитата расшифровки. Для xml_replay Source имеет
+source_type `xml_replay`, а experience_source — `result_ref` (путь к снимку
+результата XMLTeam внутри bundle), `turn` и `action`. XML фиксирует действие,
+а не мотив или общий совет. Локальные Source требуют access_integrity,
+fingerprint_status verified, snapshot_path и content_sha256; публичный URL
+не выдумывается. Evidence связывается с claim, снимок и цитата проверяются,
+затем необходим независимый семантический аудит. Проверьте по источнику и
+причину, и цену ошибки, порог, порядок, условия. Первый человек допустим
+только для ответа самого автора.
+
+Обучающее видео: сначала найдите выпуск в постоянном архиве, затем изучите
+нужные фрагменты; отметьте пороги, порядок, запреты и ловушки, сохраните ссылку,
+таймкод и точную цитату. Сверьте ASR по аудио, особенно числа и отрицания.
+Не обобщайте совет за пределы названных условий. [Анкета автора](templates/player-experience-questionnaire.md).

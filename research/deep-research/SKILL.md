@@ -229,3 +229,13 @@ Stop only when all decision-relevant branches are answered, explicitly excluded,
 - Optional-provider failure must not be hidden: record the affected platform as partial or blocked, use a bounded fallback when possible, and cap confidence.
 - Do not expose internal claim/evidence IDs, audit statuses, provider diagnostics, or research jargon in an `editor-ready` main document. Keep them in the bundle or evidence appendix.
 - Plain language must never become false certainty. Preserve every limitation that could change how an editor or reader interprets a material claim.
+
+
+## Опыт игрока
+
+Для `constructed-guide` и `strategy_review` собирайте существующие decision cards
+по [контракту опыта](references/claim-semantics.md): пороги, порядок, запреты, запасные планы, ловушки
+и советы по уровню. Источники — ответ автора, обучающий транскрипт или
+результат XMLTeam; сохраняйте происхождение и условия, не выдумывайте причины.
+Передавайте покрытие и `first_person`; при отсутствии карточек пишите
+«раздел мастерства писать не из чего» и сохраняйте gap_queue.

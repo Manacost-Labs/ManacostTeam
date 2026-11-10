@@ -86,6 +86,13 @@ def _decision_cards(chapter: dict, claims: dict, ready: bool) -> list[str]:
             or not _text(card.get("question"))
         ):
             errors.append(f"handoff: {identity} invalid card kind/status/question")
+        # Пакет опыта игрока: поля необязательны, в старых bundle их нет.
+        from .article_structure import ADVICE_FORMS
+
+        if ("advice_form" in card and card["advice_form"] not in ADVICE_FORMS) or (
+            "first_person" in card and type(card["first_person"]) is not bool
+        ):
+            errors.append(f"handoff: {identity} invalid advice_form/first_person")
         gaps = card.get("gaps", [])
         if (
             not _strings(gaps)
@@ -480,6 +487,7 @@ def validate_literary(
     handoff: dict | None = None,
     snapshots: list | None = None,
     require_owner: bool = False,
+    deck_guide: bool = False,
 ) -> list[str]:
     """Check the independent whole-article assessment and quoted findings."""
     errors = _report(text, report)
@@ -488,7 +496,7 @@ def validate_literary(
     if require_owner and not require_practices:
         from .owner_review import validate_rubric
 
-        errors += validate_rubric(text, report.get("owner_checks"))
+        errors += validate_rubric(text, report.get("owner_checks"), deck_guide=deck_guide)
     for key, explanation in (("strengths", "reason"), ("paragraph_functions", "function")):
         if key not in report and not require_extended:
             continue
@@ -526,6 +534,7 @@ def validate_literary(
             original=original,
             handoff=handoff,
             snapshots=snapshots,
+            deck_guide=deck_guide,
         )
     changes = report.get("strength_changes", [])
     if not isinstance(changes, list) or any(not isinstance(row, dict) for row in changes):
@@ -584,6 +593,7 @@ def validate_reviews(
     require_practices: bool = False,
     original: str | None = None,
     snapshots: list | None = None,
+    deck_guide: bool = False,
 ) -> list[str]:
     """Gate both reviews of exactly the same article and evidence handoff."""
     errors = validate_factual(
@@ -602,6 +612,7 @@ def validate_reviews(
         original=original,
         handoff=handoff,
         snapshots=snapshots,
+        deck_guide=deck_guide,
     )
     if isinstance(handoff, dict) and isinstance(literary, dict):
         try:

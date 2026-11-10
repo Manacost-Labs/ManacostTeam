@@ -272,3 +272,13 @@ cards with moment, player/player_basis and situation/options/action/outcome
 fields. Search coverage and editorial coverage require this track per chapter.
 An incomplete bundle may disclose gaps; a final complete bundle cannot omit
 decisions. The handoff explicitly says «блок советов писать не из чего».
+
+
+## Опыт игрока
+
+Для `constructed-guide` и `strategy_review` собирайте существующие decision cards
+по [контракту опыта](claim-semantics.md): пороги, порядок, запреты, запасные планы, ловушки
+и советы по уровню. Источники — ответ автора, обучающий транскрипт или
+результат XMLTeam; сохраняйте происхождение и условия, не выдумывайте причины.
+Передавайте покрытие и `first_person`; при отсутствии карточек пишите
+«раздел мастерства писать не из чего» и сохраняйте gap_queue.
