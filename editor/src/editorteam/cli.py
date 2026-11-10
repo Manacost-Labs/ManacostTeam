@@ -71,6 +71,8 @@ def audit(args) -> int:
             selected["profile"],
             args.mode,
             args.evidence_requested,
+            author_context=_author_context(Path(args.author_context), selected["profile"])
+            if getattr(args, "author_context", None) else None,
         )
         report = Report(document=str(args.file), profile=result["profile"])
         result["document"] = str(args.file)
@@ -483,6 +485,21 @@ def _owner_checks(text: str, profile, report: Report, author_context: dict | Non
                 meta={"card_text": hit["card_text"], "cover": hit["cover"]},
             )
         )
+
+
+def owner_findings(text: str, profile: str, author_context: dict | None = None) -> list[dict]:
+    """Same four diagnostics for native deletion, audit and the Go Python-sidecar."""
+    from types import SimpleNamespace
+
+    try:
+        selected = P.load(profile)
+    except P.ProfileError:
+        # Native runs historically accept custom profiles; only their explicit
+        # owner literals are known here, never silently apply a different genre.
+        selected = SimpleNamespace(id=profile, enabled=lambda _: False)
+    report = Report(document="<текст>", profile=profile)
+    _owner_checks(text, selected, report, author_context)
+    return report.to_dict()["findings"]
 
 
 def _masked_with_headings(text: str) -> str:

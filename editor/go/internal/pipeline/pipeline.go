@@ -166,44 +166,46 @@ func (e *RequestError) Error() string { return e.Message }
 var ErrInvalidRetrieval = &RequestError{Message: "retrieval должен быть auto, on или off"}
 
 type Result struct {
-	TaskContext              json.RawMessage                  `json:"task_context,omitempty"`
-	Text                     string                           `json:"text"`
-	Mode                     string                           `json:"mode"`
-	Status                   string                           `json:"status"`
-	Changes                  []Change                         `json:"changes,omitempty"`
-	FactualRisks             []string                         `json:"factual_risks,omitempty"`
-	QAFindings               []analyzers.Finding              `json:"qa_findings,omitempty"`
-	ProtectedEntitiesChanged []string                         `json:"protected_entities_changed,omitempty"`
-	Scores                   Scores                           `json:"scores"`
-	ScoresValid              bool                             `json:"scores_valid"`
-	CriticVerdict            string                           `json:"critic_verdict,omitempty"`
-	Improvements             []Improvement                    `json:"improvements,omitempty"`
-	PracticeChecks           []editorialreview.Check          `json:"practice_checks,omitempty"`
-	LogicChecks              []editorialreview.Check          `json:"logic_checks,omitempty"`
-	StructureReview          *editorialreview.StructureReview `json:"structure_review,omitempty"`
-	PreservationChecks       []editorialreview.Check          `json:"preservation_checks,omitempty"`
-	SourceChecks             []editorialreview.SourceCheck    `json:"source_checks,omitempty"`
-	OriginalFactualChecks    *OriginalFactualChecks           `json:"original_factual_checks,omitempty"`
-	ReviewScope              string                           `json:"review_scope,omitempty"`
-	SourceVerification       string                           `json:"source_verification,omitempty"`
-	Regressions              []string                         `json:"regressions,omitempty"`
-	Accepted                 bool                             `json:"accepted"`
-	RejectionReasons         []string                         `json:"rejection_reasons,omitempty"`
-	Provider                 string                           `json:"provider,omitempty"`
-	Model                    string                           `json:"model,omitempty"`
-	PromptVersion            string                           `json:"prompt_version"`
-	PromptVariant            string                           `json:"prompt_variant"`
-	Analysis                 Analysis                         `json:"analysis,omitempty"`
-	Attempts                 int                              `json:"attempts"`
-	ChecksComplete           bool                             `json:"checks_complete"`
-	SkippedAnalyzers         []string                         `json:"skipped_analyzers,omitempty"`
-	Retrieval                RetrievalReport                  `json:"retrieval"`
-	FactReview               *FactReview                      `json:"fact_review,omitempty"`
-	FactCheckPassed          *bool                            `json:"fact_check_passed,omitempty"`
-	UnsupportedAdditions     []string                         `json:"unsupported_additions,omitempty"`
-	ReviewerModel            string                           `json:"reviewer_model,omitempty"`
-	RevisionFallback         *RevisionFallback                `json:"revision_fallback,omitempty"`
-	ProofreadSalvage         *ProofreadSalvage                `json:"proofread_salvage,omitempty"`
+	TaskContext              json.RawMessage                    `json:"task_context,omitempty"`
+	Text                     string                             `json:"text"`
+	Mode                     string                             `json:"mode"`
+	Status                   string                             `json:"status"`
+	Changes                  []Change                           `json:"changes,omitempty"`
+	FactualRisks             []string                           `json:"factual_risks,omitempty"`
+	QAFindings               []analyzers.Finding                `json:"qa_findings,omitempty"`
+	ProtectedEntitiesChanged []string                           `json:"protected_entities_changed,omitempty"`
+	Scores                   Scores                             `json:"scores"`
+	ScoresValid              bool                               `json:"scores_valid"`
+	CriticVerdict            string                             `json:"critic_verdict,omitempty"`
+	Improvements             []Improvement                      `json:"improvements,omitempty"`
+	PracticeChecks           []editorialreview.Check            `json:"practice_checks,omitempty"`
+	LogicChecks              []editorialreview.Check            `json:"logic_checks,omitempty"`
+	StructureReview          *editorialreview.StructureReview   `json:"structure_review,omitempty"`
+	OwnerChecks              []editorialreview.Check            `json:"owner_checks"`
+	DeletionPasses           []*editorialreview.DeletionReceipt `json:"deletion_passes,omitempty"`
+	PreservationChecks       []editorialreview.Check            `json:"preservation_checks,omitempty"`
+	SourceChecks             []editorialreview.SourceCheck      `json:"source_checks,omitempty"`
+	OriginalFactualChecks    *OriginalFactualChecks             `json:"original_factual_checks,omitempty"`
+	ReviewScope              string                             `json:"review_scope,omitempty"`
+	SourceVerification       string                             `json:"source_verification,omitempty"`
+	Regressions              []string                           `json:"regressions,omitempty"`
+	Accepted                 bool                               `json:"accepted"`
+	RejectionReasons         []string                           `json:"rejection_reasons,omitempty"`
+	Provider                 string                             `json:"provider,omitempty"`
+	Model                    string                             `json:"model,omitempty"`
+	PromptVersion            string                             `json:"prompt_version"`
+	PromptVariant            string                             `json:"prompt_variant"`
+	Analysis                 Analysis                           `json:"analysis,omitempty"`
+	Attempts                 int                                `json:"attempts"`
+	ChecksComplete           bool                               `json:"checks_complete"`
+	SkippedAnalyzers         []string                           `json:"skipped_analyzers,omitempty"`
+	Retrieval                RetrievalReport                    `json:"retrieval"`
+	FactReview               *FactReview                        `json:"fact_review,omitempty"`
+	FactCheckPassed          *bool                              `json:"fact_check_passed,omitempty"`
+	UnsupportedAdditions     []string                           `json:"unsupported_additions,omitempty"`
+	ReviewerModel            string                             `json:"reviewer_model,omitempty"`
+	RevisionFallback         *RevisionFallback                  `json:"revision_fallback,omitempty"`
+	ProofreadSalvage         *ProofreadSalvage                  `json:"proofread_salvage,omitempty"`
 }
 
 type RevisionFallback struct {
@@ -476,6 +478,18 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		started := time.Now()
 		post = s.runChecks(ctx, postInput)
 		s.logStage(ctx, "postflight", started, result.Attempts, "")
+		if mode == "reconstruct" && s.LLM != nil {
+			cut, receipt, err := s.deletionPass(ctx, candidate, post.findings)
+			if err != nil {
+				return nil, err
+			}
+			result.DeletionPasses = append(result.DeletionPasses, receipt)
+			if cut != candidate {
+				candidate = cut
+				postInput.Text, postInput.After = candidate, candidate
+				post = s.runChecks(ctx, postInput)
+			}
+		}
 		guard = guards.Compare(req.Text, candidate)
 		if len(req.TaskContext) > 0 && req.Game != "hearthstone" {
 			guard = guards.CompareWithTerms(req.Text, candidate, pyRules.Protected)
@@ -629,6 +643,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Result, error) {
 		result.PracticeChecks = append([]editorialreview.Check(nil), critic.PracticeChecks...)
 		result.LogicChecks, result.PreservationChecks = critic.LogicChecks, critic.PreservationChecks
 		result.StructureReview = critic.StructureReview
+		result.OwnerChecks = critic.OwnerChecks
 		result.SourceChecks, result.OriginalFactualChecks = critic.SourceChecks, critic.OriginalFactualChecks
 		result.ReviewScope, result.SourceVerification = critic.ReviewScope, critic.SourceVerification
 		// Улучшения принимаются только с доказательствами из текста.
@@ -933,26 +948,27 @@ func appendUnique(values []string, more ...string) []string {
 // criticInput — данные для critic. Они уходят JSON-ом в user message, а не
 // инструкциями в system prompt.
 type criticInput struct {
-	StructureAssignment *editorialreview.StructureAssignment `json:"structure_assignment"`
-	NewArticle          bool                                 `json:"new_article,omitempty"`
-	LocalEdits          []LocalEdit                          `json:"local_edits,omitempty"`
-	Source              string                               `json:"source"`
-	Candidate           string                               `json:"candidate"`
-	Diff                []Change                             `json:"diff"`
-	Mode                string                               `json:"mode"`
-	RevisionBase        string                               `json:"revision_base,omitempty"`
-	RevisionBrief       string                               `json:"revision_brief,omitempty"`
-	Analysis            Analysis                             `json:"analysis"`
-	Handoff             *ResearchHandoff                     `json:"research_handoff,omitempty"`
-	SourceSnapshots     []editorialreview.SourceSnapshot     `json:"source_snapshots"`
-	SourceClaims        []map[string]any                     `json:"source_claims"`
-	ProtectedEntities   []string                             `json:"protected_entities"`
-	ToolFindings        []analyzers.Finding                  `json:"tool_findings"`
-	StyleExamples       []promptExample                      `json:"style_examples"`
-	KeepSpans           []StrongSpan                         `json:"keep_spans,omitempty"`
-	RequiredSections    []string                             `json:"sections_required,omitempty"`
-	ReviewScope         string                               `json:"review_scope,omitempty"`
-	SourceVerification  string                               `json:"source_verification,omitempty"`
+	StructureAssignment   *editorialreview.StructureAssignment `json:"structure_assignment"`
+	OwnerReviewAssignment []string                             `json:"owner_review_assignment"`
+	NewArticle            bool                                 `json:"new_article,omitempty"`
+	LocalEdits            []LocalEdit                          `json:"local_edits,omitempty"`
+	Source                string                               `json:"source"`
+	Candidate             string                               `json:"candidate"`
+	Diff                  []Change                             `json:"diff"`
+	Mode                  string                               `json:"mode"`
+	RevisionBase          string                               `json:"revision_base,omitempty"`
+	RevisionBrief         string                               `json:"revision_brief,omitempty"`
+	Analysis              Analysis                             `json:"analysis"`
+	Handoff               *ResearchHandoff                     `json:"research_handoff,omitempty"`
+	SourceSnapshots       []editorialreview.SourceSnapshot     `json:"source_snapshots"`
+	SourceClaims          []map[string]any                     `json:"source_claims"`
+	ProtectedEntities     []string                             `json:"protected_entities"`
+	ToolFindings          []analyzers.Finding                  `json:"tool_findings"`
+	StyleExamples         []promptExample                      `json:"style_examples"`
+	KeepSpans             []StrongSpan                         `json:"keep_spans,omitempty"`
+	RequiredSections      []string                             `json:"sections_required,omitempty"`
+	ReviewScope           string                               `json:"review_scope,omitempty"`
+	SourceVerification    string                               `json:"source_verification,omitempty"`
 }
 
 type criticResult struct {
@@ -969,6 +985,7 @@ type criticResult struct {
 	PracticeChecks        []editorialreview.Check          `json:"practice_checks"`
 	LogicChecks           []editorialreview.Check          `json:"logic_checks"`
 	StructureReview       *editorialreview.StructureReview `json:"structure_review"`
+	OwnerChecks           []editorialreview.Check          `json:"owner_checks"`
 	PreservationChecks    []editorialreview.Check          `json:"preservation_checks"`
 	SourceChecks          []editorialreview.SourceCheck    `json:"source_checks"`
 	OriginalFactualChecks *OriginalFactualChecks           `json:"original_factual_checks"`
@@ -1036,6 +1053,7 @@ func parseCritic(text string) (criticResult, error) {
 		PracticeChecks        []editorialreview.Check          `json:"practice_checks"`
 		LogicChecks           []editorialreview.Check          `json:"logic_checks"`
 		StructureReview       *editorialreview.StructureReview `json:"structure_review"`
+		OwnerChecks           []editorialreview.Check          `json:"owner_checks"`
 		PreservationChecks    []editorialreview.Check          `json:"preservation_checks"`
 		SourceChecks          []editorialreview.SourceCheck    `json:"source_checks"`
 		OriginalFactualChecks *OriginalFactualChecks           `json:"original_factual_checks"`
@@ -1051,6 +1069,7 @@ func parseCritic(text string) (criticResult, error) {
 	out := criticResult{NoNewFacts: *raw.NoNewFacts, UnsupportedAdditions: raw.UnsupportedAdditions, RepairRequired: raw.RepairRequired, StrengthChanges: raw.StrengthChanges, EditAssessments: raw.EditAssessments, PracticeChecks: raw.PracticeChecks, ReviewScope: raw.ReviewScope, SourceVerification: raw.SourceVerification}
 	out.LogicChecks, out.PreservationChecks = raw.LogicChecks, raw.PreservationChecks
 	out.StructureReview = raw.StructureReview
+	out.OwnerChecks = raw.OwnerChecks
 	out.SourceChecks, out.OriginalFactualChecks = raw.SourceChecks, raw.OriginalFactualChecks
 	for _, item := range raw.Improvements {
 		if strings.TrimSpace(item.Category) == "" || strings.TrimSpace(item.Reason) == "" {
@@ -1112,7 +1131,7 @@ func parseCritic(text string) (criticResult, error) {
 		if !out.RepairRequired {
 			return criticResult{}, errors.New("verdict repair требует repair_required=true")
 		}
-		if len(repairable(out.Findings)) == 0 && !hasPracticeIssue(out.PracticeChecks) && !editorialreview.HasUnresolved(out.LogicChecks, out.PreservationChecks) && (out.StructureReview == nil || !editorialreview.HasUnresolvedStructure(out.StructureReview)) && !hasOriginalIssues(out.OriginalFactualChecks) {
+		if len(repairable(out.Findings)) == 0 && !hasPracticeIssue(out.PracticeChecks) && !editorialreview.HasUnresolved(out.OwnerChecks) && !editorialreview.HasUnresolved(out.LogicChecks, out.PreservationChecks) && (out.StructureReview == nil || !editorialreview.HasUnresolvedStructure(out.StructureReview)) && !hasOriginalIssues(out.OriginalFactualChecks) {
 			return criticResult{}, errors.New("verdict repair без исправимых findings")
 		}
 	}
@@ -1247,6 +1266,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: structureErr}
 	}
 	in.StructureAssignment = assignment
+	in.OwnerReviewAssignment = editorialreview.OwnerIDs()
 	applyReviewScopeInput(&in)
 	if in.Mode == "reconstruct" {
 		in.RequiredSections = append([]string(nil), bundle.SectionsRequired...)
@@ -1259,7 +1279,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		return criticResult{}, &criticError{Kind: ReasonCriticInvalid, Err: err}
 	}
 	messages := []llm.Message{
-		{Role: "system", Content: s.styleSystem(bundle.Prompt()+editorialreview.Prompt()+criticInstruction+editorialreview.ContractPrompt()+originalReviewInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief)+revisionBaseInstruction(in.RevisionBase)+reconstructionReviewInstruction(in.Mode)+publicationCriticInstruction(in.Mode), examplesOf(in))},
+		{Role: "system", Content: s.styleSystem(bundle.Prompt()+editorialreview.Prompt()+criticInstruction+editorialreview.ContractPrompt()+editorialreview.OwnerPrompt+originalReviewInstruction+formEditingInstruction(in.Mode)+formReviewInstruction(in.Mode)+proseInstruction(in.Mode)+localReviewInstruction(in.Mode)+revisionBriefInstruction(in.RevisionBrief)+revisionBaseInstruction(in.RevisionBase)+reconstructionReviewInstruction(in.Mode)+publicationCriticInstruction(in.Mode), examplesOf(in))},
 		{Role: "user", Content: string(payload)},
 	}
 	started := time.Now()
@@ -1275,6 +1295,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 	}
 	out, parseErr := parseCritic(text)
 	applyReviewScope(&out, in)
+	preserveOwnerRepair(&out)
 	out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
 	out.Findings = append(out.Findings, contextualFindings(in, out)...)
 	if out.Verdict != "" {
@@ -1301,6 +1322,7 @@ func (s *Service) critic(ctx context.Context, bundle rules.RuleBundle, in critic
 		}
 		out, parseErr = parseCritic(text)
 		applyReviewScope(&out, in)
+		preserveOwnerRepair(&out)
 		out.Findings = append(out.Findings, practiceFindings(in.Candidate, out.PracticeChecks)...)
 		out.Findings = append(out.Findings, contextualFindings(in, out)...)
 		if out.Verdict != "" {

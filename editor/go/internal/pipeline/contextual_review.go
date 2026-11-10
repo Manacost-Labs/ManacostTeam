@@ -169,13 +169,14 @@ func validateContextualReview(in criticInput, out criticResult) error {
 	err := errors.Join(
 		editorialreview.ValidateDimensions(in.Candidate, in.Source, out.LogicChecks, out.PreservationChecks, in.NewArticle),
 		editorialreview.ValidateStructure(in.Candidate, out.StructureReview),
+		editorialreview.ValidateOwner(in.Candidate, out.OwnerChecks),
 		editorialreview.ValidateSourceChecks(in.SourceSnapshots, out.SourceChecks),
 		validateOriginalChecks(in, out.OriginalFactualChecks),
 	)
 	if out.SourceChecks == nil {
 		err = errors.Join(err, errors.New("source_checks: explicit array required, including [] when no snapshots supplied"))
 	}
-	if out.Verdict == "accept" && (editorialreview.HasUnresolved(out.LogicChecks, out.PreservationChecks) || editorialreview.HasUnresolvedStructure(out.StructureReview) || editorialreview.HasUnresolvedSources(out.SourceChecks) || hasOriginalIssues(out.OriginalFactualChecks)) {
+	if out.Verdict == "accept" && (editorialreview.HasUnresolved(out.LogicChecks, out.PreservationChecks, out.OwnerChecks) || editorialreview.HasUnresolvedStructure(out.StructureReview) || editorialreview.HasUnresolvedSources(out.SourceChecks) || hasOriginalIssues(out.OriginalFactualChecks)) {
 		err = errors.Join(err, errors.New("accept contradicts unresolved structure, logic, preservation, source or original-fact checks"))
 	}
 	return err
@@ -183,6 +184,11 @@ func validateContextualReview(in criticInput, out criticResult) error {
 
 func contextualFindings(in criticInput, out criticResult) []analyzers.Finding {
 	findings := practiceFindings(in.Candidate, append(append([]editorialreview.Check{}, out.LogicChecks...), out.PreservationChecks...))
+	for _, row := range out.OwnerChecks {
+		if row.Status == "issue" || row.Status == "unverified" {
+			findings = append(findings, analyzers.Finding{Analyzer: "critic", RuleID: "owner_review." + row.ID, Severity: "warning", Message: row.Reason, Evidence: row.Quote})
+		}
+	}
 	if out.StructureReview != nil {
 		for _, block := range out.StructureReview.Blocks {
 			if block.Status != "clear" {

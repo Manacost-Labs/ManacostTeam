@@ -130,8 +130,8 @@ illustrative; неизвестное и спорное остаётся gaps, н
 
 ## Автор и независимые отзывы
 
-Примени [три редакционных прохода](references/player-editorial-standard.md): исследование,
-авторская оценка, затем вычитка прозы. В обзоре обоснуй выбор сборки, спорные карты,
+Примени [редакционные проходы](references/player-editorial-standard.md): исследование,
+авторская оценка, вычёркивание лишнего и вычитка прозы. В обзоре обоснуй выбор сборки, спорные карты,
 замены и условия отказа, если для этого есть evidence. Не вводи норму 80/20,
 искусственный ритм или обязательный нулевой балл ИИ-детектора.
 
@@ -172,13 +172,13 @@ article_sha256/handoff_sha256. Условия, исключения и увер�
 целостность, но не доказывает истину. Review должен перечислять новые советы
 без evidence и конкретные ошибки целой статьи.
 
-Новые runs задают review_contract_version=3. Literary review содержит
+Новые runs задают review_contract_version=4. Literary review содержит
 strengths, paragraph_functions, whole_article_checked и reader_check;
 неприменимый вопрос объясняется по жанру. Замечания требуют benefit и
 meaning_risk. Keep_spans переносят сильные цитаты предыдущих ревизий; потерю
 каждой reviewer объясняет в strength_changes с причиной и replacement_quote
 либо обоснованным удалением. Inputs проверяющих не содержат чужой verdict.
-Прежние runs без поля версии читаются как v1 для истории. Для v1/v2 next
+Прежние runs без поля версии читаются как v1 для истории. Для v1/v2/v3 next
 сообщает current_review_required=true/publication_ready=false, export блокируется.
 Создай новый текущий run и повтори независимые отзывы; старую историю сохрани.
 
@@ -223,7 +223,7 @@ pending; агент не подтверждает человеческое од�
 тире, оговорки и повторы в запреты. Сначала назови конкретную проблему
 читателя; затем выбери минимальную правку, сохранив факты и голос автора.
 
-В новых native runs `review_contract_version=3`: назначенные practice_checks
+В новых native runs `review_contract_version=4`: назначенные practice_checks
 обязательны. Literary report также содержит logic_checks и preservation_checks;
 factual report — source_checks с точной цитатой источника, проверкой его
 идентичности и поддержки тезиса. Полная схема приходит в `next`.
@@ -234,7 +234,7 @@ DOI проверяется через resolver/метаданные/содерж
 
 Гейт проверяет покрытие, хеши и цитаты при submit и перед export. Он не
 доказывает истинность суждения reviewer. Отзывы независимы; после ремонта
-проверяются снова. Сохранённые runs v1/v2 читаются, но не дают новый export
+проверяются снова. Сохранённые runs v1/v2/v3 читаются, но не дают новый export
 по старым receipts; изменение версии state вручную недопустимо.
 Для отдельной правки: `editor-team editorial-review prepare` и `validate`,
 с `--text`, `--original`, `--owner literary_review`, `--review` при validate.
@@ -259,3 +259,45 @@ Unresolved исходная ошибка блокирует готовность
 переданных снимков; metadata сбора не доказывает новый веб-доступ reviewer.
 Допуск ограничен переданными источниками и проверенными утверждениями,
 а диагностические audit/analyze/validate-edit не заменяют native export.
+
+## Вычёркивание лишнего и рубрика владельца
+
+После черновика и до литературного отзыва обязателен отдельный проход на
+вычёркивание по разделу 0 [стандарта](references/player-editorial-standard.md).
+Вопрос к каждому предложению: «какое решение потеряет игрок, если это убрать?»
+Нет ответа — вычеркни. Только удаляй и сокращай; новых фактов, слов, связок и
+перестановок не добавляй. Полезные объяснения, основы, развилки, условия и
+исключения сохраняй. Убери пересказ подсказки карты/силы героя, очевидное,
+пустые страховки, повтор совета, площадки в теле GUIDE («по данным…», «игроки
+на Reddit…»), наблюдение в форме правила без причины, сравнение без реального
+выбора. Слабый блок советов убери целиком. Список удалённого с причиной храни
+в материалах запуска (cuts.json), не в статье. В native v4 это отдельный этап
+`submit --stage deletion_pass`; после revise/context он повторяется.
+
+На вход подай `card_paraphrase.retelling`, `owner.overused_word`,
+`owner.section_repeat`, `owner.forbidden_literal` из
+`editor-team audit статья.md --author-context context.json`; флаг совместим
+с `--task-context`. Находка не приказывает удалять полезное. Если NLP недоступен
+в минимальном runtime, получи audit полным EditorTeam; пустые findings при
+`diagnostic_status=unavailable` не означают чистый текст.
+[owner-eval](https://github.com/Manacost-Labs/ManacostTeam/blob/main/editor/docs/OWNER_EVAL.md):
+`editor-team owner-eval <набор> --author-context context.json` измеряет охват
+отклонений, а не одобрение владельца.
+
+Literary reviewer возвращает все десять строк `owner_checks`:
+`card_text_retelling`, `obvious_or_water`, `weak_or_obvious_tips`,
+`duplicated_advice`, `source_attribution_in_body`, `unsupported_or_false_claim`,
+`illogical_comparison`, `unclear_edge_case`, `genre_fit`, `ai_tells`.
+Каждая: `{id,status:clear|issue|unverified,quote,reason}` с непустой точной
+цитатой candidate. Issue/unverified требуют repair с фрагментом; не заменяй
+отрицательное суждение pass. Охват рубрики не доказывает качество суждений.
+Бюджет слов genre_fit выводится из полных выбранных образцов author-context;
+`genre_review` возвращает измерения из next и собственное объяснение объёма
+и манеры. Не подставляй фиксированную норму или длину короткой цитаты.
+
+Только `claim_kind=mechanic` допускает правило с «потому что» при проверенном
+основании. Observation — наблюдение в своей выборке, без придуманной причины;
+opinion — полезное мнение с именем игрока. Старый claim без типа не классифицируй
+по догадке. Если handoff говорит «блок советов писать не из чего», блок не пишется.
+Старые runs v1/v2/v3 читаются, но прежние неполные отзывы не разрешают новый
+export: создай текущий run, повтори проход и независимые отзывы.

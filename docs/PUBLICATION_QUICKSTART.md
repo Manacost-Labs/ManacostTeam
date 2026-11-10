@@ -66,8 +66,8 @@ python teams/manacost-publish/scripts/publish.py status build/publication-runs/m
 Перед `context` подготовьте [требования и выбранные образцы](PUBLICATION_CONTEXT.md).
 Без них нельзя принять черновик. При продолжении пакет восстанавливается
 автоматически; новое замечание требует обновить пакет и повторить reviews.
-Новый init устанавливает review_contract_version=3; старый run без этого поля
-читается как v1 для истории. Для v1/v2 next сообщает publication_ready=false
+Новый init устанавливает review_contract_version=4; старый run без этого поля
+читается как v1 для истории. Для v1/v2/v3 next сообщает publication_ready=false
 и current_review_required=true, а export блокируется. Для нового допуска
 создайте текущий run и повторите независимые reviews; не меняйте state.json
 ради обхода проверки и не переписывайте старые артефакты.
@@ -87,8 +87,9 @@ python teams/manacost-publish/scripts/publish.py status build/publication-runs/m
 | sources | JSON массив полных source candidates | full/public, ID, URL, текст, SHA256, provenance и время доступа |
 | research | publication-handoff.json | патч, статус, вопросы/claims, цитаты из уже сохранённых источников |
 | draft | UTF-8 article.md | непустой текст; далее проверяют два reviewer |
+| deletion_pass | JSON с article_sha256 и deletions [{start,quote,reason}] либо unchanged_reason | только точные непересекающиеся удаления; список хранится отдельно от статьи |
 | fact_review | factual.json | хеши, цитаты, советы/условия/уверенность, источники, отсутствие новых неподтверждённых сущностей |
-| literary_review | literary.json | хеши, польза, цельность, русский язык, голос, strengths, функции абзацев, reader_check; в v3 также practice_checks, logic_checks, preservation_checks и точные пары change_evidence при правках |
+| literary_review | literary.json | хеши, польза, цельность, русский язык, голос, strengths, функции абзацев, reader_check; owner_checks по 10 категориям, genre_review; также practice_checks, logic_checks, preservation_checks и точные пары change_evidence при правках |
 | ready | новый final.md | обе проверки относятся к текущему тексту и handoff |
 
 Пример сохранения этапа:

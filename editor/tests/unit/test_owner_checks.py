@@ -222,3 +222,35 @@ def test_shipped_frequencies_cover_author_corpus():
     assert freq["words"] > 1_000_000
     assert "стек" not in freq["nouns"] or freq["nouns"]["стек"] < 5
     assert "звукорегулятор" in freq["game"]
+
+
+def test_server_analyze_and_task_context_audit_receive_all_owner_findings(tmp_path, monkeypatch, lex, capsys):
+    from test_task_context import context
+
+    from editorteam import cli
+    from editorteam.server import analyze, validate
+
+    monkeypatch.setattr(cli, "_bg_card_lexicon", lambda: (lex, BG))
+    monkeypatch.setattr(O, "load_frequencies", lambda: FREQ)
+    text = (
+        "## План\n\nСамый простой путь к звонарю — портрет звонаря из лобби механизмов.\n\n"
+        + (FILLER * 10 + "Стек растет, стек копится, стеком гордится звонарь. ") * 4
+        + "\n\n## Герои\n\nТорговец песком — в начале игры раскапывает существо "
+        "7 уровня, которое приходит, когда вы потратите 60 золотых.\n\n"
+        "## Аксессуары\n\nПортрет звонаря — самый прямой путь к звонарю в лобби механизмов.\n"
+    )
+    owner = {"schema_version": 1, "profile": "battlegrounds-article", "style_note": "Синтетика.",
+             "requirements": CONTEXT["requirements"], "style_examples": []}
+    expected = {"owner.forbidden_literal", "owner.overused_word", "owner.section_repeat", "card_paraphrase.retelling"}
+    result = analyze(text, "hearthstone", "battlegrounds-article", author_context=owner)
+    assert expected <= {row["id"] for row in result["findings"]}
+    checked = validate(text, text, "hearthstone", "battlegrounds-article", author_context=owner)
+    assert expected <= {row["kind"] for row in checked["warnings"] + checked["violations"]}
+    article, task, author = (tmp_path / name for name in ("a.md", "task.json", "author.json"))
+    article.write_text(text, encoding="utf-8")
+    task.write_text(json.dumps(context("hearthstone")), encoding="utf-8")
+    author.write_text(json.dumps(owner), encoding="utf-8")
+    assert main(["audit", str(article), "--task-context", str(task), "--author-context", str(author),
+                 "--profile", "battlegrounds-article", "--format", "json"]) == 1
+    audited = json.loads(capsys.readouterr().out)
+    assert expected <= {row["id"] for row in audited["findings"]}

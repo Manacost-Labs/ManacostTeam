@@ -17,6 +17,7 @@ func ReviewFactualEdit(ctx context.Context, model llm.Completer, source, candida
 }
 
 type EditReview struct {
+	OwnerChecks           []editorialreview.Check          `json:"owner_checks"`
 	StructureReview       *editorialreview.StructureReview `json:"structure_review"`
 	PracticeChecks        []editorialreview.Check          `json:"practice_checks"`
 	LogicChecks           []editorialreview.Check          `json:"logic_checks"`
@@ -53,7 +54,7 @@ func ReviewEdit(ctx context.Context, model llm.Completer, source, candidate stri
 	if err != nil {
 		return nil, err
 	}
-	report := &EditReview{StructureReview: verdict.StructureReview, PracticeChecks: verdict.PracticeChecks, LogicChecks: verdict.LogicChecks, PreservationChecks: verdict.PreservationChecks, SourceChecks: verdict.SourceChecks, OriginalFactualChecks: verdict.OriginalFactualChecks, ReviewScope: verdict.ReviewScope, SourceVerification: verdict.SourceVerification}
+	report := &EditReview{OwnerChecks: verdict.OwnerChecks, StructureReview: verdict.StructureReview, PracticeChecks: verdict.PracticeChecks, LogicChecks: verdict.LogicChecks, PreservationChecks: verdict.PreservationChecks, SourceChecks: verdict.SourceChecks, OriginalFactualChecks: verdict.OriginalFactualChecks, ReviewScope: verdict.ReviewScope, SourceVerification: verdict.SourceVerification}
 	if verdict.Verdict != "accept" || !verdict.NoNewFacts || len(verdict.UnsupportedAdditions) > 0 {
 		return report, fmt.Errorf("не подтверждены факты, логика, смысл и голос; добавления: %v; замечания: %v", verdict.UnsupportedAdditions, verdict.Findings)
 	}

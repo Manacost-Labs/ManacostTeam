@@ -20,9 +20,9 @@ whole_article_checked недостаточно. Общий редакторск�
 без прежнего verdict. Это не утверждение, что разные модели независимы
 статистически: речь об отдельных контекстах и отсутствии подсказанного ответа.
 
-Новые runs имеют `state.review_contract_version=3`, при `state.schema_version=1`.
+Новые runs имеют `state.review_contract_version=4`, при `state.schema_version=1`.
 Старые runs без поля review_contract_version читаются как v1 для истории.
-Для v1/v2 next сообщает publication_ready=false/current_review_required=true,
+Для v1/v2/v3 next сообщает publication_ready=false/current_review_required=true,
 а export требует новый текущий run с независимой повторной проверкой. История
 и receipts не переписываются; изменение номера версии не заменяет review.
 Схема handoff также остаётся 1: research_context,
@@ -173,3 +173,24 @@ V1 не требует новые strengths/paragraph_functions/reader_check/who
 Обе схемы отражают фактически проведённую модельную проверку. Человек может
 не согласиться с выводом. Human gold и разрешение на публикацию — отдельные
 артефакты, не поля, которые модель проставляет за редактора.
+
+
+## Native v4: вычёркивание и рубрика владельца
+
+Между draft и fact_review обязателен deletion_pass: точные удаления с причинами
+сохраняются вне статьи. После правки отзывы выполняются заново.
+Литературный отчёт содержит десять owner_checks по
+[рубрике](OWNER_REJECTION_LOOP.md), каждый с id, status, непустой точной цитатой
+и причиной. Issue/unverified сохраняются как repair с фрагментом, не заменяются pass.
+Genre_review возвращает article_words/examples/word_budget из назначения и
+собственный reason сравнения объёма и манеры с выбранными образцами author-context.
+Бюджет выводится из полного текста образцов; без замеров он неизвестен.
+
+Автор и reviewer получают claim_kind: только mechanic допускает правило с
+«потому что» при проверенной причине; observation остаётся наблюдением;
+opinion получает имя игрока и включается лишь при пользе. При сообщении
+«блок советов писать не из чего» блок отсутствует.
+
+V1/v2/v3 читаются, но старые receipts не разрешают новый export. Охват и цитаты
+проверяет программа, литературное качество оценивает reviewer. Для диагностики:
+`audit --author-context` и [owner-eval](../editor/docs/OWNER_EVAL.md).

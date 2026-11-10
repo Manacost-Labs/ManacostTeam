@@ -101,8 +101,11 @@ def prepare(
     }
     if owner != "fact_review":
         from .article_structure import inventory
+        from .owner_review import assignment
 
         packet["structure_assignment"] = inventory(text)
+        packet["owner_review_assignment"] = assignment(text)
+        packet["review_schema"]["owner_checks"] = packet["owner_review_assignment"]["schema"]
         packet["review_schema"]["structure_review"] = (
             "{article_sha256,reader_question,main_answer,order_reason,ending_reason,blocks:["
             "{id,quote,function,new_information,link_to_previous,depends_on:[],repeat_of:[],repeat_reason,status:clear|issue|unverified,reason}]}. "
@@ -415,8 +418,10 @@ def validate(
     errors += _checks(text, report.get("practice_checks"), ids, "practice_checks", na=ids)
     if owner != "fact_review":
         from .article_structure import validate_review
+        from .owner_review import validate_rubric
 
         errors += validate_review(text, report.get("structure_review"))
+        errors += validate_rubric(text, report.get("owner_checks"))
         errors += _checks(
             text, report.get("logic_checks"), set(LOGIC), "logic_checks", na={"causal_support"}
         )

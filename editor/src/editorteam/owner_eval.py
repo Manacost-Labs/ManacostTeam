@@ -33,6 +33,11 @@ DETERMINISTIC = {
 
 # Почему категория остаётся рецензенту: это записывается в отчёт.
 NEEDS_REVIEWER = {
+    "card_text_retelling": "пересказ эффекта без нового решения; детерминированный поиск неполон",
+    "obvious_or_water": "нужна оценка пользы предложения для выбранного читателя",
+    "duplicated_advice": "нужно отличить пустой повтор от полезного нового условия",
+    "source_attribution_in_body": "происхождение хранится в рабочих материалах; проверь необходимость имени игрока",
+    "genre_fit": "объём и манера сравниваются с выбранными образцами author-context, не с общей нормой слов",
     "ai_tells": "рамки «Подвох:», «И железное правило:» — вопрос интонации; "
     "markers ловит только шаблоны из словаря",
     "source_attribution_overuse": "уместность ссылки на источник зависит от вывода; "
@@ -48,6 +53,17 @@ NEEDS_REVIEWER = {
     "too_short_weak_heroes": "достаточность раздела — оценка содержания",
     "unsupported_or_false_claim": "нужна сверка фактов с игрой",
     "section_rejected_structure": "вкус владельца к блоку целиком",
+}
+
+# Keep historic owner labels readable while assigning the same reviewer rubric.
+REVIEW_CATEGORY = {
+    "source_attribution_overuse": "source_attribution_in_body",
+    "genre_mismatch_too_long_literary": "genre_fit",
+    "water_hedging": "obvious_or_water", "obvious_fact": "obvious_or_water",
+    "too_short_weak_heroes": "genre_fit",
+    "section_rejected_structure": "weak_or_obvious_tips",
+    "card_text_retelling_and_duplication": "card_text_retelling",
+    "duplication": "duplicated_advice",
 }
 
 NEW_CHECKS = ("owner.", "card_paraphrase.retelling")
@@ -115,6 +131,7 @@ def judge(rejection: dict, text: str, findings: list[dict]) -> dict:
         "id": rejection["id"],
         "version": rejection["version"],
         "category": category,
+        "reviewer_category": REVIEW_CATEGORY.get(category, category),
         "status": status,
         "reason": NEEDS_REVIEWER.get(category, "") if not expected else "",
         "fragments": rows,

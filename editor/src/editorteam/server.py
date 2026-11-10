@@ -83,6 +83,7 @@ def analyze(
     profile: str | None,
     mode: str = "GUIDE",
     evidence_requested: bool = False,
+    author_context: dict | None = None,
 ) -> dict:
     C = _scripts()
     g = G.load(game)
@@ -241,6 +242,16 @@ def analyze(
     else:
         report.skipped.append("structure")
 
+    if author_context is not None:
+        from .publication_context import validate as validate_author_context
+
+        validate_author_context(author_context, prof.id, frozen="purpose" in author_context)
+    if g.id == "hearthstone" or author_context is not None:
+        from .cli import owner_findings
+
+        # Go uses /analyze through PythonAnalyzerAdapter; reuse the same NLP
+        # diagnostics rather than reimplementing their morphology in Go.
+        report.findings.extend(Finding(**row) for row in owner_findings(text, prof.id, author_context))
     report.metrics.update(measure(text, g, prof))
     d = report.to_dict()
     d["game"] = g.id
@@ -286,6 +297,7 @@ def validate(
     editorial_review: dict | None = None,
     source_handoff: dict | None = None,
     source_snapshots: list | None = None,
+    author_context: dict | None = None,
 ) -> dict:
     """Deterministic diagnostics, optionally bound to an independent review.
 
@@ -322,6 +334,17 @@ def validate(
 
     violations = []
     warnings = []
+    if author_context is not None:
+        from .publication_context import validate as validate_author_context
+
+        validate_author_context(author_context, prof.id, frozen="purpose" in author_context)
+    if g.id == "hearthstone" or author_context is not None:
+        from .cli import owner_findings
+
+        for hit in owner_findings(after, prof.id, author_context):
+            item = {"kind": hit["id"], "severity": hit["severity"], "message": hit["message"],
+                    "context": hit["evidence"], "suggestion": hit["suggestion"], "line": hit["line"]}
+            (violations if hit["severity"] == "error" else warnings).append(item)
     voice_before = round(sum(v["per1k"] for v in sa.values()), 1) if sa else None
     voice_after = round(sum(v["per1k"] for v in sb.values()), 1) if sb else None
     lost_voice_signals = []
@@ -606,6 +629,7 @@ def validate(
                     evidence_requested=evidence_requested,
                     author=author,
                     meaning=meaning,
+                    author_context=author_context,
                 )
                 result["diagnostic_baseline_sha256"] = article_hash(baseline)
                 result["review_original_sha256"] = article_hash(before)
@@ -1265,6 +1289,7 @@ class Handler(BaseHTTPRequestHandler):
                         data.get("profile"),
                         data.get("mode", "GUIDE"),
                         data.get("evidence_requested", False),
+                        author_context=data.get("author_context"),
                     ),
                 )
             elif self.path == "/validate":
@@ -1288,6 +1313,7 @@ class Handler(BaseHTTPRequestHandler):
                         editorial_review=data.get("editorial_review"),
                         source_handoff=data.get("source_handoff"),
                         source_snapshots=data.get("source_snapshots"),
+                        author_context=data.get("author_context"),
                     ),
                 )
             elif self.path == "/rules":

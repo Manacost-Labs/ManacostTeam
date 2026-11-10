@@ -4,6 +4,7 @@ import copy
 
 import pytest
 from test_article_structure import structure_assessment
+from test_owner_review import rubric
 
 from editorteam.editorial_practices import (
     catalog,
@@ -21,6 +22,7 @@ def assessment(owner="literary_review", text=TEXT):
         "status": "pass",
         "article_sha256": packet["article_sha256"],
         "structure_review": structure_assessment(text),
+        "owner_checks": rubric(text),
         "practice_checks": [
             {
                 "id": p["id"],

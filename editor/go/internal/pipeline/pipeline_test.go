@@ -49,6 +49,14 @@ func stageOf(system string) string {
 
 func (f *fakeLLM) Model() string { return "fake-model" }
 func (f *fakeLLM) Complete(_ context.Context, messages []llm.Message, _ int) (string, error) {
+	// Unrelated fixtures retain their stage scripts; dedicated deletion tests
+	// use their own completer to prove the extra call and strict replay.
+	if strings.Contains(messages[0].Content, "DELETION_PASS") {
+		var input map[string]any
+		_ = json.Unmarshal([]byte(messages[1].Content), &input)
+		raw, _ := json.Marshal(map[string]any{"article_sha256": input["article_sha256"], "deletions": []any{}, "unchanged_reason": "Synthetic useful passage unchanged."})
+		return string(raw), nil
+	}
 	f.messages = append(f.messages, append([]llm.Message(nil), messages...))
 	stage := stageOf(messages[0].Content)
 	f.stages = append(f.stages, stage)

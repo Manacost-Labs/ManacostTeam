@@ -198,12 +198,13 @@ def test_direct_rewrite_helper_cannot_accept_same_arithmetic_error():
 
 
 def test_native_repair_review_requires_original_checks_and_change_evidence(tmp_path):
-    from test_publication_run import TEXT, prepared, reviews, write
+    from test_publication_run import TEXT, complete_deletion, prepared, reviews, write
 
     from editorteam.publication_run import next_task, revise, submit
 
     run = prepared(tmp_path)
     revise(run, artifact=write(tmp_path, "revised.md", "# Совет\n\n" + TEXT))
+    complete_deletion(run)
     task = next_task(run)
     assert task["original"] == TEXT
     assert task["editorial_practices"]["original_sha256"]

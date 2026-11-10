@@ -17,16 +17,22 @@ from urllib.parse import urlsplit, urlunsplit
 
 from .editorial_lab import canonical_url
 
-STAGES = ("sources", "research", "draft", "fact_review", "literary_review")
+STAGES = ("sources", "research", "draft", "deletion_pass", "fact_review", "literary_review")
 ROLES = {
     "sources": "source_researcher",
     "research": "research_editor",
     "draft": "writer",
+    "deletion_pass": "deletion_editor",
     "fact_review": "independent_fact_reviewer",
     "literary_review": "independent_literary_reviewer",
     "ready": "publication_editor",
 }
 INSTRUCTIONS = {
+    "deletion_pass": "Выполни проход на вычёркивание по deletion_assignment. Верни только JSON "
+    "{article_sha256,deletions:[{start,quote,reason}],unchanged_reason}. start — индекс символа Python "
+    "в исходном draft (не байт и не UTF-16); quote — точная удаляемая подстрока. "
+    "Удаления перечисли по возрастанию start, без пересечений. Не передавай новый текст: "
+    "runner применит только удаления. Если всё полезно, deletions=[] с конкретным unchanged_reason.",
     "sources": "Собери полные источники через MCP или веб. Дочитай все страницы. "
     "До submit и до фиксации sources создай исследовательский bundle с reader_questions "
     "по решениям читателя и реальными локализованными поисковыми фразами. "
@@ -101,6 +107,7 @@ def craft_guidance(stage: str) -> dict | None:
         "sources": "research",
         "research": "research",
         "draft": "write",
+        "deletion_pass": "delete",
         "literary_review": "review",
     }.get(stage)
     if role is None:
@@ -114,6 +121,7 @@ def craft_guidance(stage: str) -> dict | None:
         "Абзацы дели по смене задачи объяснения, не по длине. Сначала попробуй только перенос границы; не разрывай совет и его условие. Сохраняй полезные границы, сноски и соседние правки при repair.",
     ]
     focus = {
+        "delete": "Только вычёркивай по deletion_assignment. Не выполняй авторскую переработку или литературную полировку в этом проходе.",
         "research": "Ищи, какое решение принимает читатель, что надо понять до него, когда совет применим и когда перестаёт работать. Причина, цена и альтернатива требуют собственного evidence. Исторические образцы стиля не подтверждают текущие механики.",
         "write": "Сверь план с вопросами и evidence в chapter_brief. Выбери только применимые приёмы. Сохрани точные короткие формулировки; равноценное перефразирование не улучшение. Не заполняй карточки выдуманными причинами.",
         "review": "Проверь путь от вопроса к ответу, функции абзацев и пользу каждой существенной замены. Для обязательной правки нужны цитата, конкретная трудность читателя, benefit и meaning_risk. Равноценное предпочтение обозначай info; warning требует конкретной пользы исправления. Не требуй нового текста из-за одного счётчика повторов.",
@@ -187,7 +195,11 @@ def craft_guidance(stage: str) -> dict | None:
         "Не переписывай заданные 20% или 80%: удачный фрагмент можно оставить. "
         "Балл ИИ-детектора не доказывает авторство и не служит критерием готовности.",
     }
-    passes = [research] if role == "research" else [author, prose]
+    from .owner_review import CLAIM_GUIDANCE, DELETION_GUIDANCE
+
+    common.append(CLAIM_GUIDANCE)
+    deletion = {"id": "deletion_pass", "task": DELETION_GUIDANCE}
+    passes = [research] if role == "research" else [deletion] if role == "delete" else [author, deletion, prose]
     reader_quality_checks = [
         {"id": "substance", "task": "Что абзац добавляет сверх текста карты и сказанного раньше? "
          "Убери очевидный совет, но сохрани нужную предпосылку для выбранного читателя. "
@@ -223,7 +235,7 @@ def craft_guidance(stage: str) -> dict | None:
         "principles": common,
         "focus": focus[role],
         "editorial_passes": passes,
-        **({"reader_quality_checks": reader_quality_checks} if role != "research" else {}),
+        **({"reader_quality_checks": reader_quality_checks} if role not in {"research", "delete"} else {}),
     }
 
 
@@ -351,7 +363,7 @@ def _validate_state(state: dict) -> None:
     """Reject malformed control data before accessing paths or stage artifacts."""
     if (
         type(state.get("review_contract_version", 1)) is not int
-        or state.get("review_contract_version", 1) not in {1, 2, 3}
+        or state.get("review_contract_version", 1) not in {1, 2, 3, 4}
         or any(
             not isinstance(state.get(key), str) or not state[key].strip()
             for key in ("brief", "patch", "profile")
@@ -388,6 +400,7 @@ def _validate_state(state: dict) -> None:
     if any(
         stage not in state["artifacts"] or not state["artifacts"][stage]["accepted"]
         for stage in STAGES[:index]
+        if stage != "deletion_pass" or state.get("review_contract_version", 1) >= 4
     ):
         raise ValueError("publication state stage inconsistent with accepted artifacts")
     if any(STAGES.index(stage) > index for stage in state["artifacts"]):
@@ -442,7 +455,7 @@ def init_run(run: Path, *, brief: str, patch: str, profile: str, shortcodes: str
     (run / "artifacts").mkdir()
     state = {
         "schema_version": 1,
-        "review_contract_version": 3,
+        "review_contract_version": 4,
         "brief": brief,
         "patch": patch,
         "profile": profile,
@@ -488,9 +501,9 @@ def configure_context(run: Path, *, artifact: Path) -> dict:
             handle.write(data)
         history.append({"path": relative, "sha256": _hash(data)})
         if "draft" in state["artifacts"]:
-            for stage in ("fact_review", "literary_review"):
+            for stage in ("deletion_pass", "fact_review", "literary_review"):
                 state["artifacts"].pop(stage, None)
-            state["stage"], state["blocked"], state["export"] = "fact_review", None, None
+            state["stage"], state["blocked"], state["export"] = "deletion_pass", None, None
             state["export_status"] = "not_exported"
             state["review_retries"] = {"fact_review": 0, "literary_review": 0}
         _atomic_json(run / "state.json", state)
@@ -547,13 +560,17 @@ def _context(run: Path, state: dict) -> tuple[dict, str]:
 def _previous_draft(run: Path, state: dict) -> str | None:
     """Compare repairs to the prior actual draft; do not invent a source voice."""
     drafts = [row for row in state["history"] if row["stage"] == "draft"]
-    if len(drafts) < 2:
-        if state.get("continuation"):
-            return _confined(run, state["continuation"]["draft"]["path"]).read_text(
-                encoding="utf-8"
-            )
-        return None
-    return _confined(run, drafts[-2]["path"]).read_text(encoding="utf-8")
+    earlier = [row for row in drafts if row["draft_revision"] < state["draft_revisions"]]
+    if earlier:
+        return _confined(run, earlier[-1]["path"]).read_text(encoding="utf-8")
+    if state.get("continuation"):
+        return _confined(run, state["continuation"]["draft"]["path"]).read_text(encoding="utf-8")
+    # An initial deletion creates another draft receipt in the same revision.
+    # Review its loss against the actual uncut input; later repairs must still
+    # compare with the preceding published candidate, not their own uncut draft.
+    if len(drafts) > 1:
+        return _confined(run, drafts[0]["path"]).read_text(encoding="utf-8")
+    return None
 
 
 def _keep_spans(run: Path, state: dict) -> list[dict]:
@@ -746,6 +763,10 @@ def next_task(
         handoff = _json(_data(run, state, "research"))
         task["handoff_sha256"] = handoff_hash(handoff)
         task["chapter_brief"] = chapter_brief(handoff)
+        from .owner_review import CLAIM_GUIDANCE
+
+        task["claim_guidance"] = CLAIM_GUIDANCE
+        task["instructions"] += " " + CLAIM_GUIDANCE
         task["instructions"] += (
             " chapter_brief — порядок чтения принятого handoff: вопросы → советы → evidence. "
             "Сохрани condition, exception, confidence и research_context каждого совета. "
@@ -782,7 +803,7 @@ def next_task(
         if state["draft_revisions"] >= 2 and not retries_remaining:
             task["stage"], task["role"] = "blocked", "publication_editor"
             task["instructions"] = "Лимит двух исправлений исчерпан. Требуется решение редактора."
-    if state.get("review_contract_version", 1) < 3:
+    if state.get("review_contract_version", 1) < 4:
         task["publication_ready"] = False
         task["current_review_required"] = True
         task["instructions"] += (
@@ -859,9 +880,6 @@ def next_task(
                 "прежние отзывы не проверяли полный порядок объяснения. "
             ) + task["instructions"]
         if stage == "draft":
-            # Keep immediate, actionable requirements near the text; the full practice
-            # catalog remains available by reference and is assigned to reviewers.
-            task["craft_guidance"].pop("editorial_passes", None)
             task["instructions"] = (
                 "До прозы сохрани article_plan в author_context: reader_question, main_answer и sections "
                 "[{id,question,contribution,depends_on,claim_ids}]. Сначала предпосылки, затем зависящие от них "
@@ -886,6 +904,42 @@ def next_task(
                 "Identify where the planned question is actually answered and whether prerequisites are explained first. "
                 "Several questions can share an explanatory block. A wrong plan must be updated, not rationalized.",
             }
+    if stage == "deletion_pass":
+        from .owner_review import DELETION_GUIDANCE
+
+        text = _data(run, state, "draft").decode("utf-8")
+        try:
+            from .cli import owner_findings
+
+            findings = owner_findings(text, state["profile"], author_context[0] if author_context else None)
+            diagnostic_status = "available"
+        except ModuleNotFoundError as exc:
+            # The portable publication runner is stdlib-only. Morphology lives
+            # in the full EditorTeam installation; never report a missing audit
+            # as clean or prevent the deletion editor from reading the article.
+            findings = []
+            diagnostic_status = f"unavailable: {exc.name}"
+            task["instructions"] += (
+                " NLP-аудит в этом runtime недоступен. Выполни editor-team audit для исходного draft "
+                "с --author-context в полном EditorTeam и передай находки редактору удаления. "
+                "Пустой findings здесь не означает отсутствие проблем."
+            )
+        task["deletion_assignment"] = {
+            "article_sha256": task["article_sha256"],
+            "rules": DELETION_GUIDANCE,
+            "findings": findings,
+            "diagnostic_status": diagnostic_status,
+            "limitation": "Находки — диагностика. Смысл и сохранение полезных объяснений проверяет редактор.",
+        }
+    if stage == "literary_review":
+        from .owner_review import assignment
+
+        task["owner_review_assignment"] = assignment(
+            _data(run, state, "draft").decode("utf-8"), author_context[0] if author_context else None
+        )
+        if "editorial_practices" in task:
+            task["editorial_practices"]["owner_review_assignment"] = task["owner_review_assignment"]
+        task["instructions"] += " Верни полную рубрику owner_checks и genre_review по owner_review_assignment."
     return task
 
 
@@ -1006,6 +1060,20 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
                 errors += _ground_sources(handoff, _json(_data(run, state, "sources")))
             if errors:
                 raise ValueError("; ".join(errors))
+        elif stage == "deletion_pass":
+            from .owner_review import validate_deletion
+            from .publication_context import literal_errors
+
+            before = _data(run, state, "draft").decode("utf-8")
+            result, errors = validate_deletion(before, _json(data))
+            context = _author_context(run, state)
+            if context is None:
+                raise ValueError("configure author context before deletion_pass")
+            errors += literal_errors(context[0], result)
+            if errors:
+                raise ValueError("; ".join(errors))
+            if result != before:
+                _record(run, state, "draft", result.encode("utf-8"), [])
         elif stage == "draft":
             if not data.decode("utf-8").strip():
                 raise ValueError("empty draft")
@@ -1050,6 +1118,7 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
                     require_extended=state.get("review_contract_version", 1) >= 2,
                     require_practices=state.get("review_contract_version", 1) >= 3,
                     handoff=handoff,
+                    require_owner=True,
                     **review_context,
                 )
             )
@@ -1066,6 +1135,10 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
 
             errors += validate_plan_evidence(context[0].get("article_plan"), handoff)
             errors += review_errors(*context, text, report, stage)
+            if stage == "literary_review" and isinstance(report, dict):
+                from .owner_review import validate_genre
+
+                errors += validate_genre(text, context[0], report)
         _record(run, state, stage, data, errors)
         if retry_review:
             state["review_retries"][stage] += 1
@@ -1185,9 +1258,9 @@ def revise(run: Path, *, artifact: Path, feedback_options: dict | None = None) -
             _capture_feedback(run, state, data, feedback_options)
         state["draft_revisions"] += 1
         _record(run, state, "draft", data, [])
-        for stage in ("fact_review", "literary_review"):
+        for stage in ("deletion_pass", "fact_review", "literary_review"):
             state["artifacts"].pop(stage, None)
-        state["stage"], state["blocked"], state["export"] = "fact_review", None, None
+        state["stage"], state["blocked"], state["export"] = "deletion_pass", None, None
         state["export_status"] = "not_exported"
         state["review_retries"] = {"fact_review": 0, "literary_review": 0}
         _atomic_json(run / "state.json", state)
@@ -1202,13 +1275,25 @@ def export(run: Path, *, output: Path) -> dict:
         state = _load(run)
         if state["stage"] != "ready" or state["blocked"]:
             raise ValueError("both reviews must pass before export")
-        if state.get("review_contract_version", 1) < 3:
+        if state.get("review_contract_version", 1) < 4:
             raise ValueError(
-                "current independent re-review required: historical v1/v2 receipts cannot authorize export. "
+                "current independent re-review required: historical v1/v2/v3 receipts cannot authorize export. "
                 "Create a current native run from the saved sources, handoff and draft and submit full "
                 "independent factual and literary reviews. The historical run and its history are unchanged."
             )
         handoff, text = _context(run, state)
+        from .owner_review import validate_deletion
+
+        cut = state["artifacts"]["deletion_pass"]
+        report = _json(_data(run, state, "deletion_pass"))
+        earlier = state["history"][:state["history"].index(cut)]
+        originals = [row for row in earlier if row["stage"] == "draft" and row["sha256"] == report.get("article_sha256")]
+        if not originals:
+            raise ValueError("deletion_pass: input draft receipt missing")
+        before = _confined(run, originals[-1]["path"]).read_bytes().decode("utf-8")
+        replayed, cut_errors = validate_deletion(before, report)
+        if cut_errors or replayed != text:
+            raise ValueError("deletion_pass: receipt does not reproduce current draft")
         errors = validate_reviews(
             handoff,
             text,
@@ -1234,6 +1319,11 @@ def export(run: Path, *, output: Path) -> dict:
         from .article_structure import validate_plan_evidence
 
         errors += validate_plan_evidence(context[0].get("article_plan"), handoff)
+        from .owner_review import validate_genre, validate_rubric
+
+        literary = _json(_data(run, state, "literary_review"))
+        errors += validate_rubric(text, literary.get("owner_checks"))
+        errors += validate_genre(text, context[0], literary)
         for stage in ("fact_review", "literary_review"):
             errors += review_errors(*context, text, _json(_data(run, state, stage)), stage)
         if errors:

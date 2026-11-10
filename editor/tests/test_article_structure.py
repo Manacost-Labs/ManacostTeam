@@ -165,4 +165,4 @@ def test_legacy_context_needs_plan_before_next_revision(tmp_path):
     configure_context(run, artifact=write(tmp_path, "legacy-context.json", context))
     with pytest.raises(ValueError, match="article_plan"):
         revise(run, artifact=write(tmp_path, "changed.md", TEXT + "\n"))
-    assert next_task(run)["stage"] == "fact_review"
+    assert next_task(run)["stage"] == "deletion_pass"

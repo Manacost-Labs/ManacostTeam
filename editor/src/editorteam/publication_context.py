@@ -53,6 +53,8 @@ def validate(context: dict, profile: str, *, frozen: bool = False) -> None:
     seen = set()
     for row in examples:
         allowed = {"id", "profile", "source", "source_sha256", "quote", "use_for", "avoid"}
+        if frozen:
+            allowed.add("source_word_count")
         if not frozen:
             allowed.add("source_path")
         if not isinstance(row, dict) or set(row) - allowed:
@@ -68,6 +70,8 @@ def validate(context: dict, profile: str, *, frozen: bool = False) -> None:
         ):
             raise ValueError("invalid style example: id/profile/source/quote/use_for/avoid/hash")
         seen.add(row["id"])
+        if "source_word_count" in row and (type(row["source_word_count"]) is not int or row["source_word_count"] < 1):
+            raise ValueError("invalid source_word_count")
 
 
 def freeze(artifact: Path, profile: str) -> bytes:
@@ -89,6 +93,9 @@ def freeze(artifact: Path, profile: str) -> bytes:
             raise ValueError("style source hash mismatch")
         if row["quote"] not in raw_source.decode("utf-8-sig"):
             raise ValueError("style quote is not present in source")
+        from .owner_review import word_count
+
+        row["source_word_count"] = word_count(raw_source.decode("utf-8-sig"))
     context["purpose"] = PURPOSE
     validate(context, profile, frozen=True)
     return (json.dumps(context, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
@@ -96,7 +103,7 @@ def freeze(artifact: Path, profile: str) -> bytes:
 
 def packet(context: dict, stage: str) -> dict:
     result = deepcopy(context)
-    if stage not in {"draft", "literary_review"}:
+    if stage not in {"draft", "deletion_pass", "literary_review"}:
         result.pop("style_examples", None)
         result.pop("style_note", None)
     return result

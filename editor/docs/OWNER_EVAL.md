@@ -169,3 +169,18 @@ p90 — 12,3, у эталонов — до 14,6. Порог, который ло
 | R01–R04, R07–R12, R14, R15 | содержание, жанр, логика | needs_reviewer |
 
 Новые проверки на эталонах и принятой версии: 0 error, 2 review на 7 файлов.
+
+## Рубрика reviewer и диагностика
+
+[Проход удаления и рубрика](../../docs/OWNER_REJECTION_LOOP.md) принимают четыре
+находки audit как вход. `audit --author-context` работает с `--task-context` через
+server.analyze; те же находки возвращаются через `/validate` для postflight Go.
+
+`reviewer_category` сопоставляет старые метки с общей рубрикой:
+water_hedging/obvious_fact → obvious_or_water;
+source_attribution_overuse → source_attribution_in_body;
+genre_mismatch_too_long_literary/too_short_weak_heroes → genre_fit;
+section_rejected_structure → weak_or_obvious_tips; duplication → duplicated_advice.
+Исходная category и результаты измерения сохраняются. Рубрика не превращает
+needs_reviewer в автоматически пойманное отклонение. Проверки охвата и цитат
+не измеряют качество на реальных статьях; живого reviewer-прогона не было.

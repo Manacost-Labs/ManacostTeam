@@ -53,7 +53,8 @@ def test_opt_in_language_examples_reach_only_author_task(tmp_path):
     state = json.loads(state_path.read_text())
     state["stage"] = "draft"
     state["artifacts"].pop("draft")
-    state["history"] = [receipt for receipt in state["history"] if receipt["stage"] != "draft"]
+    state["artifacts"].pop("deletion_pass", None)
+    state["history"] = [receipt for receipt in state["history"] if receipt["stage"] not in {"draft", "deletion_pass"}]
     state_path.write_text(json.dumps(state))
     old_state = state_path.read_bytes()
     baseline = next_task(run)
@@ -198,6 +199,15 @@ def handoff():
     }
 
 
+def complete_deletion(run):
+    task = next_task(run)
+    if task["stage"] == "deletion_pass":
+        submit(run, stage="deletion_pass", artifact=write(run.parent, "cut.json", {
+            "article_sha256": task["article_sha256"], "deletions": [],
+            "unchanged_reason": "Синтетический условный совет нужен читателю.",
+        }))
+
+
 def prepared(tmp_path):
     run = tmp_path / "run"
     init_run(run, brief="Гайд", patch="test", profile="guide", shortcodes="off")
@@ -221,10 +231,12 @@ def prepared(tmp_path):
     submit(run, stage="sources", artifact=write(tmp_path, "sources.json", rows))
     submit(run, stage="research", artifact=write(tmp_path, "handoff.json", handoff()))
     submit(run, stage="draft", artifact=write(tmp_path, "draft.md", TEXT))
+    complete_deletion(run)
     return run
 
 
 def reviews(run):
+    complete_deletion(run)
     task = next_task(run)
     hashes = {key: task[key] for key in ("article_sha256", "handoff_sha256")}
     factual = {
@@ -246,8 +258,17 @@ def reviews(run):
             }
         ],
     }
+    from test_owner_review import rubric
+
+    from editorteam.owner_review import genre_assignment
+    from editorteam.publication_run import _author_context, _load
+
+    candidate = Path(task["inputs"]["draft"]).read_text(encoding="utf-8")
+    context = _author_context(run, _load(run))[0]
     literary = {
         **hashes,
+        "owner_checks": rubric(candidate),
+        "genre_review": {**genre_assignment(candidate, context), "reason": "Синтетический пример; образцы проверены."},
         "status": "pass",
         "dimensions": dict.fromkeys(
             ("usefulness", "coherence", "natural_russian", "author_voice"), "pass"
@@ -347,7 +368,7 @@ def reviews(run):
 
 def test_v3_missing_practice_blocks_native_flow_and_export(tmp_path):
     run = prepared(tmp_path)
-    assert next_task(run)["review_contract_version"] == 3
+    assert next_task(run)["review_contract_version"] == 4
     fact, _ = reviews(run)
     fact["practice_checks"].pop()
     result = submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))
@@ -368,7 +389,7 @@ def test_source_grounding_accepts_equivalent_urls_without_rewriting_sources():
     assert _ground_sources(source_handoff, snapshots)
 
 
-@pytest.mark.parametrize("version", [1, 2])
+@pytest.mark.parametrize("version", [1, 2, 3])
 def test_historical_receipts_remain_readable_but_cannot_authorize_new_export(tmp_path, version):
     run = prepared(tmp_path)
     state_path = run / "state.json"
@@ -377,7 +398,7 @@ def test_historical_receipts_remain_readable_but_cannot_authorize_new_export(tmp
     state_path.write_text(json.dumps(state), encoding="utf-8")
     fact, literary = reviews(run)
     for report in (fact, literary):
-        for field in ("practice_checks", "logic_checks", "preservation_checks", "source_checks"):
+        for field in (() if version == 3 else ("practice_checks", "logic_checks", "preservation_checks", "source_checks")):
             report.pop(field, None)
     assert not submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))[
         "blocked"
@@ -474,8 +495,8 @@ def test_craft_guidance_reaches_applicable_stages_without_changing_evidence(tmp_
     [
         ("sources", ["research"]),
         ("research", ["research"]),
-        ("draft", ["author", "prose"]),
-        ("literary_review", ["author", "prose"]),
+        ("draft", ["author", "deletion_pass", "prose"]),
+        ("literary_review", ["author", "deletion_pass", "prose"]),
     ],
 )
 def test_editorial_passes_are_role_scoped_fresh_guidance(stage, expected):
@@ -582,10 +603,12 @@ def test_shared_handoff_metadata_survives_saved_receipts_and_next_task(tmp_path)
     submit(run, stage="sources", artifact=write(tmp_path, "sources.json", rows))
     artifact = write(tmp_path, "handoff.json", h)
     submit(run, stage="research", artifact=artifact)
-    for stage in ("draft", "fact_review"):
+    for stage in ("draft", "deletion_pass", "fact_review"):
         task = next_task(run)
         assert task["stage"] == stage
         assert Path(task["inputs"]["research"]).read_bytes() == artifact.read_bytes()
+        if stage == "deletion_pass":
+            complete_deletion(run)
         if stage == "draft":
             submit(run, stage="draft", artifact=write(tmp_path, "draft.md", text))
 
@@ -608,6 +631,7 @@ def test_uncollected_counterevidence_cannot_be_submitted(tmp_path):
 def test_entity_hints_reach_reviewer_without_approving_a_draft(tmp_path):
     run = prepared(tmp_path)
     revise(run, artifact=write(tmp_path, "with-name.md", TEXT + " Новая Карта"))
+    complete_deletion(run)
     task = next_task(run)
     assert any("Новая Карта" in hint for hint in task["entity_hints"])
     assert "Непроверенные" in task["entity_hints_policy"]
@@ -647,7 +671,7 @@ def test_review_loss_requires_revision_and_keeps_rejected_report(tmp_path):
     assert next_task(run)["stage"] == "draft"
     revised = write(tmp_path, "revision.md", "# Совет\n\n" + TEXT)
     result = revise(run, artifact=revised)
-    assert result["stage"] == "fact_review"
+    assert result["stage"] == "deletion_pass"
     assert "fact_review" not in result["artifacts"]
     assert result["history"][-2]["accepted"] is False
     assert (run / result["history"][-2]["path"]).read_text(encoding="utf-8")
@@ -783,7 +807,7 @@ def test_review_recheck_budget_is_bound_to_stage_and_draft_version(tmp_path):
     submit(run, stage="fact_review", artifact=report, retry_review=True)
     with pytest.raises(ValueError, match="recheck budget"):
         submit(run, stage="fact_review", artifact=report, retry_review=True)
-    assert len(status(run)["history"]) == 5
+    assert len(status(run)["history"]) == 6
     revise(run, artifact=write(tmp_path, "revision.md", "# Совет\n\n" + TEXT))
     assert status(run)["review_retries"]["fact_review"] == 0
 
@@ -941,7 +965,7 @@ def test_feedback_captures_real_bytes_as_pending_and_restarts_reviews(tmp_path, 
     assert (output / "final.md").read_bytes() == final.read_bytes()
     assert row["status"] == "pending" and row["approval"] is None and row["synthetic"]
     assert (output / "draft.md").read_text() == TEXT
-    assert status(run)["stage"] == "fact_review"
+    assert status(run)["stage"] == "deletion_pass"
     assert status(run)["draft_revisions"] == 1
     before = (run / "state.json").read_bytes()
     with pytest.raises(ValueError):
