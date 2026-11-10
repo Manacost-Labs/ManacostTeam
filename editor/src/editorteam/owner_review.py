@@ -36,6 +36,59 @@ CRITERIA = dict(
     )
 )
 
+# Гайд по колоде: план с genre=deck_guide включает ещё три обязательные строки.
+# Они не входят в CATEGORIES: прежние запуски, мета-отчёты и Полей сражений
+# проверяются прежней рубрикой из десяти категорий.
+DECK_GUIDE = "deck_guide"
+DECK_GUIDE_CATEGORIES = (
+    "advice_has_condition_and_reason",
+    "mastery_has_threshold_or_order",
+    "term_before_definition",
+)
+DECK_GUIDE_CRITERIA = dict(
+    zip(
+        DECK_GUIDE_CATEGORIES,
+        (
+            "У каждого совета есть условие (когда) и причина (почему), а при сильном совете ещё цена ошибки? "
+            "Совет без условия или без причины — ремонт: добавь подтверждённое или убери.",
+            "В каждом разделе мастерства есть хотя бы один порог (число, граница) или порядок действий (через «>»)? "
+            "Числа и последовательность совпадают с карточкой опыта игрока без изменений? "
+            "Первое лицо допустимо только там, где карточка с first_person=true.",
+            "Каждый термин («вылет», «обмен», «раскрутка») объяснён при первом упоминании или в разделе "
+            "«как работает колода», который стоит раньше? Цитируй первое употребление до объяснения.",
+        ),
+    )
+)
+
+
+def is_deck_guide(context: dict | None) -> bool:
+    plan = context.get("article_plan") if isinstance(context, dict) else None
+    return isinstance(plan, dict) and plan.get("genre") == DECK_GUIDE
+
+
+def categories_for(deck_guide: bool = False) -> tuple[str, ...]:
+    return CATEGORIES + DECK_GUIDE_CATEGORIES if deck_guide else CATEGORIES
+
+
+DECK_GUIDE_GUIDANCE = (
+    "Гайд по колоде. Порядок: вступление-сцена → как работает колода → карты по ролям → сборки с условием "
+    "выбора → муллиган → план на ранние ходы → разделы мастерства → как играть против → заключение. "
+    "Объяснение «как работает колода» стоит сразу после вступления: термины («вылет», «обмен», «раскрутка») "
+    "не используются раньше, чем объяснены. Карту описывай ролью в колоде (зачем её берут, когда играют, "
+    "чем заменяют), а не пересказом её текста; несколько абзацев подряд «Карта — …» без роли не пиши. "
+    "У каждого совета есть условие и причина; при цене ошибки назови и её. "
+    "Порядок действий пиши через «>» («таракан > сила героя > Эредар > сила героя»); порог — числом с границей. "
+    "Формы советов: порог, порядок действий, запрет, запасной план, ловушка, совет по уровню игрока "
+    "(что пропустить, если только учишься). "
+    "Раздел мастерства пиши только из карточек опыта игрока (decision_cards с advice_form), по одному разделу "
+    "на сильную мысль; порог и порядок из карточки переноси без изменения чисел и последовательности. "
+    "Если карточек нет или пакет опыта пуст, раздел мастерства не пиши («писать не из чего»), "
+    "пробел оставь пробелом, слабыми общими советами его не заполняй. "
+    "Первое лицо («я», «по моему опыту») — только для содержания карточек с first_person=true; "
+    "свой опыт, сыгранные партии и впечатления не выдумывай. "
+    "Источник называй один раз в конце, в теле его не пересказывай."
+)
+
 CLAIM_GUIDANCE = (
     "Правилом с «потому что» подавай только claim_kind=mechanic с проверенным основанием. "
     "observation — наблюдение в указанной выборке, не правило и не причина. "
@@ -93,9 +146,11 @@ def genre_assignment(text: str, context: dict | None = None) -> dict:
 
 
 def assignment(text: str, context: dict | None = None) -> dict:
+    deck = is_deck_guide(context)
     return {
-        "categories": list(CATEGORIES),
-        "criteria": dict(CRITERIA),
+        "categories": list(categories_for(deck)),
+        "criteria": {**CRITERIA, **(DECK_GUIDE_CRITERIA if deck else {})},
+        **({"deck_guide": DECK_GUIDE_GUIDANCE} if deck else {}),
         "genre": genre_assignment(text, context),
         "schema": "owner_checks: ровно одна строка на категорию {id,status:clear|issue|unverified,quote,reason}. "
         "Для КАЖДОЙ строки нужна непустая дословная цитата текущей статьи, включая проверку отсутствия дефекта. "
@@ -108,7 +163,15 @@ def assignment(text: str, context: dict | None = None) -> dict:
     }
 
 
-def validate_rubric(text: str, rows, *, allow_unresolved: bool = False) -> list[str]:
+def validate_rubric(
+    text: str, rows, *, allow_unresolved: bool = False, deck_guide: bool = False
+) -> list[str]:
+    """Весь набор категорий с цитатами; для гайда по колоде — ещё три строки.
+
+    Сохранённый отзыв из десяти строк не разрешает новый экспорт гайда по
+    колоде (missing category), но сам читается как прежде.
+    """
+    categories = categories_for(deck_guide)
     if not isinstance(rows, list) or len(rows) > 32:
         return ["owner_checks: complete quoted rubric required"]
     errors, seen = [], set()
@@ -117,7 +180,7 @@ def validate_rubric(text: str, rows, *, allow_unresolved: bool = False) -> list[
             errors.append("owner_checks: malformed row")
             continue
         key = row["id"]
-        if key not in CATEGORIES or key in seen:
+        if key not in categories or key in seen:
             errors.append(f"owner_checks: unknown or duplicate category {key}")
         seen.add(key)
         if row.get("status") not in ("clear", "issue", "unverified"):
@@ -132,7 +195,7 @@ def validate_rubric(text: str, rows, *, allow_unresolved: bool = False) -> list[
             errors.append(f"owner_checks/{key}: concrete reason required")
         if row.get("status") in ("issue", "unverified") and not allow_unresolved:
             errors.append(f"owner_checks/{key}: repair required: {row.get('quote', '')}")
-    for key in CATEGORIES:
+    for key in categories:
         if key not in seen:
             errors.append(f"owner_checks: missing category {key}")
     return errors

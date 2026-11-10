@@ -29,6 +29,7 @@ DETERMINISTIC = {
     "duplication": ("owner.section_repeat",),
     "overused_word": ("owner.overused_word", "owner.forbidden_literal"),
     "forbidden_word": ("owner.forbidden_literal",),
+    "uniform_openings": ("owner.paragraph_starts",),
 }
 
 # Почему категория остаётся рецензенту: это записывается в отчёт.
@@ -53,6 +54,13 @@ NEEDS_REVIEWER = {
     "too_short_weak_heroes": "достаточность раздела — оценка содержания",
     "unsupported_or_false_claim": "нужна сверка фактов с игрой",
     "section_rejected_structure": "вкус владельца к блоку целиком",
+    # рубрика гайда по колоде (genre=deck_guide); эталон — гайд про Раза ОнД
+    "advice_has_condition_and_reason": "наличие условия и причины у совета — оценка смысла, "
+    "а не поиск слов «если/потому что»",
+    "mastery_has_threshold_or_order": "порог или порядок действий в разделе мастерства "
+    "сверяются с карточкой опыта игрока: числа и последовательность без изменений",
+    "term_before_definition": "порядок объяснения терминов — смысловая проверка; "
+    "план и depends_on страхуют раздел «как работает колода», но не каждый термин",
 }
 
 # Keep historic owner labels readable while assigning the same reviewer rubric.

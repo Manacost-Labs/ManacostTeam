@@ -42,3 +42,29 @@ func TestDeletionOnlyReceiptUsesRuneOffsetsAndRejectsAdditions(t *testing.T) {
 		t.Fatal("new text accepted")
 	}
 }
+
+func TestDeckGuideRubricExtensionIsAllOrNothing(t *testing.T) {
+	text := "Условный совет."
+	row := func(id string) Check { return Check{ID: id, Status: "clear", Quote: text, Reason: "Synthetic check."} }
+	var base []Check
+	for _, id := range OwnerIDs() {
+		base = append(base, row(id))
+	}
+	if err := ValidateOwner(text, base); err != nil {
+		t.Fatal("base rubric must stay valid without a genre signal", err)
+	}
+	full := append([]Check(nil), base...)
+	for _, id := range DeckGuideOwnerIDs() {
+		full = append(full, row(id))
+	}
+	if err := ValidateOwner(text, full); err != nil {
+		t.Fatal(err)
+	}
+	if ValidateOwner(text, full[:len(full)-1]) == nil {
+		t.Fatal("partial deck guide extension accepted")
+	}
+	full[len(full)-1].Status = "issue"
+	if ValidateOwner(text, full) != nil || !HasUnresolved(full) {
+		t.Fatal("negative deck guide judgment must stay valid evidence and block acceptance")
+	}
+}

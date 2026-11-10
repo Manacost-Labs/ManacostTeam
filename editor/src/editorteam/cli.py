@@ -396,6 +396,8 @@ def _audit_report(text: str, document: str, args, author_context: dict | None = 
 
 
 BG_PROFILES = ("battlegrounds-guide", "battlegrounds-article")
+# Однообразные начала абзацев ищутся ещё и в гайдах по колодам.
+OPENING_PROFILES = (*BG_PROFILES, "constructed-guide")
 
 
 def _author_context(path: Path, profile: str | None) -> dict:
@@ -425,6 +427,29 @@ def _owner_checks(text: str, profile, report: Report, author_context: dict | Non
                     line=hit["line"],
                     profile=profile.id,
                     meta={"requirement": hit["requirement"], "count": hit["count"]},
+                )
+            )
+    if profile.id in OPENING_PROFILES and profile.enabled("owner_checks"):
+        for hit in Owner.paragraph_openings(_masked_with_headings(text)):
+            what = (
+                f"{hit['count']} абзацев открываются схемой «название — …»"
+                if hit["scheme"] == "title"
+                else f"{hit['count']} абзацев подряд начинаются со слова «{hit['key']}»"
+            )
+            report.add(
+                Finding(
+                    id="owner.paragraph_starts",
+                    analyzer="owner",
+                    category="repetition",
+                    severity="review",
+                    confidence=0.5,
+                    message=f"{what} (стр.{hit['line']}–{hit['last_line']})",
+                    evidence=" / ".join(hit["quotes"]),
+                    suggestion="у каждого абзаца своя роль в решении: назови, зачем берут карту или "
+                    "когда действуют; пустую оценку («ключевая», «незаменимая») убери, остальное начни по-разному",
+                    line=hit["line"],
+                    profile=profile.id,
+                    meta={"count": hit["count"], "scheme": hit["scheme"], "last_line": hit["last_line"]},
                 )
             )
     if profile.id not in BG_PROFILES or not profile.enabled("owner_checks"):

@@ -12,6 +12,13 @@ func OwnerIDs() []string {
 	return []string{"card_text_retelling", "obvious_or_water", "weak_or_obvious_tips", "duplicated_advice", "source_attribution_in_body", "unsupported_or_false_claim", "illogical_comparison", "unclear_edge_case", "genre_fit", "ai_tells"}
 }
 
+// DeckGuideOwnerIDs — три дополнительные категории гайда по колоде (genre=deck_guide
+// в плане Python-контекста). Go не получает жанр в /v2/edit, поэтому набор
+// необязателен: если рецензент вернул хотя бы одну из них, нужны все три.
+func DeckGuideOwnerIDs() []string {
+	return []string{"advice_has_condition_and_reason", "mastery_has_threshold_or_order", "term_before_definition"}
+}
+
 const ClaimGuidance = "Правилом с «потому что» подавай только claim_kind=mechanic с проверенным основанием. observation — наблюдение в указанной выборке, не правило и не причина. opinion — мнение с именем игрока, только если нужно читателю. Отсутствующий claim_kind старого handoff не угадывай. Если handoff говорит «блок советов писать не из чего», блок не пишется."
 
 const OwnerPrompt = `
@@ -23,6 +30,8 @@ source_attribution_in_body: «по данным», Reddit и отчёт об и�
 illogical_comparison: выбор, которого у игрока на практике нет; unclear_edge_case: необъяснённый частный случай;
 genre_fit: манера и объём относительно выбранных образцов. Если переданы только отрывки, бюджет полной статьи неизвестен — не выводи его из длины отрывков;
 ai_tells: шаблонные рамки и интонация, не определение авторства. Отрицательный вердикт сохраняй как repair с цитатой, не меняй на clear ради допуска.
+Гайд по колоде: если owner_review_assignment содержит ещё advice_has_condition_and_reason, mastery_has_threshold_or_order, term_before_definition — верни и их:
+у каждого совета есть условие и причина; в разделе мастерства есть порог или порядок действий без изменения чисел и последовательности из карточки опыта; термин не используется раньше объяснения.
 Программа проверяет охват и цитаты, смысл и качество оцениваешь ты.
 ` + ClaimGuidance
 
@@ -39,6 +48,17 @@ const DeletionPrompt = `DELETION_PASS
 // evidence for contextualFindings and cannot authorize acceptance.
 func ValidateOwner(candidate string, rows []Check) error {
 	ids := OwnerIDs()
+	deck := DeckGuideOwnerIDs()
+	for _, row := range rows {
+		for _, id := range deck {
+			if row.ID == id {
+				ids = append(ids, deck...)
+			}
+		}
+		if len(ids) > len(OwnerIDs()) {
+			break
+		}
+	}
 	if len(rows) != len(ids) {
 		return fmt.Errorf("owner_checks: exactly %d categories required", len(ids))
 	}
