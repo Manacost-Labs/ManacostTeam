@@ -241,6 +241,13 @@ def section_repeats(text: str, morph, prose: Callable[[str], str] | None = None)
 # принятая версия, гайд-эталон по колоде) — в editor/docs/OWNER_EVAL.md.
 OPENING_MIN_TITLES = 10
 OPENING_MAX_GAP = 1
+# «Карта — роль и условие» — собственная форма автора: серия сама по себе
+# срабатывала на 172 из 297 гайдов архива. Сигнал нужен там, где в серии есть
+# пустые записи в одну короткую фразу («ключевая карта, без неё никак»):
+# не меньше двух абзацев до 14 слов. Так: архив 47 из 297, corpus-bg 3 из 45,
+# гайд-эталон по колоде срабатывает (записи в 11 и 14 слов).
+OPENING_SHORT_WORDS = 14
+OPENING_MIN_SHORT = 2
 OPENING_MIN_SAME_WORD = 6
 _OPEN_TITLE_WORDS = 4
 _OPEN_DASH = re.compile(r"[—–]|\s-\s")
@@ -286,20 +293,22 @@ def paragraph_openings(text: str) -> list[dict]:
     нужна, поэтому проверка работает и в минимальном runtime.
     """
     out: list[dict] = []
-    titles: list[tuple[int, str]] = []  # (строка, начало)
+    titles: list[tuple[int, str, int]] = []  # (строка, начало, слов в абзаце)
     words: list[tuple[int, str, str]] = []  # (строка, слово, начало)
     gap = 0
 
     def close_titles() -> None:
-        if len(titles) >= OPENING_MIN_TITLES:
+        short = [(n, q) for n, q, size in titles if size <= OPENING_SHORT_WORDS]
+        if len(titles) >= OPENING_MIN_TITLES and len(short) >= OPENING_MIN_SHORT:
             out.append(
                 {
                     "line": titles[0][0],
                     "last_line": titles[-1][0],
                     "count": len(titles),
+                    "short": len(short),
                     "scheme": "title",
                     "key": "название — …",
-                    "quotes": [q for _, q in titles[:3]],
+                    "quotes": [q for _, q in short[:3]],
                 }
             )
         titles.clear()
@@ -328,7 +337,7 @@ def paragraph_openings(text: str) -> list[dict]:
         opening = _opening(clean) if len(clean) >= 20 else None
         quote = clean[:70]
         if opening and opening[0] == "title":
-            titles.append((n, quote))
+            titles.append((n, quote, len(clean.split())))
             gap = 0
         elif titles:
             gap += 1

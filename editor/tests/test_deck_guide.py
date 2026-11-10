@@ -363,6 +363,23 @@ def test_one_foreign_paragraph_does_not_hide_the_series():
     assert O.paragraph_openings("\n\n".join(rows)) == []
 
 
+def test_title_series_needs_empty_entries_to_be_reported():
+    """«Карта — роль и условие» — авторская форма: сигнал только при пустых записях."""
+    full = (
+        "Карта{n} — берите её на второй ход против быстрых колод, потому что она "
+        "забирает стол соперника раньше, чем он успевает развиться."
+    )
+    rows = [full.format(n=chr(1040 + i)) for i in range(12)]
+    blank = chr(10) * 2
+    assert O.paragraph_openings(blank.join(rows)) == []
+    rows[3] = FILLER.format(n="Г")
+    assert O.paragraph_openings(blank.join(rows)) == []  # одна пустая запись — ещё не серия
+    rows[7] = FILLER.format(n="З")
+    hits = O.paragraph_openings(blank.join(rows))
+    assert len(hits) == 1 and hits[0]["short"] == 2
+    assert all("ключевая часть" in quote for quote in hits[0]["quotes"])
+
+
 def test_same_first_word_series_is_reported():
     rows = [f"Если соперник играет вариант {i}, меняйте план и ждите момента для удара." for i in range(7)]
     hits = O.paragraph_openings("\n\n".join(rows))
