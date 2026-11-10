@@ -732,6 +732,8 @@ def next_task(run):
         task["analysis_brief"] = analysis_brief(report, read_json(run / "sources.json"), read_json(run / "publication-handoff.json"))
     if task["stage"] == "draft":
         task["instructions"] += " Read teams/editor-team/SKILL.md and skills/meta-report/references/workflow.md. Cover all classes using ## Russian class and ### exact deck name headings. Explain plan, key cards, conditions and limitations in connected prose. Copy each accepted code below its own deck. Preserve statistical scope and unknown sample sizes."
+    elif task["stage"] == "deletion_pass":
+        task["instructions"] += " Keep every class and deck heading, each accepted deck code and the statistical scope: the meta-report format check is repeated on the result and rejects a pass that removes them."
     elif task["stage"] == "fact_review":
         task["instructions"] += " Check every number's subject, source, grain, ranks, period, region and sample; distinguish popularity, performance and editorial judgement. Check current legality, runes, independent list provenance and all gameplay explanations. Inspect the entire article for contradictory recommendations and causal overclaims."
     elif task["stage"] == "literary_review":
@@ -764,11 +766,22 @@ def model_percentages(run, report):
 def submit(run, *, stage, artifact, retry_review=False):
     run = Path(run)
     report = accepted(run)
-    require(stage in {"draft", "fact_review", "literary_review"}, "sources/research are accepted together by prepare")
+    require(stage in {"draft", "deletion_pass", "fact_review", "literary_review"}, "sources/research are accepted together by prepare")
     if stage == "draft":
         errors = audit_material(report, Path(artifact).read_text(encoding="utf-8-sig"), model_percentages(run, report))
         require(not errors, "; ".join(errors))
     pub, _, _ = runtimes()
+    if stage == "deletion_pass":
+        # Removals must not break the report format; malformed passes are
+        # left to the publication runtime, which reports the exact reason.
+        from editorteam.owner_review import validate_deletion
+        state = pub.status(run / "publication")
+        draft = (run / "publication" / state["artifacts"]["draft"]["path"]).read_bytes().decode("utf-8")
+        result, invalid = validate_deletion(draft, read_json(artifact))
+        if not invalid:
+            # The stored draft keeps its bytes; the format check reads text.
+            errors = audit_material(report, "\n".join(result.splitlines()), model_percentages(run, report))
+            require(not errors, "deletion_pass breaks the report format: " + "; ".join(errors))
     if stage == "fact_review" and report["schema_version"] >= 2:
         state = pub.status(run / "publication")
         draft = run / "publication" / state["artifacts"]["draft"]["path"]
@@ -820,7 +833,7 @@ def main(argv=None):
         if name in {"submit", "revise", "context"}:
             command.add_argument("--artifact", required=True, type=Path)
         if name == "submit":
-            command.add_argument("--stage", required=True, choices=("draft", "fact_review", "literary_review"))
+            command.add_argument("--stage", required=True, choices=("draft", "deletion_pass", "fact_review", "literary_review"))
             command.add_argument("--retry-review", action="store_true")
         if name == "export":
             command.add_argument("--output", required=True, type=Path)

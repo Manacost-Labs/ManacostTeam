@@ -211,7 +211,13 @@ python skills/meta-report/scripts/meta_report.py next RUN
 проверяющим чужие verdict. Литературный reviewer работает с brief, голосом,
 ограничениями и текстом; фактологический — также с полным evidence.
 
+После черновика и после каждой правки идёт обязательный проход на вычёркивание
+(`deletion_pass`, правила — в docs/OWNER_REJECTION_LOOP.md): только удаления с
+причиной. Заголовки классов и колод, коды колод и границы статистики удалять
+нельзя: формат отчёта проверяется на результате повторно.
+
 ```powershell
+python skills/meta-report/scripts/meta_report.py submit RUN --stage deletion_pass --artifact RUN/cuts.json
 python skills/meta-report/scripts/meta_report.py submit RUN --stage fact_review --artifact RUN/factual.json
 python skills/meta-report/scripts/meta_report.py next RUN
 python skills/meta-report/scripts/meta_report.py submit RUN --stage literary_review --artifact RUN/literary.json
