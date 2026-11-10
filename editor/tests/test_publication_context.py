@@ -5,7 +5,7 @@ import json
 
 import pytest
 from test_article_structure import article_plan
-from test_publication_run import TEXT, prepared, reviews, write
+from test_publication_run import TEXT, complete_deletion, prepared, reviews, write
 
 from editorteam import publication_run as run_api
 
@@ -49,6 +49,7 @@ def test_context_is_frozen_persistent_and_role_scoped(tmp_path):
     run_api.configure_context(run, artifact=artifact)
     artifact.unlink()
     (tmp_path / "old-guide.md").write_text("Changed source", encoding="utf-8")
+    complete_deletion(run)
     fact_task = run_api.next_task(run)
     assert fact_task["author_context"]["requirements"][0]["id"] == "plain"
     assert "style_examples" not in fact_task["author_context"]
@@ -82,11 +83,12 @@ def test_context_change_invalidates_reviews_and_old_hashes(tmp_path):
     updated = context_file(tmp_path, requirements=[{"id": "plain", "instruction": "Сохрани условие и исключение."}])
     run_api.configure_context(run, artifact=updated)
     state = run_api.status(run)
-    assert state["stage"] == "fact_review" and state["export"] is None
+    assert state["stage"] == "deletion_pass" and state["export"] is None
     assert "literary_review" not in state["artifacts"]
     assert (tmp_path / "before.md").exists()
     with pytest.raises(ValueError, match="both reviews"):
         run_api.export(run, output=tmp_path / "after.md")
+    complete_deletion(run)
     result = run_api.submit(run, stage="fact_review", artifact=write(tmp_path, "stale.json", fact))
     assert any("author_context_sha256" in error for error in result["blocked"]["errors"])
 

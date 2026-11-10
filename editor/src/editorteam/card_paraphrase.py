@@ -176,6 +176,45 @@ def build_texts(cards: Iterable[dict]) -> dict[str, list[str]]:
     return {name: sorted(t for t in texts if t) for name, texts in sorted(out.items())}
 
 
+_BG_ID_TYPES = {
+    "MINION",
+    "HERO",
+    "HERO_POWER",
+    "BATTLEGROUND_SPELL",
+    "BATTLEGROUND_TRINKET",
+    "BATTLEGROUND_QUEST_REWARD",
+    "BATTLEGROUND_ANOMALY",
+}
+
+
+def build_bg(cards: list[dict]) -> dict[str, dict]:
+    """{ID: {"n": название, "t": [тексты]}} — карты Полей сражений для шорткодов.
+
+    Шорткод `[hs_bg id="…"]` называет карту точно, а название не всегда:
+    «Битбоксер» в Constructed и «Притягательный битбоксер» на Полях сражений —
+    разные карты. У героя текста нет, поэтому берётся текст его силы
+    (`heroPowerDbfId`); у существа — обычный и золотой. Скины героев и
+    золотые копии отдельными ID не хранятся: шорткод ссылается на основу.
+    """
+    by_dbf = {c.get("dbfId"): c for c in cards if c.get("dbfId") is not None}
+    out: dict[str, dict] = {}
+    for card in cards:
+        cid, name, kind = card.get("id", ""), card.get("name"), card.get("type")
+        if card.get("set") != "BATTLEGROUNDS" or kind not in _BG_ID_TYPES or not name:
+            continue
+        if "_SKIN_" in cid or cid.endswith("_G"):
+            continue
+        sources = [card]
+        if kind == "HERO":
+            sources = [by_dbf.get(card.get("heroPowerDbfId"))]
+        elif card.get("battlegroundsPremiumDbfId"):
+            sources.append(by_dbf.get(card["battlegroundsPremiumDbfId"]))
+        texts = sorted({clean_text(c["text"]) for c in sources if c and c.get("text")} - {""})
+        if texts:
+            out[cid] = {"n": name, "t": texts}
+    return dict(sorted(out.items()))
+
+
 def load_texts(path: Path = TEXTS) -> dict[str, list[str]]:
     if not path.exists():
         raise FileNotFoundError(
@@ -184,9 +223,25 @@ def load_texts(path: Path = TEXTS) -> dict[str, list[str]]:
     return json.loads(path.read_text(encoding="utf-8"))["cards"]
 
 
+def load_bg(path: Path = TEXTS) -> dict[str, dict]:
+    """Тексты Полей сражений по ID; у старого снимка без раздела — пусто."""
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8")).get("bg", {})
+
+
+def bg_texts_by_name(bg: dict[str, dict]) -> dict[str, list[str]]:
+    """Тексты Полей сражений по названию: у героя — текст силы героя."""
+    out: dict[str, set[str]] = {}
+    for row in bg.values():
+        out.setdefault(row["n"], set()).update(row["t"])
+    return {name: sorted(texts) for name, texts in out.items()}
+
+
 def update_texts(fetch: Callable[[str], list[dict]], path: Path = TEXTS, taken: str = "") -> int:
-    cards = build_texts(fetch(SOURCE))
-    payload = {"_источник": SOURCE, "_снято": taken, "cards": cards}
+    raw = fetch(SOURCE)
+    cards = build_texts(raw)
+    payload = {"_источник": SOURCE, "_снято": taken, "cards": cards, "bg": build_bg(raw)}
     path.write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
     )
@@ -568,6 +623,120 @@ def analyze(text: str, lex: Lexicon, prose: Callable[[str], str], document: str 
         "paraphrases": paraphrases,
         "bare_mentions": bare,
     }
+
+
+# ── Пересказ по предложению (Поля сражений) ──────────────────────────────
+
+# Пороги сняты с corpus-bg (45 гайдов), corpus-archive (297) и шести
+# эталонных статей Полей сражений, на которые указал владелец; числа
+# калибровки — в editor/docs/OWNER_EVAL.md. Отличие от документного замера
+# выше: одна фраза-пересказ — уже сигнал редактору, а «когда»/«после»
+# из пересказа силы героя не делают фразу советом.
+RETELL_COVER_MIN = 0.5
+RETELL_NOVELTY_MAX = 0.5
+RETELL_OVERLAP_MIN = 3
+
+_SHORTCODE = re.compile(r'\[hs_bg\b[^\]]*?\bid="([^"]+)"[^\]]*\](.*?)\[/hs_bg\]', re.I)
+
+
+def shortcode_aliases(text: str, bg: dict[str, dict]) -> dict[str, str]:
+    """{форма в тексте: название карты Полей сражений} по шорткодам `[hs_bg id]`.
+
+    «Битбоксеру» в шорткоде BG26_149 — «Притягательный битбоксер», а не
+    одноимённая карта Constructed. Форма запоминается на весь текст: та же
+    форма без шорткода в соседней фразе — та же карта.
+    """
+    out = {}
+    for cid, surface in _SHORTCODE.findall(text):
+        row = bg.get(cid)
+        surface = _clean_inline(surface).strip()
+        if row and surface:
+            out[surface] = row["n"]
+    return out
+
+
+def _alias_mentions(sentence: Sentence, aliases: dict[str, str]) -> list[Mention]:
+    """Упоминания из шорткодов поверх распознанных по названию."""
+    found = []
+    taken = set()
+    by_start = {m.first: m for m in sentence.mentions}
+    for m in sentence.mentions:
+        if m.surface in aliases:
+            m = Mention(aliases[m.surface], m.surface, m.first, m.last)
+        found.append(m)
+        taken |= set(range(m.first, m.last))
+    for surface, card in sorted(aliases.items(), key=lambda kv: -len(kv[0])):
+        parts = _WORD.findall(surface)
+        n = len(parts)
+        for i in range(len(sentence.tokens) - n + 1):
+            span = set(range(i, i + n))
+            if span & taken or i in by_start:
+                continue
+            if [t.lower() for t in sentence.tokens[i : i + n]] == [p.lower() for p in parts]:
+                found.append(Mention(card, surface, i, i + n))
+                taken |= span
+    return sorted(found, key=lambda m: m.first)
+
+
+def _advice(sentence: Sentence, own: list[str], lex: Lexicon, card_lemmas: Counter) -> bool:
+    """Решение, причина или опора совета сверх текста карты.
+
+    Условие само по себе советом не считается: «в начале игры… когда вы
+    потратите 60 золотых» — это пересказ «потратив 60 золотых».
+    """
+    _, decision, reason = signals(sentence, card_lemmas)
+    kinds = context_kinds(own, lex, card_lemmas) - {"when"}
+    return decision or reason or bool(kinds)
+
+
+def retellings(
+    text: str,
+    lex: Lexicon,
+    prose: Callable[[str], str],
+    aliases: dict[str, str] | None = None,
+) -> list[dict]:
+    """Предложения, которые пересказывают текст карты или силы героя.
+
+    Мерится каждое предложение, а не доля по документу: владелец
+    возвращает текст и за одну такую фразу.
+    """
+    aliases = aliases or {}
+    out = []
+    for sents in split_sentences(text, lex, prose):
+        for s in sents:
+            s.mentions = _alias_mentions(s, aliases)
+            if not s.mentions:
+                continue
+            own = _own(s)
+            if len(own) < 3:
+                continue
+            best = None
+            for card in dict.fromkeys(m.card for m in s.mentions):
+                cover, novelty, overlap = paraphrase_score(s, card, lex)
+                if (
+                    overlap >= RETELL_OVERLAP_MIN
+                    and cover >= RETELL_COVER_MIN
+                    and novelty <= RETELL_NOVELTY_MAX
+                    and (best is None or cover > best[1])
+                ):
+                    best = (card, cover, novelty, overlap)
+            if best is None:
+                continue
+            card, cover, novelty, overlap = best
+            if _advice(s, own, lex, _card_all_lemmas(card, lex)):
+                continue
+            out.append(
+                {
+                    "line": s.line,
+                    "card": card,
+                    "quote": s.text,
+                    "card_text": " | ".join(lex.texts.get(card, [])),
+                    "cover": round(cover, 2),
+                    "novelty": round(novelty, 2),
+                    "overlap": overlap,
+                }
+            )
+    return out
 
 
 def _rate(part: int, whole: int) -> float | None:

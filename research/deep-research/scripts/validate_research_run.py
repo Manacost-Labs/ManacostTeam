@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import sys
+from claim_semantics import CLAIM_CONTRACT_VERSION, claim_errors, strategy_decision_coverage
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -778,6 +779,9 @@ def main() -> int:
         return 1
 
     manifest = load_json(root / "manifest.json", errors)
+    claim_contract = manifest.get("claim_contract_version")
+    if claim_contract is not None and claim_contract != CLAIM_CONTRACT_VERSION:
+        errors.append("manifest.json: unsupported claim_contract_version")
     schema_hint = manifest.get("schema_version")
     audit = load_json(root / "audit.json", errors)
     queries = load_jsonl(root / "queries.jsonl", errors)
@@ -1242,8 +1246,22 @@ def main() -> int:
         and record.get("source_id") in snapshot_by_source
     }
 
+    semantic_evidence = {
+        item["evidence_id"]: item for item in evidence
+        if isinstance(item.get("evidence_id"), str)
+    }
+    semantic_sources = {
+        item["source_id"]: item for item in sources
+        if isinstance(item.get("source_id"), str)
+    }
     for record in claims:
         label = f"claims.jsonl:{record['__line__']}"
+        errors.extend(f"{label}: {error}" for error in claim_errors(
+            record,
+            semantic_evidence,
+            semantic_sources,
+            required=claim_contract == CLAIM_CONTRACT_VERSION,
+        ))
         require_fields(
             record,
             (
@@ -1369,6 +1387,18 @@ def main() -> int:
         for record in claims
         if isinstance(record.get("claim_id"), str)
     }
+    if not plan and (root / "plan.json").is_file():
+        plan = load_json(root / "plan.json", errors)
+    if manifest.get("strategy_review") is True or plan.get("strategy_review") is True:
+        if not plan:
+            plan = load_json(root / "plan.json", errors)
+        strategy_plan = {**plan, "strategy_review": True}
+        coverage = strategy_decision_coverage(
+            strategy_plan, claims_by_id, evidence_by_id,
+            semantic_sources,
+        )
+        # An honest incomplete bundle remains readable, but cannot become ready.
+        (errors if args.stage == "final" and manifest.get("status") == "complete" else warnings).extend(coverage["gaps"])
     community_by_id = {
         record["community_claim_id"]: record
         for record in community

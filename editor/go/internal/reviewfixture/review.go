@@ -49,6 +49,11 @@ func Complete(raw, payload string) string {
 		}
 		put("structure_review", review)
 	}
+	var owner []editorialreview.Check
+	for _, id := range editorialreview.OwnerIDs() {
+		owner = append(owner, editorialreview.Check{ID: id, Status: "clear", Quote: in.Candidate, Reason: "Synthetic owner rubric for unrelated gates."})
+	}
+	put("owner_checks", owner)
 	put("logic_checks", logic)
 	put("preservation_checks", preservation)
 	checks := []editorialreview.SourceCheck{}

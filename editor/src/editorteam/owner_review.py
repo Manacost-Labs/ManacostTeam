@@ -1,0 +1,189 @@
+"""Owner rejection coverage and a deletion-only receipt; never semantic verdicts."""
+
+from __future__ import annotations
+
+import hashlib
+import re
+
+CATEGORIES = (
+    "card_text_retelling",
+    "obvious_or_water",
+    "weak_or_obvious_tips",
+    "duplicated_advice",
+    "source_attribution_in_body",
+    "unsupported_or_false_claim",
+    "illogical_comparison",
+    "unclear_edge_case",
+    "genre_fit",
+    "ai_tells",
+)
+
+CRITERIA = dict(
+    zip(
+        CATEGORIES,
+        (
+            "Есть ли польза сверх текста карты или силы героя, видимого в подсказке?",
+            "Какое решение потеряет выбранный читатель при удалении фразы? Нужна ли страховочная оговорка?",
+            "Есть ли подтверждённые неочевидные решения сильных игроков? Слабый блок советов убери целиком.",
+            "Добавляет ли повтор новое условие или полезную навигацию? Сопоставь разные разделы.",
+            "Не просочились ли в тело GUIDE площадки, «по данным…» и отчёт о поиске? Имя игрока нужно лишь полезному мнению.",
+            "Не подано ли observation как правило с придуманной причиной? Сверь claim_kind и evidence, не только confidence.",
+            "Может ли игрок на практике получить оба сравниваемых варианта в названной ситуации?",
+            "Ясен ли путь в частный случай и какое решение он меняет? Сохрани действительно нужные исключения.",
+            "Соответствуют ли объём, манера и содержательность выбранным образцам? Обоснуй отклонение от их бюджета.",
+            "Нет ли искусственных рамок, натужной живости и шаблонной интонации? Не определяй авторство по признакам.",
+        ),
+    )
+)
+
+CLAIM_GUIDANCE = (
+    "Правилом с «потому что» подавай только claim_kind=mechanic с проверенным основанием. "
+    "observation — наблюдение в указанной выборке, не правило и не причина. "
+    "opinion — мнение с именем игрока, только если оно нужно читателю. "
+    "Отсутствующий claim_kind у старого handoff не угадывай: проверь основание отдельно. "
+    "Если handoff говорит «блок советов писать не из чего», блок не пишется; "
+    "не заменяй его слабыми общими пунктами."
+)
+
+DELETION_GUIDANCE = (
+    "После черновика и до литературного отзыва выполни отдельный проход на вычёркивание. "
+    "Только удаляй и сокращай; новых фактов, слов, связок и перестановок не добавляй. "
+    "Для каждого предложения спроси: «какое решение потеряет игрок, если это убрать?» "
+    "Нет ответа — вычеркни. Удали пересказ текста карты/силы героя, уже видимого в подсказке "
+    "шорткода, очевидное, страховочные оговорки без пользы, повтор совета из другого раздела, "
+    "атрибуцию источника в теле («по данным…», «игроки на Reddit…»), статистическое наблюдение "
+    "в форме правила без проверяемой причины, сравнение без доступного игроку выбора. "
+    "Слабый блок советов убери целиком. Находки card_paraphrase.retelling, owner.overused_word, "
+    "owner.section_repeat, owner.forbidden_literal — вход для решения, а не приказ удалить полезное. "
+    "«Убрать воду» не означает сократить полезные объяснения: сохрани необходимые предпосылки, "
+    "развилки, числа, условия, исключения и границы уверенности. Если удаление искажает совет, "
+    "оставь фрагмент для содержательного ремонта, не добавляй объяснение в этом проходе. "
+    "Список вычеркнутого с причиной хранится в рабочих материалах запуска, не в статье."
+)
+
+
+def word_count(text: str) -> int:
+    text = re.sub(r"\[/?hs_(?:bg|card)\b[^\]]*\]|\[IMG\b[^\]]*\]|https?://\S+|<[^>]*>", "", text)
+    return len(re.findall(r"\b[\w]+(?:[-’'][\w]+)*\b", text, re.UNICODE))
+
+
+def genre_assignment(text: str, context: dict | None = None) -> dict:
+    examples = [
+        {
+            "id": row["id"],
+            "source_sha256": row["source_sha256"],
+            "source_words": row.get("source_word_count"),
+        }
+        for row in (context or {}).get("style_examples", [])
+    ]
+    counts = [row["source_words"] for row in examples if row["source_words"] is not None]
+    budget = (
+        {"min": min(counts), "max": max(counts)}
+        if counts and len(counts) == len(examples)
+        else None
+    )
+    return {
+        "article_words": word_count(text),
+        "examples": examples,
+        "word_budget": budget,
+        "limitation": "Бюджет выведен из полных выбранных образцов, не из коротких цитат. "
+        "При отсутствии замеров он неизвестен: обнови context или объясни ограничение. "
+        "Отклонение от диапазона оценивает reviewer по содержанию, не автоматический порог.",
+    }
+
+
+def assignment(text: str, context: dict | None = None) -> dict:
+    return {
+        "categories": list(CATEGORIES),
+        "criteria": dict(CRITERIA),
+        "genre": genre_assignment(text, context),
+        "schema": "owner_checks: ровно одна строка на категорию {id,status:clear|issue|unverified,quote,reason}. "
+        "Для КАЖДОЙ строки нужна непустая дословная цитата текущей статьи, включая проверку отсутствия дефекта. "
+        "issue/unverified требуют repair с этим фрагментом, а не подмены verdict на pass. "
+        "genre_fit: сравни объём, манеру и полезное содержание с выбранными образцами; "
+        "запиши genre_review из назначения и concrete reason. "
+        "ai_tells — интонация и шаблонность, не определение авторства. "
+        "Проверка охвата и цитат не проверяет качество суждения.",
+        "claim_guidance": CLAIM_GUIDANCE,
+    }
+
+
+def validate_rubric(text: str, rows, *, allow_unresolved: bool = False) -> list[str]:
+    if not isinstance(rows, list) or len(rows) > 32:
+        return ["owner_checks: complete quoted rubric required"]
+    errors, seen = [], set()
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+            errors.append("owner_checks: malformed row")
+            continue
+        key = row["id"]
+        if key not in CATEGORIES or key in seen:
+            errors.append(f"owner_checks: unknown or duplicate category {key}")
+        seen.add(key)
+        if row.get("status") not in ("clear", "issue", "unverified"):
+            errors.append(f"owner_checks/{key}: invalid status")
+        if (
+            not isinstance(row.get("quote"), str)
+            or not row["quote"].strip()
+            or row["quote"] not in text
+        ):
+            errors.append(f"owner_checks/{key}: exact nonempty candidate quote required")
+        if not isinstance(row.get("reason"), str) or not row["reason"].strip():
+            errors.append(f"owner_checks/{key}: concrete reason required")
+        if row.get("status") in ("issue", "unverified") and not allow_unresolved:
+            errors.append(f"owner_checks/{key}: repair required: {row.get('quote', '')}")
+    for key in CATEGORIES:
+        if key not in seen:
+            errors.append(f"owner_checks: missing category {key}")
+    return errors
+
+
+def validate_genre(text: str, context: dict, report: dict) -> list[str]:
+    expected = genre_assignment(text, context)
+    review = report.get("genre_review")
+    if not isinstance(review, dict) or any(
+        review.get(k) != expected[k] for k in ("article_words", "examples", "word_budget")
+    ):
+        return ["genre_review: use measured article and selected example word budget"]
+    if not isinstance(review.get("reason"), str) or not review["reason"].strip():
+        return ["genre_review: explain length and manner relative to the selected samples"]
+    return []
+
+
+def validate_deletion(text: str, report) -> tuple[str, list[str]]:
+    """Replay exact spans. No replacement field exists, so no new prose can enter."""
+    if not isinstance(report, dict) or set(report) - {
+        "article_sha256",
+        "deletions",
+        "unchanged_reason",
+    }:
+        return text, ["deletion_pass: invalid fields; only removals allowed"]
+    if report.get("article_sha256") != hashlib.sha256(text.encode("utf-8")).hexdigest():
+        return text, ["deletion_pass: article hash mismatch"]
+    rows = report.get("deletions")
+    if not isinstance(rows, list) or len(rows) > 1024:
+        return text, ["deletion_pass: bounded deletions array required"]
+    if not rows:
+        reason = report.get("unchanged_reason")
+        return text, [] if isinstance(reason, str) and reason.strip() else [
+            "deletion_pass: explain unchanged result"
+        ]
+    cursor, parts = 0, []
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != {"start", "quote", "reason"}:
+            return text, ["deletion_pass: each removal needs start/quote/reason"]
+        start, quote, reason = row["start"], row["quote"], row["reason"]
+        if (
+            type(start) is not int
+            or start < cursor
+            or not isinstance(quote, str)
+            or not quote
+            or text[start : start + len(quote)] != quote
+            or not isinstance(reason, str)
+            or not reason.strip()
+        ):
+            return text, ["deletion_pass: ordered nonoverlapping exact quotes and reasons required"]
+        parts.append(text[cursor:start])
+        cursor = start + len(quote)
+    result = "".join(parts) + text[cursor:]
+    return result, [] if result.strip() else ["deletion_pass: cannot erase the article"]

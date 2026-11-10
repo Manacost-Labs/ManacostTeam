@@ -7,6 +7,7 @@ import argparse
 import json
 import sys
 import uuid
+from claim_semantics import CLAIM_CONTRACT_VERSION
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -52,6 +53,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--domain", action="append", default=[], dest="domains")
     parser.add_argument("--modifier", action="append", default=[], dest="modifiers")
     parser.add_argument("--as-of", help="Research as-of date in YYYY-MM-DD")
+    parser.add_argument("--strategy-review", action="store_true",
+                        help="Require sourced strong-player decisions for every strategy chapter")
     return parser.parse_args()
 
 
@@ -91,6 +94,7 @@ def main() -> int:
 
     manifest = {
         "schema_version": "1.2",
+        "claim_contract_version": CLAIM_CONTRACT_VERSION,
         "research_id": research_id,
         "main_question": question,
         "created_at": timestamp,
@@ -110,6 +114,8 @@ def main() -> int:
         },
     }
     coverage_enabled = args.output_profile == "editor-ready"
+    if args.strategy_review:
+        manifest["strategy_review"] = True
     useful_data_required = coverage_enabled and args.depth in {"deep", "exhaustive"}
     if coverage_enabled:
         manifest["coverage_contract_version"] = COVERAGE_CONTRACT_VERSION
@@ -176,6 +182,11 @@ def main() -> int:
                 "source_emphasis": {"x": "standard", "youtube": "standard"},
             },
         )
+    if args.strategy_review:
+        plan_path = target / "plan.json"
+        plan = json.loads(plan_path.read_text(encoding="utf-8")) if plan_path.exists() else {}
+        plan.update({"strategy_review": True, "chapters": [], "decisions": []})
+        write_json(plan_path, plan)
     write_json(target / "audit.json", audit)
     (target / "report.md").write_text(
         f"# Research Report\n\nResearch ID: `{research_id}`\n\n"

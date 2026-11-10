@@ -35,6 +35,51 @@ func TestPythonAdapterMapsSidecarReport(t *testing.T) {
 	}
 }
 
+func TestPythonAdapterKeepsOwnerDiagnosticsInAnalyzeAndPostflight(t *testing.T) {
+	ids := []string{"card_paraphrase.retelling", "owner.overused_word", "owner.section_repeat", "owner.forbidden_literal"}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var findings, warnings, violations []map[string]any
+		for _, id := range ids {
+			severity := "review"
+			if id == "owner.forbidden_literal" {
+				severity = "error"
+			}
+			findings = append(findings, map[string]any{"id": id, "severity": severity, "message": "Synthetic owner diagnosis", "evidence": "Синтетическая цитата."})
+			row := map[string]any{"kind": id, "message": "Synthetic owner diagnosis", "context": "Синтетическая цитата."}
+			if severity == "error" {
+				violations = append(violations, row)
+			} else {
+				warnings = append(warnings, row)
+			}
+		}
+		if r.URL.Path == "/analyze" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"findings": findings})
+		} else {
+			_ = json.NewEncoder(w).Encode(map[string]any{"warnings": warnings, "violations": violations})
+		}
+	}))
+	defer server.Close()
+	adapter := &PythonAnalyzerAdapter{Client: analyzer.New(server.URL, time.Second)}
+	for _, in := range []Input{{Text: "Текст"}, {Before: "Текст", After: "Текст"}} {
+		result, err := adapter.Analyze(context.Background(), in)
+		if err != nil || len(result.Findings) != len(ids) {
+			t.Fatalf("owner findings lost: %+v %v", result, err)
+		}
+		seen := map[string]bool{}
+		for _, hit := range result.Findings {
+			seen[hit.RuleID] = true
+			if hit.Context != "Синтетическая цитата." || (hit.RuleID == "owner.forbidden_literal" && hit.Severity != "error") {
+				t.Fatalf("quote/severity lost: %+v", hit)
+			}
+		}
+		for _, id := range ids {
+			if !seen[id] {
+				t.Fatal("lost", id)
+			}
+		}
+	}
+}
+
 func TestPythonAdapterPreservesCorrectionScopeAndDiagnosticSeverity(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any

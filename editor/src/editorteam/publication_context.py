@@ -53,6 +53,8 @@ def validate(context: dict, profile: str, *, frozen: bool = False) -> None:
     seen = set()
     for row in examples:
         allowed = {"id", "profile", "source", "source_sha256", "quote", "use_for", "avoid"}
+        if frozen:
+            allowed.add("source_word_count")
         if not frozen:
             allowed.add("source_path")
         if not isinstance(row, dict) or set(row) - allowed:
@@ -68,6 +70,8 @@ def validate(context: dict, profile: str, *, frozen: bool = False) -> None:
         ):
             raise ValueError("invalid style example: id/profile/source/quote/use_for/avoid/hash")
         seen.add(row["id"])
+        if "source_word_count" in row and (type(row["source_word_count"]) is not int or row["source_word_count"] < 1):
+            raise ValueError("invalid source_word_count")
 
 
 def freeze(artifact: Path, profile: str) -> bytes:
@@ -89,6 +93,9 @@ def freeze(artifact: Path, profile: str) -> bytes:
             raise ValueError("style source hash mismatch")
         if row["quote"] not in raw_source.decode("utf-8-sig"):
             raise ValueError("style quote is not present in source")
+        from .owner_review import word_count
+
+        row["source_word_count"] = word_count(raw_source.decode("utf-8-sig"))
     context["purpose"] = PURPOSE
     validate(context, profile, frozen=True)
     return (json.dumps(context, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
@@ -96,7 +103,7 @@ def freeze(artifact: Path, profile: str) -> bytes:
 
 def packet(context: dict, stage: str) -> dict:
     result = deepcopy(context)
-    if stage not in {"draft", "literary_review"}:
+    if stage not in {"draft", "deletion_pass", "literary_review"}:
         result.pop("style_examples", None)
         result.pop("style_note", None)
     return result
@@ -131,6 +138,25 @@ class _VisibleText(HTMLParser):
             self.parts.append(data)
 
 
+# Окончания существительных и прилагательных: запрет слова «стек» должен
+# ловить «стека», «стеком», «стеки», но не «стеклянный». Глаголы не
+# склоняются этим списком; многословный запрет сверяется дословно.
+_RU_ENDINGS = (
+    "ами|ями|ого|его|ому|ему|ыми|ими|ом|ем|ём|ой|ей|ою|ею|ов|ев|ёв|ам|ям|ах|ях|"
+    "ую|юю|ая|яя|ое|ее|ые|ие|ым|им|ых|их|а|я|о|е|ё|ы|и|у|ю|ь|й"
+)
+
+
+def literal_pattern(term: str) -> re.Pattern:
+    """Шаблон запрещённого слова: русское одиночное слово — во всех падежах."""
+    if re.fullmatch(r"[а-яё]{4,}", term, re.IGNORECASE):
+        stem = re.sub(r"[аяоеёыиуюьй]$", "", term, flags=re.IGNORECASE)
+        body = re.escape(stem) + f"(?:{_RU_ENDINGS})?"
+    else:
+        body = re.escape(term)
+    return re.compile(r"(?<!\w)" + body + r"(?!\w)", re.IGNORECASE)
+
+
 def literal_errors(context: dict, article: str) -> list[str]:
     # Check visible words, including headings and captions, without substring bans.
     # Link destinations and reference definitions are not author-facing prose.
@@ -145,7 +171,7 @@ def literal_errors(context: dict, article: str) -> list[str]:
     errors = []
     for row in context["requirements"]:
         for term in row.get("forbidden_literals", []):
-            if re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", visible, re.IGNORECASE):
+            if literal_pattern(term).search(visible):
                 errors.append(f"requirement {row['id']}: forbidden literal {term!r}")
     return errors
 

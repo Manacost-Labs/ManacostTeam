@@ -40,6 +40,14 @@ Complete this map for every `deep` or `exhaustive` editor-ready handoff. Use one
 
 For each: claim ID, bounded wording, confidence, conditions, and decisive evidence IDs.
 
+For each new claim retain `claim_kind` and its rule evidence, observation sample/
+slice, or named opinion attribution under [claim semantics](../claim-semantics.md).
+Observation reasons stay empty or «в источниках не найдено»; never add a causal
+explanation from final-board statistics. Strategy reviews also list verified
+strong-player decisions per chapter (moment, action, alternative, outcome,
+URL and timestamp/transcript quote). When absent, write exactly
+«блок советов писать не из чего» and keep the advice block blocked.
+
 ## Warnings and unknowns
 
 - Decision-critical gaps:

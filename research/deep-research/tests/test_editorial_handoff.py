@@ -135,6 +135,89 @@ class EditorialHandoffTests(unittest.TestCase):
         self.assertEqual(handoff["sources"][0]["quote"], "Совет с условием.")
         self.assertEqual(report["required_coverage"], 1.0)
 
+    def update_reviewed_record(self, name, **updates):
+        path = self.root / f"{name}.jsonl"
+        row = {**json.loads(path.read_text(encoding="utf-8")), **updates}
+        path.write_text(json.dumps(row), encoding="utf-8")
+        key = {"claims": "claim", "sources": "source", "evidence": "evidence"}[name]
+        self.audit[key + "_sha256"] = handoff_module.record_sha256(row)
+        (self.root / "semantic-audit.jsonl").write_text(json.dumps(self.audit), encoding="utf-8")
+
+    def test_handoff_preserves_claim_kind_and_observation_scope_without_reason(self):
+        scope = {"sample_size": 4, "unit": "games", "slice": "synthetic selected games"}
+        self.update_reviewed_record("claims", claim_kind="observation", observation_scope=scope)
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(report["blocking"], [])
+        row = handoff["claims"][0]
+        self.assertEqual(row["claim_kind"], "observation")
+        self.assertEqual(row["research_context"]["observation_scope"], scope)
+        self.assertEqual(row["reason"], "в источниках не найдено")
+        self.assertNotIn("inference_steps", row["research_context"])
+
+    def test_handoff_rejects_observation_cause_and_removes_card_reason(self):
+        self.update_reviewed_record("claims", claim_kind="observation", observation_scope={
+            "sample_size": 4, "unit": "games", "slice": "synthetic"})
+        card = {"card_id": "CARD-1", "kind": "derived", "status": "supported",
+                "question": "Why?", "fields": {"reason": {
+                    "text": "Invented cause", "claim_ids": ["CLM-1"], "evidence_refs": ["EVD-1"]}}}
+        self.plan["chapters"][0]["decision_cards"] = [card]
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(handoff["status"], "research_blocked")
+        self.assertIn("observation cannot explain", " ".join(report["blocking"]))
+        self.assertNotIn("reason", handoff["chapters"][0]["decision_cards"][0]["fields"])
+        self.assertIn("reason", card["fields"])  # No mutation of the caller's plan.
+        self.plan["chapters"][0].pop("decision_cards")
+        self.update_reviewed_record("claims", reason="Invented cause")
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(handoff["claims"], [])
+        self.assertIn("observation reason", " ".join(report["blocking"]))
+
+    def test_handoff_preserves_named_opinion_and_rule_based_reason(self):
+        attribution = {"name": "Synthetic Player", "source_id": "SRC-1"}
+        self.update_reviewed_record("claims", claim_kind="opinion", attribution=attribution,
+                                    reason="Synthetic player's explanation")
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(report["blocking"], [])
+        self.assertEqual(handoff["claims"][0]["attribution"], attribution)
+        self.assertEqual(handoff["claims"][0]["reason"], "Synthetic player's explanation")
+        self.update_reviewed_record("claims", claim_kind="mechanic", rule_evidence_ids=["EVD-1"])
+        self.update_reviewed_record("evidence", evidence_type="card_text")
+        self.update_reviewed_record("sources", source_type="card_catalog")
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(report["blocking"], [])
+        self.assertEqual(handoff["claims"][0]["claim_kind"], "mechanic")
+
+    def test_new_handoff_requires_claim_kind_but_legacy_fixture_still_reads(self):
+        (self.root / "manifest.json").write_text('{"claim_contract_version":"1.0"}', encoding="utf-8")
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(handoff["status"], "research_blocked")
+        self.assertIn("claim_kind", " ".join(report["blocking"]))
+
+    def test_legacy_reason_requires_classification_before_editorial_use(self):
+        self.update_reviewed_record("claims", reason="Unclassified author explanation")
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(handoff["claims"], [])
+        self.assertIn("claim_kind required", " ".join(report["blocking"]))
+
+    def test_strategy_handoff_blocks_advice_until_player_decision_exists(self):
+        self.plan["strategy_review"] = True
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(handoff["status"], "research_blocked")
+        self.assertIn("блок советов писать не из чего", " ".join(report["blocking"]))
+        self.assertEqual(report["gap_queue"][0]["reason"], "missing_player_decision")
+        self.update_reviewed_record("evidence", locator="12:34")
+        field = {"text": "Synthetic verified decision", "claim_ids": ["CLM-1"], "evidence_refs": ["EVD-1"]}
+        card = {"card_id": "CARD-1", "kind": "observed", "status": "supported",
+                "question": "When?", "player": "Synthetic Player", "player_basis": "Verified test expertise",
+                "moment": {"turn": 8, "gold": 10, "tavern_tier": 4},
+                "fields": {name: dict(field) for name in ("situation", "options", "action", "outcome")}}
+        self.plan["chapters"][0]["decision_cards"] = [card]
+        handoff, report = compile_handoff(self.root, self.plan)
+        self.assertEqual(report["blocking"], [])
+        self.assertEqual(handoff["status"], "research_ready")
+        self.assertEqual(handoff["chapters"][0]["decision_cards"][0]["moment"]["gold"], 10)
+        self.assertEqual(handoff["player_decisions"]["covered_chapters"], ["CH-1"])
+
     def test_rich_context_survives_compilation_and_shared_evidence(self):
         updates = {
             "sources": {

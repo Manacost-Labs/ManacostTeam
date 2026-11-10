@@ -3,6 +3,16 @@
 ```yaml
 claim_id:
 claim:
+claim_kind: mechanic | observation | opinion
+reason: # mechanic or attributed opinion only; observation empty or "в источниках не найдено"
+rule_evidence_ids: [] # mechanic: inspected card_text/game_rule/patch_note/rules_reference
+observation_scope: # observation only; never guess the sample
+  sample_size:
+  unit:
+  slice:
+attribution: # opinion only
+  name:
+  source_id:
 claim_class: official_fact | statistical | strategic | causal | prevalence | superlative | forecast | interpretation
 importance: critical | material | supporting | contextual
 deliverable_section_ids: [SEC-0001]
@@ -37,6 +47,10 @@ wording_for_output:
 ```
 
 If one field contains two independently falsifiable assertions, split the record.
+
+See [claim semantics](../claim-semantics.md). `claim_class` describes the research
+question; `claim_kind` constrains editorial use and is mandatory in every new
+bundle (`claim_contract_version: "1.0"`). It is not decision-card `kind`.
 
 `challenge_search` records the contradiction-pass queries that looked for disconfirming evidence when none was found or the found evidence was weak. In schema 1.2 a critical claim cannot pass final validation without either challenging evidence or this record.
 

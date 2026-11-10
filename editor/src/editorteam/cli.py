@@ -71,6 +71,8 @@ def audit(args) -> int:
             selected["profile"],
             args.mode,
             args.evidence_requested,
+            author_context=_author_context(Path(args.author_context), selected["profile"])
+            if getattr(args, "author_context", None) else None,
         )
         report = Report(document=str(args.file), profile=result["profile"])
         result["document"] = str(args.file)
@@ -91,15 +93,25 @@ def audit(args) -> int:
         else:
             _emit(report, args)
         return exit_code(report, args.fail_on)
-    C = _scripts()
     text = _read(Path(args.file))
+    context = None
+    if getattr(args, "author_context", None):
+        context = _author_context(Path(args.author_context), args.profile)
+    report = _audit_report(text, str(args.file), args, context)
+    _emit(report, args)
+    return exit_code(report, args.fail_on)
+
+
+def _audit_report(text: str, document: str, args, author_context: dict | None = None) -> Report:
+    """Отчёт `audit` без печати: его же зовёт `owner-eval` для каждой версии."""
+    C = _scripts()
     profile_name = args.profile
     confidence = None
     if not profile_name:
         profile_name, confidence = P.detect(text)
     profile = P.load(profile_name)
 
-    report = Report(document=str(args.file), profile=profile.id)
+    report = Report(document=document, profile=profile.id)
     from editorteam.integrity import arithmetic_issues
 
     for issue in arithmetic_issues(text):
@@ -378,9 +390,126 @@ def audit(args) -> int:
     else:
         report.skipped.append("soul")
 
+    _owner_checks(text, profile, report, author_context)
     report.metrics["words"] = words
-    _emit(report, args)
-    return exit_code(report, args.fail_on)
+    return report
+
+
+BG_PROFILES = ("battlegrounds-guide", "battlegrounds-article")
+
+
+def _author_context(path: Path, profile: str | None) -> dict:
+    """Требования владельца из author-context (тот же формат, что в publication run)."""
+    from editorteam import publication_context
+
+    context = json.loads(_read(path))
+    publication_context.validate(context, context.get("profile") or profile or "")
+    return context
+
+
+def _owner_checks(text: str, profile, report: Report, author_context: dict | None) -> None:
+    """Проверки по замечаниям владельца: запрет слова — для всех, остальное — для BG."""
+    from editorteam import owner_checks as Owner
+
+    if author_context:
+        for hit in Owner.forbidden_literals(author_context, text):
+            report.add(
+                Finding(
+                    id="owner.forbidden_literal",
+                    analyzer="owner",
+                    category="owner-requirement",
+                    severity="error",
+                    message=f"запрещено владельцем: «{hit['term']}» ({hit['count']} раз)",
+                    evidence=hit["term"],
+                    suggestion=hit["instruction"],
+                    line=hit["line"],
+                    profile=profile.id,
+                    meta={"requirement": hit["requirement"], "count": hit["count"]},
+                )
+            )
+    if profile.id not in BG_PROFILES or not profile.enabled("owner_checks"):
+        return
+    C = _scripts()
+    morph = C.morph()
+    for hit in Owner.overused_words(text, Owner.load_frequencies(), morph, _prose_lines):
+        report.add(
+            Finding(
+                id="owner.overused_word",
+                analyzer="owner",
+                category="word-choice",
+                severity="review",
+                confidence=0.7,
+                message=(
+                    f"слово «{hit['lemma']}» — {hit['count']} раз на {hit['words']} слов "
+                    f"({hit['per_1k']} на 1000); у автора {hit['corpus_count']} "
+                    f"на {hit['corpus_words']:,} слов".replace(",", " ")
+                ),
+                evidence=", ".join(hit["forms"]),
+                suggestion="назвать конкретное существо или действие; не заменять механически",
+                line=hit["line"],
+                profile=profile.id,
+                meta={k: hit[k] for k in ("lemma", "count", "per_1k", "ratio")},
+            )
+        )
+    for hit in Owner.section_repeats(text, morph, _masked_with_headings):
+        report.add(
+            Finding(
+                id="owner.section_repeat",
+                analyzer="owner",
+                category="repetition",
+                severity="review",
+                confidence=0.5,
+                message=f"повтор из другого раздела (стр.{hit['first_line']})",
+                evidence=f"«{hit['first_quote']}» / «{hit['quote']}»",
+                suggestion="оставить мысль в одном разделе; во втором — только новое",
+                line=hit["line"],
+                profile=profile.id,
+                meta={"first_line": hit["first_line"], "shared": hit["shared"]},
+            )
+        )
+    lex, bg = _bg_card_lexicon()
+    aliases = CardParaphrase.shortcode_aliases(text, bg)
+    for hit in CardParaphrase.retellings(text, lex, _prose_lines, aliases):
+        report.add(
+            Finding(
+                id="card_paraphrase.retelling",
+                analyzer="card_paraphrase",
+                category="card-retelling",
+                severity="review",
+                confidence=0.6,
+                message=f"пересказ текста карты или силы героя: {hit['card']}",
+                evidence=hit["quote"],
+                suggestion="убрать пересказ; оставить, что из эффекта следует для решения",
+                line=hit["line"],
+                profile=profile.id,
+                meta={"card_text": hit["card_text"], "cover": hit["cover"]},
+            )
+        )
+
+
+def owner_findings(text: str, profile: str, author_context: dict | None = None) -> list[dict]:
+    """Same four diagnostics for native deletion, audit and the Go Python-sidecar."""
+    from types import SimpleNamespace
+
+    try:
+        selected = P.load(profile)
+    except P.ProfileError:
+        # Native runs historically accept custom profiles; only their explicit
+        # owner literals are known here, never silently apply a different genre.
+        selected = SimpleNamespace(id=profile, enabled=lambda _: False)
+    report = Report(document="<текст>", profile=profile)
+    _owner_checks(text, selected, report, author_context)
+    return report.to_dict()["findings"]
+
+
+def _masked_with_headings(text: str) -> str:
+    """Проза для деления на разделы: без фронт-маттера, кода и цитат, заголовки на месте."""
+    C = _scripts()
+    m = C.FRONT_MATTER.match(text)
+    if m:
+        text = "\n" * m.group(0).count("\n") + text[m.end() :]
+    lines = C.mask_protected(text).split("\n")
+    return "\n".join("" if C._TABLE_ROW.match(x) else x for x in lines)
 
 
 def cards_cmd(args) -> int:
@@ -1029,6 +1158,27 @@ def _card_lexicon():
     return CardParaphrase.Lexicon(idx, texts, cards.corpus_common(idx), skip)
 
 
+_BG_LEXICON: list = []
+
+
+def _bg_card_lexicon():
+    """Лексикон с текстами Полей сражений поверх общих: у героя — текст силы героя."""
+    if not _BG_LEXICON:
+        C = _scripts()
+        cards = C.sibling("cards")
+        cards.ensure_pymorphy()
+        from editorteam.card_shortcodes import AMBIGUOUS_NAMES
+
+        bg = CardParaphrase.load_bg()
+        texts = {**CardParaphrase.load_texts(), **CardParaphrase.bg_texts_by_name(bg)}
+        idx = cards.Index(list(texts), C.morph())
+        skip = cards.NOT_CARDS | AMBIGUOUS_NAMES
+        _BG_LEXICON.extend(
+            [CardParaphrase.Lexicon(idx, texts, cards.corpus_common(idx), skip), bg]
+        )
+    return _BG_LEXICON[0], _BG_LEXICON[1]
+
+
 def _prose_lines(text: str) -> str:
     """Проза без фронт-маттера, кода, цитат, таблиц и заголовков — строки на месте,
     чтобы номер строки в отчёте совпадал с файлом."""
@@ -1082,6 +1232,54 @@ def card_paraphrase_cmd(args) -> int:
     else:
         print(CardParaphrase.render(report, limit=args.limit))
     return 1 if args.check and False in report["verdicts"].values() else 0
+
+
+def owner_eval_cmd(args) -> int:
+    """Прогнать audit по набору отклонений владельца; JSON и короткая таблица."""
+    import argparse as _argparse
+
+    from editorteam import owner_checks as Owner
+    from editorteam import owner_eval as OwnerEval
+
+    if args.update_frequencies:
+        C = _scripts()
+        docs = [
+            C.split_front_matter(p.read_text(encoding="utf-8"))[1]
+            for folder in ("corpus-bg", "corpus-archive")
+            for p in sorted((ROOT / folder / "guides").glob("*.md"))
+        ]
+        game = list(CardParaphrase.load_texts())
+        game += [t for texts in CardParaphrase.load_texts().values() for t in texts]
+        for row in CardParaphrase.load_bg().values():
+            game += [row["n"], *row["t"]]
+        freq = Owner.build_frequencies(docs, game, C.morph(), "corpus-bg + corpus-archive")
+        Owner.FREQ.write_text(
+            json.dumps(freq, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+        )
+        print(f"частоты: {len(docs)} гайдов, {freq['words']} слов, {len(freq['nouns'])} лемм")
+        return 0
+    if not args.dataset:
+        print("owner-eval: нужна папка набора", file=sys.stderr)
+        return 2
+    folder = Path(args.dataset)
+    if not (folder / "labels.json").exists():
+        print(f"owner-eval: нет {folder / 'labels.json'}", file=sys.stderr)
+        return 2
+    context = _author_context(Path(args.author_context), args.profile) if args.author_context else None
+    options = _argparse.Namespace(
+        profile=args.profile, strict=False, deep=False, mode="GUIDE", evidence_requested=False
+    )
+
+    def run(text: str, name: str) -> list[dict]:
+        report = _audit_report(text, name, options, context)
+        return [f.to_dict() for f in report.findings]
+
+    result = OwnerEval.evaluate(folder, run)
+    if args.format == "json":
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print(OwnerEval.render(result))
+    return 0
 
 
 def _print_corpus_summary(summary: dict, args) -> None:
@@ -1229,6 +1427,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="автор явно попросил показать evidence в тексте",
     )
+    a.add_argument(
+        "--author-context",
+        help="author-context.json: forbidden_literals владельца становятся ошибками",
+    )
     a.set_defaults(func=audit)
 
     wp = sub.add_parser(
@@ -1298,6 +1500,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--update-texts", action="store_true", help="перекачать тексты карт с HearthstoneJSON"
     )
     cp.set_defaults(func=card_paraphrase_cmd)
+
+    oe = sub.add_parser(
+        "owner-eval",
+        help="audit на размеченных отклонениях владельца: что помечено, что ложно",
+        parents=[common],
+    )
+    oe.add_argument("dataset", nargs="?", help="папка с labels.json, versions/ и gold/")
+    oe.add_argument("--profile", choices=P.available(), default="battlegrounds-article")
+    oe.add_argument("--author-context", help="author-context.json с требованиями владельца")
+    oe.add_argument(
+        "--update-frequencies",
+        action="store_true",
+        help="пересчитать частоты слов автора по corpus-bg и corpus-archive",
+    )
+    oe.set_defaults(func=owner_eval_cmd)
 
     ra = sub.add_parser(
         "ru-audit",

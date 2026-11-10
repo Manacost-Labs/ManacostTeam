@@ -2,12 +2,12 @@
 name: editor-team
 description: "Редактура игровых материалов в стиле Манакоста с сохранением фактов и авторского голоса."
 metadata:
-  version: "1.15.14"
+  version: "1.15.15"
 ---
 
 # EditorTeam
 
-Для новых обзоров и глубокой пересборки используй [три редакционных прохода](references/player-editorial-standard.md):
+Для новых обзоров и глубокой пересборки используй [редакционные проходы](references/player-editorial-standard.md):
 проверенные ситуации → обоснованный авторский выбор → вычитка прозы.
 Не превращай игровой пример из задания в факт и не переписывай текст ради балла ИИ-детектора.
 Обзор стратегии Полей сражений строй вокруг решений партии, а после правок
@@ -128,13 +128,13 @@ PYTHONPATH=python. Новые статьи остаются candidate; опуб�
 и человеческие оценки храни отдельно от переносимого пакета.
 
 Для полного возобновляемого запуска в Codex используй отдельный manacost-publish.
-Он выполняет источники → handoff → draft → независимые factual/literary reviews,
+Он выполняет источники → handoff → draft → deletion_pass → независимые factual/literary reviews,
 сохраняет версии и экспортирует результат после проверок. Runtime stdlib:
 `PYTHONPATH=python python -m editorteam.publication_run --help`. Контроль цитат
 и хешей не заменяет смысловую проверку reviewer и человеческое утверждение.
-Новые native runs используют review_contract_version=3: функции абзацев,
+Новые native runs используют review_contract_version=4: функции абзацев,
 вопросы читателя, strengths и объяснения потерь keep_spans; прежние runs без
-поля версии читаются как v1 для истории. Export старых v1/v2 требует нового
+поля версии читаются как v1 для истории. Export старых v1/v2/v3 требует нового
 текущего run и независимой повторной проверки; не меняй state.json ради допуска.
 Проверяющие не получают чужой verdict. Состояние
 сравнительного исследования — в [пилоте](references/research-editor-pilot.md):
@@ -180,3 +180,45 @@ AG-UI обязательны все 26 практик, 5 logic_checks и 7 prese
 Audit/analyze/validate-edit без независимого отзыва — diagnostics_only,
 publication_ready=false. Для validate-edit передай --review и, при сверке
 источников, --handoff/--sources; формальная валидность отзыва не равна публикации.
+
+## Вычёркивание лишнего и рубрика владельца
+
+После черновика и до литературного отзыва обязателен отдельный проход на
+вычёркивание по разделу 0 [стандарта](references/player-editorial-standard.md).
+Вопрос к каждому предложению: «какое решение потеряет игрок, если это убрать?»
+Нет ответа — вычеркни. Только удаляй и сокращай; новых фактов, слов, связок и
+перестановок не добавляй. Полезные объяснения, основы, развилки, условия и
+исключения сохраняй. Убери пересказ подсказки карты/силы героя, очевидное,
+пустые страховки, повтор совета, площадки в теле GUIDE («по данным…», «игроки
+на Reddit…»), наблюдение в форме правила без причины, сравнение без реального
+выбора. Слабый блок советов убери целиком. Список удалённого с причиной храни
+в материалах запуска (cuts.json), не в статье. В native v4 это отдельный этап
+`submit --stage deletion_pass`; после revise/context он повторяется.
+
+На вход подай `card_paraphrase.retelling`, `owner.overused_word`,
+`owner.section_repeat`, `owner.forbidden_literal` из
+`editor-team audit статья.md --author-context context.json`; флаг совместим
+с `--task-context`. Находка не приказывает удалять полезное. Если NLP недоступен
+в минимальном runtime, получи audit полным EditorTeam; пустые findings при
+`diagnostic_status=unavailable` не означают чистый текст.
+[owner-eval](https://github.com/Manacost-Labs/ManacostTeam/blob/main/editor/docs/OWNER_EVAL.md):
+`editor-team owner-eval <набор> --author-context context.json` измеряет охват
+отклонений, а не одобрение владельца.
+
+Literary reviewer возвращает все десять строк `owner_checks`:
+`card_text_retelling`, `obvious_or_water`, `weak_or_obvious_tips`,
+`duplicated_advice`, `source_attribution_in_body`, `unsupported_or_false_claim`,
+`illogical_comparison`, `unclear_edge_case`, `genre_fit`, `ai_tells`.
+Каждая: `{id,status:clear|issue|unverified,quote,reason}` с непустой точной
+цитатой candidate. Issue/unverified требуют repair с фрагментом; не заменяй
+отрицательное суждение pass. Охват рубрики не доказывает качество суждений.
+Бюджет слов genre_fit выводится из полных выбранных образцов author-context;
+`genre_review` возвращает измерения из next и собственное объяснение объёма
+и манеры. Не подставляй фиксированную норму или длину короткой цитаты.
+
+Только `claim_kind=mechanic` допускает правило с «потому что» при проверенном
+основании. Observation — наблюдение в своей выборке, без придуманной причины;
+opinion — полезное мнение с именем игрока. Старый claim без типа не классифицируй
+по догадке. Если handoff говорит «блок советов писать не из чего», блок не пишется.
+Старые runs v1/v2/v3 читаются, но прежние неполные отзывы не разрешают новый
+export: создай текущий run, повтори проход и независимые отзывы.

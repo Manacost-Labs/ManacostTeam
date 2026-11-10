@@ -39,6 +39,16 @@ class MetaReportTests(unittest.TestCase):
         })
         return meta.configure_context(self.run, artifact=artifact)
 
+    def pass_deletion(self, deletions=()):
+        """Submit the mandatory removal-only pass for the current draft."""
+        state = meta.runtimes()[0].status(self.run / "publication")
+        text = (self.run / "publication" / state["artifacts"]["draft"]["path"]).read_bytes().decode("utf-8")
+        rows = [{"start": text.index(quote), "quote": quote, "reason": "Synthetic removal."} for quote in deletions]
+        artifact = self.run / "cuts.json"
+        write_json(artifact, {"article_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(), "deletions": rows,
+                              "unchanged_reason": "" if rows else "Synthetic fixture: every sentence carries a decision."})
+        return meta.submit(self.run, stage="deletion_pass", artifact=artifact)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -251,7 +261,11 @@ class MetaReportTests(unittest.TestCase):
             meta.submit(self.run, stage="draft", artifact=draft)
         self.configure_context()
         self.assertEqual(meta.next_task(self.run)["context_status"], "configured")
-        self.assertEqual(meta.submit(self.run, stage="draft", artifact=draft)["stage"], "fact_review")
+        self.assertEqual(meta.submit(self.run, stage="draft", artifact=draft)["stage"], "deletion_pass")
+        self.assertIn("deck code", meta.next_task(self.run)["instructions"])
+        with self.assertRaisesRegex(ValueError, "breaks the report format"):
+            self.pass_deletion(deletions=[self.code])
+        self.assertEqual(self.pass_deletion()["stage"], "fact_review")
         with self.assertRaisesRegex(ValueError, "both reviews"):
             meta.export(self.run, self.run / "final.md")
         self.report["scope_note"] = "Changed after acceptance"
@@ -445,6 +459,7 @@ class MetaReportTests(unittest.TestCase):
         draft.write_text(self.material(), encoding="utf-8")
         self.configure_context()
         meta.submit(self.run, stage="draft", artifact=draft)
+        self.pass_deletion()
         review = self.run / "factual.json"
         write_json(review, {})
         with self.assertRaisesRegex(ValueError, "meta_analysis"):
@@ -470,6 +485,7 @@ class MetaReportTests(unittest.TestCase):
         draft.write_text(article, encoding="utf-8")
         self.configure_context()
         meta.submit(self.run, stage="draft", artifact=draft)
+        self.pass_deletion()
         review = self.run / "negative.json"
         validator = meta.runtimes()[1]
         payload = {"status": "repair", "article_sha256": validator.article_hash(article),
@@ -484,7 +500,7 @@ class MetaReportTests(unittest.TestCase):
         draft.write_text(article + "\n\nSynthetic revision records unresolved evidence limitations.\n", encoding="utf-8")
         revised = meta.revise(self.run, draft)
         self.assertIsNone(revised["blocked"])
-        self.assertEqual(revised["stage"], "fact_review")
+        self.assertEqual(revised["stage"], "deletion_pass")
 
     def enable_matchups(self):
         self.enable_analysis()
@@ -547,7 +563,8 @@ class MetaReportTests(unittest.TestCase):
         draft.write_text(self.material() + "\n\nModel coverage 90%, unknown 10%; estimate 60%, bounds 54% to 64%.\n", encoding="utf-8")
         self.configure_context()
         state = meta.submit(self.run, stage="draft", artifact=draft)
-        self.assertEqual(state["stage"], "fact_review")
+        self.assertEqual(state["stage"], "deletion_pass")
+        self.assertEqual(self.pass_deletion()["stage"], "fact_review")
         self.assertIn("both reviews", str(self.assert_export_blocked()))
         errors = meta.validate_analysis_review(self.report, draft.read_text(encoding="utf-8"), {"meta_analysis": {"archetypes": [], "dominance": []}})
         self.assertTrue(any("matchup_profiles" in error for error in errors))

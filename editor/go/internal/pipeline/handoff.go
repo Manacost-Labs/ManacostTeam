@@ -51,6 +51,9 @@ type ResearchSource struct {
 }
 
 type ResearchClaim struct {
+	ClaimKind       string         `json:"claim_kind,omitempty"`
+	Reason          string         `json:"reason,omitempty"`
+	Attribution     map[string]any `json:"attribution,omitempty"`
 	ID              string         `json:"claim_id"`
 	Meaning         string         `json:"meaning"`
 	Action          string         `json:"action"`

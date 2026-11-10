@@ -479,11 +479,16 @@ def validate_literary(
     original: str | None = None,
     handoff: dict | None = None,
     snapshots: list | None = None,
+    require_owner: bool = False,
 ) -> list[str]:
     """Check the independent whole-article assessment and quoted findings."""
     errors = _report(text, report)
     if not isinstance(report, dict) or not _text(text):
         return errors
+    if require_owner and not require_practices:
+        from .owner_review import validate_rubric
+
+        errors += validate_rubric(text, report.get("owner_checks"))
     for key, explanation in (("strengths", "reason"), ("paragraph_functions", "function")):
         if key not in report and not require_extended:
             continue

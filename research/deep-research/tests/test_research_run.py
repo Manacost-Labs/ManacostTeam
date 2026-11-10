@@ -110,6 +110,8 @@ def write_minimal_linked_fixture(run: Path) -> None:
             {
                 "claim_id": "CLM-0001",
                 "claim": "Fixture claim for editor-ready validation only.",
+                "claim_kind": "observation",
+                "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"},
                 "importance": "critical",
                 "status": "supported",
                 "confidence": "HIGH",
@@ -1835,6 +1837,8 @@ class ResearchRunToolsTest(unittest.TestCase):
                     {
                         "claim_id": "CLM-0001",
                         "claim": "Fixture claim for integrity testing only.",
+                        "claim_kind": "observation",
+                        "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"},
                         "importance": "critical",
                         "status": "supported",
                         "confidence": "HIGH",
@@ -1928,6 +1932,8 @@ class ResearchRunToolsTest(unittest.TestCase):
                     {
                         "claim_id": "CLM-0001",
                         "claim": "Broken fixture claim.",
+                        "claim_kind": "observation",
+                        "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"},
                         "importance": "material",
                         "status": "supported",
                         "confidence": "HIGH",
