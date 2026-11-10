@@ -213,8 +213,8 @@ class EditorialHandoffTests(unittest.TestCase):
                 "fields": {name: dict(field) for name in ("situation", "options", "action", "outcome")}}
         self.plan["chapters"][0]["decision_cards"] = [card]
         handoff, report = compile_handoff(self.root, self.plan)
-        self.assertEqual(report["blocking"], [])
-        self.assertEqual(handoff["status"], "research_ready")
+        self.assertEqual(report["blocking"], ["раздел мастерства писать не из чего"])
+        self.assertEqual(handoff["status"], "research_blocked")
         self.assertEqual(handoff["chapters"][0]["decision_cards"][0]["moment"]["gold"], 10)
         self.assertEqual(handoff["player_decisions"]["covered_chapters"], ["CH-1"])
 

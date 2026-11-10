@@ -153,3 +153,13 @@ first and inspect concrete strong-player decisions with moment, action,
 alternative, outcome, URL and timecode or transcript quote. A collected VOD
 page or RSS entry does not close the decision track. Missing decisions remain
 «блок советов писать не из чего» in the handoff and coverage gaps.
+
+
+## Опыт игрока
+
+Для `constructed-guide` и `strategy_review` собирайте существующие decision cards
+по [контракту опыта](claim-semantics.md): пороги, порядок, запреты, запасные планы, ловушки
+и советы по уровню. Источники — ответ автора, обучающий транскрипт или
+результат XMLTeam; сохраняйте происхождение и условия, не выдумывайте причины.
+Передавайте покрытие и `first_person`; при отсутствии карточек пишите
+«раздел мастерства писать не из чего» и сохраняйте gap_queue.

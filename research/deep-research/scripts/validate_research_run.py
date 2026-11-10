@@ -8,7 +8,7 @@ import hashlib
 import json
 import re
 import sys
-from claim_semantics import CLAIM_CONTRACT_VERSION, claim_errors, strategy_decision_coverage
+from claim_semantics import CLAIM_CONTRACT_VERSION, claim_errors, strategy_decision_coverage, experience_errors, experience_coverage
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -1078,15 +1078,18 @@ def main() -> int:
             "source_type",
             "lineage_id",
         )
-        if schema_version in PROVENANCE_SCHEMAS:
+        local_experience = record.get("source_type") in {"author_note", "xml_replay"}
+        if schema_version in PROVENANCE_SCHEMAS and not local_experience:
             source_fields += (
                 "requested_url",
                 "final_url",
                 "mutable",
                 "fingerprint_status",
             )
-        else:
+        elif not local_experience:
             source_fields += ("url",)
+        else:
+            source_fields += ("mutable", "fingerprint_status", "snapshot_path", "content_sha256")
         require_fields(record, source_fields, label, errors)
         urls = (
             (
@@ -1389,6 +1392,27 @@ def main() -> int:
     }
     if not plan and (root / "plan.json").is_file():
         plan = load_json(root / "plan.json", errors)
+    for chapter in plan.get("chapters", []) if isinstance(plan.get("chapters", []), list) else []:
+        if not isinstance(chapter, dict):
+            continue
+        for card in chapter.get("decision_cards", []) if isinstance(chapter.get("decision_cards", []), list) else []:
+            if isinstance(card, dict):
+                errors.extend(f"decision card {card.get('card_id', '?')}: {issue}" for issue in experience_errors(card, claims_by_id, evidence_by_id, semantic_sources))
+                provenance = card.get("experience_source")
+                if isinstance(provenance, dict) and provenance.get("kind") in {"author_note", "xml_replay"}:
+                    sid, eid = provenance.get("source_id"), provenance.get("evidence_id")
+                    source = semantic_sources.get(sid, {}) if isinstance(sid, str) else {}
+                    item = evidence_by_id.get(eid, {}) if isinstance(eid, str) else {}
+                    quote = item.get("exact_excerpt") or item.get("quote") or item.get("verbatim_quote")
+                    if isinstance(quote, str) and quote.strip():
+                        from editorial_handoff import source_proof
+                        try:
+                            source_proof(root, source, quote)
+                        except (ValueError, OSError, UnicodeError) as exc:
+                            errors.append(f"decision card {card.get('card_id', '?')}: {exc}")
+    experience_plan = {**{k: manifest[k] for k in ("profile", "genre", "article_type", "style_profile") if k in manifest}, **plan, "strategy_review": manifest.get("strategy_review") is True or plan.get("strategy_review") is True}
+    experience = experience_coverage(experience_plan, claims_by_id, evidence_by_id, semantic_sources)
+    (errors if args.stage == "final" and manifest.get("status") == "complete" else warnings).extend(experience["gaps"])
     if manifest.get("strategy_review") is True or plan.get("strategy_review") is True:
         if not plan:
             plan = load_json(root / "plan.json", errors)

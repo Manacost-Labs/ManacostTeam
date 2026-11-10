@@ -73,3 +73,13 @@ URL and timestamp/transcript quote). When absent, write exactly
 - Coverage preservation: pass | fail | not_applicable
 
 Use `coverage_preservation: pass` only for a coverage-enabled `editor-ready` final whose `audit.json.coverage_review` passed against the frozen manifest, plan, all eight JSONL ledgers, report, every required/routed/present bank, and applicable appendix. Use `not_applicable` for legacy bundles and other output profiles.
+
+
+## Опыт игрока
+
+Для `constructed-guide` и `strategy_review` собирайте существующие decision cards
+по [контракту опыта](../claim-semantics.md): пороги, порядок, запреты, запасные планы, ловушки
+и советы по уровню. Источники — ответ автора, обучающий транскрипт или
+результат XMLTeam; сохраняйте происхождение и условия, не выдумывайте причины.
+Передавайте покрытие и `first_person`; при отсутствии карточек пишите
+«раздел мастерства писать не из чего» и сохраняйте gap_queue.
