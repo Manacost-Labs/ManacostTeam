@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Manacost Studio</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Manacost <span>Studio</span></div>
+    <div class="user">
+      <span id="user-name" class="muted"></span>
+      <button type="button" id="logout" class="ghost">Выйти</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Инструменты">
+    <button role="tab" id="tab-research" aria-controls="panel-research" aria-selected="true">Исследование</button>
+    <button role="tab" id="tab-edit" aria-controls="panel-edit" aria-selected="false" tabindex="-1">Редактура</button>
+    <button role="tab" id="tab-shortcodes" aria-controls="panel-shortcodes" aria-selected="false" tabindex="-1">Шорткоды</button>
+    <button role="tab" id="tab-translate" aria-controls="panel-translate" aria-selected="false" tabindex="-1">Перевод</button>
+  </nav>
+
+  <main>
+    <!-- Исследование -->
+    <section id="panel-research" role="tabpanel" aria-labelledby="tab-research" class="panel">
+      <p class="notice">Это <strong>быстрый поиск</strong>: несколько запросов к шлюзу источников (сниппеты выдачи) и один ответ модели со ссылками [n]. Он не заменяет полный прогон ResearchTeam — без обхода 39 источников владельца, журнала покрытия и проверки противоречий.</p>
+      <label class="field">
+        <span>Вопрос</span>
+        <textarea id="research-query" rows="3" maxlength="500" placeholder="Например: как игроки оценивают новый патч для Охотника на демонов?"></textarea>
+      </label>
+      <div class="row">
+        <fieldset class="field">
+          <legend>Провайдеры</legend>
+          <div class="checks" id="research-providers">
+            <label><input type="checkbox" value="web" checked> Веб</label>
+            <label><input type="checkbox" value="reddit" checked> Reddit</label>
+            <label><input type="checkbox" value="x"> X</label>
+            <label><input type="checkbox" value="youtube"> YouTube</label>
+          </div>
+        </fieldset>
+        <label class="field">
+          <span>Период (Reddit)</span>
+          <select id="research-timeframe">
+            <option value="week">Неделя</option>
+            <option value="month" selected>Месяц</option>
+            <option value="year">Год</option>
+            <option value="all">Всё время</option>
+          </select>
+        </label>
+      </div>
+      <div class="actions">
+        <button type="button" class="paid" id="research-run">Исследовать <span class="badge">платно</span></button>
+        <span class="status" id="research-status" role="status" aria-live="polite"></span>
+      </div>
+      <div class="result" id="research-result" hidden>
+        <div class="result-head"><h2>Ответ</h2><button type="button" class="ghost copy" data-copy="research-answer">Копировать</button></div>
+        <div id="research-answer" class="prose"></div>
+        <h3>Источники</h3>
+        <ol id="research-sources" class="sources"></ol>
+        <div id="research-errors"></div>
+      </div>
+    </section>
+
+    <!-- Редактура -->
+    <section id="panel-edit" role="tabpanel" aria-labelledby="tab-edit" class="panel" hidden>
+      <label class="field">
+        <span>Текст</span>
+        <textarea id="edit-text" rows="16" placeholder="Вставьте материал в Markdown"></textarea>
+      </label>
+      <div class="row">
+        <label class="field">
+          <span>Игра</span>
+          <select id="edit-game">
+            <option value="hearthstone" selected>Hearthstone</option>
+            <option value="world-of-warcraft">World of Warcraft</option>
+            <option value="league-of-legends">League of Legends</option>
+            <option value="deadlock">Deadlock</option>
+            <option value="overwatch">Overwatch</option>
+            <option value="heroes-of-the-storm">Heroes of the Storm</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Жанр</span>
+          <select id="edit-genre"></select>
+        </label>
+        <label class="field">
+          <span>Патч (необязательно)</span>
+          <input id="edit-patch" type="text" maxlength="80" placeholder="например 32.4.0">
+        </label>
+      </div>
+      <div class="actions split">
+        <div class="group">
+          <button type="button" id="edit-analyze">Проверить <span class="badge free">бесплатно</span></button>
+        </div>
+        <div class="group">
+          <label class="inline">
+            <span>Глубина</span>
+            <select id="edit-mode">
+              <option value="proofread" selected>Вычитка</option>
+              <option value="edit">Правка</option>
+              <option value="rewrite">Переписать</option>
+            </select>
+          </label>
+          <button type="button" class="paid" id="edit-run">Править моделью <span class="badge">платно</span></button>
+        </div>
+      </div>
+      <span class="status" id="edit-status" role="status" aria-live="polite"></span>
+      <div class="result" id="edit-result" hidden>
+        <div id="edit-summary" class="summary"></div>
+        <div id="edit-output-wrap" hidden>
+          <div class="result-head"><h2>Результат правки</h2><button type="button" class="ghost copy" data-copy="edit-output">Копировать</button></div>
+          <textarea id="edit-output" rows="16" readonly></textarea>
+        </div>
+        <ul id="edit-findings" class="findings"></ul>
+      </div>
+    </section>
+
+    <!-- Шорткоды -->
+    <section id="panel-shortcodes" role="tabpanel" aria-labelledby="tab-shortcodes" class="panel" hidden>
+      <p class="notice" id="shortcodes-catalog" hidden></p>
+      <label class="field">
+        <span>Текст</span>
+        <textarea id="shortcodes-text" rows="16" placeholder="Текст, в котором нужно подсветить карты"></textarea>
+      </label>
+      <div class="row">
+        <label class="field">
+          <span>Режим</span>
+          <select id="shortcodes-format">
+            <option value="Стандарт" selected>Стандарт</option>
+            <option value="Вольный">Вольный</option>
+            <option value="Арена">Арена</option>
+            <option value="Поля сражений">Поля сражений</option>
+          </select>
+        </label>
+      </div>
+      <p class="muted small">Подсвечиваются только точные имена из каталога выбранного режима. Падежные формы и сокращения не угадываются; спорные слова («Ярость», «Монетка»…) выносятся на проверку.</p>
+      <div class="actions">
+        <button type="button" id="shortcodes-run">Расставить шорткоды <span class="badge free">бесплатно</span></button>
+        <span class="status" id="shortcodes-status" role="status" aria-live="polite"></span>
+      </div>
+      <div class="result" id="shortcodes-result" hidden>
+        <div id="shortcodes-summary" class="summary"></div>
+        <div class="result-head"><h2>Текст со шорткодами</h2><button type="button" class="ghost copy" data-copy="shortcodes-output">Копировать</button></div>
+        <textarea id="shortcodes-output" rows="16" readonly></textarea>
+      </div>
+    </section>
+
+    <!-- Перевод -->
+    <section id="panel-translate" role="tabpanel" aria-labelledby="tab-translate" class="panel" hidden>
+      <label class="field">
+        <span>Исходный текст (английский Markdown)</span>
+        <textarea id="translate-text" rows="16" placeholder="Paste the English material"></textarea>
+      </label>
+      <div class="row">
+        <label class="field">
+          <span>Игра</span>
+          <select id="translate-game">
+            <option value="hearthstone" selected>Hearthstone</option>
+            <option value="world-of-warcraft">World of Warcraft</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Патч/билд (для точного глоссария)</span>
+          <input id="translate-patch" type="text" maxlength="80" placeholder="необязательно">
+        </label>
+        <label class="field" id="translate-product-wrap" hidden>
+          <span>Продукт WoW</span>
+          <input id="translate-product" type="text" maxlength="80" placeholder="например retail">
+        </label>
+        <label class="field">
+          <span>Стиль</span>
+          <select id="translate-style">
+            <option value="manacost" selected>Manacost</option>
+            <option value="literal">Дословно</option>
+            <option value="technical">Технический</option>
+            <option value="summary">Кратко</option>
+          </select>
+        </label>
+      </div>
+      <div class="actions">
+        <button type="button" class="paid" id="translate-run">Перевести <span class="badge">платно</span></button>
+        <span class="status" id="translate-status" role="status" aria-live="polite"></span>
+      </div>
+      <div class="result" id="translate-result" hidden>
+        <div id="translate-summary" class="summary"></div>
+        <div class="result-head"><h2>Перевод</h2><button type="button" class="ghost copy" data-copy="translate-output">Копировать</button></div>
+        <textarea id="translate-output" rows="16" readonly></textarea>
+        <ul id="translate-qa" class="findings"></ul>
+      </div>
+    </section>
+  </main>
+
+  <div id="signed-out" class="message" hidden>
+    <h1>Вы вышли</h1>
+    <p><a href="/auth/login">Войти снова</a></p>
+  </div>
+</body>
+</html>
