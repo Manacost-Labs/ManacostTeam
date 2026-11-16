@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     permissions:
-      checks: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,7 +45,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
           python3 deploy/151/wait_for_ci.py "$GITHUB_SHA"
-          --self "CI gate" --self "Deploy to 151" --timeout 2700
+          --self "Deploy 151" --timeout 2700
+          --required "Studio CI" --required "Research CI" --required "Translate CI"
 
   deploy:
     name: Deploy to 151
