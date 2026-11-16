@@ -1,0 +1,42 @@
+name: Studio CI
+
+on:
+  push:
+    paths:
+      - "studio/**"
+      # Studio зависит от этих контрактов: ловим расхождение сразу.
+      - "shared/manacost_context.py"
+      - "games/registry.json"
+      - "profiles/registry.json"
+      - "server/api.py"
+      - "editor/src/editorteam/wordpress.py"
+      - "editor/src/editorteam/card_shortcodes.py"
+      - ".github/workflows/studio-ci.yml"
+  pull_request:
+    paths:
+      - "studio/**"
+      # Studio зависит от этих контрактов: ловим расхождение сразу.
+      - "shared/manacost_context.py"
+      - "games/registry.json"
+      - "profiles/registry.json"
+      - "server/api.py"
+      - "editor/src/editorteam/wordpress.py"
+      - "editor/src/editorteam/card_shortcodes.py"
+      - ".github/workflows/studio-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r studio/requirements.txt pytest==8.3.5
+      - run: python -m compileall -q studio/app studio/tests
+      - run: python -m pytest -q studio/tests
