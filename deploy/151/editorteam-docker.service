@@ -1,0 +1,27 @@
+# Шаблон /etc/systemd/system/editorteam-docker.service для сервера 151.
+# Поднимает проект editorteam из трёх compose-файлов при загрузке.
+# Ставить после того, как настроены studio.env, research.env и секреты студии
+# (см. deploy/151/README.md); до этого оставьте текущий юнит.
+[Unit]
+Description=EditorTeam stack (editor + adapter + studio) via Docker Compose
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/srv/projects/web/ManacostTeam
+Environment=COMPOSE_ARGS=-p editorteam --env-file /srv/editorteam/server.env -f /srv/projects/web/ManacostTeam/editor/docker-compose.yml -f /srv/editorteam/compose.server.yml -f /srv/projects/web/ManacostTeam/deploy/151/compose.studio.yml
+
+# Секреты на tmpfs (/run/editorteam/*.env, /run/editorteam/studio/*) после
+# перезагрузки отсутствуют. Подготовьте их своим скриптом и раскомментируйте:
+#ExecStartPre=/srv/editorteam/prepare-secrets.sh
+
+ExecStart=/usr/bin/docker compose $COMPOSE_ARGS up -d
+ExecStop=/usr/bin/docker compose $COMPOSE_ARGS stop
+TimeoutStartSec=900
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target
