@@ -1,0 +1,122 @@
+# Третий оверлей проекта `editorteam` на сервере 151.
+#
+#   docker compose -p editorteam --env-file /srv/editorteam/server.env \
+#     -f editor/docker-compose.yml \
+#     -f /srv/editorteam/compose.server.yml \
+#     -f deploy/151/compose.studio.yml ...
+#
+# Относительные пути Compose считает от каталога ПЕРВОГО файла (editor/),
+# поэтому корень репозитория здесь — "..".
+#
+# Сервисы живут в сети `editor` того же проекта и видят gateway, analyzer и
+# adapter. Наружу публикуется только studio и только на 127.0.0.1;
+# translator и research доступны лишь внутри сети.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  studio:
+    build:
+      context: ..
+      dockerfile: studio/Dockerfile
+    restart: unless-stopped
+    mem_limit: 512m
+    logging: *logging
+    env_file:
+      # Несекретные значения: STUDIO_PUBLIC_URL, OIDC_ISSUER, OIDC_CLIENT_ID,
+      # STUDIO_ALLOWED_SUBS, LLM_MODEL, CARD_CATALOG_FILE.
+      - path: /srv/editorteam/studio.env
+        required: false
+    environment:
+      OIDC_CLIENT_SECRET_FILE: /run/secrets/studio/oidc_client_secret
+      STUDIO_SESSION_SECRET_FILE: /run/secrets/studio/session_secret
+      SOURCE_GATEWAY_TOKEN_FILE: /run/secrets/studio/source_gateway_token
+      EDITOR_GATEWAY_URL: http://gateway:8080
+      ANALYZER_URL: http://analyzer:8731
+      TRANSLATOR_URL: http://translator:8000
+      SOURCE_GATEWAY_URL: http://research:8777
+      LLM_URL: http://adapter:8790/v1/chat/completions
+    volumes:
+      - type: bind
+        source: /run/editorteam/studio
+        target: /run/secrets/studio
+        read_only: true
+    ports:
+      - "127.0.0.1:8796:8080"
+    healthcheck:
+      # Образ студии собирается параллельно; проверка не полагается на
+      # конкретную утилиту и пробует wget, curl, затем python.
+      test:
+        - CMD-SHELL
+        - >-
+          wget -qO- http://127.0.0.1:8080/health >/dev/null 2>&1
+          || curl -fsS -o /dev/null http://127.0.0.1:8080/health
+          || python3 -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8080/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - editor
+
+  translator:
+    build:
+      context: ..
+      dockerfile: translate/Dockerfile
+    restart: unless-stopped
+    mem_limit: 512m
+    logging: *logging
+    environment:
+      DATA_DIR: /app/data
+      ALLOWED_DOMAINS: ${TRANSLATOR_ALLOWED_DOMAINS:-}
+      MAX_SOURCE_CHARS: ${TRANSLATOR_MAX_SOURCE_CHARS:-120000}
+    volumes:
+      - translator-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    networks:
+      - editor
+
+  research:
+    # Dockerfile копирует deep-research/ относительно research/.
+    build:
+      context: ../research
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    mem_limit: 384m
+    logging: *logging
+    env_file:
+      # SOURCE_GATEWAY_TOKEN (совпадает с /run/editorteam/studio/source_gateway_token)
+      # и ключи провайдеров: REDDITAPIS_KEY, GETXAPI_KEY, TRANSCRIPTAPI_TOKEN,
+      # SCRAPE_DO_API_TOKEN, TINYFISH_API_KEY.
+      - path: /run/editorteam/research.env
+        required: false
+    environment:
+      SOURCE_GATEWAY_HOST: 0.0.0.0
+      SOURCE_GATEWAY_PORT: "8777"
+      # Пользователь образа (uid 10001) может писать только в /tmp.
+      DEEP_RESEARCH_CACHE_DIR: /tmp/deep-research
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8777/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    networks:
+      - editor
+
+volumes:
+  translator-data:

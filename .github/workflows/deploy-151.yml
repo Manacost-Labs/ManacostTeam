@@ -1,0 +1,66 @@
+name: Deploy 151
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "editor/**"
+      - "research/**"
+      - "translate/**"
+      - "studio/**"
+      - "server/**"
+      - "shared/**"
+      - "games/**"
+      - "profiles/**"
+      - "deploy/151/**"
+  workflow_dispatch:
+    inputs:
+      skip_ci_gate:
+        description: "Не ждать CI модулей (аварийный деплой)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-151
+  cancel-in-progress: false
+
+jobs:
+  ci-gate:
+    name: CI gate
+    if: github.ref == 'refs/heads/main' && !inputs.skip_ci_gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: deploy/151
+          persist-credentials: false
+      - name: Wait for module CI on this commit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python3 deploy/151/wait_for_ci.py "$GITHUB_SHA"
+          --self "Deploy 151" --timeout 2700
+          --required "Studio CI" --required "Research CI" --required "Translate CI"
+
+  deploy:
+    name: Deploy to 151
+    needs: ci-gate
+    # Запускается и при пропущенном gate (ручной аварийный запуск), но не при его провале.
+    if: >-
+      always() && github.ref == 'refs/heads/main'
+      && (needs.ci-gate.result == 'success' || needs.ci-gate.result == 'skipped')
+    runs-on: [self-hosted, manacost-151]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: deploy/151
+          persist-credentials: false
+      - name: Deploy ${{ github.sha }}
+        run: bash deploy/151/deploy.sh "$GITHUB_SHA"
