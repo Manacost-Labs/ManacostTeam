@@ -66,12 +66,13 @@ python tools/publish_team_skills.py release --execute  # GitHub Release v<вер
 | JobTeam | job-team-1.0.1 | /job-team |
 | MarketingTeam | marketing-team-1.0.1 | /marketing-team |
 | Подсветка карт | card-shortcodes-1.0.3 | /card-shortcodes |
+| SEO к статье | article-seo-1.0.0 | /article-seo |
 
 **Claude web:** загрузите отдельный ZIP в Customize → Skills при включённом Code execution. Доступность меню зависит от настроек аккаунта/организации. [Официальная инструкция](https://support.claude.com/en/articles/12512180-use-skills-in-claude).
 
 **Claude Code:** распакуйте ZIP с папкой навыка в `.claude/skills/` проекта или в пользовательский каталог навыков. Имя SKILL.md становится `/name`. В этом репозитории уже есть тонкие `.claude/commands` с теми же именами; они разрешают локальные ресурсы через registry. Для combined plugin namespace будет `/manacost-team:research-team` и аналогично для остальных навыков. [Официальный контракт skills](https://code.claude.com/docs/en/skills).
 
-**Локальный Codex:** `.agents/skills/` содержит девять тонких entrypoints для основного репозитория. Они читают канонический SKILL.md из `teams/` и разрешают ресурсы по registry. Исходная папка ManacostTeam тоже получила локальные entrypoints Codex/Claude, направляющие работу в основную копию. После обновления списка навыков их можно выбрать через `/skills`, `$name` или доступный slash picker.
+**Локальный Codex:** `.agents/skills/` содержит десять тонких entrypoints для основного репозитория. Они читают канонический SKILL.md из `teams/` и разрешают ресурсы по registry. Исходная папка ManacostTeam тоже получила локальные entrypoints Codex/Claude, направляющие работу в основную копию. После обновления списка навыков их можно выбрать через `/skills`, `$name` или доступный slash picker.
 
 **ChatGPT desktop / Codex:** отдельные ZIP предназначены для доступного интерфейса standalone/custom skills. В ChatGPT web/mobile используйте combined plugin через поддерживаемый интерфейс plugins/marketplace. Plugin содержит portable plugin.json и совместимый Claude manifest; MCP-сервер не требуется. Явный вызов навыка в ChatGPT — через `@`, в Codex — через `$`; enabled skills могут появляться в slash list, но стабильная команда `/name` зависит от клиента. Обычная отправка ZIP в сообщение не регистрирует постоянную команду. Не отправляйте пакет на публичную публикацию без отдельной задачи. [OpenAI: build skills](https://learn.chatgpt.com/docs/build-skills), [slash commands](https://learn.chatgpt.com/docs/reference/slash-commands), [упаковка plugins](https://developers.openai.com/plugins/build/plugins).
 

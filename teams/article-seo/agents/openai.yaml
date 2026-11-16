@@ -1,0 +1,4 @@
+interface:
+  display_name: "article-seo"
+  short_description: "SEO-поля IndexPilot к статье и правки по анализу"
+  default_prompt: "Use $article-seo to complete this task."
