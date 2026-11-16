@@ -18,9 +18,10 @@ class TeamPackageTests(unittest.TestCase):
         import build_team_skills as builder
 
         entries = builder.load_registry(ROOT)
-        self.assertEqual(len(entries), 9)
+        self.assertEqual(len(entries), 10)
         self.assertEqual(len({entry["team"] for entry in entries}), 7)
         self.assertIn("card-shortcodes", {entry["name"] for entry in entries})
+        self.assertIn("article-seo", {entry["name"] for entry in entries})
         self.assertIn("manacost-publish", {entry["name"] for entry in entries})
 
     def test_zip_is_reproducible_and_rejects_unsafe_resources(self):
@@ -242,7 +243,7 @@ with tempfile.TemporaryDirectory() as temporary:
             (plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8")
         )
         self.assertEqual(portable["name"], claude["name"])
-        self.assertEqual(len(list((plugin / "skills").glob("*/SKILL.md"))), 9)
+        self.assertEqual(len(list((plugin / "skills").glob("*/SKILL.md"))), 10)
 
     def test_editor_config_and_audit_work_without_repository_or_installed_dependencies(
         self,
@@ -684,6 +685,15 @@ with tempfile.TemporaryDirectory() as temporary:
         )
         self.assertEqual(output.read_bytes(), expected.encode("utf-8"))
         self.assertEqual(source.read_bytes(), text.encode("utf-8"))
+
+    def test_article_seo_helper_runs_from_package(self):
+        process = self.run_helper(
+            "article-seo",
+            "scripts/seo_check.py",
+            "--title-width",
+            "Масса урона за один ход — гайд на Берн Мага от TrueBench",
+        )
+        self.assertEqual(process.stdout.strip(), "557")
 
     def test_xml_runtime_contains_build_configs_lockfile_and_source_entrypoints(self):
         runtime = self.unpacked / "xml-team/runtime"
