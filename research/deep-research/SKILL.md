@@ -112,6 +112,8 @@ Load one or more domain adapters only when relevant:
 
 For Russian Hearthstone output, follow the entity-name and terminology gate in the Hearthstone adapter. Resolve the correct mode and stable DBF or exact card identity through `api.kolodahearthstone.com`; use its Russian localization, preserve the original identity internally, and leave unresolved names visible instead of translating them from memory.
 
+Step 0 of any Hearthstone research: read the Manacost MCP archive and card catalog when it is connected, then save fresh `api.kolodahearthstone.com/v1` tables with `scripts/community_sources.py stats-bundle` before scraping HSGuru or HSReplay through Scrape.do; reserve Scrape.do, RedditAPI and TranscriptAPI for timestamps, disputes, patch notes and reasons. See [source providers](references/source-providers.md).
+
 Use the matching files in [templates](references/templates) as internal working records. Do not expose every record unless the user asks for a dossier or `raw-research`.
 
 ## Execute the pipeline

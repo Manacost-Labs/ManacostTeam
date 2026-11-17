@@ -1,0 +1,193 @@
+{
+ "source_id": "hsreplay_battlegrounds_trinkets_top_1_percent_current_battlegrounds_patch",
+ "fetched_at": "2026-11-17T17:01:26.821931+00:00",
+ "data": {
+  "source_id": "hsreplay_battlegrounds_trinkets_top_1_percent_current_battlegrounds_patch",
+  "structured": {
+   "type": "bg_trinkets",
+   "trinkets": [
+    {
+     "name": "Nerglish Phrasebook",
+     "dbfId": 110991,
+     "id": "BG30_MagicItem_914",
+     "trinket_id": "BG30_MagicItem_914",
+     "type": "Lesser",
+     "trinket_tier": "Lesser",
+     "tier": "C",
+     "pick_rate": "9.6%",
+     "avg_placement": "3.62",
+     "games": 34,
+     "games_is_minimum": true,
+     "localized_name": "Мурлочий словарь"
+    },
+    {
+     "name": "Holy Mallet",
+     "dbfId": 111401,
+     "id": "BG30_MagicItem_902",
+     "trinket_id": "BG30_MagicItem_902",
+     "type": "Lesser",
+     "trinket_tier": "Lesser",
+     "tier": "F",
+     "pick_rate": "7.2%",
+     "avg_placement": "4.12",
+     "games": 42,
+     "games_is_minimum": true,
+     "localized_name": "Светлый молот"
+    },
+    {
+     "name": "Yogg-Tastic Pastry",
+     "dbfId": 113104,
+     "id": "BG30_MagicItem_994",
+     "trinket_id": "BG30_MagicItem_994",
+     "type": "Lesser",
+     "trinket_tier": "Lesser",
+     "tier": "D",
+     "pick_rate": "15.1%",
+     "avg_placement": "3.97",
+     "games": 269,
+     "games_is_minimum": true,
+     "localized_name": "Сладкое Йогг-гощение"
+    },
+    {
+     "name": "Ornate Clock",
+     "dbfId": 121120,
+     "id": "BG32_MagicItem_271",
+     "trinket_id": "BG32_MagicItem_271",
+     "type": "Lesser",
+     "trinket_tier": "Lesser",
+     "tier": "A",
+     "pick_rate": "59.8%",
+     "avg_placement": "3.36",
+     "games": 905,
+     "games_is_minimum": true,
+     "localized_name": "Часы с узором"
+    },
+    {
+     "name": "Mysterious Orb",
+     "dbfId": 130836,
+     "id": "BG35_MagicItem_818",
+     "trinket_id": "BG35_MagicItem_818",
+     "type": "Lesser",
+     "trinket_tier": "Lesser",
+     "tier": "A",
+     "pick_rate": "39.1%",
+     "avg_placement": "3.42",
+     "games": 654,
+     "games_is_minimum": true,
+     "localized_name": "Загадочная сфера"
+    },
+    {
+     "name": "Sunken Anchor",
+     "dbfId": 130890,
+     "id": "BG35_MagicItem_890",
+     "trinket_id": "BG35_MagicItem_890",
+     "type": "Lesser",
+     "trinket_tier": "Lesser",
+     "tier": "C",
+     "pick_rate": "18.7%",
+     "avg_placement": "3.62",
+     "games": 304,
+     "games_is_minimum": true,
+     "localized_name": "Затонувший якорь"
+    },
+    {
+     "name": "Defensive Shell",
+     "dbfId": 133063,
+     "id": "BG36_MagicItem_811",
+     "trinket_id": "BG36_MagicItem_811",
+     "type": "Lesser",
+     "trinket_tier": "Lesser",
+     "tier": "B",
+     "pick_rate": "8.5%",
+     "avg_placement": "3.55",
+     "games": 152,
+     "games_is_minimum": true,
+     "localized_name": "Защитный панцирь"
+    },
+    {
+     "name": "Pagle's Fishing Rod",
+     "dbfId": 113103,
+     "id": "BG30_MagicItem_993",
+     "trinket_id": "BG30_MagicItem_993",
+     "type": "Greater",
+     "trinket_tier": "Greater",
+     "tier": "C",
+     "pick_rate": "26.9%",
+     "avg_placement": "3.56",
+     "games": 636,
+     "games_is_minimum": true,
+     "localized_name": "Удочка Пэгла"
+    },
+    {
+     "name": "Maw Caster Portrait",
+     "dbfId": 121558,
+     "id": "BG32_MagicItem_205",
+     "trinket_id": "BG32_MagicItem_205",
+     "type": "Greater",
+     "trinket_tier": "Greater",
+     "tier": "A",
+     "pick_rate": "56.6%",
+     "avg_placement": "3.33",
+     "games": 258,
+     "games_is_minimum": true,
+     "localized_name": "Портрет заклинателя из Утробы"
+    },
+    {
+     "name": "Safety Patch",
+     "dbfId": 130838,
+     "id": "BG35_MagicItem_820",
+     "trinket_id": "BG35_MagicItem_820",
+     "type": "Greater",
+     "trinket_tier": "Greater",
+     "tier": "D",
+     "pick_rate": "78.6%",
+     "avg_placement": "3.71",
+     "games": 456,
+     "games_is_minimum": true,
+     "localized_name": "Защитная заплатка"
+    },
+    {
+     "name": "Soul Fermenter",
+     "dbfId": 131132,
+     "id": "BG35_MagicItem_732",
+     "trinket_id": "BG35_MagicItem_732",
+     "type": "Greater",
+     "trinket_tier": "Greater",
+     "tier": "A",
+     "pick_rate": "48.9%",
+     "avg_placement": "3.18",
+     "games": 188,
+     "games_is_minimum": true,
+     "localized_name": "Разлагатель душ"
+    },
+    {
+     "name": "Sinister Invitation",
+     "dbfId": 134748,
+     "id": "BG36_MagicItem_610",
+     "trinket_id": "BG36_MagicItem_610",
+     "type": "Greater",
+     "trinket_tier": "Greater",
+     "tier": "D",
+     "pick_rate": "24.7%",
+     "avg_placement": "3.83",
+     "games": 1014,
+     "games_is_minimum": true,
+     "localized_name": "Зловещее приглашение"
+    }
+   ],
+   "source": {
+    "key": "hsreplay",
+    "url": "https://hsreplay.net/api/v1/battlegrounds/trinkets/?format=json&hl=en&BattlegroundsMMRPercentile=TOP_1_PERCENT&BattlegroundsTimeRange=CURRENT_BATTLEGROUNDS_PATCH",
+    "mmr_percentile": "TOP_1_PERCENT",
+    "time_range": "CURRENT_BATTLEGROUNDS_PATCH"
+   }
+  }
+ },
+ "publication": {
+  "schema_version": 1,
+  "source_id": "hsreplay_battlegrounds_trinkets_top_1_percent_current_battlegrounds_patch",
+  "mode": "stable",
+  "channel": "stable",
+  "published_at": "2026-11-17T17:01:26.821931+00:00"
+ }
+}

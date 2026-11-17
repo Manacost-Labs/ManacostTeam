@@ -72,6 +72,35 @@ STATS_API_PATHS = {
     "parsing-reliability": "/system/parsing-reliability",
 }
 STATS_API_SOURCE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,127}$")
+# Full mode bundles: the whole minion/hero list or a large Arena dataset is
+# bigger than one ad-hoc stats-api answer, and the API caps `limit` at 500.
+STATS_BUNDLE_MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+STATS_BUNDLE_ENDPOINT_LIMIT = 500
+STATS_BUNDLE_MANIFEST = "stats-bundle-manifest.json"
+STATS_BUNDLE_SETS: dict[str, tuple[tuple[str, str | None], ...]] = {
+    "standard": tuple(
+        ("dataset", f"hsguru_meta_standard_{rank}")
+        for rank in ("diamond_4to1", "legend", "top_5k", "top_legend")
+    ),
+    "wild": tuple(
+        ("dataset", f"hsguru_meta_wild_{rank}")
+        for rank in ("diamond_4to1", "legend", "top_5k", "top_legend")
+    ),
+    "battlegrounds": (
+        ("battlegrounds-minions", None),
+        ("battlegrounds-heroes", None),
+        ("dataset", "firestone_battlegrounds_cards"),
+        ("dataset", "firestone_battlegrounds_comps"),
+        ("dataset", "hsreplay_battlegrounds_trinkets_all_current_battlegrounds_patch"),
+        ("dataset", "hsreplay_battlegrounds_trinkets_top_1_percent_current_battlegrounds_patch"),
+    ),
+    "arena": (
+        ("arena-classes", None),
+        ("dataset", "hsreplay_arena_cards_advanced"),
+        ("dataset", "firestone_arena_cards_normal"),
+        ("dataset", "heartharena_tierlist"),
+    ),
+}
 RATE_WINDOW_SECONDS = 60
 MAX_PROVIDER_RESPONSE_BYTES = 10_000_000
 
@@ -1165,6 +1194,137 @@ def normalize_stats_api(
     )
 
 
+def stats_bundle_url(operation: str, source_id: str | None) -> str:
+    """Canonical URL of one bundle item; only allowlisted routes are accepted."""
+
+    if operation == "dataset":
+        url, _path = stats_api_endpoint("dataset", {"source_id": source_id})
+        return url
+    url, _path = stats_api_endpoint(operation, {})
+    return f"{url}?{urlencode({'limit': STATS_BUNDLE_ENDPOINT_LIMIT})}"
+
+
+def stats_api_get_bytes(url: str, max_bytes: int = STATS_BUNDLE_MAX_RESPONSE_BYTES) -> bytes:
+    """GET one allowlisted statistics URL and return the exact response bytes."""
+
+    request = Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "deep-research-koloda-stats/1.0",
+        },
+        method="GET",
+    )
+    try:
+        with urlopen(request, timeout=STATS_API_TIMEOUT_SECONDS) as response:
+            raw = response.read(max_bytes + 1)
+    except HTTPError as exc:
+        raise ProviderError(
+            "koloda_stats_api",
+            f"Statistics API returned HTTP {exc.code}.",
+            status=exc.code,
+            retry_after=exc.headers.get("Retry-After") if exc.headers else None,
+        ) from exc
+    except URLError as exc:
+        raise ProviderError("koloda_stats_api", "Statistics API request failed.") from exc
+    if len(raw) > max_bytes:
+        raise ProviderError("koloda_stats_api", "Statistics response is too large.")
+    return raw
+
+
+def stats_bundle(mode: str, output: Path) -> dict[str, Any]:
+    """Save the canonical dataset set of one mode with a SHA-256 manifest.
+
+    Every file holds the exact UTF-8 bytes returned by the API, so a
+    ``sources.json`` row is the manifest entry plus ``text`` = the file
+    content: its ``sha256`` already equals ``sha256(text.encode("utf-8"))``.
+    """
+
+    items = STATS_BUNDLE_SETS.get(mode)
+    if items is None:
+        raise ProviderError("koloda_stats_api", "Unsupported statistics bundle mode.")
+    output.mkdir(parents=True, exist_ok=True)
+    host = urlsplit(STATS_API_BASE_URL).hostname or "api.kolodahearthstone.com"
+    files: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for operation, source_id in items:
+        name = source_id or operation
+        url = stats_bundle_url(operation, source_id)
+        try:
+            raw = stats_api_get_bytes(url)
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise ProviderError(
+                    "koloda_stats_api", "Statistics API returned invalid JSON."
+                ) from exc
+            if not isinstance(payload, dict):
+                raise ProviderError(
+                    "koloda_stats_api", "Statistics API returned an unexpected response shape."
+                )
+        except ProviderError as exc:
+            failures.append({"name": name, "url": url, "error": exc.as_dict()})
+            continue
+        path = output / f"{name}.json"
+        temporary = path.with_name(f"{path.name}.tmp")
+        temporary.write_bytes(raw)
+        os.replace(temporary, path)
+        meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+        data = payload.get("data")
+        entry: dict[str, Any] = {
+            "id": f"koloda-{name}",
+            "name": name,
+            "operation": operation,
+            "url": url,
+            "path": path.name,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "bytes": len(raw),
+            "access": "public",
+            "source": host,
+            "retrieved_at": utc_now(),
+            "api_source_id": meta.get("source_id") or payload.get("source_id") or source_id,
+            "api_fetched_at": meta.get("fetched_at") or payload.get("fetched_at"),
+            "api_stale": meta.get("stale") if isinstance(meta.get("stale"), bool) else None,
+        }
+        if isinstance(data, list):
+            entry["rows"] = len(data)
+            count = meta.get("count")
+            if isinstance(count, int) and count > len(data):
+                warnings.append(
+                    f"{name}: API reports {count} rows but returned {len(data)}; the file is truncated."
+                )
+        if entry["api_stale"] is True:
+            warnings.append(
+                f"{name}: API marks this dataset stale (fetched_at {entry['api_fetched_at']})."
+            )
+        files.append(entry)
+    if not files:
+        raise ProviderError("koloda_stats_api", "No statistics dataset of the bundle could be read.")
+    manifest = {
+        "schema_version": SCHEMA_VERSION,
+        "provider": "koloda_stats_api",
+        "operation": "stats-bundle",
+        "mode": mode,
+        "base_url": STATS_API_BASE_URL,
+        "collected_at": utc_now(),
+        "files": files,
+        "failures": failures,
+        "warnings": [
+            *warnings,
+            "Check api_fetched_at and api_stale before making freshness claims.",
+            "Statistics describe the published dataset and do not by themselves explain causation.",
+        ],
+    }
+    manifest_path = output / STATS_BUNDLE_MANIFEST
+    temporary = manifest_path.with_name(f"{manifest_path.name}.tmp")
+    temporary.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    os.replace(temporary, manifest_path)
+    return manifest
+
+
 def normalize_tinyfish_search(
     payload: dict[str, Any],
     query: str,
@@ -1454,6 +1614,13 @@ def build_parser() -> argparse.ArgumentParser:
     stats_api.add_argument("--tavern-tier", type=int)
     stats_api.add_argument("--limit", type=positive_limit, default=50)
     stats_api.add_argument("--offset", type=int, default=0)
+
+    stats_bundle_parser = subparsers.add_parser(
+        "stats-bundle",
+        help="Save the canonical Koloda statistics datasets of one game mode with SHA-256 manifest.",
+    )
+    stats_bundle_parser.add_argument("--mode", choices=tuple(STATS_BUNDLE_SETS), required=True)
+    stats_bundle_parser.add_argument("--output", required=True, help="Directory for the bundle.")
     return parser
 
 
@@ -1620,6 +1787,8 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
             args.operation,
             params,
         )
+    if args.command == "stats-bundle":
+        return stats_bundle(args.mode, Path(args.output))
     raise ProviderError("adapter", "Unknown command.")
 
 

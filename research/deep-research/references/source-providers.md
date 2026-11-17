@@ -108,6 +108,8 @@ python3 scripts/community_sources.py stats-api \
   --operation constructed-archetypes --limit 50
 python3 scripts/community_sources.py stats-api \
   --operation dataset --source-id metastats_matchups
+python3 scripts/community_sources.py stats-bundle \
+  --mode battlegrounds --output RUN/stats-bundle
 ```
 
 RedditAPI reads `REDDITAPIS_KEY`; GetXAPI reads `GETXAPI_KEY`; TranscriptAPI reads `TRANSCRIPTAPI_TOKEN`. Configure these only in the local environment or a secret manager. TinyFish uses `TINYFISH_API_KEY` for its REST Search/Fetch fallback and can use its CLI when installed. Chinese ingestion reads `SCRAPE_DO_API_TOKEN` and optionally `KHS_API_TOKEN`. Never place keys in a command argument, target URL, repository file, research bundle, snapshot, output, or error report; provider-required authentication must remain inside a redacted transport boundary.
@@ -121,6 +123,26 @@ Arena classes, and parsing reliability. Query `api.kolodahearthstone.com` before
 HSReplay, HSGuru, or MetaStats pages: those datasets are already cached there. The named `dataset`
 operation accepts only a validated source id; current MetaStats ids include `metastats_decks` and
 `metastats_matchups`.
+
+`stats-bundle --mode standard|wild|battlegrounds|arena --output DIR` saves the canonical dataset
+set of one mode in a single call: HSGuru meta for Diamond 4–1, Legend, Top 5K and Top Legend
+(Standard/Wild); minions, heroes, Firestone cards and compositions, and trinkets for all players
+and the top 1% (Battlegrounds); Arena classes and card tables (Arena). Each file holds the exact
+response bytes; `stats-bundle-manifest.json` lists `id`, `url`, `path`, `sha256`, `bytes`,
+`access`, `source`, `retrieved_at`, `api_fetched_at` and `api_stale`, so a `sources.json` row is
+the entry plus `text` = the file content. Failed items stay in `failures`; a stale or truncated
+dataset is a manifest warning. `editorteam.stats_insights --from DIR` in the editor module reads
+the same files offline and extracts deterministic contrasts without inventing causes.
+
+### Step 0 of any Hearthstone research
+
+1. If Manacost MCP (`https://hearthpulse.net/mcp`, server `manacost`) is connected, read the
+   archive of earlier issues and guides (`search_content`, `get_content`) and the card catalog.
+2. Always save fresh `api.kolodahearthstone.com/v1` tables with `stats-bundle` (and, for editor
+   work, `python -m editorteam.stats_insights`) **before** scraping HSGuru or HSReplay through
+   Scrape.do.
+3. Use Scrape.do, RedditAPI and TranscriptAPI for what the tables do not hold: streamer
+   timestamps, Reddit disputes, patch notes and the reasons behind a contrast.
 
 ## Provider rules
 

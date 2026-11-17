@@ -50,6 +50,13 @@ python skills/meta-report/scripts/meta_report.py next build/meta-reports/unique-
 
 ## Исследование → статья
 
+0. **Шаг 0** (до Scrape.do и парсинга HSGuru/HSReplay): Manacost MCP, если подключён, —
+   архив выпусков и каталог карт; затем свежие таблицы `api.kolodahearthstone.com/v1`:
+   `python research/deep-research/scripts/community_sources.py stats-bundle --mode standard --output RUN/stats-bundle`
+   (для вольного — `--mode wild`) и разрывы рангов
+   `python -m editorteam.stats_insights --mode standard --from RUN/stats-bundle --output RUN/stats-insights.json`
+   (Алмаз 4–1 против Легенды и Топ-Легенды). Контраст — повод искать причину в
+   разборах и на Reddit, а не готовый вывод; `warnings` о несвежем срезе сохраняй.
 1. ResearchTeam проверяет патч/хотфиксы у Blizzard, изучает статистику и
    опубликованные составы, объясняет положение каждого класса, планы игры,
    ключевые связки, ограничения и контрпримеры. Manacost MCP дает архив,

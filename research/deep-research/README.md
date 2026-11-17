@@ -79,6 +79,7 @@ python3 scripts/community_sources.py tinyfish-search --query "Hearthstone analys
 python3 scripts/community_sources.py tinyfish-fetch --url https://example.com/source
 python3 scripts/community_sources.py stats-api --operation constructed-archetypes --limit 50
 python3 scripts/community_sources.py stats-api --operation dataset --source-id metastats_decks
+python3 scripts/community_sources.py stats-bundle --mode battlegrounds --output RUN/stats-bundle
 ```
 
 RedditAPI reads `REDDITAPIS_KEY`, GetXAPI reads `GETXAPI_KEY`, TranscriptAPI reads `TRANSCRIPTAPI_TOKEN`, and TinyFish reads `TINYFISH_API_KEY` for its REST Search/Fetch fallback or uses its CLI when installed. Keys are never command arguments or output. Transcript translation is disabled unless explicitly requested because it can cost additional credits. `youtube-public-transcript` is the credential-free, explicitly labeled reserve route and requires the optional `youtube-transcript-api` package; it never masquerades as TranscriptAPI output. TinyFish search is locally capped at 30 calls per rolling minute. Provider output is still untrusted discovery material until the original source is inspected and converted into Source/Evidence records; API statistics also require freshness checks. HSReplay, HSGuru, and MetaStats datasets already published by `api.kolodahearthstone.com` should be read there first. Use the named `dataset` operation for generic stored datasets such as `metastats_decks` and `metastats_matchups`; it accepts only a plain source id and never an arbitrary URL.

@@ -1,0 +1,128 @@
+{
+ "state": "ok",
+ "fetched_at": "2026-11-17T14:40:38.448278+00:00",
+ "final_url": "https://www.hsguru.com/meta?format=2&rank=diamond_4to1",
+ "data": {
+  "source_id": "hsguru_meta_standard_diamond_4to1",
+  "structured": {
+   "type": "meta",
+   "strategies": [
+    {
+     "Archetype": "Yogg Warrior",
+     "Archetype_url": "https://www.hsguru.com/archetype/Yogg%20Warrior?rank=diamond_4to1",
+     "Winrate↓": "59.9",
+     "Popularity": "5.5% (27285)",
+     "Turns": "8.3",
+     "Duration": "7.4",
+     "Climbing Speed": "1.61⭐/h"
+    },
+    {
+     "Archetype": "Void C'Thun DH",
+     "Archetype_url": "https://www.hsguru.com/archetype/Void%20C%27Thun%20DH?rank=diamond_4to1",
+     "Winrate↓": "57.3",
+     "Popularity": "6.1% (30353)",
+     "Turns": "8.0",
+     "Duration": "7.1",
+     "Climbing Speed": "1.24⭐/h"
+    },
+    {
+     "Archetype": "Mug Shaman",
+     "Archetype_url": "https://www.hsguru.com/archetype/Mug%20Shaman?rank=diamond_4to1",
+     "Winrate↓": "56.3",
+     "Popularity": "4.0% (19643)",
+     "Turns": "8.4",
+     "Duration": "8.3",
+     "Climbing Speed": "0.91⭐/h"
+    },
+    {
+     "Archetype": "Holy Paladin",
+     "Archetype_url": "https://www.hsguru.com/archetype/Holy%20Paladin?rank=diamond_4to1",
+     "Winrate↓": "54.7",
+     "Popularity": "3.5% (17255)",
+     "Turns": "9.0",
+     "Duration": "7.6",
+     "Climbing Speed": "0.75⭐/h"
+    },
+    {
+     "Archetype": "Zoolock",
+     "Archetype_url": "https://www.hsguru.com/archetype/Zoolock?rank=diamond_4to1",
+     "Winrate↓": "54.7",
+     "Popularity": "0.7% (3648)",
+     "Turns": "7.5",
+     "Duration": "6.1",
+     "Climbing Speed": "0.92⭐/h"
+    },
+    {
+     "Archetype": "AYAYA Rogue",
+     "Archetype_url": "https://www.hsguru.com/archetype/AYAYA%20Rogue?rank=diamond_4to1",
+     "Winrate↓": "53.9",
+     "Popularity": "10.7% (53045)",
+     "Turns": "7.5",
+     "Duration": "7.1",
+     "Climbing Speed": "0.65⭐/h"
+    },
+    {
+     "Archetype": "Burn Mage",
+     "Archetype_url": "https://www.hsguru.com/archetype/Burn%20Mage?rank=diamond_4to1",
+     "Winrate↓": "53.7",
+     "Popularity": "4.6% (22807)",
+     "Turns": "7.5",
+     "Duration": "6.4",
+     "Climbing Speed": "0.69⭐/h"
+    },
+    {
+     "Archetype": "Blood DK",
+     "Archetype_url": "https://www.hsguru.com/archetype/Blood%20DK?rank=diamond_4to1",
+     "Winrate↓": "52.7",
+     "Popularity": "3.3% (16280)",
+     "Turns": "10.1",
+     "Duration": "9.4",
+     "Climbing Speed": "0.34⭐/h"
+    },
+    {
+     "Archetype": "Quest Priest",
+     "Archetype_url": "https://www.hsguru.com/archetype/Quest%20Priest?rank=diamond_4to1",
+     "Winrate↓": "52.1",
+     "Popularity": "2.3% (11384)",
+     "Turns": "9.6",
+     "Duration": "9.1",
+     "Climbing Speed": "0.27⭐/h"
+    },
+    {
+     "Archetype": "Raza DH",
+     "Archetype_url": "https://www.hsguru.com/archetype/Raza%20DH?rank=diamond_4to1",
+     "Winrate↓": "52.0",
+     "Popularity": "0.2% (1120)",
+     "Turns": "8.3",
+     "Duration": "8.6",
+     "Climbing Speed": "0.28⭐/h"
+    },
+    {
+     "Archetype": "Harold Blood DK",
+     "Archetype_url": "https://www.hsguru.com/archetype/Harold%20Blood%20DK?rank=diamond_4to1",
+     "Winrate↓": "51.6",
+     "Popularity": "12.1% (59862)",
+     "Turns": "10.1",
+     "Duration": "9.5",
+     "Climbing Speed": "0.2⭐/h"
+    },
+    {
+     "Archetype": "Thief Priest",
+     "Archetype_url": "https://www.hsguru.com/archetype/Thief%20Priest?rank=diamond_4to1",
+     "Winrate↓": "46.7",
+     "Popularity": "4.0% (19607)",
+     "Turns": "11.4",
+     "Duration": "10.8",
+     "Climbing Speed": "-0.36⭐/h"
+    }
+   ]
+  }
+ },
+ "publication": {
+  "schema_version": 1,
+  "source_id": "hsguru_meta_standard_diamond_4to1",
+  "mode": "stable",
+  "channel": "stable",
+  "published_at": "2026-11-17T14:40:38.448278+00:00"
+ }
+}

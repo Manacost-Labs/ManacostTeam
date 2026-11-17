@@ -59,6 +59,14 @@ Helper не ищет и не пишет статью; пустая матриц�
 
 Прочитай [research playbook](references/research-playbook.md) целиком. Кратко:
 
+- **Шаг 0** (до Scrape.do и HSGuru/HSReplay): Manacost MCP, если подключён, —
+  прошлые выпуски (`search_content`, `get_content`) и каталог карт; затем свежие
+  таблицы `api.kolodahearthstone.com/v1` одним вызовом
+  `python research/deep-research/scripts/community_sources.py stats-bundle --mode battlegrounds --output RUN/stats-bundle`
+  и контрасты `python -m editorteam.stats_insights --mode battlegrounds --from RUN/stats-bundle --output RUN/stats-insights.json`
+  (ловушки толпы, ранний темп, точки выхода, аксессуары «все» против топ-1%).
+  Контраст — повод искать причину на стримах и Reddit, а не готовый вывод; `warnings`
+  о несвежем срезе сохраняй в журнале.
 - Запуск ResearchTeam уровня `exhaustive`, профиль `editor-ready`, с
   `hearthstone-source-library.md` (все `owner_required` источники) и
   [broad platform search](../../research/deep-research/references/broad-platform-search.md).

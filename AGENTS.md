@@ -32,6 +32,19 @@
 
 ## Локальные пайплайны
 
+**Шаг 0 любого исследования Hearthstone** (до research, статьи и тир-листа):
+1) если подключён Manacost MCP (`https://hearthpulse.net/mcp`, сервер `manacost`),
+забери прошлые выпуски и гайды (`search_content`, `get_content`) и каталог карт;
+2) всегда сохрани свежие таблицы `https://api.kolodahearthstone.com/v1` **до** любого
+парсинга HSGuru/HSReplay через Scrape.do:
+`python research/deep-research/scripts/community_sources.py stats-bundle --mode standard|wild|battlegrounds|arena --output RUN/stats-bundle`
+(файлы с SHA-256 и manifest для `sources.json`), затем контрасты
+`python -m editorteam.stats_insights --mode battlegrounds --tavern-tier N --from RUN/stats-bundle --output RUN/stats-insights.json`
+(или `--mode standard|wild`); предупреждения о `stale`/старом `fetched_at` переноси в оговорки;
+3) Scrape.do, RedditAPI и TranscriptAPI — для того, чего нет в таблицах: таймкоды стримеров,
+споры на Reddit, патчноуты и причины («почему карта — ловушка»). Цифры контрастов не
+объясняют причину сами.
+
 Во всех исследованиях Hearthstone обязателен обход всех 39 источников владельца:
 `research/deep-research/references/hearthstone-source-library.md` и записи
 `owner_required` в `references/domains/hearthstone-sources.json` этого модуля.
