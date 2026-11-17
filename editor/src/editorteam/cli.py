@@ -142,7 +142,7 @@ def _audit_report(text: str, document: str, args, author_context: dict | None = 
     # маркеры шаблона
     if profile.enabled("markers"):
         markers = C.sibling("markers")
-        for hit in markers.scan(text, markers.load_patterns()):
+        for hit in rules.filter_marker_hits(markers.scan(text, markers.load_patterns()), text, profile):
             sev = "review"
             report.add(
                 Finding(
@@ -395,7 +395,7 @@ def _audit_report(text: str, document: str, args, author_context: dict | None = 
     return report
 
 
-BG_PROFILES = ("battlegrounds-guide", "battlegrounds-article")
+BG_PROFILES = ("battlegrounds-guide", "battlegrounds-article", "battlegrounds-tierlist")
 # Однообразные начала абзацев ищутся ещё и в гайдах по колодам.
 OPENING_PROFILES = (*BG_PROFILES, "constructed-guide")
 
@@ -454,6 +454,25 @@ def _owner_checks(text: str, profile, report: Report, author_context: dict | Non
             )
     if profile.id not in BG_PROFILES or not profile.enabled("owner_checks"):
         return
+    from editorteam import bg_mechanics_gate
+
+    for hit in bg_mechanics_gate.check_bg_mechanics(text):
+        sev = "review" if hit["severity"] == "warning" else hit["severity"]
+        report.add(
+            Finding(
+                id=hit["id"],
+                analyzer=hit["analyzer"],
+                category=hit["category"],
+                severity=sev,
+                confidence=0.95 if sev == "error" else 0.75,
+                message=hit["message"],
+                evidence=hit.get("evidence", ""),
+                suggestion=hit.get("suggestion", ""),
+                line=hit.get("line"),
+                profile=profile.id,
+                meta=hit.get("meta") or {},
+            )
+        )
     C = _scripts()
     morph = C.morph()
     for hit in Owner.overused_words(text, Owner.load_frequencies(), morph, _prose_lines):

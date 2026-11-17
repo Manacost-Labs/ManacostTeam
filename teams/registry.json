@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.16.0",
+      "version": "1.17.0",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -349,7 +349,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.12.14",
+      "version": "1.13.0",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -459,6 +459,26 @@
         {
           "source": "editor/src/editorteam/owner_review.py",
           "destination": "python/editorteam/owner_review.py"
+        },
+        {
+          "source": "editor/src/editorteam/bg_dossier.py",
+          "destination": "python/editorteam/bg_dossier.py"
+        },
+        {
+          "source": "editor/src/editorteam/bg_mechanics_gate.py",
+          "destination": "python/editorteam/bg_mechanics_gate.py"
+        },
+        {
+          "source": "editor/src/editorteam/bg_sim.py",
+          "destination": "python/editorteam/bg_sim.py"
+        },
+        {
+          "source": "editor/src/editorteam/publication_bundle.py",
+          "destination": "python/editorteam/publication_bundle.py"
+        },
+        {
+          "source": "editor/src/editorteam/wordpress.py",
+          "destination": "python/editorteam/wordpress.py"
         }
       ]
     },
@@ -471,5 +491,5 @@
       "resources": []
     }
   ],
-  "release_version": "1.20.18"
+  "release_version": "1.20.19"
 }

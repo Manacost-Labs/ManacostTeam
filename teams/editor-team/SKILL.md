@@ -2,7 +2,7 @@
 name: editor-team
 description: "Редактура игровых материалов в стиле Манакоста с сохранением фактов и авторского голоса."
 metadata:
-  version: "1.16.0"
+  version: "1.17.0"
 ---
 
 # EditorTeam
@@ -12,7 +12,7 @@ metadata:
 примеры и терминология этих документов не переносятся на другие игры. Содержание бери из свежих проверенных источников.
 
 Справочники по задаче — открывай нужный, остальные не держи в голове:
-- обзор стратегии Полей сражений → [references/genre-battlegrounds.md](references/genre-battlegrounds.md);
+- обзор стратегии Полей сражений → [references/genre-battlegrounds.md](references/genre-battlegrounds.md) (для тир-листов и рейтингов пула БГ выбирай профиль `battlegrounds-tierlist`, а не `battlegrounds-guide`; для любых текстов БГ запускай `python -m editorteam.bg_mechanics_gate` и сверяй дочерние токены по `python -m editorteam.bg_dossier`);
 - большой гайд по одной колоде → [references/genre-deck-guide.md](references/genre-deck-guide.md);
 - запуск runner/manacost-publish, контракты отзывов, CLI, task_context, приём материала ResearchTeam и research handoff, проверки источников, Manacost MCP → [references/pipeline-contracts.md](references/pipeline-contracts.md).
 
@@ -87,4 +87,4 @@ language_norm/author_global могут дать обязательную зам�
 ничего не правят молча, а недоступный инструмент называй непроведённой проверкой.
 
 Перед каждой выдачей сверяй с заданием весь текст, заголовки, подписи и ответ в чате. Верни полный исправленный материал и коротко объясни существенные изменения. Не публикуй
-его автоматически. Если нужны только шорткоды, используй отдельный card-shortcodes, не редактируй прозу. Не добавляй шорткоды без запроса пользователя.
+его автоматически. Если нужны только шорткоды, используй отдельный card-shortcodes, не редактируй прозу. При выдаче комплекта со шорткодами и/или `seo.json` проверяй посимвольное совпадение текста и актуальность `article_sha256` через `python -m editorteam.publication_bundle verify`. Не добавляй шорткоды без запроса пользователя.

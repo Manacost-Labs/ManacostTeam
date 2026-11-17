@@ -32,6 +32,7 @@ from pathlib import Path
 
 from editorteam import games as G
 from editorteam import profiles as P
+from editorteam import rules
 from editorteam.corpus_learning import CorpusError, CorpusStore
 from editorteam.finding import Finding, Report
 from editorteam.integrity import arithmetic_issues, diagnostic_scope
@@ -109,7 +110,7 @@ def analyze(
 
     if prof.enabled("markers"):
         markers = C.sibling("markers")
-        for hit in markers.scan(text, markers.load_patterns()):
+        for hit in rules.filter_marker_hits(markers.scan(text, markers.load_patterns()), text, prof):
             sev = "review"
             report.add(
                 Finding(
@@ -829,6 +830,7 @@ GENRE_FAMILIES = {
     "analysis": "analysis",
     "analytics-article": "analysis",
     "battlegrounds-article": "analysis",
+    "battlegrounds-tierlist": "guide",
     "meta-report": "analysis",
     "news": "news",
 }

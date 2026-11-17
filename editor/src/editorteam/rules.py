@@ -202,3 +202,60 @@ def word_pattern(rule: TermRule) -> re.Pattern:
     """Образец для поиска слова правила во всех падежах (грубо, по основе)."""
     stem = re.escape(rule.subject[:-1] if len(rule.subject) > 4 else rule.subject)
     return re.compile(rf"\b{stem}\w*", re.IGNORECASE)
+
+
+# ── форма подачи по профилю: оглавления тиров ────────────────────────────────
+# Пункт-оглавление тира — одно жирное название карты без пояснения:
+# «- **Подозрительный надзиратель**». Это перечень, а не акцент и не приём
+# «**Ярлык:** пояснение», поэтому в профиле с form.allow_bold_index_lists
+# маркеры жирного на таких строках не показываются. Пункт с двоеточием или
+# тире после названия остаётся под проверкой как раньше.
+BOLD_INDEX_LINE = re.compile(
+    r"^\s*(?:[-*+]|\d{1,3}[.)])\s+\*\*[^*\n]{1,80}\*\*\s*[.,;]?\s*$"
+)
+BOLD_MARKER_IDS = frozenset({"bold-spam", "bold-label-list"})
+
+
+def _profile_form(profile) -> dict:
+    if profile is None:
+        return {}
+    if isinstance(profile, dict):
+        return profile.get("form", profile) or {}
+    return getattr(profile, "form", None) or {}
+
+
+def filter_marker_hits(hits: list[dict], text: str, profile) -> list[dict]:
+    """Снять маркеры жирного с пунктов-оглавлений, если профиль это разрешает.
+
+    `hits` — выход `markers.scan` (поля id, line, para, min_hits, scope);
+    `profile` — Profile, его `form` или None. Без флага
+    `form.allow_bold_index_lists` список возвращается без изменений. После
+    снятия кластер жирного в абзаце пересчитывается: два оставшихся акцента
+    при пороге 3 уже не сигнал.
+    """
+    if not _profile_form(profile).get("allow_bold_index_lists"):
+        return hits
+    lines = text.splitlines()
+
+    def index_line(number: int) -> bool:
+        # образец маркера начинается с `^\s*` и может захватить пустые строки
+        # перед пунктом: смотрим первую непустую строку от места совпадения
+        while 1 <= number <= len(lines) and not lines[number - 1].strip():
+            number += 1
+        return 1 <= number <= len(lines) and bool(BOLD_INDEX_LINE.match(lines[number - 1]))
+
+    kept = [
+        h for h in hits
+        if not (h.get("id") in BOLD_MARKER_IDS and index_line(int(h.get("line", 0))))
+    ]
+    counts: dict[tuple, int] = {}
+    for h in kept:
+        if h.get("id") in BOLD_MARKER_IDS:
+            key = (h["id"], h.get("para"))
+            counts[key] = counts.get(key, 0) + 1
+    return [
+        h for h in kept
+        if h.get("id") not in BOLD_MARKER_IDS
+        or h.get("scope", "paragraph") == "document"
+        or counts[(h["id"], h.get("para"))] >= int(h.get("min_hits", 1))
+    ]

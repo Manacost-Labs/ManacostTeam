@@ -150,6 +150,16 @@ HINTS = {
         r"\bпочему\s+это\s+(?:плохо|важно)\b",
         r"\bпотолок\s+силы\b",
     ],
+    # тир-лист пула Полей: учитывается только при BG-контексте (см. detect)
+    "battlegrounds-tierlist": [
+        r"тир-лист",
+        r"\bрейтинг\w*\s+тир-?\d",
+        r"\bлучш\w+\s+и\s+худш\w+\s+(?:тир-?\d|существ|геро|аксессуар)",
+        r"\bлучш\w+\s+тир-?\d\s+существ",
+        r"\b\d-(?:е|ые|х|ых|й|ый|го)\s+дроп\w*",
+        r"\bпервый\s+ход\s+на\s+полях\s+сражений",
+        r"\b\d+\s+(?:лучш|худш)\w+\s+(?:\w+\s+)?(?:существ|геро|аксессуар)\w*",
+    ],
     "analytics-article": [
         r"\bобзор\w*\s+(?:патч\w*|изменен\w*|карт\w*)",
         r"\bожидаем\w*\s+карт",
@@ -184,6 +194,19 @@ STRONG_ANTI_HINTS = (
     r"\b\d+\s+колод\w*\s+(?:против|для\s+(?:побед|борьб|контр))",
 )
 
+BG_CONTEXT = r"поля\w*\s+сражений|баттлграунд|\bтаверн"
+# разделы гайда одной сборки: при них текст — гайд, даже если в нём есть тир-лист
+BG_GUIDE_SECTIONS = r"идея\s+стратегии|ключевые\s+существа|план\s+по\s+ходам"
+# явные приметы рейтинга пула: тир-лист, лучшие/худшие тир-N, 1-е дропы
+STRONG_TIERLIST_HINTS = (
+    r"тир-лист",
+    r"\bрейтинг\w*\s+тир-?\d",
+    r"\bлучш\w+\s+и\s+худш\w+\s+тир-?\d",
+    r"\bлучш\w+\s+тир-?\d\s+существ",
+    r"\b\d-(?:е|ые|х|ых|го)\s+дроп\w*",
+    r"\bпервый\s+ход\s+на\s+полях\s+сражений",
+)
+
 
 def detect(text: str) -> tuple[str, float]:
     """Угадать профиль. Возвращает (имя, уверенность 0–1).
@@ -205,6 +228,23 @@ def detect(text: str) -> tuple[str, float]:
             # структуры нет, переносим вес этих общих сигналов в профиль
             # статьи, чтобы автору не приходилось указывать профиль вручную.
             scores["battlegrounds-article"] += guide_cues + 2
+    # Тир-лист Полей: без BG-контекста «тир-лист» — примета мета-отчёта, поэтому
+    # сигналы рейтинга считаются только рядом с Полями сражений. Явный рейтинг
+    # без разделов гайда одной сборки перевешивает и общий BG-профиль, и статью.
+    bg_context = re.search(BG_CONTEXT, text, re.I)
+    if not bg_context:
+        scores["battlegrounds-tierlist"] = 0
+    else:
+        # рейтинг объявляется в заголовке или первых абзацах; «Тир-лист» на
+        # третьей странице гайда по стратегии жанр не меняет
+        strong_tier = sum(len(re.findall(p, text[:1200], re.I)) for p in STRONG_TIERLIST_HINTS)
+        if (
+            strong_tier
+            and not re.search(BG_GUIDE_SECTIONS, text, re.I)
+            and not re.search(r"мета-отч[её]т", text[:1200], re.I)
+        ):
+            others = sum(v for k, v in scores.items() if k != "battlegrounds-tierlist")
+            scores["battlegrounds-tierlist"] += others + 3 * strong_tier
     preamble = text[:1200]
     strong_anti = sum(len(re.findall(pattern, preamble, re.I)) for pattern in STRONG_ANTI_HINTS)
     if strong_anti:
