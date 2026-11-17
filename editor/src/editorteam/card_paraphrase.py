@@ -689,20 +689,226 @@ def _advice(sentence: Sentence, own: list[str], lex: Lexicon, card_lemmas: Count
     return decision or reason or bool(kinds)
 
 
+# ── Пересказ связки нескольких карт ──────────────────────────────────────
+# Пошаговый пересказ взаимодействия («покупаете Лев-рыбу, применяете её
+# Активацию, Нетопырь уничтожает наживку и получает +5/+5») не набирает
+# половины текста ни одной карты, но почти целиком состоит из их текстов.
+# Поэтому для предложения (или двух соседних без опор совета) с двумя и
+# более картами покрытие считается по объединённому тексту карт и их
+# токенов из досье (`bg_dossier`: наживка лев-рыбы, щупальце Зоатроида).
+MULTI_COVER_MIN = 0.45
+MULTI_NOVELTY_MAX = 0.5
+MULTI_OVERLAP_MIN = 6
+MULTI_PER_CARD_MIN = 2  # пересказ связки: из текста каждой из двух карт ≥ 2 леммы
+MULTI_MAX_CARDS = 3  # четыре карты и больше в одной фразе — перечень, а не связка
+TOKEN_OVERLAP_MIN = 2  # токен входит в объединённый текст, только если его пересказывают
+# Оценка цены делает пересказ связки советом: «ценен», «выгодно», «слабый».
+EVALUATION = frozenset(
+    "хороший плохой сильный слабый ценный выгодный невыгодный полезный бесполезный "
+    "опасный удобный лучший худший мощный отличный неплохой стоящий окупаться "
+    "переплачивать дорогой дешёвый дешевый рискованный".split()
+)
+
+
+def linked_tokens(bg: dict[str, dict]) -> dict[str, list[tuple[str, list[str]]]]:
+    """{название карты: [(название токена, тексты)]} по правилам досье.
+
+    Токен — карта с ID-префиксом `<ID>t` / `<ID>_Gt` или названная в тексте
+    по `bg_dossier.TEXT_TOKEN_RULES`; если в снимке её нет, текст берётся из
+    `bg_dossier.BUILTIN_TOKENS`.
+    """
+    from bisect import bisect_left
+
+    from editorteam import bg_dossier
+
+    ids = sorted(bg)
+
+    def token(tid: str) -> tuple[str, list[str]] | None:
+        row = bg.get(tid)
+        if row:
+            return row["n"], list(row["t"])
+        builtin = bg_dossier.BUILTIN_TOKENS.get(tid)
+        if builtin and builtin.get("text_ru"):
+            return builtin["name_ru"], [clean_text(builtin["text_ru"])]
+        return None
+
+    out: dict[str, dict[str, list[str]]] = {}
+    for cid, row in bg.items():
+        found: dict[str, list[str]] = {}
+        for prefix in (f"{cid}t", f"{cid}_Gt"):
+            k = bisect_left(ids, prefix)
+            while k < len(ids) and ids[k].startswith(prefix):
+                hit = token(ids[k])
+                if hit:
+                    found.setdefault(hit[0], []).extend(hit[1])
+                k += 1
+        joined = " ".join(row["t"])
+        for pattern, token_ids in bg_dossier.TEXT_TOKEN_RULES:
+            if pattern.search(joined):
+                for tid in token_ids:
+                    hit = token(tid)
+                    if hit:
+                        found.setdefault(hit[0], []).extend(hit[1])
+        found.pop(row["n"], None)
+        if found:
+            target = out.setdefault(row["n"], {})
+            for name, texts in found.items():
+                target.setdefault(name, []).extend(texts)
+    return {
+        card: [(name, sorted(set(texts))) for name, texts in sorted(found.items())]
+        for card, found in out.items()
+    }
+
+
+def _overlap(own: list[frozenset], text: list[frozenset], used: list[bool]) -> int:
+    """Жадное сопоставление слов текста карты со свободными словами автора."""
+    hits = 0
+    for word in text:
+        for k, mine in enumerate(own):
+            if not used[k] and mine & word:
+                used[k] = True
+                hits += 1
+                break
+    return hits
+
+
+def _union_score(
+    own: list[frozenset], groups: list[tuple[str, str, list[list[frozenset]]]]
+) -> tuple[float, float, int, list[int]]:
+    """(доля объединённого текста, доля своих слов, общих лемм, общих по картам).
+
+    `groups` — (вид, название, варианты текста): у карты берётся вариант с
+    наибольшим пересечением, токен входит, только если его пересказывают.
+    """
+    union: list[list[frozenset]] = []
+    kinds: list[str] = []
+    for kind, _, variants in groups:
+        best, best_hits = None, -1
+        for words in variants:
+            if not words:
+                continue
+            hits = _overlap(own, words, [False] * len(own))
+            if hits > best_hits or (hits == best_hits and len(words) < len(best or ())):
+                best, best_hits = words, hits
+        if best is None or (kind == "token" and best_hits < TOKEN_OVERLAP_MIN):
+            continue
+        union.append(best)
+        kinds.append(kind)
+    size = sum(len(words) for words in union)
+    if not size or not own:
+        return 0.0, 1.0, 0, []
+    used = [False] * len(own)
+    per = [_overlap(own, words, used) for words in union]
+    total = sum(per)
+    cards = [n for n, kind in zip(per, kinds) if kind == "card"]
+    return total / size, used.count(False) / len(own), total, cards
+
+
+def _multi_groups(
+    cards: list[str], lex: Lexicon, tokens: dict[str, list[tuple[str, list[str]]]]
+) -> list[tuple[str, str, list[list[frozenset]]]]:
+    groups = []
+    for card in cards:
+        groups.append(("card", card, lex.card_texts(card)))
+        for name, texts in tokens.get(card, []):
+            groups.append(("token", name, [lex.content(_WORD.findall(t)) for t in texts]))
+    return groups
+
+
+def _distinct_cards(unit: list[Sentence]) -> list[str]:
+    """Карты фрагмента без коротких дублей: «Силач» рядом с «Дюнным силачом» — та же карта."""
+    cards = list(dict.fromkeys(m.card for s in unit for m in s.mentions))
+    words = {card: set(_WORD.findall(card.lower())) for card in cards}
+    return [
+        card for card in cards
+        if not any(other != card and words[card] < words[other] for other in cards)
+    ]
+
+
+def _multi_advice(unit: list[Sentence], lex: Lexicon, minus: Counter) -> bool:
+    """Условие, решение, причина или оценка цены хотя бы в одном предложении."""
+    for s in unit:
+        cond, decision, reason = signals(s, minus)
+        words = Counter(s.lemmas) - minus
+        if cond or decision or reason or words.keys() & EVALUATION:
+            return True
+        if context_kinds(_own(s), lex, minus) - {"when"}:
+            return True
+    return False
+
+
+def _multi_retellings(
+    sents: list[Sentence],
+    lex: Lexicon,
+    tokens: dict[str, list[tuple[str, list[str]]]],
+    taken: set[int],
+) -> list[dict]:
+    """Пересказ связки двух и более карт в предложении или паре соседних."""
+    out = []
+    for i, s in enumerate(sents):
+        units = [[s], sents[i : i + 2]] if i + 1 < len(sents) else [[s]]
+        for unit in units:
+            if any(id(x) in taken for x in unit):
+                continue
+            cards = _distinct_cards(unit)
+            if not 2 <= len(cards) <= MULTI_MAX_CARDS:
+                continue
+            own = [w for x in unit for w in lex.content(_own(x))]
+            groups = _multi_groups(cards, lex, tokens)
+            cover, novelty, overlap, per_card = _union_score(own, groups)
+            if (
+                overlap < MULTI_OVERLAP_MIN
+                or cover < MULTI_COVER_MIN
+                or novelty > MULTI_NOVELTY_MAX
+                or sum(n >= MULTI_PER_CARD_MIN for n in per_card) < 2
+            ):
+                continue
+            minus = Counter()
+            for _, name, _ in groups:
+                minus |= _card_all_lemmas(name, lex)
+                for token_name, texts in tokens.get(name, []):
+                    for t in texts:
+                        minus |= lex.all_lemmas(t)
+            if _multi_advice(unit, lex, minus):
+                continue
+            taken.update(id(x) for x in unit)
+            out.append(
+                {
+                    "line": unit[0].line,
+                    "card": " + ".join(cards),
+                    "quote": " ".join(x.text for x in unit),
+                    "card_text": " | ".join(
+                        t for card in cards for t in lex.texts.get(card, [])[:1]
+                    ),
+                    "cover": round(cover, 2),
+                    "novelty": round(novelty, 2),
+                    "overlap": overlap,
+                    "cards": cards,
+                }
+            )
+            break
+    return out
+
+
 def retellings(
     text: str,
     lex: Lexicon,
     prose: Callable[[str], str],
     aliases: dict[str, str] | None = None,
+    tokens: dict[str, list[tuple[str, list[str]]]] | None = None,
 ) -> list[dict]:
     """Предложения, которые пересказывают текст карты или силы героя.
 
     Мерится каждое предложение, а не доля по документу: владелец
-    возвращает текст и за одну такую фразу.
+    возвращает текст и за одну такую фразу. Предложение (или пара соседних)
+    с двумя и более картами дополнительно сверяется с объединённым текстом
+    этих карт и их токенов `tokens` (см. `linked_tokens`).
     """
     aliases = aliases or {}
+    tokens = tokens or {}
     out = []
     for sents in split_sentences(text, lex, prose):
+        taken: set[int] = set()
         for s in sents:
             s.mentions = _alias_mentions(s, aliases)
             if not s.mentions:
@@ -725,6 +931,7 @@ def retellings(
             card, cover, novelty, overlap = best
             if _advice(s, own, lex, _card_all_lemmas(card, lex)):
                 continue
+            taken.add(id(s))
             out.append(
                 {
                     "line": s.line,
@@ -736,6 +943,7 @@ def retellings(
                     "overlap": overlap,
                 }
             )
+        out += _multi_retellings(sents, lex, tokens, taken)
     return out
 
 

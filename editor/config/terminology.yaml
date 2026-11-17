@@ -135,3 +135,57 @@ rules:
     corpus: {slang: 0, preferred: 86}
     note: "О рангах — «на этих рангах», «на высоких рангах», не «на этом отрезке»"
 
+  # замечания редактора к статьям 2026-11: сленг и кальки, которые он правил руками
+  - id: term.milling
+    slang: миллинг
+    decision: advisory
+    preferred: сжигание карт
+    alternative: милл
+    corpus: {slang: 0, preferred: 2}
+    note: "«Миллинг» автор не пишет; «сжигание карт» или короткое «милл» по контексту"
+
+  - id: term.win_condition
+    slang: вин-кондишн
+    pattern: '\bвин[\s-]?кондиш\w*'
+    decision: auto_replace
+    authority: language_norm
+    preferred: способ победы
+    alternative: условие победы
+    corpus: {slang: 0, preferred: 153, alternative: 7}
+    note: "«вин-кондишн», «винкондишен» — калька win condition; у автора «способ победы»"
+
+  - id: term.raskrut
+    slang: раскрут
+    pattern: '\bраскрут(?:а|у|ом|е|ы|ов|ами|ах)?(?![а-яё])'
+    decision: auto_replace
+    authority: language_norm
+    preferred: раскрутка
+    alternative: перебор
+    corpus: {slang: 0, preferred: 0, alternative: 42}
+    note: "«раскрутка» колоды; о быстром доборе — «перебор». «Раскрутку», «раскрутить» не трогает"
+
+  - id: term.scale_bg
+    slang: скейл
+    aliases:
+      - {pattern: '\bскейл\w*', shown: "скейлится"}
+    decision: advisory
+    preferred: рост характеристик
+    alternative: бафф
+    corpus: {slang: 0, preferred: 1, alternative: 703}
+    note: "О Полях сражений — «растёт», «набирает характеристики», «бафф», а не «скейлится»"
+
+  - id: term.concentrate
+    slang: сконцентрироваться
+    decision: advisory
+    preferred: сфокусироваться
+    corpus: {slang: 5, preferred: 0}
+    note: "Просьба редактора; в корпусе гайдов чаще «сконцентрироваться», поэтому подсказка, не замена"
+
+  - id: term.naschet
+    slang: на счет
+    pattern: '\bна\s+сч[её]т\s+(?=(?:колод|карт|игр|сборк|матч|мет|геро|стратеги|заклинан|существ|тир|патч|баланс)\w*)'
+    decision: advisory
+    preferred: насчет
+    corpus: {slang: 0, preferred: 0}
+    note: "«На счет колоды/карт/игры» в значении «о» — «насчет»; «положить на счет» не трогать"
+

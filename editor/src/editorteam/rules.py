@@ -214,6 +214,19 @@ BOLD_INDEX_LINE = re.compile(
     r"^\s*(?:[-*+]|\d{1,3}[.)])\s+\*\*[^*\n]{1,80}\*\*\s*[.,;]?\s*$"
 )
 BOLD_MARKER_IDS = frozenset({"bold-spam", "bold-label-list"})
+# Карточка тира — абзац или пункт, который открывается официальным названием
+# карты жирным и тире: «**Подозрительный надзиратель** — берите на 1-м ходу».
+# Это навигация по тиру, а не приём «**Ярлык:** пояснение». Внутри карточки
+# допустим ещё один акцент на решении; три выделения и больше — по-прежнему
+# перебор жирного. Название — шорткод карты или имя из снимка карт: «**Плюс** —»
+# карточкой не считается.
+CARD_ENTRY_LINE = re.compile(
+    r"^\s*(?:[-*+]\s+|\d{1,3}[.)]\s+)?\*\*(?P<name>[^*\n]{1,120})\*\*\s*(?:[—–]|-(?=\s))\s*\S"
+)
+CARD_ENTRY_MAX_BOLD = 2
+_BOLD_SPAN = re.compile(r"\*\*[^*\n]{1,80}\*\*")
+_CARD_SHORTCODE = re.compile(r"\[(?:hs_bg|hs_card)\b", re.I)
+_ENTRY_BREAK = re.compile(r"^\s*(?:#{1,6}\s|[-*+]\s|\d{1,3}[.)]\s)")
 
 
 def _profile_form(profile) -> dict:
@@ -224,8 +237,54 @@ def _profile_form(profile) -> dict:
     return getattr(profile, "form", None) or {}
 
 
+@lru_cache(maxsize=1)
+def _card_names() -> frozenset[str]:
+    """Официальные названия карт из снимка HearthstoneJSON, строчными и без «ё»."""
+    from editorteam import card_paraphrase
+
+    try:
+        names = set(card_paraphrase.load_texts())
+        names |= {row["n"] for row in card_paraphrase.load_bg().values()}
+    except (OSError, ValueError, KeyError):
+        return frozenset()  # без снимка карточкой считается только шорткод
+    return frozenset(" ".join(n.split()).lower().replace("ё", "е") for n in names)
+
+
+def _is_card_name(label: str) -> bool:
+    if _CARD_SHORTCODE.search(label):
+        return True
+    return " ".join(label.split()).lower().replace("ё", "е") in _card_names()
+
+
+def _card_entry_lines(lines: list[str]) -> set[int]:
+    """Номера строк карточек тира, где жирного не больше CARD_ENTRY_MAX_BOLD.
+
+    Карточка — от строки-зачина до пустой строки, заголовка, следующего пункта
+    или следующего зачина.
+    """
+    out: set[int] = set()
+    n = 0
+    while n < len(lines):
+        m = CARD_ENTRY_LINE.match(lines[n])
+        if not (m and _is_card_name(m.group("name"))):
+            n += 1
+            continue
+        end = n + 1
+        while (
+            end < len(lines)
+            and lines[end].strip()
+            and not _ENTRY_BREAK.match(lines[end])
+            and not CARD_ENTRY_LINE.match(lines[end])
+        ):
+            end += 1
+        if sum(len(_BOLD_SPAN.findall(line)) for line in lines[n:end]) <= CARD_ENTRY_MAX_BOLD:
+            out.update(range(n + 1, end + 1))
+        n = end
+    return out
+
+
 def filter_marker_hits(hits: list[dict], text: str, profile) -> list[dict]:
-    """Снять маркеры жирного с пунктов-оглавлений, если профиль это разрешает.
+    """Снять маркеры жирного с пунктов-оглавлений и карточек тира, если профиль это разрешает.
 
     `hits` — выход `markers.scan` (поля id, line, para, min_hits, scope);
     `profile` — Profile, его `form` или None. Без флага
@@ -236,17 +295,20 @@ def filter_marker_hits(hits: list[dict], text: str, profile) -> list[dict]:
     if not _profile_form(profile).get("allow_bold_index_lists"):
         return hits
     lines = text.splitlines()
+    entries = _card_entry_lines(lines)
 
-    def index_line(number: int) -> bool:
+    def allowed_line(number: int) -> bool:
         # образец маркера начинается с `^\s*` и может захватить пустые строки
         # перед пунктом: смотрим первую непустую строку от места совпадения
         while 1 <= number <= len(lines) and not lines[number - 1].strip():
             number += 1
-        return 1 <= number <= len(lines) and bool(BOLD_INDEX_LINE.match(lines[number - 1]))
+        if not 1 <= number <= len(lines):
+            return False
+        return number in entries or bool(BOLD_INDEX_LINE.match(lines[number - 1]))
 
     kept = [
         h for h in hits
-        if not (h.get("id") in BOLD_MARKER_IDS and index_line(int(h.get("line", 0))))
+        if not (h.get("id") in BOLD_MARKER_IDS and allowed_line(int(h.get("line", 0))))
     ]
     counts: dict[tuple, int] = {}
     for h in kept:

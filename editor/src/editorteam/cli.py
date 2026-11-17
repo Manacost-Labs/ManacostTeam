@@ -396,8 +396,10 @@ def _audit_report(text: str, document: str, args, author_context: dict | None = 
 
 
 BG_PROFILES = ("battlegrounds-guide", "battlegrounds-article", "battlegrounds-tierlist")
-# Однообразные начала абзацев ищутся ещё и в гайдах по колодам.
-OPENING_PROFILES = (*BG_PROFILES, "constructed-guide")
+# Однообразные начала абзацев ищутся ещё и в гайдах по колодам. Тир-лист — нет:
+# там однотипное начало карточки («Существо — вердикт…») служит навигации, а
+# сигнал толкал автора сливать по три-четыре существа в один абзац.
+OPENING_PROFILES = ("battlegrounds-guide", "battlegrounds-article", "constructed-guide")
 
 
 def _author_context(path: Path, profile: str | None) -> dict:
@@ -410,7 +412,8 @@ def _author_context(path: Path, profile: str | None) -> dict:
 
 
 def _owner_checks(text: str, profile, report: Report, author_context: dict | None) -> None:
-    """Проверки по замечаниям владельца: запрет слова — для всех, остальное — для BG."""
+    """Проверки по замечаниям владельца: запрет слова и язык автора — для всех,
+    морфология, пересказ и игровая физика — для BG."""
     from editorteam import owner_checks as Owner
 
     if author_context:
@@ -450,6 +453,24 @@ def _owner_checks(text: str, profile, report: Report, author_context: dict | Non
                     line=hit["line"],
                     profile=profile.id,
                     meta={"count": hit["count"], "scheme": hit["scheme"], "last_line": hit["last_line"]},
+                )
+            )
+    if profile.enabled("owner_checks"):
+        # обращение, заголовки, «гайд по», «Вольный», полное имя карты — без морфологии
+        for hit in Owner.voice_checks(text):
+            report.add(
+                Finding(
+                    id=hit["id"],
+                    analyzer="owner",
+                    category=hit["category"],
+                    severity=hit["severity"],
+                    confidence=0.9 if hit["severity"] == "error" else 0.6,
+                    message=hit["message"],
+                    evidence=hit["evidence"],
+                    suggestion=hit["suggestion"],
+                    line=hit["line"],
+                    profile=profile.id,
+                    meta=hit["meta"],
                 )
             )
     if profile.id not in BG_PROFILES or not profile.enabled("owner_checks"):
@@ -513,7 +534,9 @@ def _owner_checks(text: str, profile, report: Report, author_context: dict | Non
         )
     lex, bg = _bg_card_lexicon()
     aliases = CardParaphrase.shortcode_aliases(text, bg)
-    for hit in CardParaphrase.retellings(text, lex, _prose_lines, aliases):
+    if not _BG_TOKENS or _BG_TOKENS[0] is not bg:
+        _BG_TOKENS[:] = [bg, CardParaphrase.linked_tokens(bg)]
+    for hit in CardParaphrase.retellings(text, lex, _prose_lines, aliases, _BG_TOKENS[1]):
         report.add(
             Finding(
                 id="card_paraphrase.retelling",
@@ -521,18 +544,24 @@ def _owner_checks(text: str, profile, report: Report, author_context: dict | Non
                 category="card-retelling",
                 severity="review",
                 confidence=0.6,
-                message=f"пересказ текста карты или силы героя: {hit['card']}",
+                message=(
+                    f"пересказ связки карт: {hit['card']}"
+                    if "cards" in hit
+                    else f"пересказ текста карты или силы героя: {hit['card']}"
+                ),
                 evidence=hit["quote"],
                 suggestion="убрать пересказ; оставить, что из эффекта следует для решения",
                 line=hit["line"],
                 profile=profile.id,
-                meta={"card_text": hit["card_text"], "cover": hit["cover"]},
+                meta={"card_text": hit["card_text"], "cover": hit["cover"], **(
+                    {"cards": hit["cards"]} if "cards" in hit else {}
+                )},
             )
         )
 
 
 def owner_findings(text: str, profile: str, author_context: dict | None = None) -> list[dict]:
-    """Same four diagnostics for native deletion, audit and the Go Python-sidecar."""
+    """Same owner diagnostics for native deletion, audit and the Go Python-sidecar."""
     from types import SimpleNamespace
 
     try:
@@ -1203,6 +1232,8 @@ def _card_lexicon():
 
 
 _BG_LEXICON: list = []
+# [снимок bg, токены его карт по правилам досье: {название: [(токен, тексты)]}].
+_BG_TOKENS: list = []
 
 
 def _bg_card_lexicon():

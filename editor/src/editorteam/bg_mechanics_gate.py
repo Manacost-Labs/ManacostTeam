@@ -12,7 +12,10 @@
     bg.token_zone_mismatch   — щупальце Зоатроида «остаётся на столе» (оно в руке);
     bg.false_free_gold       — «бесплатное золото» от лев-рыбы и нетопыря:
                                активация стоит 2, добытчик продаётся за 1;
-    bg.unlinked_pool_spell   — заклинание таверны без шорткода [hs_bg] (warning).
+    bg.unlinked_pool_spell   — заклинание таверны без шорткода [hs_bg] (warning);
+    bg.archetype_cherez      — «Элементали через Живого азерита», «игра пойдёт
+                               через Свинобразов»: калька; у Манакоста — «с»
+                               или «на» («Свинобразы на самоцветах»).
 
 Находки — словари в духе `finding.Finding.to_dict()`; у `unlinked_pool_spell`
 severity `warning`, поэтому модель Finding здесь не используется напрямую.
@@ -152,6 +155,21 @@ REAL_COST = re.compile(
     r"|(?:2|два|двух)\s+(?:золот|монет)\w*",
     re.I,
 )
+# «<Тип существ> через <карту/механику>» и «игра пойдёт через <Тип существ>»:
+# калька с английского «X via Y», которую редактор правил в 2026-11.
+_TYPE_FORM = (
+    rf"(?:свинобраз|квилбор|дракон|пират|мурлок|звер(?!инц)|элементал|нежит|механизм|демон|аберрац)"
+    rf"{_W}*|мех(?:и|ов|ами|ам|ах)(?!{_W})|наг(?:а|и|ов|ам|ами|ах)?(?!{_W})"
+)
+CHEREZ_TYPE = re.compile(rf"(?<!{_W})({_TYPE_FORM})\s+через\s+{_W}+", re.I)
+CHEREZ_GO = re.compile(
+    rf"(?<!{_W})(?:пойд|ид[её]т|пош[её]л|пошл|игра|сыгра|заход|зайд|выход|выйд|собира|сборк|стратеги|композици)"
+    rf"{_W}*\s+(?:{_W}+\s+){{0,2}}?через\s+(?:{_TYPE_FORM})",
+    re.I,
+)
+# Прилагательное с заглавной перед строчным типом — название карты:
+# «Сторожевого механизма через Монетку» — розыгрыш карты, а не архетип.
+_CARD_ADJ = re.compile(rf"[А-ЯЁ]{_W}*(?:ого|его|ый|ий|ой|ая|ую|ые|ых|их|ым|им|ом|ем)\s+$")
 SHORTCODE_TAG = re.compile(r"\[/?(?:hs_bg|hs_card)\b[^\]]*\]", re.I)
 SHORTCODE_FULL = re.compile(r"\[(hs_bg|hs_card)\b[^\]]*\].*?\[/\1\]", re.I | re.S)
 QUOTED = re.compile(r"«[^«»\n]*»|„[^„“\n]*“|\"[^\"\n]*\"|^\s*>.*$", re.M)
@@ -299,6 +317,29 @@ def check_bg_mechanics(
             "В текстах о Полях сражений не пишем «племя»: используйте «тип существ».",
             *match.span(), suggestion="тип существ",
         ))
+
+    # 1б. «Элементали через Живого азерита», «игра пойдёт через Свинобразов».
+    cards = [m.span() for m in SHORTCODE_FULL.finditer(text)]
+    cherez: list[tuple[int, int]] = []
+    for pattern in (CHEREZ_TYPE, CHEREZ_GO):
+        for match in pattern.finditer(unquoted):
+            start, end = match.span()
+            head = match.start(1) if pattern is CHEREZ_TYPE else start
+            if any(a <= head < b for a, b in cards) or any(start < b and end > a for a, b in cherez):
+                continue
+            if pattern is CHEREZ_TYPE and match.group(1)[:1].islower() and _CARD_ADJ.search(
+                unquoted[max(0, head - 40):head]
+            ):
+                continue
+            cherez.append((start, end))
+            findings.append(_finding(
+                text, "bg.archetype_cherez", "error",
+                "«… через …» о типе существ — калька: у Манакоста сборку называют "
+                "с предлогом «с» или «на».",
+                start, end,
+                suggestion="«Элементали с Живым азеритом», «Свинобразы на самоцветах», "
+                "«если лобби поведёт в Свинобразов»",
+            ))
 
     for p_index, (p_start, p_end) in enumerate(paragraphs):
         paragraph = plain[p_start:p_end]
