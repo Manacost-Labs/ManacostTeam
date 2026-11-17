@@ -134,6 +134,9 @@ TIERLIST_ROLES = ("intro", "changes", "tier", "conclusion")
 ADVICE_FORMS = ("threshold", "order", "prohibition", "fallback", "trap", "skill_gated", "verdict")
 MASTERY_FORMS = frozenset({"threshold", "order"})
 VERDICT_FIELDS = ("take_when", "skip_when", "pivot_or_sell_turn", "bad_alternative_omitted")
+# Необязательные поля плана: сквозная мысль патча и асимметричный вес записей раздела.
+META_THESIS_LIMIT = 600
+ENTRY_WEIGHTS = ("full", "brief", "grouped")
 
 
 def verdict_errors(card: dict) -> list[str]:
@@ -227,12 +230,45 @@ def _tierlist_roles(rows: list[dict]) -> None:
             raise ValueError(f"bg tierlist plan: tier section {row['id']} must name claim_ids of its entries")
 
 
+def _entry_weights(rows: list[dict]) -> None:
+    """Асимметричный объём записей: full — подробный разбор, brief — короткая запись,
+    grouped — простые разменные существа одним явным блоком с единым правилом выбора.
+    Один предмет получает один вес в одном разделе."""
+    owner: dict[str, str] = {}
+    for row in rows:
+        if "entry_weights" not in row:
+            continue
+        weights = row["entry_weights"]
+        if not isinstance(weights, dict) or not weights or set(weights) - set(ENTRY_WEIGHTS):
+            raise ValueError(
+                f"article_plan section {row['id']}: entry_weights must map " + "/".join(ENTRY_WEIGHTS) + " to names"
+            )
+        for weight, names in weights.items():
+            if not isinstance(names, list) or not 1 <= len(names) <= 64 or any(not _text(x, 100) for x in names):
+                raise ValueError(
+                    f"article_plan section {row['id']}: entry_weights.{weight} must be a bounded list of names or IDs"
+                )
+            if weight == "grouped" and len(names) < 2:
+                raise ValueError(
+                    f"article_plan section {row['id']}: grouped needs at least two entries; one card is a brief entry"
+                )
+            for name in names:
+                key = name.strip().casefold()
+                if key in owner:
+                    raise ValueError(
+                        f"article_plan entry {name!r} has two weights or sections ({owner[key]} and {row['id']}.{weight})"
+                    )
+                owner[key] = f"{row['id']}.{weight}"
+
+
 def validate_plan(plan) -> None:
     required = {"reader_question", "main_answer", "sections"}
-    if not isinstance(plan, dict) or not required <= set(plan) <= required | {"genre"}:
+    if not isinstance(plan, dict) or not required <= set(plan) <= required | {"genre", "meta_thesis"}:
         raise ValueError("article_plan requires reader_question, main_answer and sections")
     if "genre" in plan and plan["genre"] not in GENRES:
         raise ValueError("article_plan genre must be one of " + ", ".join(GENRES))
+    if "meta_thesis" in plan and not _text(plan["meta_thesis"], META_THESIS_LIMIT):
+        raise ValueError(f"article_plan meta_thesis must be a nonempty string up to {META_THESIS_LIMIT} characters")
     roles = TIERLIST_ROLES if plan.get("genre") == BG_TIERLIST else ROLES
     if any(not _text(plan.get(k), 800) for k in ("reader_question", "main_answer")):
         raise ValueError("article_plan needs a concrete reader question and bounded answer")
@@ -241,7 +277,7 @@ def validate_plan(plan) -> None:
         raise ValueError("article_plan requires 1..48 sections")
     base = {"id", "question", "contribution", "depends_on", "claim_ids"}
     for row in rows:
-        if not isinstance(row, dict) or not base <= set(row) <= base | {"role", "card_ids"}:
+        if not isinstance(row, dict) or not base <= set(row) <= base | {"role", "card_ids", "entry_weights"}:
             raise ValueError("invalid article_plan section fields")
         if not _text(row["id"], 80) or row["id"] in earlier or any(not _text(row[k], 800) for k in ("question", "contribution")):
             raise ValueError("article_plan needs unique sections with a question and contribution")
@@ -256,6 +292,7 @@ def validate_plan(plan) -> None:
         if not isinstance(cards, list) or len(cards) > 32 or any(not _text(x, 100) for x in cards) or len(cards) != len(set(cards)):
             raise ValueError("article_plan card_ids must be a bounded unique list of experience card IDs")
         earlier.add(row["id"])
+    _entry_weights(rows)
     if plan.get("genre") == DECK_GUIDE:
         _deck_guide_roles([{**row, "card_ids": row.get("card_ids", [])} for row in rows])
     elif plan.get("genre") == BG_TIERLIST:

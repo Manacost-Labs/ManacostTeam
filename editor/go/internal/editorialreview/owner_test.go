@@ -3,6 +3,7 @@ package editorialreview
 import (
 	"crypto/sha256"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -112,5 +113,16 @@ func TestBGRubricExtensionsAreAllOrNothingAndNeverMixed(t *testing.T) {
 	}
 	if err := ValidateOwner(text, base); err != nil {
 		t.Fatal("/v2/edit without plan context must keep the ten-row rubric", err)
+	}
+}
+
+func TestOwnerPromptAllowsExplicitGroupedBlockButNotFakeBridges(t *testing.T) {
+	for _, phrase := range []string{"full и brief", "grouped", "единым правилом выбора", "фальшивым мостиком", "ровно один тир"} {
+		if !strings.Contains(OwnerPrompt, phrase) {
+			t.Fatalf("uniform_entry_structure criterion lost %q", phrase)
+		}
+	}
+	if strings.Contains(strings.ToLower(OwnerPrompt), "плем") {
+		t.Fatal("Battlegrounds prompt must say «тип существ»")
 	}
 }

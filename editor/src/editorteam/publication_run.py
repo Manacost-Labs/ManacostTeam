@@ -99,6 +99,25 @@ INSTRUCTIONS = {
     "ready": "Обе проверки прошли для этой версии статьи. Выполни export в новый final.md. "
     "Готовность здесь относится к локальным проверкам; публикация на сайте выполняется отдельно.",
 }
+# Необязательная сводка контрастов статистики в каталоге запуска (python -m editorteam.stats_insights).
+STATS_INSIGHTS = "stats-insights.json"
+# Голос первичного черновика: короткие ориентиры вместо чеклистов вычитки и ревью.
+# Полный строгий набор остаётся у deletion_pass, независимых отзывов и repair.
+VOICE_CUES = (
+    "Пиши как сильный игрок Манакоста, который вчера отыграл 30 партий, а не как энциклопедия.",
+    "Начинай от главной идеи патча (meta_thesis) и оценивай каждую карту через неё.",
+    "Чередуй развёрнутое объяснение развилки с коротким рубленым выводом (<8 слов) и живыми уточнениями в скобках.",
+    "Говори прямо глаголами действия (берите, продавайте, не тратьте монету); границу совета задавай точным "
+    "условием или числом, а не словами «нередко/порой».",
+    "Соблюдай асимметрию объёма (entry_weights): подробный разбор — только там, где есть нетривиальный розыгрыш "
+    "или ловушка; проходные тушки сворачивай коротко.",
+)
+VOICE_DRAFT_INSTRUCTION = (
+    "Первичный черновик пиши по voice_packet: meta_thesis — стержень статьи, voice_cues — голос, "
+    "stats_insights — контрасты статистики для выбора акцентов (число в статью — только если оно есть в handoff), "
+    "style_examples — живые отрывки для ритма, не источник фактов. Чеклисты вычитки и схемы отзывов "
+    "применяются на deletion_pass и в независимых ревью — не пиши под них."
+)
 
 
 def craft_guidance(stage: str, genre: str | bool | None = None) -> dict | None:
@@ -657,6 +676,108 @@ def chapter_brief(handoff: dict) -> dict:
     }
 
 
+def _stats_insights(run: Path) -> dict:
+    """Необязательный stats-insights.json запуска: JSON-словарь как есть; без файла — пусто."""
+    path = _confined(run, STATS_INSIGHTS)
+    if not path.is_file():
+        return {}
+    value = _json(path.read_bytes())
+    if not isinstance(value, dict):
+        raise ValueError(f"{STATS_INSIGHTS} must be a JSON object")
+    return value
+
+
+def _voice_packet(run: Path, context: dict | None) -> dict:
+    """Компактный пакет голоса для первичного draft; требования владельца остаются в author_context."""
+    plan = context.get("article_plan", {}) if context else {}
+    examples = context.get("style_examples", []) if context else []
+    return {
+        "meta_thesis": plan.get("meta_thesis", ""),
+        "voice_cues": list(VOICE_CUES),
+        "stats_insights": _stats_insights(run),
+        "style_examples": [
+            {key: row[key] for key in ("id", "source", "quote", "use_for", "avoid") if key in row}
+            for row in examples
+        ],
+    }
+
+
+def _named(row: dict) -> str:
+    for key in ("name", "card", "card_name", "title", "hero", "archetype", "id", "card_id", "dbf_id"):
+        if isinstance(row.get(key), (str, int)) and not isinstance(row.get(key), bool) and str(row[key]).strip():
+            return str(row[key]).strip()
+    return "?"
+
+
+# Числа записи stats_insights, которые объясняют контраст; прочие числа — после них.
+_CONTRAST_NUMBERS = ("popularity", "combat_winrate", "impact", "avg_placement_with", "avg_placement_without")
+
+
+def _contrast_line(kind: str, row) -> str:
+    """Одна строка контраста: метка, имя и до четырёх чисел записи, без толкования причин."""
+    if not isinstance(row, dict):
+        return f"{kind}: {str(row)[:140]}"
+    keys = [key for key in _CONTRAST_NUMBERS if key in row] + [
+        key for key in row if key not in _CONTRAST_NUMBERS
+    ]
+    numbers = [
+        f"{key}={row[key]:g}" if isinstance(row[key], float) else f"{key}={row[key]}"
+        for key in keys
+        if isinstance(row[key], (int, float)) and not isinstance(row[key], bool)
+        and key not in {"id", "card_id", "dbf_id", "tavern_tier", "popularity_rank", "games_with_minion"}
+    ][:4]
+    label = row.get("label") if isinstance(row.get("label"), str) and row["label"].strip() else kind
+    return f"{label}: {_named(row)}" + (f" ({', '.join(numbers)})" if numbers else "")
+
+
+def _contrasts(insights: dict) -> list[tuple[str, object]]:
+    """Записи детекторов по очереди: первая из каждого, затем вторые — топ разных контрастов."""
+    detectors = insights.get("insights") if isinstance(insights.get("insights"), dict) else {
+        key: value
+        for key, value in insights.items()
+        if key not in {"warnings", "sources", "source_urls", "thresholds", "pool"}
+    }
+    lists = [(kind, value) for kind, value in detectors.items() if isinstance(value, list) and value]
+    depth = max((len(value) for _, value in lists), default=0)
+    return [(kind, value[i]) for i in range(depth) for kind, value in lists if i < len(value)]
+
+
+def thesis_card(run: Path, *, contrasts: int = 3) -> str:
+    """Карточка перед черновиком: сквозной тезис, топ контрастов статистики,
+    тиры и веса записей плана. Только чтение сохранённого; моделей не вызывает."""
+    run = Path(run)
+    state = _load(run)
+    saved = _author_context(run, state)
+    plan = saved[0].get("article_plan", {}) if saved else {}
+    sections = plan.get("sections", [])
+    lines = [
+        "Тезис: " + (plan.get("meta_thesis") or "не задан — добавь article_plan.meta_thesis через context"),
+        "Вопрос → ответ: "
+        + (f"{plan['reader_question']} → {plan['main_answer']}" if plan else "article_plan не сохранён"),
+    ]
+    insights = _stats_insights(run)
+    rows = _contrasts(insights)
+    warnings = insights.get("warnings") if isinstance(insights.get("warnings"), list) else []
+    if not insights:
+        lines.append(f"Контрасты: {STATS_INSIGHTS} нет — шаг 0: python -m editorteam.stats_insights --mode … --output RUN/{STATS_INSIGHTS}")
+    else:
+        lines.append(f"Контрасты {STATS_INSIGHTS}: {len(rows)}, предупреждений: {len(warnings)}")
+        lines += ["  • " + _contrast_line(kind, row) for kind, row in rows[:contrasts]]
+        lines += [f"  ! {str(text)[:160]}" for text in warnings[:1]]
+    totals = {weight: 0 for weight in ("full", "brief", "grouped")}
+    tiers = []
+    for row in sections:
+        weights = row.get("entry_weights", {})
+        for weight in totals:
+            totals[weight] += len(weights.get(weight, []))
+        if row.get("role") == "tier" or weights:
+            counts = "/".join(str(len(weights.get(weight, []))) for weight in totals)
+            tiers.append(f"{row['id']} {counts}" if weights else f"{row['id']} claims={len(row['claim_ids'])}")
+    lines.append("Тиры (full/brief/grouped): " + ("; ".join(tiers) if tiers else "нет разделов tier и entry_weights"))
+    lines.append("Веса: " + " · ".join(f"{weight} {count}" for weight, count in totals.items()))
+    return "\n".join(lines)
+
+
 def _language_examples(bank: Path, query: dict) -> dict:
     """Use the canonical optional Node selector, with no source text in argv."""
     helper = Path(__file__).with_name("example_bank.js")
@@ -711,6 +832,8 @@ def next_task(
     run = Path(run)
     state = _load(run)
     stage = "draft" if state["blocked"] else state["stage"]
+    # Первичный черновик получает voice_packet; repair после отказа ревью — полный набор.
+    initial_draft = stage == "draft" and not state["blocked"]
     task = {
         "stage": stage,
         "role": ROLES[stage],
@@ -748,7 +871,7 @@ def next_task(
             "новые материалы к прежним snapshots; не подменяй их. Снова собери handoff, обнови "
             "черновик и получи обе независимые проверки. Прежние reviews не дают допуска."
         )
-    if state.get("review_contract_version", 1) >= 3:
+    if state.get("review_contract_version", 1) >= 3 and not initial_draft:
         from .editorial_practices import prepare
 
         if stage in {"fact_review", "literary_review"}:
@@ -788,6 +911,11 @@ def next_task(
     bg_genre = genre in (BG_TIERLIST, BG_GUIDE)
     guidance = craft_guidance(stage, genre)
     if guidance is not None:
+        if initial_draft:
+            # Принципы и жанровые правила остаются; проходы вычитки и вопросы
+            # читательской проверки получают deletion_pass, литературный отзыв и repair.
+            for key in ("editorial_passes", "reader_quality_checks"):
+                guidance.pop(key, None)
         task["craft_guidance"] = guidance
         task["instructions"] += (
             " craft_guidance содержит условные приёмы объяснения, не факты, "
@@ -954,7 +1082,9 @@ def next_task(
         if stage == "draft":
             task["instructions"] = (
                 "До прозы сохрани article_plan в author_context: reader_question, main_answer и sections "
-                "[{id,question,contribution,depends_on,claim_ids}]. Сначала предпосылки, затем зависящие от них "
+                "[{id,question,contribution,depends_on,claim_ids}]; при необходимости meta_thesis — сквозная мысль "
+                "патча до 600 символов — и entry_weights раздела {full,brief,grouped}. Перед прозой сверь план "
+                "с publish.py thesis-card RUN. Сначала предпосылки, затем зависящие от них "
                 "решения. Каждый раздел добавляет ответ, а не повторяет эффект карты. План объяснения "
                 "не обязан копировать главы исследования; используй реальные claim_ids из handoff. "
                 "После прозы сверь фактический порядок с планом. Не добавляй переходную фразу вместо "
@@ -972,7 +1102,9 @@ def next_task(
                     "Тир-лист Полей сражений: у плана genre=bg_tierlist, у каждого раздела role "
                     "(intro, changes, tier, conclusion); нужен хотя бы один раздел tier, и каждый tier называет "
                     "claim_ids своих существ, а card_ids — их карточки verdict, если они есть. "
-                    "Каждое существо стоит ровно в одном тире отдельной записью с одинаковым порядком сведений. "
+                    "Каждое существо стоит ровно в одном тире; записи веса full и brief идут отдельно с одинаковым "
+                    "порядком сведений, простые разменные существа веса grouped можно собрать в один явный блок "
+                    "с единым правилом выбора. "
                 ) + task["instructions"]
             elif genre == BG_GUIDE:
                 task["instructions"] = (
@@ -1031,6 +1163,18 @@ def next_task(
         if "editorial_practices" in task:
             task["editorial_practices"]["owner_review_assignment"] = task["owner_review_assignment"]
         task["instructions"] += " Верни полную рубрику owner_checks и genre_review по owner_review_assignment."
+    if initial_draft:
+        packet_context = author_context[0] if author_context else None
+        if "author_context" in task:
+            # Образцы стиля переезжают в voice_packet без дубля; requirements,
+            # forbidden_literals и article_plan остаются в author_context.
+            task["author_context"].pop("style_examples", None)
+        task = {
+            **{key: task[key] for key in ("author_context", "author_context_sha256") if key in task},
+            "voice_packet": _voice_packet(run, packet_context),
+            **task,
+        }
+        task["instructions"] += " " + VOICE_DRAFT_INSTRUCTION
     return task
 
 
@@ -1454,6 +1598,7 @@ def main(argv: list[str] | None = None) -> int:
         "continue-research",
         "feedback",
         "context",
+        "thesis-card",
     ):
         command = commands.add_parser(name)
         command.add_argument("run", type=Path)
@@ -1496,10 +1641,12 @@ def main(argv: list[str] | None = None) -> int:
         "continue-research": continue_research,
         "feedback": feedback,
         "context": configure_context,
+        "thesis-card": thesis_card,
     }
     try:
         result = operations[name](run, **args)
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        # thesis-card — короткая карточка для чтения человеком, остальное — JSON.
+        print(result if isinstance(result, str) else json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (
         ValueError,

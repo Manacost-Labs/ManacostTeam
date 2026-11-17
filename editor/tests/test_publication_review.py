@@ -217,10 +217,15 @@ def test_full_candidate_review_is_required(bundle, checked):
 @pytest.mark.parametrize("field", ["condition_quote", "exception_quote", "confidence_quote"])
 def test_required_literal_attestation(bundle, field):
     h, text, fact, _ = bundle
+    if field == "confidence_quote":
+        # medium с найденной condition_quote оговорки не требует; обязательность — у low.
+        h["claims"][0]["confidence"] = "low"
+        fact["handoff_sha256"] = handoff_hash(h)
+        assert validate_factual(h, text, fact) == []
     fact["claims"][0][field] = ""
-    assert validate_factual(h, text, fact)
+    assert any(field in error for error in validate_factual(h, text, fact))
     fact["claims"][0][field] = "Выдуманная цитата"
-    assert validate_factual(h, text, fact)
+    assert any(field in error for error in validate_factual(h, text, fact))
 
 
 def test_amplified_confidence_report_and_unsupported_advice(bundle):

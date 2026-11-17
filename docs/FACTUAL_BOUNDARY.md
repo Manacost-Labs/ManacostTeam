@@ -93,9 +93,11 @@ Google Docs read-only grants и существующий цикл попыток
 При research handoff evidence reviewer дополнительно обязан подтвердить проверку
 всех утверждений (`candidate_checked: true`) и вернуть `unsupported_claims: []`.
 Дополнительно обязательны `confidence_preserved: true` и дословная
-`confidence_quote` для каждого medium/low claim. Цитата должна сохранять
-осторожность рекомендации; отсутствие, пустая или отсутствующая в candidate
-цитата блокируют результат. Для high допустима пустая confidence_quote.
+`confidence_quote` для каждого low claim и для medium claim, у которого нет
+condition с найденной condition_quote и нет точного числа в найденной
+action_quote. Цитата должна сохранять осторожность рекомендации; отсутствие
+обязательной, пустая обязательная или отсутствующая в candidate цитата блокируют
+результат. Для high допустима пустая confidence_quote.
 При превращении вероятности в гарантию reviewer обязан вернуть false.
 Те же требования действуют в factual report Python publication workflow.
 Нельзя ограничиться сохранением обязательных claims и пропустить новые детали

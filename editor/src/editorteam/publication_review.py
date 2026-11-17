@@ -380,6 +380,31 @@ def _report(text: str, report: dict) -> list[str]:
     return errors
 
 
+def confidence_quote_required(claim: dict, row: dict, text: str) -> bool:
+    """Нужна ли отдельная дословная оговорка уверенности.
+
+    high — не нужна. low — нужна всегда. medium — не нужна, если границу совета
+    уже задаёт найденная в тексте condition_quote (у claim есть condition) или
+    точное число в найденной action_quote; иначе нужна. Так условие или процент
+    не превращаются в обязательные «нередко/иногда» поверх них.
+    """
+    confidence = claim.get("confidence")
+    if confidence == "high":
+        return False
+    if confidence != "medium":
+        return True
+    condition_quote, action_quote = row.get("condition_quote", ""), row.get("action_quote", "")
+    bounded_by_condition = (
+        bool(str(claim.get("condition", "")).strip())
+        and _text(condition_quote)
+        and condition_quote in text
+    )
+    bounded_by_number = (
+        _text(action_quote) and action_quote in text and _NUMBER.search(action_quote) is not None
+    )
+    return not (bounded_by_condition or bounded_by_number)
+
+
 def validate_factual(
     handoff: dict,
     text: str,
@@ -433,7 +458,7 @@ def validate_factual(
         for field in ("action", "condition", "exception", "confidence"):
             needed = (
                 field == "action"
-                or (field == "confidence" and claim["confidence"] != "high")
+                or (field == "confidence" and confidence_quote_required(claim, row, text))
                 or (field in {"condition", "exception"} and bool(claim.get(field, "").strip()))
             )
             quote = row.get(f"{field}_quote", "")

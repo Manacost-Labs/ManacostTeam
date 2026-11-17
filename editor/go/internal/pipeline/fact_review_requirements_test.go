@@ -37,7 +37,8 @@ func TestFactReviewerReceivesEachRequiredQuoteFieldAndItsOwnSources(t *testing.T
 		t.Fatalf("checklist changed the factual input: %s", after)
 	}
 	expected := []map[string]any{
-		{"claim_id": "CLM-1", "required_quote_fields": []string{"action_quote", "condition_quote", "exception_quote", "confidence_quote"}, "allowed_evidence_refs": []string{"SRC-1"},
+		// CLM-1 — medium с условием: найденная condition_quote закрывает уверенность, отдельная оговорка не нужна.
+		{"claim_id": "CLM-1", "required_quote_fields": []string{"action_quote", "condition_quote", "exception_quote"}, "allowed_evidence_refs": []string{"SRC-1"},
 			"required_meaning": "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения.", "required_action": "Сохраняйте ресурс", "required_condition": "при слабой позиции", "required_exception": "кроме угрозы поражения", "required_confidence": "medium"},
 		{"claim_id": "CLM-2", "required_quote_fields": []string{"action_quote", "exception_quote"}, "allowed_evidence_refs": []string{"SRC-2"},
 			"required_meaning": "Получите награду", "required_action": "", "required_condition": "", "required_exception": "кроме повторного захода", "required_confidence": "HIGH"},
@@ -51,5 +52,39 @@ func TestFactReviewerReceivesEachRequiredQuoteFieldAndItsOwnSources(t *testing.T
 	}
 	if !reflect.DeepEqual(payload["required_attestations"], want) {
 		t.Fatalf("required review fields or source boundaries missing: %#v", payload["required_attestations"])
+	}
+}
+
+func TestMediumConfidenceQuoteIsClosedByConditionOrExactNumber(t *testing.T) {
+	candidate := "Ставьте на 2-м ходу при слабой позиции. Бейте с шансом 33%. Берите иногда. Продавайте позже. https://example.org/guide"
+	cases := []struct {
+		name  string
+		claim ResearchClaim
+		item  FactAttestation
+		want  bool
+	}{
+		{"high", ResearchClaim{Confidence: "HIGH"}, FactAttestation{ActionQuote: "Продавайте позже"}, false},
+		{"medium with found condition", ResearchClaim{Confidence: "medium", Condition: "при слабой позиции"}, FactAttestation{ActionQuote: "Продавайте позже", ConditionQuote: "при слабой позиции"}, false},
+		{"medium with condition quote missing from text", ResearchClaim{Confidence: "medium", Condition: "при слабой позиции"}, FactAttestation{ActionQuote: "Продавайте позже", ConditionQuote: "при сильной позиции"}, true},
+		{"medium with exact number", ResearchClaim{Confidence: "medium"}, FactAttestation{ActionQuote: "Бейте с шансом 33%"}, false},
+		{"medium without condition or number", ResearchClaim{Confidence: "medium"}, FactAttestation{ActionQuote: "Продавайте позже"}, true},
+		{"low with condition and number", ResearchClaim{Confidence: "low", Condition: "при слабой позиции"}, FactAttestation{ActionQuote: "Бейте с шансом 33%", ConditionQuote: "при слабой позиции"}, true},
+	}
+	for _, tc := range cases {
+		if got := confidenceQuoteRequired(tc.claim, tc.item, candidate); got != tc.want {
+			t.Fatalf("%s: confidenceQuoteRequired=%v, want %v", tc.name, got, tc.want)
+		}
+	}
+	// Полный отзыв: medium с найденным условием проходит без confidence_quote,
+	// а выдуманная оговорка по-прежнему блокируется.
+	h := readyHandoff()
+	text := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. https://example.org/guide"
+	pass := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"","evidence_refs":["SRC-1"]}]}`
+	if _, err := validateFactReview(pass, h, text); err != nil {
+		t.Fatalf("medium claim with a found condition still demands a hedge: %v", err)
+	}
+	h.Claims[0].Confidence = "low"
+	if _, err := validateFactReview(pass, h, text); err == nil {
+		t.Fatal("low claim accepted without confidence_quote")
 	}
 }

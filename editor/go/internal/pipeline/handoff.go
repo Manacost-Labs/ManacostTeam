@@ -637,7 +637,7 @@ func validateFactReview(raw string, h *ResearchHandoff, candidate string) (FactR
 				return review, &factQuoteError{fmt.Sprintf("утеряно условие или цитата %s", claim.ID)}
 			}
 		}
-		if (strings.ToLower(claim.Confidence) != "high" && strings.TrimSpace(item.ConfidenceQuote) == "") ||
+		if (confidenceQuoteRequired(claim, item, candidate) && strings.TrimSpace(item.ConfidenceQuote) == "") ||
 			(item.ConfidenceQuote != "" && !strings.Contains(candidate, item.ConfidenceQuote)) {
 			return review, &factQuoteError{fmt.Sprintf("нет дословного подтверждения уверенности %s", claim.ID)}
 		}
@@ -688,6 +688,26 @@ func conditionLedger(h *ResearchHandoff) []map[string]any {
 	return rows
 }
 
+// exactNumberRE — точное число или процент в цитате совета; зеркало _NUMBER из
+// publication_review.py (RE2 без lookaround, поэтому границы заданы классами).
+var exactNumberRE = regexp.MustCompile(`(?:^|[^\p{L}\p{N}_])\d+(?:[.,]\d+)?\s*%?(?:$|[^\p{L}\p{N}_])`)
+
+// confidenceQuoteRequired зеркалит publication_review.confidence_quote_required:
+// high — оговорка не нужна; low — нужна всегда; medium — не нужна, если границу
+// совета уже задаёт найденная condition_quote (у claim есть condition) или точное
+// число в найденной action_quote.
+func confidenceQuoteRequired(claim ResearchClaim, item FactAttestation, candidate string) bool {
+	switch strings.ToLower(claim.Confidence) {
+	case "high":
+		return false
+	case "medium":
+		byCondition := strings.TrimSpace(claim.Condition) != "" && strings.TrimSpace(item.ConditionQuote) != "" && strings.Contains(candidate, item.ConditionQuote)
+		byNumber := strings.TrimSpace(item.ActionQuote) != "" && strings.Contains(candidate, item.ActionQuote) && exactNumberRE.MatchString(item.ActionQuote)
+		return !byCondition && !byNumber
+	}
+	return true
+}
+
 func factReviewRequirements(h *ResearchHandoff) []map[string]any {
 	var rows []map[string]any
 	for _, claim := range h.requiredClaims() {
@@ -698,7 +718,9 @@ func factReviewRequirements(h *ResearchHandoff) []map[string]any {
 		if claim.Exception != "" {
 			fields = append(fields, "exception_quote")
 		}
-		if strings.ToLower(claim.Confidence) != "high" {
+		// medium с условием закрывает уверенность найденной condition_quote; без условия
+		// оговорка нужна, если в action_quote нет точного числа (проверяет validateFactReview).
+		if confidence := strings.ToLower(claim.Confidence); confidence != "high" && (confidence != "medium" || claim.Condition == "") {
 			fields = append(fields, "confidence_quote")
 		}
 		rows = append(rows, map[string]any{
@@ -733,7 +755,7 @@ func (s *Service) factReview(ctx context.Context, h *ResearchHandoff, candidate 
 		"Для каждого обязательного claim из глав проверь точность совета, условия, исключения, уровень уверенности, патч, цитирование и отсутствие новых неподтвержденных советов. " +
 		"Проверь ВСЕ утверждения candidate по evidence, включая не совпадающие с обязательными claims; если обнаружены новые неподтвержденные советы, пометь хотя бы один claim insufficient. " +
 		"Верни только JSON {\"candidate_checked\":true,\"confidence_preserved\":true,\"unsupported_claims\":[],\"claims\":[{\"claim_id\":\"\",\"status\":\"supported|contradicted|insufficient\",\"action_quote\":\"\",\"condition_quote\":\"\",\"exception_quote\":\"\",\"confidence_quote\":\"\",\"evidence_refs\":[]}]}. " +
-		"Для medium/low обязательна дословная confidence_quote из candidate, сохраняющая осторожность совета. Пустая цитата допустима для high. При усилении до гарантии confidence_preserved=false; не цитируй уверенную фразу как доказательство осторожности. " +
+		"Для low обязательна дословная confidence_quote из candidate, сохраняющая осторожность совета. Для medium она нужна, только если у claim нет условия и в action_quote нет точного числа: найденная condition_quote или число уже задают границу совета, и «нередко/иногда» поверх них не требуются. Пустая цитата допустима для high. При усилении до гарантии confidence_preserved=false; не цитируй уверенную фразу как доказательство осторожности. " +
 		"Проверяй не отдельное слово, а область утверждения: тот же условный совет можно выразить прямым глаголом при сохраненном условии, если Action уже является советом. confidence_quote должна показывать родное ограничение, условие или модальность именно этого совета; общая служебная страховка в другой главе не заменяет ее. Сверяй вывод с source.context_quote и evidence_snapshots, если они переданы, и с inference_steps; они не расширяют разрешенные evidence_refs. " +
 		"candidate_checked=true только после проверки всех утверждений, а не только обязательных claims. В unsupported_claims перечисли дословные неподтверждённые описания, механики и советы; при сомнении оставь candidate_checked=false. " +
 		"Все цитаты дословно из candidate. action_quote подтверждает смысл claim; condition_quote и exception_quote обязательны, если исходный claim содержит условие или исключение. " +
@@ -816,7 +838,7 @@ func factRepairFindings(h *ResearchHandoff, candidate string, review FactReview,
 				return nil
 			}
 		}
-		if item.Status == "supported" && strings.ToLower(claim.Confidence) != "high" && strings.TrimSpace(item.ConfidenceQuote) == "" {
+		if item.Status == "supported" && confidenceQuoteRequired(*claim, item, candidate) && strings.TrimSpace(item.ConfidenceQuote) == "" {
 			return nil
 		}
 		for _, ref := range item.EvidenceRefs {

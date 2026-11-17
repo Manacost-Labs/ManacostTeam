@@ -162,12 +162,20 @@ func TestFactReviewRequiresConfidenceAttestation(t *testing.T) {
 		strings.Replace(good, `"confidence_preserved":true,`, "", 1),
 		strings.Replace(good, `"confidence_preserved":true`, `"confidence_preserved":null`, 1),
 		strings.Replace(good, `"confidence_preserved":true`, `"confidence_preserved":false`, 1),
-		strings.Replace(good, `"confidence_quote":"может помочь",`, "", 1),
 		strings.Replace(good, `может помочь`, `несуществующая цитата`, 1),
 	} {
 		if _, err := validateFactReview(bad, h, candidate); err == nil {
 			t.Fatal("unverified confidence accepted")
 		}
+	}
+	// medium с найденной condition_quote закрыт условием; без оговорки блокируется low.
+	missing := strings.Replace(good, `"confidence_quote":"может помочь",`, "", 1)
+	if _, err := validateFactReview(missing, h, candidate); err != nil {
+		t.Fatal("medium claim with a found condition still demands a hedge:", err)
+	}
+	h.Claims[0].Confidence = "low"
+	if _, err := validateFactReview(missing, h, candidate); err == nil {
+		t.Fatal("low claim accepted without confidence_quote")
 	}
 	for _, confidence := range []string{"medium", "low"} {
 		h.Claims[0].Confidence = confidence
