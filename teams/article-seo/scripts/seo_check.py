@@ -4,6 +4,8 @@
 Правила повторяют анализ плагина IndexPilot: ширина заголовка, длина описания,
 поиск главного запроса с русским стеммером и игровыми синонимами, первый абзац,
 слаг, alt картинок, обязательные разделы гайда, краткий ответ и FAQ.
+Отдельно, вне оценки плагина, — нормы Манакоста: заголовок без обрыва, точки и
+Title Case, «гайд по» в видимых полях, разговорный синоним в похожих запросах.
 """
 from __future__ import annotations
 
@@ -171,6 +173,42 @@ STOP_WORDS = {
     "и", "в", "во", "на", "для", "по", "от", "с", "со", "к", "о", "об", "из", "за", "у",
     "the", "a", "an", "of", "for", "in", "on", "to", "and",
 }
+
+# --- Нормы Манакоста для видимых полей: в оценку плагина не входят. ----------
+GUIDE_NA = re.compile(r"(?<![\w-])гайд(?:а|у|ом|е|ы|ов|ам|ами|ах)?\s+на(?![\w-])", re.IGNORECASE)
+TRUNCATED_END = re.compile(
+    r"(?:\.{3}|…|[—–:,-]|(?<![\w-])(?:и|а|в|во|на|по|для|от|с|со|к|о|об|из|за|у|или))\s*$",
+    re.IGNORECASE,
+)
+SOFT_HYPHEN = chr(0xAD)
+TITLE_CASE_MIN = 3
+TITLE_CASE_SHARE = 0.75
+COLLOQUIAL = {form for forms in FORMS.values() for form in forms} | {"варлок", "отк", "хс"}
+COLLOQUIAL_MAX_WORDS = 4
+# Классы, их сленг и режимы пишутся с заглавной по правилам издания: в счёт Title Case не идут.
+PROPER_WORDS = (
+    [word for name in CLASSES for word in name.split()]
+    + ["Вольный", "Стандарт", "Арена", "Легенда", "Поля", "Полях"]
+)
+
+
+def title_case_words(title: str) -> list[str]:
+    """Слова с заглавной не в начале, если их почти все: признак английского Title Case.
+
+    Имена карт и архетипов пишутся с заглавной, поэтому одно-два таких слова —
+    норма; сигнал — три и больше и не меньше трёх четвертей значимых слов.
+    """
+    proper = {russian_stem(word.lower()) for word in PROPER_WORDS} | {form for forms in FORMS.values() for form in forms}
+    words = [word for word in re.findall(r"[^\W\d_]+", title) if re.search(r"[а-яё]", word.lower())]
+    content = [
+        word for word in words[1:]
+        if len(word) >= 3 and not word.isupper()
+        and word.lower() not in proper and russian_stem(word.lower()) not in proper
+    ]
+    capital = [word for word in content if word[0].isupper()]
+    if len(capital) >= TITLE_CASE_MIN and len(capital) >= TITLE_CASE_SHARE * len(content):
+        return capital
+    return []
 
 
 def split_words(text: str) -> list[str]:
@@ -769,6 +807,40 @@ def run_checks(article: Article, seo: dict, *, post_title: str, categories: list
         add("related", "orange", "Похожий запрос повторяет главный.")
     elif unique:
         add("related", "green", f"Похожих запросов: {len(unique)}.")
+
+    # Нормы Манакоста: заголовок без обрыва и Title Case, «гайд по», живой синоним.
+    if title:
+        problems = []
+        if TRUNCATED_END.search(title):
+            problems.append("обрывается на предлоге, знаке или многоточии — похоже на обрезанный")
+        elif title.endswith("."):
+            problems.append("точка в конце")
+        capital = title_case_words(title)
+        if capital:
+            problems.append(f"английский Title Case ({', '.join(capital)}): с заглавной только первое слово и имена собственные")
+        if GUIDE_NA.search(title):
+            problems.append("«гайд на …» — пишите «гайд по …»")
+        if SOFT_HYPHEN in title:
+            problems.append("мягкий перенос")
+        add(
+            "title_not_truncated_or_vague",
+            "orange" if problems else "green",
+            ("Заголовок: " + "; ".join(problems) + ".") if problems else "Заголовок без обрыва, точки, Title Case и «гайд на».",
+        )
+    visible = [("описание", description), ("краткий ответ", answer)]
+    if post_title.strip() and post_title.strip() != title:
+        visible.insert(0, ("H1", post_title))
+    for number, item in enumerate(seo.get("faq", []) or [], 1):
+        visible += [(f"вопрос {number}", str(item.get("question", ""))), (f"ответ {number}", str(item.get("answer", "")))]
+    visible += [("заголовок для соцсетей", str(seo.get("og_title", ""))), ("описание для соцсетей", str(seo.get("og_description", "")))]
+    guide_na = [name for name, text in visible if GUIDE_NA.search(reduce_shortcodes(text))]
+    if guide_na:
+        add("guide_preposition", "orange", f"«Гайд на …» в полях: {', '.join(guide_na)}. Пишите «гайд по …»; «гайд на» оставьте только в похожих запросах.")
+    colloquial = [item for item in unique if len(item.split()) <= COLLOQUIAL_MAX_WORDS and COLLOQUIAL & set(split_words(item))]
+    if colloquial:
+        add("related_colloquial", "green", f"Разговорный синоним в похожих запросах: «{colloquial[0]}».")
+    elif keyword or unique:
+        add("related_colloquial", "orange", "В похожих запросах нет короткого разговорного синонима архетипа или режима (например, «отк дх», «тир-1 существа бг»).")
 
     faq = seo.get("faq", [])
     if faq:

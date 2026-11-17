@@ -139,6 +139,67 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(seo_check.detect_material("Колода дня", ["Новости"], [], "post"), "news")
 
 
+class ManacostNormTests(unittest.TestCase):
+    TITLE = "Берн Маг: масса урона за один ход — гайд от TrueBench"
+
+    def test_clean_title_and_colloquial_related_are_green(self):
+        checks, report = statuses(seo(title=self.TITLE), title=self.TITLE)
+        self.assertEqual(checks["title_not_truncated_or_vague"]["status"], "green")
+        self.assertEqual(checks["related_colloquial"]["status"], "green")
+        self.assertIn("ОТК Маг", checks["related_colloquial"]["message"])
+        self.assertNotIn("guide_preposition", checks)
+        # нормы Манакоста не входят в оценку плагина
+        self.assertNotIn("title_not_truncated_or_vague", seo_check.WEIGHTS)
+        self.assertEqual(report["score_estimate"], statuses(seo(title=self.TITLE, related=[]), title=self.TITLE)[1]["score_estimate"])
+
+    def test_title_dot_title_case_and_guide_na(self):
+        title = "Масса Урона За Один Ход — Гайд На Берн Мага."
+        checks, _ = statuses(seo(title=title), title=self.TITLE)
+        message = checks["title_not_truncated_or_vague"]["message"]
+        self.assertEqual(checks["title_not_truncated_or_vague"]["status"], "orange")
+        self.assertIn("точка в конце", message)
+        self.assertIn("Title Case", message)
+        self.assertIn("гайд по", message)
+
+    def test_truncated_title(self):
+        for title in ("Лучшие тир-1 существа на", "Лучшие тир-1 существа…", "Лучшие тир-1 существа —"):
+            checks, _ = statuses(seo(title=title), title=self.TITLE)
+            self.assertIn("обрезанный", checks["title_not_truncated_or_vague"]["message"], title)
+
+    def test_card_and_archetype_names_are_not_title_case(self):
+        self.assertEqual(seo_check.title_case_words("Первый ход на Полях сражений: лучшие тир-1 существа"), [])
+        self.assertEqual(seo_check.title_case_words("Хэндбафф Рыцарь смерти от Ника — топ-1 Легенды"), [])
+        self.assertEqual(seo_check.title_case_words("Квест Маг и Фейс Хант в Вольном формате"), [])
+        self.assertEqual(seo_check.title_case_words("Фейс Хант и Мех Паладин в Стандарте"), [])
+        self.assertEqual(
+            seo_check.title_case_words("Лучший Первый Ход На Полях Сражений"), ["Первый", "Ход", "Сражений"]
+        )
+        self.assertEqual(
+            seo_check.title_case_words("Квест Маг и Миракл Разбойник: Лучшие Колоды"), ["Миракл", "Лучшие", "Колоды"]
+        )
+
+    def test_guide_na_is_allowed_only_in_related(self):
+        faq = [{"question": "Где гайд на Берн Мага?", "answer": "Это гайд по Берн Магу."}]
+        checks, _ = statuses(seo(title=self.TITLE, faq=faq, answer="Короткий гайд на мага."), title="Гайд на Берн Мага")
+        message = checks["guide_preposition"]["message"]
+        self.assertEqual(checks["guide_preposition"]["status"], "orange")
+        for field in ("H1", "краткий ответ", "вопрос 1"):
+            self.assertIn(field, message)
+        self.assertNotIn("ответ 1", message)
+        # в похожих запросах «гайд на мага» из фикстуры — норма
+        self.assertEqual(checks["title_not_truncated_or_vague"]["status"], "green")
+
+    def test_related_without_short_colloquial_synonym(self):
+        related = ["тир-1 существа Полей сражений", "лучшие существа 1 уровня таверны"]
+        checks, _ = statuses(seo(related=related), title=self.TITLE)
+        self.assertEqual(checks["related_colloquial"]["status"], "orange")
+        checks, _ = statuses(seo(related=related + ["тир-1 существа бг"]), title=self.TITLE)
+        self.assertEqual(checks["related_colloquial"]["status"], "green")
+        # длинная фраза со сленгом — не короткий синоним
+        checks, _ = statuses(seo(related=["как играть на первом ходу в бг новичку"]), title=self.TITLE)
+        self.assertEqual(checks["related_colloquial"]["status"], "orange")
+
+
 class CliTests(unittest.TestCase):
     def run_cli(self, *arguments):
         return subprocess.run(

@@ -9,7 +9,10 @@
   (`hs_bg` — Поля сражений, `hs_card` — остальные), ID есть в каталоге;
 * `seo.json` полон для IndexPilot, его `article_sha256` совпадает со статьёй,
   шорткоды в ответах корректны, запреты владельца и тавтология «в лобби с
-  <Типом>» не просочились в SEO.
+  <Типом>» не просочились в SEO;
+* вёрстка статьи по `editor/СТИЛЬ.md`: без «Обратите внимание» у `[su_panel]`,
+  панель обновления раньше блока ссылок, в `[gallery]` не больше 3 карт в ряд,
+  жирные режим и предмет во вступлении (предупреждение).
 
 CLI::
 
@@ -446,6 +449,126 @@ def check_seo(
                            f"только в лобби со своим типом", file=seo_file, field=name)
 
 
+# ── вёрстка Манакоста ────────────────────────────────────────────────────────
+# Правила из editor/СТИЛЬ.md («Служебные блоки и ссылки», «Галереи и визуалы»,
+# «Вступление и первое упоминание карт»).
+
+MAX_GALLERY_COLUMNS = 3
+INTRO_PARAGRAPHS = 3
+PANEL = re.compile(r"\[su_panel\b[^\]]*\](?P<body>.*?)\[/su_panel\]", re.IGNORECASE | re.DOTALL)
+SU_BLOCK = re.compile(r"\[(su_\w+)\b[^\]]*\].*?\[/\1\]", re.IGNORECASE | re.DOTALL)
+PANEL_NOISE = re.compile(r"обратите\s+внимание", re.IGNORECASE)
+PANEL_UPDATE = re.compile(
+    r"(?<!\w)(?:обновл\w*|патч\w*)|\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа"
+    r"|сентября|октября|ноября|декабря)|\d{1,2}\.\d{1,2}\.\d{2,4}",
+    re.IGNORECASE,
+)
+# строка блока ссылок: якорь на раздел статьи или ссылка на Telegram/подборку гайдов,
+# причём кроме ссылок в строке почти нет текста (ссылка внутри абзаца — не блок)
+SECTION_LINK = re.compile(r"\]\(\s*#|href\s*=\s*[\"']#", re.IGNORECASE)
+LINK_MARKUP = re.compile(r"\]\(|<a\s|https?://|t\.me/", re.IGNORECASE)
+LINK_TOPIC = re.compile(
+    r"t\.me/|telegram|телеграм|больше\s+(?:гайдов|статей|материалов)|все\s+(?:гайды|статьи|материалы)",
+    re.IGNORECASE,
+)
+LINK_TEXT = re.compile(r"!?\[[^\]]*\]\([^)]*\)|<a\b.*?</a>|https?://\S+|t\.me/\S+", re.IGNORECASE)
+LINK_LINE_MAX_WORDS = 6
+NOISE_LABEL_MAX_WORDS = 5
+GALLERY = re.compile(r"\[gallery\b(?P<attrs>[^\]]*)\]", re.IGNORECASE)
+GALLERY_COLUMNS = re.compile(r"(?<![\w-])columns\s*=\s*[^\w\s\]]?\s*(?P<n>\d+)", re.IGNORECASE)
+BOLD = re.compile(r"\*\*[^*\n]+\*\*|__[^_\n]+__|<(?:strong|b)\b[^>]*>", re.IGNORECASE)
+BLOCK_SPLIT = re.compile(r"\n[ \t]*\n")
+SERVICE_BLOCK = re.compile(r"(?:\[(?!hs_bg\b|hs_card\b)/?[a-z_]+|!\[|<img\b|<figure\b|<!--|-{3,}\s*$|\*{3,}\s*$|\|)",
+                           re.IGNORECASE)
+
+
+def _line_start(text: str, pos: int) -> int:
+    return text.rfind("\n", 0, pos) + 1
+
+
+def _previous_line(text: str, pos: int) -> str:
+    """Последняя непустая строка перед позицией `pos`."""
+    for line in reversed(text[:_line_start(text, pos)].split("\n")):
+        if line.strip():
+            return line
+    return ""
+
+
+def _words(text: str) -> int:
+    return len(re.findall(r"[^\W_]+", text))
+
+
+def _is_link_line(line: str) -> bool:
+    """Строка блока ссылок: оглавление, Telegram, «Больше гайдов», а не ссылка внутри абзаца."""
+    if not (SECTION_LINK.search(line) or (LINK_MARKUP.search(line) and LINK_TOPIC.search(line))):
+        return False
+    return _words(LINK_TEXT.sub(" ", line)) <= LINK_LINE_MAX_WORDS
+
+
+def intro_paragraphs(article: str, limit: int = INTRO_PARAGRAPHS) -> list[str]:
+    """Первые абзацы вступления: до первого подзаголовка, без H1 и служебных блоков."""
+    text = SU_BLOCK.sub("\n\n", article)
+    found: list[str] = []
+    for block in BLOCK_SPLIT.split(text):
+        block = block.strip()
+        if not block:
+            continue
+        if block.startswith("#"):
+            if re.match(r"#\s", block) and not found:
+                continue  # H1 — заголовок записи, не вступление
+            break
+        if SERVICE_BLOCK.match(block):
+            continue
+        found.append(block)
+        if len(found) == limit:
+            break
+    return found
+
+
+def check_layout(article: str, report: BundleReport, *, file: str = ARTICLE_NAME) -> None:
+    """Вёрстка статьи для WordPress: панель обновления, ссылки, галереи, вступление."""
+    panels = list(PANEL.finditer(article))
+    for panel in panels:
+        line = _line_of(article, panel.start())
+        if PANEL_NOISE.search(panel.group(0)):
+            report.add("bundle.banned_panel_noise",
+                       "в [su_panel] «Обратите внимание»: панель и так выделяет текст, уберите шумную фразу",
+                       file=file, line=line)
+        else:
+            label = _previous_line(article, panel.start())
+            if PANEL_NOISE.search(label) and _words(label) <= NOISE_LABEL_MAX_WORDS:
+                report.add("bundle.banned_panel_noise",
+                           "над [su_panel] подпись «Обратите внимание»: панель и так выделяет текст, "
+                           "уберите шумную фразу", file=file, line=line)
+
+    updates = [panel for panel in panels if PANEL_UPDATE.search(panel.group("body"))]
+    if updates:
+        first = updates[0]
+        for match in re.finditer(r"[^\n]+", article[:first.start()]):
+            if _is_link_line(match.group(0)):
+                report.add("bundle.panel_order",
+                           f"блок ссылок (строка {_line_of(article, match.start())}) стоит раньше панели "
+                           f"обновления [su_panel]: поставьте панель с датой и патчем перед ссылками на "
+                           f"разделы и Telegram, а ссылки отделите линией ---",
+                           file=file, line=_line_of(article, first.start()))
+                break
+
+    for gallery in GALLERY.finditer(article):
+        columns = GALLERY_COLUMNS.search(gallery.group("attrs"))
+        if columns and int(columns.group("n")) > MAX_GALLERY_COLUMNS:
+            report.add("bundle.gallery_columns",
+                       f"[gallery] с columns={columns.group('n')}: не больше {MAX_GALLERY_COLUMNS} отдельных "
+                       f"карт в ряд, иначе они мельчают; 4 и больше — только одной сборной картинкой",
+                       file=file, line=_line_of(article, gallery.start()))
+
+    intro = intro_paragraphs(article)
+    if intro and not any(BOLD.search(paragraph) for paragraph in intro):
+        report.warnings.append(
+            "bundle.intro_bold_missing: в первых абзацах вступления нет жирного выделения — "
+            "выделите **режим** и **главный предмет** статьи"
+        )
+
+
 # ── сборка проверки ──────────────────────────────────────────────────────────
 
 
@@ -497,6 +620,7 @@ def verify_texts(
     if TAG_START.search(article):
         report.add("article_has_shortcodes", "в статье без шорткодов есть теги шорткодов",
                    file=names["article"], line=_line_of(article, TAG_START.search(article).start()))
+    check_layout(article, report, file=names["article"])
 
     article_ids: set[str] | None = None
     if shortcodes is not None:
