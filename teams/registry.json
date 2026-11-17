@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.17.0",
+      "version": "1.18.0",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -122,7 +122,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.11.12",
+      "version": "1.12.0",
       "source": "teams/research-team",
       "resources": [
         {
@@ -349,7 +349,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.13.0",
+      "version": "1.14.0",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -473,6 +473,10 @@
           "destination": "python/editorteam/bg_sim.py"
         },
         {
+          "source": "editor/src/editorteam/stats_insights.py",
+          "destination": "python/editorteam/stats_insights.py"
+        },
+        {
           "source": "editor/src/editorteam/publication_bundle.py",
           "destination": "python/editorteam/publication_bundle.py"
         },
@@ -491,5 +495,5 @@
       "resources": []
     }
   ],
-  "release_version": "1.20.19"
+  "release_version": "1.20.20"
 }
