@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.15.16",
+      "version": "1.16.0",
       "source": "teams/editor-team",
       "resources": [
         {
