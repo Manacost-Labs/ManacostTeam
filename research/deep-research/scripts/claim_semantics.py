@@ -166,6 +166,10 @@ def strategy_decision_coverage(plan: dict, claims: dict, evidence: dict, sources
 
 
 ADVICE_FORMS = ("threshold", "order", "prohibition", "fallback", "trap", "skill_gated")
+# Позиция игрока по существу тир-листа Полей сражений. В покрытие мастерства
+# гайда по колоде не входит, поэтому не порождает предупреждений «Нет формы опыта».
+VERDICT_FORM = "verdict"
+VERDICT_FIELDS = ("take_when", "skip_when", "pivot_or_sell_turn", "bad_alternative_omitted")
 MASTERY_GAP = "раздел мастерства писать не из чего"
 NO_ADVICE_REASON = "причина не названа"
 
@@ -176,7 +180,7 @@ def experience_errors(card: dict, claims: dict, evidence: dict, sources: dict) -
         return []
     errors = []
     form = card.get("advice_form")
-    if form not in ADVICE_FORMS:
+    if form not in ADVICE_FORMS and form != VERDICT_FORM:
         errors.append("invalid advice_form")
     fields = card.get("fields")
     fields = fields if isinstance(fields, dict) else {}
@@ -195,6 +199,10 @@ def experience_errors(card: dict, claims: dict, evidence: dict, sources: dict) -
             errors.append("threshold requires numeric value and unit")
     if form == "skill_gated" and not text(card.get("audience")):
         errors.append("skill_gated requires audience")
+    if form == VERDICT_FORM:
+        verdict = card.get("verdict")
+        if not isinstance(verdict, dict) or any(not text(verdict.get(key)) for key in VERDICT_FIELDS):
+            errors.append("verdict requires take_when, skip_when, pivot_or_sell_turn and bad_alternative_omitted")
     provenance = card.get("experience_source")
     if not isinstance(provenance, dict):
         return errors + ["experience_source required"]

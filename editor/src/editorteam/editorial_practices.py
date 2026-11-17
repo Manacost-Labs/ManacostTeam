@@ -399,6 +399,7 @@ def validate(
     snapshots: list | None = None,
     require_snapshots: bool = False,
     deck_guide: bool = False,
+    genre: str | None = None,
 ) -> list[str]:
     try:
         packet = prepare(text, owner=owner, original=original, handoff=handoff, snapshots=snapshots)
@@ -422,7 +423,9 @@ def validate(
         from .owner_review import validate_rubric
 
         errors += validate_review(text, report.get("structure_review"))
-        errors += validate_rubric(text, report.get("owner_checks"), deck_guide=deck_guide)
+        errors += validate_rubric(
+            text, report.get("owner_checks"), deck_guide=deck_guide, genre=genre
+        )
         errors += _checks(
             text, report.get("logic_checks"), set(LOGIC), "logic_checks", na={"causal_support"}
         )

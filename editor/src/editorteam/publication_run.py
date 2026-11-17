@@ -101,8 +101,12 @@ INSTRUCTIONS = {
 }
 
 
-def craft_guidance(stage: str, deck_guide: bool = False) -> dict | None:
-    """Conditional craft cues, separate from the evidence-bearing chapter brief."""
+def craft_guidance(stage: str, genre: str | bool | None = None) -> dict | None:
+    """Conditional craft cues, separate from the evidence-bearing chapter brief.
+
+    genre — жанр плана (deck_guide, bg_tierlist, bg_guide); прежний вызов с
+    True означает гайд по колоде.
+    """
     role = {
         "sources": "research",
         "research": "research",
@@ -195,13 +199,23 @@ def craft_guidance(stage: str, deck_guide: bool = False) -> dict | None:
         "Не переписывай заданные 20% или 80%: удачный фрагмент можно оставить. "
         "Балл ИИ-детектора не доказывает авторство и не служит критерием готовности.",
     }
-    from .owner_review import CLAIM_GUIDANCE, DELETION_GUIDANCE
+    from .owner_review import (
+        BG_GUIDE,
+        BG_PLAYER_POSITION_GUIDANCE,
+        BG_TIERLIST,
+        CLAIM_GUIDANCE,
+        DECK_GUIDE,
+        DELETION_GUIDANCE,
+        GENRE_GUIDANCE,
+    )
 
+    genre = DECK_GUIDE if genre is True else genre
     common.append(CLAIM_GUIDANCE)
-    if deck_guide and role != "research":
-        from .owner_review import DECK_GUIDE_GUIDANCE
-
-        common.append(DECK_GUIDE_GUIDANCE)
+    if genre in GENRE_GUIDANCE and role != "research":
+        common.append(GENRE_GUIDANCE[genre])
+    if genre in (BG_TIERLIST, BG_GUIDE) and role == "research":
+        # research собирает позицию игрока по каждому существу, а не каталог эффектов
+        common.append(BG_PLAYER_POSITION_GUIDANCE)
     deletion = {"id": "deletion_pass", "task": DELETION_GUIDANCE}
     passes = [research] if role == "research" else [deletion] if role == "delete" else [author, deletion, prose]
     reader_quality_checks = [
@@ -756,16 +770,36 @@ def next_task(
             "и поля review_schema. Проверяй содержательность, логику, источники и сохранение голоса. "
             "Не подменяй неизвестные данные выдумкой. issue/unverified требуют исправления или источника."
         )
-    from .owner_review import is_deck_guide
+    from .owner_review import (
+        BG_GUIDE,
+        BG_PLAYER_POSITION_GUIDANCE,
+        BG_TIERLIST,
+        DECK_GUIDE,
+        plan_genre,
+    )
 
     saved_context = _author_context(run, state)
-    deck_guide = is_deck_guide(saved_context[0]) if saved_context else False
-    guidance = craft_guidance(stage, deck_guide)
+    genre = plan_genre(saved_context[0]) if saved_context else None
+    if genre is None and state["profile"] == "battlegrounds-tierlist":
+        # Профиль тир-листа даёт автору и research жанровые подсказки;
+        # рубрика owner_checks расширяется только жанром плана.
+        genre = BG_TIERLIST
+    deck_guide = genre == DECK_GUIDE
+    bg_genre = genre in (BG_TIERLIST, BG_GUIDE)
+    guidance = craft_guidance(stage, genre)
     if guidance is not None:
         task["craft_guidance"] = guidance
         task["instructions"] += (
             " craft_guidance содержит условные приёмы объяснения, не факты, "
             "не обязательную структуру и не квоту правок. Применяй по задаче читателя."
+        )
+    if bg_genre and stage in {"sources", "research"}:
+        task["instructions"] += " " + BG_PLAYER_POSITION_GUIDANCE
+    if bg_genre and stage == "draft":
+        task["instructions"] += (
+            " Поля сражений: каждое оцениваемое существо пиши позицией игрока — вердикт, когда брать, "
+            "когда не брать, ход продажи или выхода, нетривиальный нюанс и ловушка, — а не пересказом эффекта. "
+            "Позицию без подтверждения в handoff не выдумывай."
         )
     if "research" in state["artifacts"]:
         handoff = _json(_data(run, state, "research"))
@@ -796,6 +830,20 @@ def next_task(
                 "на mastery_card_ids; при mastery_allowed=false раздел мастерства не пиши. "
                 "Порог и порядок действий из карточки переноси без изменения чисел и последовательности. "
                 "Первое лицо — только для first_person_card_ids."
+            )
+        elif bg_genre:
+            from .article_structure import TIERLIST_ROLES, experience_summary
+            from .owner_review import GENRE_GUIDANCE
+
+            task[genre] = {
+                "guidance": GENRE_GUIDANCE[genre],
+                **({"section_roles": list(TIERLIST_ROLES)} if genre == BG_TIERLIST else {}),
+                "verdict_card_ids": experience_summary(handoff)["coverage"]["verdict"],
+            }
+            task["instructions"] += (
+                f" {genre}.verdict_card_ids — подтверждённые позиции игрока (advice_form=verdict): "
+                "условия и ход продажи переноси без изменений, bad_alternative_omitted в статью не пиши. "
+                "Для существа без карточки позицию не выдумывай: опирайся на claims handoff или оставь пробел."
             )
     if "draft" in state["artifacts"]:
         task["article_sha256"] = article_hash(_data(run, state, "draft").decode("utf-8"))
@@ -918,6 +966,18 @@ def next_task(
                     "(intro, mechanics, cards, builds, mulligan, early, mastery, against, conclusion) и card_ids — "
                     "карточки опыта игрока, которые раздел использует. Раздел mechanics («как работает колода») идёт "
                     "сразу после вступления и входит в depends_on каждого раздела, который на него опирается. "
+                ) + task["instructions"]
+            elif genre == BG_TIERLIST:
+                task["instructions"] = (
+                    "Тир-лист Полей сражений: у плана genre=bg_tierlist, у каждого раздела role "
+                    "(intro, changes, tier, conclusion); нужен хотя бы один раздел tier, и каждый tier называет "
+                    "claim_ids своих существ, а card_ids — их карточки verdict, если они есть. "
+                    "Каждое существо стоит ровно в одном тире отдельной записью с одинаковым порядком сведений. "
+                ) + task["instructions"]
+            elif genre == BG_GUIDE:
+                task["instructions"] = (
+                    "Гайд по стратегии Полей сражений: у плана genre=bg_guide; разделы ведут от сигнала входа "
+                    "в сборку через кривую золота и рабочие синергии к моменту отказа. "
                 ) + task["instructions"]
         if stage in {"fact_review", "literary_review"}:
             task["author_context_review_schema"] = {
@@ -1125,7 +1185,7 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
         else:
             handoff, text = _context(run, state)
             report = _json(data)
-            from .owner_review import is_deck_guide
+            from .owner_review import plan_genre
 
             context = _author_context(run, state)
             if context is None:
@@ -1155,7 +1215,7 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
                     require_practices=state.get("review_contract_version", 1) >= 3,
                     handoff=handoff,
                     require_owner=True,
-                    deck_guide=is_deck_guide(context[0]),
+                    genre=plan_genre(context[0]),
                     **review_context,
                 )
             )
@@ -1327,12 +1387,12 @@ def export(run: Path, *, output: Path) -> dict:
         replayed, cut_errors = validate_deletion(before, report)
         if cut_errors or replayed != text:
             raise ValueError("deletion_pass: receipt does not reproduce current draft")
-        from .owner_review import is_deck_guide
+        from .owner_review import plan_genre
 
         context = _author_context(run, state)
         if context is None:
             raise ValueError("configure author context and repeat reviews before export")
-        deck_guide = is_deck_guide(context[0])
+        genre = plan_genre(context[0])
         errors = validate_reviews(
             handoff,
             text,
@@ -1347,7 +1407,7 @@ def export(run: Path, *, output: Path) -> dict:
             snapshots=_json(_data(run, state, "sources"))
             if state.get("review_contract_version", 1) >= 3
             else None,
-            deck_guide=deck_guide,
+            genre=genre,
         )
         if errors:
             raise ValueError("; ".join(errors))
@@ -1358,7 +1418,7 @@ def export(run: Path, *, output: Path) -> dict:
         from .owner_review import validate_genre, validate_rubric
 
         literary = _json(_data(run, state, "literary_review"))
-        errors += validate_rubric(text, literary.get("owner_checks"), deck_guide=deck_guide)
+        errors += validate_rubric(text, literary.get("owner_checks"), genre=genre)
         errors += validate_genre(text, context[0], literary)
         for stage in ("fact_review", "literary_review"):
             errors += review_errors(*context, text, _json(_data(run, state, stage)), stage)

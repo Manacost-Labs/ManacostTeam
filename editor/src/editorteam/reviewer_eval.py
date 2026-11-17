@@ -154,7 +154,7 @@ def evaluate(
     for name in clean_names:
         texts[name] = (folder / name).read_text(encoding="utf-8")
 
-    deck = OwnerReview.is_deck_guide(context)
+    genre = OwnerReview.plan_genre(context)
     context_sha = sha(json.dumps(context, ensure_ascii=False, sort_keys=True)) if context else "-"
 
     def key(name: str, run: int) -> str:
@@ -183,7 +183,7 @@ def evaluate(
         rows = parse_reply(record.get("reply", ""))
         record["rows"] = rows
         record["validation"] = (
-            OwnerReview.validate_rubric(text, rows, allow_unresolved=True, deck_guide=deck)
+            OwnerReview.validate_rubric(text, rows, allow_unresolved=True, genre=genre)
             if rows is not None
             else ["no owner_checks JSON"]
         )
@@ -246,7 +246,7 @@ def evaluate(
         return round(sum(values) / len(values), 2) if values else 0.0
 
     discrimination = {
-        "categories": len(OwnerReview.categories_for(deck)),
+        "categories": len(OwnerReview.categories_for(genre)),
         "rejected_mean_issues": mean(sorted(rejected_names)),
         "clean_mean_issues": mean(clean_names),
     }

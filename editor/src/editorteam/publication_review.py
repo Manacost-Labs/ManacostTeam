@@ -87,12 +87,13 @@ def _decision_cards(chapter: dict, claims: dict, ready: bool) -> list[str]:
         ):
             errors.append(f"handoff: {identity} invalid card kind/status/question")
         # Пакет опыта игрока: поля необязательны, в старых bundle их нет.
-        from .article_structure import ADVICE_FORMS
+        from .article_structure import ADVICE_FORMS, verdict_errors
 
         if ("advice_form" in card and card["advice_form"] not in ADVICE_FORMS) or (
             "first_person" in card and type(card["first_person"]) is not bool
         ):
             errors.append(f"handoff: {identity} invalid advice_form/first_person")
+        errors.extend(f"handoff: {identity} {error}" for error in verdict_errors(card))
         gaps = card.get("gaps", [])
         if (
             not _strings(gaps)
@@ -488,6 +489,7 @@ def validate_literary(
     snapshots: list | None = None,
     require_owner: bool = False,
     deck_guide: bool = False,
+    genre: str | None = None,
 ) -> list[str]:
     """Check the independent whole-article assessment and quoted findings."""
     errors = _report(text, report)
@@ -496,7 +498,9 @@ def validate_literary(
     if require_owner and not require_practices:
         from .owner_review import validate_rubric
 
-        errors += validate_rubric(text, report.get("owner_checks"), deck_guide=deck_guide)
+        errors += validate_rubric(
+            text, report.get("owner_checks"), deck_guide=deck_guide, genre=genre
+        )
     for key, explanation in (("strengths", "reason"), ("paragraph_functions", "function")):
         if key not in report and not require_extended:
             continue
@@ -535,6 +539,7 @@ def validate_literary(
             handoff=handoff,
             snapshots=snapshots,
             deck_guide=deck_guide,
+            genre=genre,
         )
     changes = report.get("strength_changes", [])
     if not isinstance(changes, list) or any(not isinstance(row, dict) for row in changes):
@@ -594,6 +599,7 @@ def validate_reviews(
     original: str | None = None,
     snapshots: list | None = None,
     deck_guide: bool = False,
+    genre: str | None = None,
 ) -> list[str]:
     """Gate both reviews of exactly the same article and evidence handoff."""
     errors = validate_factual(
@@ -613,6 +619,7 @@ def validate_reviews(
         handoff=handoff,
         snapshots=snapshots,
         deck_guide=deck_guide,
+        genre=genre,
     )
     if isinstance(handoff, dict) and isinstance(literary, dict):
         try:

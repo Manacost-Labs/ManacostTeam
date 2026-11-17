@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 )
 
@@ -17,6 +18,26 @@ func OwnerIDs() []string {
 // необязателен: если рецензент вернул хотя бы одну из них, нужны все три.
 func DeckGuideOwnerIDs() []string {
 	return []string{"advice_has_condition_and_reason", "mastery_has_threshold_or_order", "term_before_definition"}
+}
+
+// BGTierlistOwnerIDs — четыре дополнительные категории тир-листа Полей сражений
+// (genre=bg_tierlist). Контракт тот же, что у DeckGuideOwnerIDs: набор необязателен,
+// но одна присланная категория требует весь набор.
+func BGTierlistOwnerIDs() []string {
+	return []string{"uniform_entry_structure", "directive_verdict_when_take_or_skip", "decision_horizon_and_pivot", "nontrivial_plays_no_trivial_filler"}
+}
+
+// BGGuideOwnerIDs — три дополнительные категории гайда по стратегии Полей
+// сражений (genre=bg_guide), по тому же контракту.
+func BGGuideOwnerIDs() []string {
+	return []string{"entry_and_abort_condition", "good_vs_trap_synergies", "turn_curve_without_trivial_filler"}
+}
+
+// genreOwnerIDs — жанровые расширения рубрики. Жанр знает только план
+// Python-контекста, поэтому расширение распознаётся по присланным ID; наборы
+// разных жанров не смешиваются.
+func genreOwnerIDs() [][]string {
+	return [][]string{DeckGuideOwnerIDs(), BGTierlistOwnerIDs(), BGGuideOwnerIDs()}
 }
 
 const ClaimGuidance = "Правилом с «потому что» подавай только claim_kind=mechanic с проверенным основанием. observation — наблюдение в указанной выборке, не правило и не причина. opinion — мнение с именем игрока, только если нужно читателю. Отсутствующий claim_kind старого handoff не угадывай. Если handoff говорит «блок советов писать не из чего», блок не пишется."
@@ -32,6 +53,10 @@ genre_fit: манера и объём относительно выбранны�
 ai_tells: шаблонные рамки и интонация, не определение авторства. Отрицательный вердикт сохраняй как repair с цитатой, не меняй на clear ради допуска.
 Гайд по колоде: если owner_review_assignment содержит ещё advice_has_condition_and_reason, mastery_has_threshold_or_order, term_before_definition — верни и их:
 у каждого совета есть условие и причина; в разделе мастерства есть порог или порядок действий без изменения чисел и последовательности из карточки опыта; термин не используется раньше объяснения.
+Тир-лист Полей сражений: если owner_review_assignment содержит uniform_entry_structure, directive_verdict_when_take_or_skip, decision_horizon_and_pivot, nontrivial_plays_no_trivial_filler — верни все четыре:
+у каждого существа отдельная запись с одинаковым порядком сведений и ровно один тир; прямо сказано, когда брать и когда не брать; разбор ограничен реальным горизонтом решения и ходом продажи; выделены неочевидные приёмы без тривиальных плохих альтернатив.
+Гайд по стратегии Полей сражений: если owner_review_assignment содержит entry_and_abort_condition, good_vs_trap_synergies, turn_curve_without_trivial_filler — верни все три:
+есть сигнал входа в сборку и момент отказа; рабочие синергии отделены от ловушек; кривая золота и улучшения таверны расписаны без советов покупать слабые карты «на сдачу».
 Программа проверяет охват и цитаты, смысл и качество оцениваешь ты.
 ` + ClaimGuidance
 
@@ -48,15 +73,15 @@ const DeletionPrompt = `DELETION_PASS
 // evidence for contextualFindings and cannot authorize acceptance.
 func ValidateOwner(candidate string, rows []Check) error {
 	ids := OwnerIDs()
-	deck := DeckGuideOwnerIDs()
-	for _, row := range rows {
-		for _, id := range deck {
-			if row.ID == id {
-				ids = append(ids, deck...)
+	// Первый набор, из которого пришла хотя бы одна строка, становится
+	// обязательным целиком; строки другого жанра остаются неизвестными.
+genres:
+	for _, set := range genreOwnerIDs() {
+		for _, row := range rows {
+			if slices.Contains(set, row.ID) {
+				ids = append(ids, set...)
+				break genres
 			}
-		}
-		if len(ids) > len(OwnerIDs()) {
-			break
 		}
 	}
 	if len(rows) != len(ids) {

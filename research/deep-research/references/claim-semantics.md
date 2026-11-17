@@ -116,7 +116,9 @@ missing_forms. Пробелы нельзя заполнять догадками
 
 В дополнение к обычным полям observed/supported decision card укажите:
 
-- `advice_form`: threshold, order, prohibition, fallback, trap или skill_gated;
+- `advice_form`: threshold, order, prohibition, fallback, trap, skill_gated или
+  verdict (позиция по существу Полей сражений: объект `verdict` с непустыми
+  `take_when`, `skip_when`, `pivot_or_sell_turn`, `bad_alternative_omitted`);
 - `first_person`: true только для author_note, иначе false;
 - `condition`, `reason` (или «причина не названа»), при наличии `error_cost`;
   действие находится в существующем `fields.action` с claim/evidence;

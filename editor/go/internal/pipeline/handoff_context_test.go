@@ -139,4 +139,29 @@ func TestDecisionCardAcceptsOptionalAdviceFormAndRejectsUnknown(t *testing.T) {
 	if h := build("tip"); h.Validate() == nil {
 		t.Fatal("unknown advice_form accepted")
 	}
+	// verdict: позиция игрока тир-листа Полей сражений требует все четыре поля.
+	verdict := func(fields map[string]any) ResearchHandoff {
+		var payload map[string]any
+		_ = json.Unmarshal(richHandoffJSON(t), &payload)
+		card := payload["chapters"].([]any)[0].(map[string]any)["decision_cards"].([]any)[0].(map[string]any)
+		card["advice_form"], card["first_person"] = "verdict", false
+		if fields != nil {
+			card["verdict"] = fields
+		}
+		data, _ := json.Marshal(payload)
+		var h ResearchHandoff
+		_ = json.Unmarshal(data, &h)
+		return h
+	}
+	full := map[string]any{"take_when": "на 1-м ходу", "skip_when": "при паре на 2-м ходу", "pivot_or_sell_turn": "3-й ход", "bad_alternative_omitted": "покупка случайного заклинания"}
+	if h := verdict(full); h.Validate() != nil {
+		t.Fatalf("complete verdict rejected: %v", h.Validate())
+	}
+	if h := verdict(nil); h.Validate() == nil {
+		t.Fatal("verdict without fields accepted")
+	}
+	delete(full, "skip_when")
+	if h := verdict(full); h.Validate() == nil {
+		t.Fatal("verdict without skip_when accepted")
+	}
 }

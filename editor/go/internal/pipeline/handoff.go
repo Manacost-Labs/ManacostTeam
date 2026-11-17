@@ -139,6 +139,17 @@ type DecisionCard struct {
 	// признак ответа автора-игрока.
 	AdviceForm  string `json:"advice_form,omitempty"`
 	FirstPerson *bool  `json:"first_person,omitempty"`
+	// Позиция игрока по существу тир-листа Полей сражений (advice_form=verdict).
+	Verdict *VerdictFields `json:"verdict,omitempty"`
+}
+
+// VerdictFields — когда брать, когда не брать, ход продажи/выхода и плохая
+// альтернатива, которую статья не предлагает.
+type VerdictFields struct {
+	TakeWhen              string `json:"take_when"`
+	SkipWhen              string `json:"skip_when"`
+	PivotOrSellTurn       string `json:"pivot_or_sell_turn"`
+	BadAlternativeOmitted string `json:"bad_alternative_omitted"`
 }
 
 func validateDecisionCards(chapter ResearchChapter, claims []ResearchClaim, ready bool) error {
@@ -164,6 +175,11 @@ func validateDecisionCards(chapter ResearchChapter, claims []ResearchClaim, read
 		}
 		switch card.AdviceForm {
 		case "", "threshold", "order", "prohibition", "fallback", "trap", "skill_gated":
+		case "verdict":
+			v := card.Verdict
+			if v == nil || strings.TrimSpace(v.TakeWhen) == "" || strings.TrimSpace(v.SkipWhen) == "" || strings.TrimSpace(v.PivotOrSellTurn) == "" || strings.TrimSpace(v.BadAlternativeOmitted) == "" {
+				return fmt.Errorf("verdict requires take_when, skip_when, pivot_or_sell_turn and bad_alternative_omitted")
+			}
 		default:
 			return fmt.Errorf("invalid card advice_form")
 		}

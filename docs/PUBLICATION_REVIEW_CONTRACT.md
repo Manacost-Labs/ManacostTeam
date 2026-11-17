@@ -201,6 +201,15 @@ opinion получает имя игрока и включается лишь п
 (`missing category`). Поля `advice_form` и `first_person` карточек пакета опыта в
 handoff необязательны; неизвестная форма отклоняется.
 
+Для тир-листа Полей сражений (`genre = "bg_tierlist"`) рубрика содержит 14 строк:
+десять общих и `uniform_entry_structure`, `directive_verdict_when_take_or_skip`,
+`decision_horizon_and_pivot`, `nontrivial_plays_no_trivial_filler`. Для гайда
+Полей сражений (`genre = "bg_guide"`) — 13 строк: десять общих и
+`entry_and_abort_condition`, `good_vs_trap_synergies`,
+`turn_curve_without_trivial_filler`. Строки разных жанров смешивать нельзя.
+Профиль `battlegrounds-tierlist` без `genre` в плане включает только жанровые
+подсказки автору; рубрика остаётся из десяти строк.
+
 V1/v2/v3 читаются, но старые receipts не разрешают новый export. Охват и цитаты
 проверяет программа, литературное качество оценивает reviewer. Для диагностики:
 `audit --author-context` и [owner-eval](../editor/docs/OWNER_EVAL.md).

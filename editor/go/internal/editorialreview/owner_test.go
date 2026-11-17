@@ -68,3 +68,49 @@ func TestDeckGuideRubricExtensionIsAllOrNothing(t *testing.T) {
 		t.Fatal("negative deck guide judgment must stay valid evidence and block acceptance")
 	}
 }
+
+func TestBGRubricExtensionsAreAllOrNothingAndNeverMixed(t *testing.T) {
+	text := "Ставьте на 2-м ходу."
+	row := func(id string) Check { return Check{ID: id, Status: "clear", Quote: text, Reason: "Synthetic check."} }
+	var base []Check
+	for _, id := range OwnerIDs() {
+		base = append(base, row(id))
+	}
+	extend := func(ids []string) []Check {
+		rows := append([]Check(nil), base...)
+		for _, id := range ids {
+			rows = append(rows, row(id))
+		}
+		return rows
+	}
+	for name, ids := range map[string][]string{"bg_tierlist": BGTierlistOwnerIDs(), "bg_guide": BGGuideOwnerIDs()} {
+		full := extend(ids)
+		if err := ValidateOwner(text, full); err != nil {
+			t.Fatal(name, err)
+		}
+		if len(full) != len(OwnerIDs())+len(ids) {
+			t.Fatal(name, "unexpected rubric size")
+		}
+		if ValidateOwner(text, full[:len(full)-1]) == nil {
+			t.Fatal(name, "partial extension accepted")
+		}
+		full[len(full)-1].Status = "issue"
+		if ValidateOwner(text, full) != nil || !HasUnresolved(full) {
+			t.Fatal(name, "negative judgment must stay valid evidence and block acceptance")
+		}
+	}
+	if len(BGTierlistOwnerIDs()) != 4 || len(BGGuideOwnerIDs()) != 3 {
+		t.Fatal("bg extensions must add 4 and 3 categories")
+	}
+	mixed := extend(append(BGTierlistOwnerIDs(), BGGuideOwnerIDs()[0]))
+	if ValidateOwner(text, mixed) == nil {
+		t.Fatal("rows of two genres accepted together")
+	}
+	mixed = extend(append(DeckGuideOwnerIDs(), BGTierlistOwnerIDs()...))
+	if ValidateOwner(text, mixed) == nil {
+		t.Fatal("deck guide and tierlist rows accepted together")
+	}
+	if err := ValidateOwner(text, base); err != nil {
+		t.Fatal("/v2/edit without plan context must keep the ten-row rubric", err)
+	}
+}

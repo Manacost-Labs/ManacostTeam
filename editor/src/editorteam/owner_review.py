@@ -61,13 +61,84 @@ DECK_GUIDE_CRITERIA = dict(
 )
 
 
-def is_deck_guide(context: dict | None) -> bool:
+# Поля сражений: тир-лист (genre=bg_tierlist) — четыре строки, гайд по стратегии
+# (genre=bg_guide) — три. Как и у гайда по колоде, включаются только планом.
+BG_TIERLIST = "bg_tierlist"
+BG_TIERLIST_CATEGORIES = (
+    "uniform_entry_structure",
+    "directive_verdict_when_take_or_skip",
+    "decision_horizon_and_pivot",
+    "nontrivial_plays_no_trivial_filler",
+)
+BG_TIERLIST_CRITERIA = dict(
+    zip(
+        BG_TIERLIST_CATEGORIES,
+        (
+            "У каждого предмета в тире предсказуемая отдельная структура (не свалены 3–4 карты в общую кучу "
+            "с разным набором сведений), и ни одна карта не раздвоена между двумя тирами? "
+            "Цитируй склейку нескольких существ или карту, упомянутую в двух тирах.",
+            "Для каждой карты прямо сказано, когда её брать и когда НЕ брать — директивно, без трусливого "
+            "«нередко/иногда» там, где есть чёткое правило? Сверь условие с карточкой verdict, если она есть.",
+            "Разбор ограничен реальным горизонтом решения (для 1-х дропов — 1–4 ход и условие продажи "
+            "или перехода в тир-3), без пересказа финальных столов и чужих стадий игры?",
+            "Выделены неочевидные для среднего MMR приёмы (удержание в руке, точный порядок, реальные шансы "
+            "вроде 33%), и НЕ предложены тривиальные плохие ходы как альтернатива в ущерб кривой золота?",
+        ),
+    )
+)
+BG_GUIDE = "bg_guide"
+BG_GUIDE_CATEGORIES = (
+    "entry_and_abort_condition",
+    "good_vs_trap_synergies",
+    "turn_curve_without_trivial_filler",
+)
+BG_GUIDE_CRITERIA = dict(
+    zip(
+        BG_GUIDE_CATEGORIES,
+        (
+            "Есть чёткий сигнал входа в сборку (что и к какому ходу говорит «играем это») "
+            "и момент отказа от неё (что должно не случиться, чтобы перейти на другой план)?",
+            "Рабочие микросинергии отделены от ловушек и от траты золота на пустые характеристики? "
+            "Ловушка названа прямо, а не подана как запасной вариант.",
+            "Кривая золота и улучшения таверны расписаны по ходам с условиями, "
+            "без советов покупать слабые карты «на сдачу»?",
+        ),
+    )
+)
+
+GENRE_CATEGORIES = {
+    DECK_GUIDE: DECK_GUIDE_CATEGORIES,
+    BG_TIERLIST: BG_TIERLIST_CATEGORIES,
+    BG_GUIDE: BG_GUIDE_CATEGORIES,
+}
+GENRE_CRITERIA = {
+    DECK_GUIDE: DECK_GUIDE_CRITERIA,
+    BG_TIERLIST: BG_TIERLIST_CRITERIA,
+    BG_GUIDE: BG_GUIDE_CRITERIA,
+}
+
+
+def plan_genre(context: dict | None) -> str | None:
+    """Жанр плана, который расширяет рубрику; без genre — None и прежние десять строк."""
     plan = context.get("article_plan") if isinstance(context, dict) else None
-    return isinstance(plan, dict) and plan.get("genre") == DECK_GUIDE
+    genre = plan.get("genre") if isinstance(plan, dict) else None
+    return genre if genre in GENRE_CATEGORIES else None
 
 
-def categories_for(deck_guide: bool = False) -> tuple[str, ...]:
-    return CATEGORIES + DECK_GUIDE_CATEGORIES if deck_guide else CATEGORIES
+def is_deck_guide(context: dict | None) -> bool:
+    return plan_genre(context) == DECK_GUIDE
+
+
+def _genre(value) -> str | None:
+    # Прежние вызовы передают bool гайда по колоде; новые — строку жанра плана.
+    if value is True:
+        return DECK_GUIDE
+    return value if isinstance(value, str) and value in GENRE_CATEGORIES else None
+
+
+def categories_for(genre: str | bool | None = None) -> tuple[str, ...]:
+    """Десять базовых категорий и жанровое расширение; True — прежний флаг гайда по колоде."""
+    return CATEGORIES + GENRE_CATEGORIES.get(_genre(genre), ())
 
 
 DECK_GUIDE_GUIDANCE = (
@@ -88,6 +159,50 @@ DECK_GUIDE_GUIDANCE = (
     "свой опыт, сыгранные партии и впечатления не выдумывай. "
     "Источник называй один раз в конце, в теле его не пересказывай."
 )
+
+# Позиция игрока по существу Полей сражений: общий вход research и автора тир-листа/гайда.
+BG_PLAYER_POSITION_GUIDANCE = (
+    "Поля сражений: для каждого оцениваемого существа или заклинания таверны фиксируй не пересказ эффекта, "
+    "а позицию сильного игрока: вердикт (тир или «брать/не брать»), когда брать (ход, стол, герой), "
+    "когда НЕ брать, ход продажи или выхода из сборки, нетривиальный нюанс "
+    "(придержать в руке, точный порядок, реальные шансы) и ловушку, которой надо избегать. "
+    "Подтверждённую позицию оформляй decision_card с advice_form=verdict и полем verdict "
+    "{take_when, skip_when, pivot_or_sell_turn, bad_alternative_omitted}; bad_alternative_omitted — "
+    "тривиальный плохой ход, который статья не предлагает как альтернативу. "
+    "Неподтверждённую позицию оставь пробелом, догадкой не заполняй."
+)
+
+BG_TIERLIST_GUIDANCE = (
+    "Тир-лист Полей сражений. Порядок: вступление (режим и предмет рейтинга) → что изменилось → тиры "
+    "от сильного к слабому → заключение. Каждое существо — отдельная запись с одинаковым порядком сведений: "
+    "вердикт, когда брать, когда не брать, ход продажи или перехода, нетривиальный нюанс. "
+    "Не сливай три-четыре существа в один абзац связками вроде «на первый взгляд… но дальше у них разная "
+    "судьба»; одна карта стоит ровно в одном тире. Где есть чёткое правило, пиши его прямо "
+    "(«ставьте на 2-м ходу»), без «нередко» и «иногда». Горизонт решения — реальная стадия: для существ "
+    "1-го уровня это 1–4 ход и условие продажи или перехода на 3-й уровень таверны; финальные столы не пересказывай. "
+    "Текст карты виден в подсказке шорткода — пиши позицию игрока, а не эффект. "
+    "Выделяй неочевидные приёмы (удержание в руке, порядок розыгрыша, реальные шансы) и не предлагай "
+    "тривиальные плохие ходы как альтернативу — например, покупку случайных заклинаний ради мелкой "
+    "прибавки к характеристикам в ущерб кривой золота. Условия и ход из карточки verdict переноси без изменений; "
+    "bad_alternative_omitted в статью не пиши. Объединения существ называй только «тип существ»."
+)
+
+BG_GUIDE_GUIDANCE = (
+    "Гайд по стратегии Полей сражений. Начни с сигнала входа в сборку: какие существа, заклинания таверны "
+    "или герой к какому ходу говорят «играем это»; назови момент отказа — что должно не случиться к какому "
+    "ходу, чтобы перейти на другой план. Отделяй рабочие микросинергии от ловушек: связку, которая выглядит "
+    "сильной, но тратит золото на пустые характеристики, называй ловушкой прямо. Кривую золота и улучшения "
+    "таверны пиши по ходам с условиями; не советуй покупать слабые карты «на сдачу». Ключевые существа "
+    "описывай позицией игрока (когда брать, когда продать, что держать в руке), а не текстом карты. "
+    "Где есть правило, пиши директивно; «зависит от ситуации» раскрывай признаком выбора. "
+    "Объединения существ называй только «тип существ»."
+)
+
+GENRE_GUIDANCE = {
+    DECK_GUIDE: DECK_GUIDE_GUIDANCE,
+    BG_TIERLIST: BG_TIERLIST_GUIDANCE,
+    BG_GUIDE: BG_GUIDE_GUIDANCE,
+}
 
 CLAIM_GUIDANCE = (
     "Правилом с «потому что» подавай только claim_kind=mechanic с проверенным основанием. "
@@ -146,11 +261,12 @@ def genre_assignment(text: str, context: dict | None = None) -> dict:
 
 
 def assignment(text: str, context: dict | None = None) -> dict:
-    deck = is_deck_guide(context)
+    genre = plan_genre(context)
     return {
-        "categories": list(categories_for(deck)),
-        "criteria": {**CRITERIA, **(DECK_GUIDE_CRITERIA if deck else {})},
-        **({"deck_guide": DECK_GUIDE_GUIDANCE} if deck else {}),
+        "categories": list(categories_for(genre)),
+        "criteria": {**CRITERIA, **GENRE_CRITERIA.get(genre, {})},
+        # ключ совпадает с жанром плана: deck_guide, bg_tierlist или bg_guide
+        **({genre: GENRE_GUIDANCE[genre]} if genre else {}),
         "genre": genre_assignment(text, context),
         "schema": "owner_checks: ровно одна строка на категорию {id,status:clear|issue|unverified,quote,reason}. "
         "Для КАЖДОЙ строки нужна непустая дословная цитата текущей статьи, включая проверку отсутствия дефекта. "
@@ -164,14 +280,21 @@ def assignment(text: str, context: dict | None = None) -> dict:
 
 
 def validate_rubric(
-    text: str, rows, *, allow_unresolved: bool = False, deck_guide: bool = False
+    text: str,
+    rows,
+    *,
+    allow_unresolved: bool = False,
+    deck_guide: bool = False,
+    genre: str | None = None,
 ) -> list[str]:
-    """Весь набор категорий с цитатами; для гайда по колоде — ещё три строки.
+    """Весь набор категорий с цитатами; жанр плана добавляет свои строки.
 
-    Сохранённый отзыв из десяти строк не разрешает новый экспорт гайда по
-    колоде (missing category), но сам читается как прежде.
+    Гайд по колоде — ещё три, тир-лист Полей сражений — четыре, гайд по
+    стратегии Полей сражений — три. Сохранённый отзыв из десяти строк не
+    разрешает новый экспорт жанровой статьи (missing category), но сам
+    читается как прежде.
     """
-    categories = categories_for(deck_guide)
+    categories = categories_for(genre or deck_guide)
     if not isinstance(rows, list) or len(rows) > 32:
         return ["owner_checks: complete quoted rubric required"]
     errors, seen = [], set()

@@ -45,6 +45,14 @@ class ExperienceTests(unittest.TestCase):
         self.assertTrue(self.errors())
         self.assertEqual(sem.experience_errors({}, {}, {}, {}), [])
 
+    def test_verdict_requires_all_four_player_position_fields(self):
+        self.card.update(advice_form="verdict", verdict={"take_when": "first turn", "skip_when": "pair on turn two", "pivot_or_sell_turn": "turn three", "bad_alternative_omitted": "random spell for stats"})
+        self.assertEqual(self.errors(), [])
+        del self.card["verdict"]["skip_when"]
+        self.assertTrue(self.errors())
+        plan = {"profile": "constructed-guide", "chapters": [{"decision_cards": [self.card]}]}
+        self.assertNotIn("verdict", sem.experience_coverage(plan, self.claims, self.evidence, self.sources)["missing_forms"])
+
     def test_transcript_and_replay_need_real_source_and_locator(self):
         self.card.update(advice_form="trap", first_person=False)
         self.card["experience_source"] = {"kind": "transcript", "source_id": "S", "evidence_id": "E"}

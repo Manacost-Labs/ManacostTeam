@@ -120,12 +120,32 @@ def validate_review(text: str, report) -> list[str]:
 
 
 DECK_GUIDE = "deck_guide"
+# Жанры Полей сражений: тир-лист (рейтинг пула) и гайд по стратегии.
+BG_TIERLIST = "bg_tierlist"
+BG_GUIDE = "bg_guide"
+GENRES = (DECK_GUIDE, BG_TIERLIST, BG_GUIDE)
 # Роли разделов гайда по колоде в порядке решений читателя, не обязательные заголовки.
 ROLES = ("intro", "mechanics", "cards", "builds", "mulligan", "early", "mastery", "against", "conclusion")
 NEEDS_MECHANICS = frozenset({"cards", "builds", "mulligan", "early", "mastery", "against"})
-# Формы советов в пакете опыта игрока (контракт с research).
-ADVICE_FORMS = ("threshold", "order", "prohibition", "fallback", "trap", "skill_gated")
+# Роли разделов тир-листа Полей сражений: вступление, изменения пула, тиры, вывод.
+TIERLIST_ROLES = ("intro", "changes", "tier", "conclusion")
+# Формы советов в пакете опыта игрока (контракт с research). verdict — позиция
+# игрока по одному существу тир-листа; в покрытие мастерства гайда по колоде не входит.
+ADVICE_FORMS = ("threshold", "order", "prohibition", "fallback", "trap", "skill_gated", "verdict")
 MASTERY_FORMS = frozenset({"threshold", "order"})
+VERDICT_FIELDS = ("take_when", "skip_when", "pivot_or_sell_turn", "bad_alternative_omitted")
+
+
+def verdict_errors(card: dict) -> list[str]:
+    """Карточка verdict: когда брать, когда не брать, ход продажи/выхода и опущенная плохая альтернатива."""
+    if card.get("advice_form") != "verdict":
+        return []
+    verdict = card.get("verdict")
+    if not isinstance(verdict, dict) or set(verdict) != set(VERDICT_FIELDS) or any(
+        not _text(verdict[key], 800) for key in VERDICT_FIELDS
+    ):
+        return ["verdict requires take_when, skip_when, pivot_or_sell_turn and bad_alternative_omitted"]
+    return []
 
 
 def experience_cards(handoff) -> list[dict]:
@@ -195,12 +215,25 @@ def _deck_guide_roles(rows: list[dict]) -> None:
             raise ValueError(f"deck guide plan: mastery section {row['id']} must name its experience card_ids")
 
 
+def _tierlist_roles(rows: list[dict]) -> None:
+    """Тир-лист: у каждого раздела роль, хотя бы один тир, и тир называет claim_ids своих элементов."""
+    if any(row.get("role") is None for row in rows):
+        raise ValueError("bg tierlist plan: every section needs a role")
+    tiers = [row for row in rows if row["role"] == "tier"]
+    if not tiers:
+        raise ValueError("bg tierlist plan needs at least one tier section")
+    for row in tiers:
+        if not row["claim_ids"]:
+            raise ValueError(f"bg tierlist plan: tier section {row['id']} must name claim_ids of its entries")
+
+
 def validate_plan(plan) -> None:
     required = {"reader_question", "main_answer", "sections"}
     if not isinstance(plan, dict) or not required <= set(plan) <= required | {"genre"}:
         raise ValueError("article_plan requires reader_question, main_answer and sections")
-    if "genre" in plan and plan["genre"] != DECK_GUIDE:
-        raise ValueError("article_plan genre can only be deck_guide")
+    if "genre" in plan and plan["genre"] not in GENRES:
+        raise ValueError("article_plan genre must be one of " + ", ".join(GENRES))
+    roles = TIERLIST_ROLES if plan.get("genre") == BG_TIERLIST else ROLES
     if any(not _text(plan.get(k), 800) for k in ("reader_question", "main_answer")):
         raise ValueError("article_plan needs a concrete reader question and bounded answer")
     rows, earlier = plan["sections"], set()
@@ -218,13 +251,15 @@ def validate_plan(plan) -> None:
         if not isinstance(claims, list) or len(claims) > 128 or any(not _text(x, 100) for x in claims) or len(claims) != len(set(claims)):
             raise ValueError("article_plan claim_ids must be a bounded unique list")
         cards = row.get("card_ids", [])
-        if row.get("role") is not None and row["role"] not in ROLES:
+        if row.get("role") is not None and row["role"] not in roles:
             raise ValueError("article_plan section role is unknown")
         if not isinstance(cards, list) or len(cards) > 32 or any(not _text(x, 100) for x in cards) or len(cards) != len(set(cards)):
             raise ValueError("article_plan card_ids must be a bounded unique list of experience card IDs")
         earlier.add(row["id"])
     if plan.get("genre") == DECK_GUIDE:
         _deck_guide_roles([{**row, "card_ids": row.get("card_ids", [])} for row in rows])
+    elif plan.get("genre") == BG_TIERLIST:
+        _tierlist_roles(rows)
 
 
 def validate_plan_evidence(plan, handoff: dict) -> list[str]:
@@ -238,7 +273,7 @@ def validate_plan_evidence(plan, handoff: dict) -> list[str]:
     errors = (["article_plan references unknown claims"] if used - allowed else []) + (
         ["article_plan leaves required claims uncovered"] if required - used else []
     )
-    if plan.get("genre") != DECK_GUIDE:
+    if plan.get("genre") not in GENRES:
         return errors
     by_id = {card.get("card_id"): card for card in experience_cards(handoff)}
     for row in plan["sections"]:
