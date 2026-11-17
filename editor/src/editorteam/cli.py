@@ -1308,12 +1308,78 @@ def owner_eval_cmd(args) -> int:
     else:
         result = OwnerEval.evaluate_clean(folder, run)
     result["profile"] = args.profile
+    delta = None
+    if args.baseline and labeled:
+        delta = OwnerEval.compare(result, json.loads(_read(Path(args.baseline))))
+        result["baseline_delta"] = delta
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif labeled:
         print(OwnerEval.render(result))
+        if delta is not None:
+            print(OwnerEval.render_delta(delta))
     else:
         print(OwnerEval.render_clean(result))
+    if delta is not None and OwnerEval.is_regression(delta):
+        return 1
+    return 0
+
+
+def reviewer_eval_cmd(args) -> int:
+    """Прогнать рецензента-модель (owner_checks) по набору отклонений владельца."""
+    import os
+
+    from editorteam import reviewer_eval as ReviewerEval
+
+    folder = Path(args.dataset)
+    if not (folder / "labels.json").is_file():
+        print(f"reviewer-eval: в {folder} нет labels.json", file=sys.stderr)
+        return 2
+    calls = ReviewerEval.calls_needed(folder, args.runs)
+    cache = Path(args.cache) if args.cache else folder / ".reviewer-cache"
+    print(
+        f"reviewer-eval: {calls} вызов(ов) модели ({args.runs} прогон(а)), "
+        f"backend claude -p по подписке, кэш {cache}",
+        file=sys.stderr,
+    )
+    if args.dry_run:
+        return 0
+    bridge_dir = ROOT / "tools"
+    if not (bridge_dir / "cli_model_bridge.py").is_file():
+        print("reviewer-eval: нужен editor/tools/cli_model_bridge.py (полный репозиторий)", file=sys.stderr)
+        return 2
+    if str(bridge_dir) not in sys.path:
+        sys.path.insert(0, str(bridge_dir))
+    import cli_model_bridge as Bridge
+
+    # Только подписка: ключ API в окружении переключил бы claude CLI на платный API.
+    for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+        os.environ.pop(name, None)
+    backend = Bridge.Backend("claude", args.model or "", "", [], "")
+
+    def call(system: str, prompt: str) -> str:
+        reply, code, diagnostic = backend.run(system, prompt, args.timeout)
+        if code:
+            raise RuntimeError(Bridge.classify_failure(diagnostic, code))
+        if code is None:
+            raise RuntimeError("cli не ответил вовремя")
+        return reply
+
+    context = _author_context(Path(args.author_context), args.profile) if args.author_context else None
+    result = ReviewerEval.evaluate(
+        folder, call, runs=args.runs, model=args.model or "", context=context,
+        cache=cache, parallel=args.parallel,
+    )
+    delta = None
+    if args.baseline:
+        delta = ReviewerEval.compare(result, json.loads(_read(Path(args.baseline))))
+        result["baseline_delta"] = delta
+    if args.output:
+        Path(args.output).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    if args.format == "json":
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print(ReviewerEval.render(result, delta))
     return 0
 
 
@@ -1554,7 +1620,30 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="пересчитать частоты слов автора по corpus-bg и corpus-archive",
     )
+    oe.add_argument(
+        "--baseline",
+        help="JSON прежнего owner-eval того же набора: печатает дельту, код 1 при ухудшении",
+    )
     oe.set_defaults(func=owner_eval_cmd)
+
+    rv = sub.add_parser(
+        "reviewer-eval",
+        help="рецензент-модель (owner_checks) на размеченных отклонениях владельца: "
+        "что поймано, ложные тревоги на эталонах",
+        parents=[common],
+    )
+    rv.add_argument("dataset", help="папка с labels.json, versions/ и gold/")
+    rv.add_argument("--runs", type=int, default=1, help="повторов на текст (стабильность)")
+    rv.add_argument("--model", default="", help="модель claude CLI; по умолчанию — модель CLI")
+    rv.add_argument("--parallel", type=int, default=2, help="одновременных вызовов")
+    rv.add_argument("--timeout", type=float, default=900, help="секунд на вызов")
+    rv.add_argument("--cache", help="папка кэша ответов (по умолчанию <набор>/.reviewer-cache)")
+    rv.add_argument("--profile", choices=P.available(), default="battlegrounds-article")
+    rv.add_argument("--author-context", help="author-context.json: требования и образцы")
+    rv.add_argument("--baseline", help="JSON прежнего reviewer-eval: печатает дельту")
+    rv.add_argument("--output", help="сохранить JSON результата")
+    rv.add_argument("--dry-run", action="store_true", help="только посчитать вызовы")
+    rv.set_defaults(func=reviewer_eval_cmd)
 
     ra = sub.add_parser(
         "ru-audit",
