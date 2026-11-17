@@ -307,3 +307,34 @@ def render(result: dict) -> str:
     c = result["clean_totals"]
     out.append(f"  {'всего':<55} {c['error']} / {c['review']}")
     return "\n".join(out)
+
+
+# Ухудшение: поймано меньше или на хороших текстах стало больше находок новых проверок.
+_HIGHER_IS_BETTER = ("detected",)
+_LOWER_IS_BETTER = ("missed", "clean_error", "clean_review")
+
+
+def compare(result: dict, baseline: dict) -> dict:
+    """Дельта итогов с прежним owner-eval того же набора (JSON с `totals`/`clean_totals`)."""
+
+    def flat(r: dict) -> dict:
+        t, c = r.get("totals", {}), r.get("clean_totals", {})
+        return {
+            **{k: t.get(k, 0) for k in ("detected", "partial", "missed", "needs_reviewer")},
+            "clean_error": c.get("error", 0),
+            "clean_review": c.get("review", 0),
+        }
+
+    now, then = flat(result), flat(baseline)
+    return {k: now[k] - then[k] for k in now}
+
+
+def is_regression(delta: dict) -> bool:
+    return any(delta.get(k, 0) < 0 for k in _HIGHER_IS_BETTER) or any(
+        delta.get(k, 0) > 0 for k in _LOWER_IS_BETTER
+    )
+
+
+def render_delta(delta: dict) -> str:
+    verdict = "УХУДШЕНИЕ" if is_regression(delta) else "не хуже baseline"
+    return "\nдельта к baseline: " + ", ".join(f"{k} {v:+d}" for k, v in delta.items()) + f" — {verdict}"
