@@ -473,6 +473,38 @@ def _owner_checks(text: str, profile, report: Report, author_context: dict | Non
                     meta=hit["meta"],
                 )
             )
+        slop = Owner.load_slop_frequencies()
+        if slop:
+            C = _scripts()
+            try:
+                import pymorphy3  # noqa: F401
+            except ImportError:
+                morph_slop = None
+            else:
+                morph_slop = C.morph()
+            if morph_slop is not None:
+                for hit in Owner.slop_frequency(text, slop, morph_slop, _prose_lines):
+                    report.add(
+                        Finding(
+                            id="owner.slop_frequency",
+                            analyzer="owner",
+                            category="word-choice",
+                            severity="review",
+                            confidence=0.65,
+                            message=(
+                                f"ИИ-штамп «{hit['term']}» — {hit['count']} раз на {hit['words']} слов "
+                                f"({hit['per_1k']} на 1000; в ИИ-текстах ×{hit['ratio']} чаще нормы автора)"
+                            ),
+                            evidence=", ".join(hit["forms"]),
+                            suggestion="убрать штамп или назвать конкретное действие, условие или карту",
+                            line=hit["line"],
+                            profile=profile.id,
+                            meta={
+                                k: hit[k]
+                                for k in ("kind", "term", "count", "per_1k", "ai_per_1k", "human_per_1k", "ratio")
+                            },
+                        )
+                    )
     if profile.id not in BG_PROFILES or not profile.enabled("owner_checks"):
         return
     from editorteam import bg_mechanics_gate
@@ -1333,6 +1365,28 @@ def owner_eval_cmd(args) -> int:
         )
         print(f"частоты: {len(docs)} гайдов, {freq['words']} слов, {len(freq['nouns'])} лемм")
         return 0
+    if getattr(args, "update_slop", False):
+        from editorteam import slop_calibrate as SlopCal
+
+        C = _scripts()
+        repo_root = ROOT.parent
+        human_docs = SlopCal.collect_human_docs(repo_root)
+        ai_docs = SlopCal.collect_ai_docs(repo_root)
+        game = list(CardParaphrase.load_texts())
+        game += [t for texts in CardParaphrase.load_texts().values() for t in texts]
+        for row in CardParaphrase.load_bg().values():
+            game += [row["n"], *row["t"]]
+        topic_ids = {doc_id for doc_id, _ in human_docs if doc_id.startswith("bg-")}
+        slop = SlopCal.calibrate_slop(human_docs, ai_docs, game, C.morph(), topic_ids=topic_ids)
+        Owner.SLOP_FREQ.write_text(
+            json.dumps(slop, ensure_ascii=False, indent=1), encoding="utf-8"
+        )
+        print(
+            f"слоп-словарь: human={slop['human_docs']} ({slop['human_words']} слов), "
+            f"ai={slop['ai_docs']} / {slop['ai_families']} семейств ({slop['ai_words']} слов), "
+            f"лемм={len(slop['unigrams'])}, n-грамм={len(slop['ngrams'])}"
+        )
+        return 0
     if not args.dataset:
         print("owner-eval: нужна папка набора", file=sys.stderr)
         return 2
@@ -1376,20 +1430,27 @@ def owner_eval_cmd(args) -> int:
 
 
 def reviewer_eval_cmd(args) -> int:
-    """Прогнать рецензента-модель (owner_checks) по набору отклонений владельца."""
+    """Прогнать рецензента-модель (owner_checks или pairwise) по набору отклонений владельца."""
     import os
 
     from editorteam import reviewer_eval as ReviewerEval
 
     folder = Path(args.dataset)
-    if not (folder / "labels.json").is_file():
+    mode = getattr(args, "mode", "single")
+    if mode == "single" and not (folder / "labels.json").is_file():
         print(f"reviewer-eval: в {folder} нет labels.json", file=sys.stderr)
         return 2
-    calls = ReviewerEval.calls_needed(folder, args.runs)
+    max_pairs = getattr(args, "max_pairs", None)
+    calls = (
+        ReviewerEval.pairwise_calls_needed(folder, max_pairs=max_pairs)
+        if mode == "pairwise"
+        else ReviewerEval.calls_needed(folder, args.runs)
+    )
     cache = Path(args.cache) if args.cache else folder / ".reviewer-cache"
     print(
-        f"reviewer-eval: {calls} вызов(ов) модели ({args.runs} прогон(а)), "
-        f"backend claude -p по подписке, кэш {cache}",
+        f"reviewer-eval ({mode}): {calls} вызов(ов) модели"
+        + (f" ({args.runs} прогон(а))" if mode == "single" else "")
+        + f", backend claude -p по подписке, кэш {cache}",
         file=sys.stderr,
     )
     if args.dry_run:
@@ -1414,6 +1475,25 @@ def reviewer_eval_cmd(args) -> int:
         if code is None:
             raise RuntimeError("cli не ответил вовремя")
         return reply
+
+    if mode == "pairwise":
+        result = ReviewerEval.evaluate_pairwise(
+            folder, call, model=args.model or "", cache=cache, parallel=args.parallel, max_pairs=max_pairs
+        )
+        delta = (
+            ReviewerEval.compare_pairwise(result, json.loads(_read(Path(args.baseline))))
+            if args.baseline
+            else None
+        )
+        if delta is not None:
+            result["baseline_delta"] = delta
+        if args.output:
+            Path(args.output).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        if args.format == "json":
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print(ReviewerEval.render_pairwise(result, delta))
+        return 0
 
     context = _author_context(Path(args.author_context), args.profile) if args.author_context else None
     result = ReviewerEval.evaluate(
@@ -1671,6 +1751,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="пересчитать частоты слов автора по corpus-bg и corpus-archive",
     )
     oe.add_argument(
+        "--update-slop",
+        action="store_true",
+        help="пересчитать словарь AI-слопа с human-vs-human контролем шума",
+    )
+    oe.add_argument(
         "--baseline",
         help="JSON прежнего owner-eval того же набора: печатает дельту, код 1 при ухудшении",
     )
@@ -1678,11 +1763,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     rv = sub.add_parser(
         "reviewer-eval",
-        help="рецензент-модель (owner_checks) на размеченных отклонениях владельца: "
-        "что поймано, ложные тревоги на эталонах",
+        help="рецензент-модель (owner_checks или pairwise) на размеченных отклонениях владельца",
         parents=[common],
     )
-    rv.add_argument("dataset", help="папка с labels.json, versions/ и gold/")
+    rv.add_argument("dataset", help="папка с labels.json, versions/ и gold/ (или evals/pairs в режиме pairwise)")
+    rv.add_argument("--mode", choices=["single", "pairwise"], default="single", help="single — 10 категорий, pairwise — слепое парное сравнение")
+    rv.add_argument("--max-pairs", type=int, default=None, help="ограничить число пар в режиме pairwise")
     rv.add_argument("--runs", type=int, default=1, help="повторов на текст (стабильность)")
     rv.add_argument("--model", default="", help="модель claude CLI; по умолчанию — модель CLI")
     rv.add_argument("--parallel", type=int, default=2, help="одновременных вызовов")

@@ -426,3 +426,82 @@ def test_editor_terms_are_valid_and_slang_is_caught():
     found = sorted((h["rule"], h["found"]) for h in rewrite_gate.terminology_hits(text)
                    if h["rule"] in ("term.win_condition", "term.raskrut"))
     assert found == [("term.raskrut", "раскрут"), ("term.win_condition", "вин-кондишн")]
+
+
+# ── Частотный AI-слоп (slop_calibrate + owner.slop_frequency) ────────────
+
+
+def test_slop_calibrate_filters_human_split_noise_and_keeps_true_slop():
+    from editorteam import slop_calibrate
+
+    # В половине human_docs (_split_bit == 0) часто мелькает «осада» (разница тем),
+    # тогда как в AI стабильно лезут «автоматически» и «не доказывать».
+    half_zero = [f"hz-{i}" for i in range(60) if slop_calibrate._split_bit(f"hz-{i}") == 0][:6]
+    half_one = [f"ho-{i}" for i in range(60) if slop_calibrate._split_bit(f"ho-{i}") == 1][:6]
+    human_docs = [
+        (did, "осада враг башня темп карта " * 40) for did in half_zero
+    ] + [
+        (did, "обычный ход темп размен стол карта " * 40) for did in half_one
+    ]
+    ai_docs = [
+        (
+            f"a-{i}",
+            f"fam-{i}",
+            "осада враг башня темп карта. " * 20
+            + "Он автоматически улучшает темп. Этот выбор автоматически решает, "
+            "и один эффект не доказывает победу. Автоматически и не доказывает.\n" * 6,
+        )
+        for i in range(6)
+    ]
+    slop = slop_calibrate.calibrate_slop(
+        human_docs,
+        ai_docs,
+        game_texts=[],
+        morph=C.morph(),
+        min_uni_count=5,
+        min_ngram_count=4,
+    )
+    assert "автоматически" in slop["unigrams"]
+    assert "не доказывать" in slop["ngrams"]
+    assert "осада" not in slop["unigrams"]
+    assert slop["dropped_by_human_split"]["unigrams"] >= 0
+
+
+def test_slop_frequency_flags_repeated_slop_and_stays_silent_on_clean_prose():
+    slop = {
+        "unigrams": {
+            "заранее": {"ai_per_1k": 0.9, "human_per_1k": 0.02, "ratio": 25.0, "score": 9.5},
+        },
+        "ngrams": {
+            "не гарантировать": {"ai_per_1k": 0.4, "human_per_1k": 0.01, "ratio": 20.0, "score": 8.0},
+        },
+    }
+    sloppy_text = (
+        "## План\n\n"
+        "Заранее подготовьте стол. Заранее держите копию, заранее считайте урон и заранее ищите ответ.\n"
+        "Это не гарантирует победу на 5-м ходу и не гарантирует топ-1.\n"
+    )
+    hits = O.slop_frequency(sloppy_text, slop, C.morph(), _prose_lines)
+    terms = {h["term"] for h in hits}
+    assert {"не гарантировать", "заранее"} <= terms
+    clean_text = (
+        "## План\n\n"
+        "Заранее проверьте заходы противника, чтобы не отдать лишнее здоровье на третьем ходу.\n"
+        + ("Ставьте сильнейших существ на край стола и держите экономику. " * 25)
+    )
+    assert O.slop_frequency(clean_text, slop, C.morph(), _prose_lines) == []
+
+
+def test_owner_findings_include_slop_frequency_when_slop_matches(monkeypatch):
+    fake_slop = {
+        "unigrams": {
+            "обещание": {"ai_per_1k": 0.5, "human_per_1k": 0.0, "ratio": 40.0, "score": 11.0},
+        },
+        "ngrams": {},
+    }
+    monkeypatch.setattr(O, "load_slop_frequencies", lambda: fake_slop)
+    text = "## Введение\n\nПустое обещание победы — обещание без расчёта; очередное обещание и ещё обещание.\n"
+    found = [f for f in owner_findings(text, "news") if f["id"] == "owner.slop_frequency"]
+    assert len(found) == 1
+    assert found[0]["severity"] == "review"
+    assert found[0]["meta"]["term"] == "обещание"

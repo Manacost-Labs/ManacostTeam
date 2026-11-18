@@ -323,6 +323,219 @@ def validate_plan_evidence(plan, handoff: dict) -> list[str]:
     return errors
 
 
+_FRAMING_ROLES = frozenset({"intro", "conclusion"})
+_FRAMING_HEADING = re.compile(
+    r"^\s*(?:вступ|предислов|итог|вывод|заключ|резюме|intro|conclusion)\b", re.I
+)
+_DECISION_ANCHOR = re.compile(
+    r"\d|(?:\b(?:если|при|когда|пока|иначе|вместо|против|лучше|хуже|бери|берите|ставь|ставьте|продав|ищите|меняй|отказ|ловушк)\w*)",
+    re.I,
+)
+_RU_OR_LAT_WORD = re.compile(r"[А-Яа-яЁёA-Za-z]{4,}")
+_SHORTCODE_MARKUP = re.compile(r"\[/?hs_(?:bg|card)\b[^\]]*\]", re.I)
+
+
+def _content_stems(text: str) -> set[str]:
+    return {w.lower()[:5] for w in _RU_OR_LAT_WORD.findall(_SHORTCODE_MARKUP.sub(" ", text))}
+
+
+def _grounded_handoff_stems(handoff: dict) -> set[str]:
+    parts: list[str] = []
+    for row in handoff.get("claims", []) if isinstance(handoff, dict) else []:
+        if isinstance(row, dict):
+            for key in ("meaning", "action", "condition", "exception"):
+                if isinstance(row.get(key), str):
+                    parts.append(row[key])
+    for card in experience_cards(handoff):
+        for field in (card.get("fields") or {}).values():
+            if isinstance(field, dict) and isinstance(field.get("text"), str):
+                parts.append(field["text"])
+        verdict = card.get("verdict")
+        if isinstance(verdict, dict):
+            for val in verdict.values():
+                if isinstance(val, str):
+                    parts.append(val)
+    return _content_stems(" ".join(parts))
+
+
+def _windowed_lexical_ratio(words: list[str], window: int = 100, step: int = 10) -> float | None:
+    """Средняя доля уникальных слов в скользящем окне; None для текста короче окна."""
+    if len(words) < window:
+        return None
+    ratios = [len(set(words[i : i + window])) / window for i in range(0, len(words) - window + 1, step)]
+    return sum(ratios) / len(ratios)
+
+
+def _markdown_sections(text: str) -> list[tuple[int, str, str]]:
+    """Split Markdown into (heading_level, heading_title, body) outside code fences."""
+    sections: list[tuple[int, str, str]] = []
+    current_level = 0
+    current_title = ""
+    buf: list[str] = []
+    fence: str | None = None
+    for line in text.splitlines():
+        m_fence = FENCE.match(line.rstrip("\r"))
+        if fence:
+            buf.append(line)
+            if m_fence and m_fence[1][0] == fence[0] and len(m_fence[1]) >= len(fence) and not m_fence[2].strip():
+                fence = None
+            continue
+        if m_fence:
+            fence = m_fence[1]
+            buf.append(line)
+            continue
+        m_head = re.match(r"^\s{0,3}(#{1,6})[ \t]+(.+?)\s*$", line)
+        if m_head:
+            if current_level or any(x.strip() for x in buf):
+                sections.append((current_level, current_title, "\n".join(buf).strip()))
+            current_level = len(m_head.group(1))
+            current_title = m_head.group(2)
+            buf = []
+        else:
+            buf.append(line)
+    if current_level or any(x.strip() for x in buf):
+        sections.append((current_level, current_title, "\n".join(buf).strip()))
+    return sections
+
+
+def plan_density_diagnostics(
+    plan,
+    handoff: dict,
+    author_context: dict | None = None,
+    text: str | None = None,
+    *,
+    profile: str | None = None,
+) -> dict:
+    """Hard pre-draft / draft density and word-budget check (stdlib-only)."""
+    errors: list[str] = []
+    try:
+        validate_plan(plan)
+    except ValueError as error:
+        return {
+            "status": "blocked",
+            "errors": [str(error)],
+            "budget": {"grounded_units": 0, "recommended_max_words": 0, "actual_words": None},
+            "sections": [],
+        }
+
+    claims_list = handoff.get("claims", []) if isinstance(handoff, dict) else []
+    valid_claims = {
+        row["claim_id"]: row
+        for row in claims_list
+        if isinstance(row, dict)
+        and isinstance(row.get("claim_id"), str)
+        and row.get("status") not in {"rejected", "disputed", "unknown", "unsupported"}
+    }
+    valid_cards = {
+        card["card_id"]: card
+        for card in experience_cards(handoff)
+        if isinstance(card.get("card_id"), str)
+    }
+    grounded_units = len(valid_claims) + len(valid_cards)
+
+    section_rows: list[dict] = []
+    content_sections = 0
+    for row in plan["sections"]:
+        role = row.get("role")
+        is_framing = role in _FRAMING_ROLES
+        cids = [cid for cid in row.get("claim_ids", []) if cid in valid_claims]
+        xids = [cid for cid in row.get("card_ids", []) if cid in valid_cards]
+        if not is_framing:
+            content_sections += 1
+            if not cids and not xids:
+                errors.append(
+                    f"density blocker: section {row['id']!r} has 0 grounded claims or experience cards; remove or merge it before writing"
+                )
+        weights = row.get("entry_weights") or {}
+        full_entries = weights.get("full") or []
+        if full_entries and not xids and len(cids) < 2:
+            errors.append(
+                f"density blocker: section {row['id']!r} gives full weight to {len(full_entries)} entries without experience/verdict cards or >=2 grounded claims; downgrade to brief/grouped or gather evidence"
+            )
+        section_rows.append(
+            {
+                "id": row["id"],
+                "role": role,
+                "framing": is_framing,
+                "grounded_claims": len(cids),
+                "grounded_cards": len(xids),
+            }
+        )
+
+    if grounded_units > 0 and content_sections > max(1, grounded_units):
+        errors.append(
+            f"density blocker: {content_sections} content sections exceed {grounded_units} grounded claims/cards; merge thin sections"
+        )
+
+    fact_budget = max(260, grounded_units * 220)
+    style_counts = [
+        row["source_word_count"]
+        for row in (author_context or {}).get("style_examples", [])
+        if isinstance(row, dict) and type(row.get("source_word_count")) is int and row["source_word_count"] > 0
+    ]
+    style_budget = int(max(style_counts) * 1.35) if style_counts else None
+    recommended_max_words = min(fact_budget, style_budget) if style_budget is not None else fact_budget
+
+    actual_words: int | None = None
+    if text is not None:
+        clean_text = _SHORTCODE_MARKUP.sub(" ", text)
+        words = clean_text.split()
+        actual_words = len(words)
+        if actual_words > fact_budget:
+            errors.append(
+                f"draft density blocker: {actual_words} words for {grounded_units} grounded claims/cards (max {fact_budget}); cut water or add verified facts"
+            )
+        elif style_budget is not None and actual_words > style_budget and actual_words > max(260, grounded_units * 160):
+            errors.append(
+                f"draft density blocker: {actual_words} words exceeds style budget ({style_budget}) without matching grounded fact density ({grounded_units} units)"
+            )
+
+        lower_words = [w.lower().strip(".,:;!?()[]«»\"'") for w in words]
+        lower_words = [w for w in lower_words if w]
+        # Доля уникальных слов по всему тексту падает с длиной (гайд на 30 тыс.
+        # слов у человека даёт 0,12), поэтому меряем её в окнах по 100 слов:
+        # у 348 человеческих текстов корпуса минимум 0,70, у зацикленной воды ниже 0,1.
+        lexical = _windowed_lexical_ratio(lower_words)
+        if lexical is not None and lexical < 0.4:
+            errors.append(
+                f"draft density blocker: repetitive filler detected (windowed unique lexical ratio {lexical:.2f} < 0.40)"
+            )
+
+        md_sections = _markdown_sections(text)
+        handoff_stems = _grounded_handoff_stems(handoff)
+        for idx, (level, title, body) in enumerate(md_sections):
+            if not level:
+                continue
+            body_words = _SHORTCODE_MARKUP.sub(" ", body).split()
+            next_level = md_sections[idx + 1][0] if idx + 1 < len(md_sections) else 0
+            has_child_heading = next_level > level
+            is_framing_head = bool(_FRAMING_HEADING.match(title))
+            if not body_words and not has_child_heading:
+                errors.append(f"draft density blocker: empty heading «{title}» with no content")
+                continue
+            # Короткий раздел не блокируем: под заголовком законно стоит только
+            # код колоды, картинка стола или строка «данных нет» в мета-отчёте.
+            if not is_framing_head and len(body_words) >= 120:
+                has_decision = bool(_DECISION_ANCHOR.search(body))
+                overlap = len(_content_stems(body) & handoff_stems) if handoff_stems else 1
+                if not has_decision and overlap < 2:
+                    errors.append(
+                        f"draft density blocker: long section «{title}» ({len(body_words)} words) has no decision/number anchors or handoff facts"
+                    )
+
+    return {
+        "status": "blocked" if errors else "ok",
+        "errors": errors,
+        "budget": {
+            "grounded_units": grounded_units,
+            "recommended_max_words": recommended_max_words,
+            "style_budget_words": style_budget,
+            "actual_words": actual_words,
+        },
+        "sections": section_rows,
+    }
+
+
 def validate_plan_review(plan, text: str, rows) -> list[str]:
     try:
         validate_plan(plan)

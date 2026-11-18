@@ -775,6 +775,21 @@ def thesis_card(run: Path, *, contrasts: int = 3) -> str:
             tiers.append(f"{row['id']} {counts}" if weights else f"{row['id']} claims={len(row['claim_ids'])}")
     lines.append("Тиры (full/brief/grouped): " + ("; ".join(tiers) if tiers else "нет разделов tier и entry_weights"))
     lines.append("Веса: " + " · ".join(f"{weight} {count}" for weight, count in totals.items()))
+    if plan and "research" in state["artifacts"]:
+        from .article_structure import plan_density_diagnostics
+
+        density = plan_density_diagnostics(
+            plan,
+            _json(_data(run, state, "research")),
+            saved[0] if saved else None,
+            profile=state.get("profile"),
+        )
+        budget = density["budget"]
+        lines.append(
+            f"Плотность: единиц фактуры {budget['grounded_units']}, лимит объёма {budget['recommended_max_words']} слов"
+        )
+        if density["errors"]:
+            lines.append("БЛОКЕР ПЛОТНОСТИ: " + "; ".join(density["errors"]))
     return "\n".join(lines)
 
 
@@ -1080,6 +1095,25 @@ def next_task(
                 "прежние отзывы не проверяли полный порядок объяснения. "
             ) + task["instructions"]
         if stage == "draft":
+            if "article_plan" in context and "research" in state["artifacts"]:
+                from .article_structure import plan_density_diagnostics
+
+                density = plan_density_diagnostics(
+                    context["article_plan"],
+                    _json(_data(run, state, "research")),
+                    context,
+                    profile=state.get("profile"),
+                )
+                task["plan_density"] = density
+                if density["errors"]:
+                    task["publication_ready"] = False
+                    task["instructions"] = (
+                        "БЛОКЕР ПЛОТНОСТИ ДО ЧЕРНОВИКА: " + "; ".join(density["errors"]) + ". "
+                    ) + task["instructions"]
+                else:
+                    task["instructions"] += (
+                        f" Бюджет объёма по подтверждённым фактам: до {density['budget']['recommended_max_words']} слов."
+                    )
             task["instructions"] = (
                 "До прозы сохрани article_plan в author_context: reader_question, main_answer и sections "
                 "[{id,question,contribution,depends_on,claim_ids}]; при необходимости meta_thesis — сквозная мысль "
@@ -1315,9 +1349,19 @@ def submit(run: Path, *, stage: str, artifact: Path, retry_review: bool = False)
             context = _author_context(run, state)
             if context is None:
                 raise ValueError("configure author context before submitting a draft")
-            from .article_structure import validate_plan_evidence
+            from .article_structure import plan_density_diagnostics, validate_plan_evidence
 
-            plan_errors = validate_plan_evidence(context[0].get("article_plan"), _json(_data(run, state, "research")))
+            handoff_data = _json(_data(run, state, "research"))
+            plan_errors = validate_plan_evidence(context[0].get("article_plan"), handoff_data)
+            if not plan_errors and state.get("review_contract_version", 1) >= 4 and "article_plan" in context[0]:
+                density = plan_density_diagnostics(
+                    context[0].get("article_plan"),
+                    handoff_data,
+                    context[0],
+                    text=data.decode("utf-8"),
+                    profile=state.get("profile"),
+                )
+                plan_errors = density["errors"]
             if plan_errors:
                 raise ValueError("; ".join(plan_errors))
             from .publication_context import literal_errors

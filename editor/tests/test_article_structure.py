@@ -166,3 +166,52 @@ def test_legacy_context_needs_plan_before_next_revision(tmp_path):
     with pytest.raises(ValueError, match="article_plan"):
         revise(run, artifact=write(tmp_path, "changed.md", TEXT + "\n"))
     assert next_task(run)["stage"] == "deletion_pass"
+
+
+def test_plan_density_blocks_empty_sections_full_without_evidence_and_bloated_water():
+    from test_publication_run import handoff
+
+    from editorteam.article_structure import plan_density_diagnostics
+
+    good = article_plan()
+    diag = plan_density_diagnostics(good, handoff())
+    assert diag["status"] == "ok" and diag["errors"] == []
+
+    # 1. Empty content section with 0 claims/cards
+    hollow = article_plan()
+    hollow["sections"].append(
+        {"id": "water", "question": "Вода?", "contribution": "Пересказ.", "depends_on": ["decision"], "claim_ids": []}
+    )
+    hollow_diag = plan_density_diagnostics(hollow, handoff())
+    assert hollow_diag["status"] == "blocked"
+    assert any("0 grounded claims" in err for err in hollow_diag["errors"])
+
+    # 2. entry_weights.full without verdict card or >= 2 claims
+    weak_full = article_plan()
+    weak_full["sections"][0]["entry_weights"] = {"full": ["Карта А"]}
+    weak_full_diag = plan_density_diagnostics(weak_full, handoff())
+    assert weak_full_diag["status"] == "blocked"
+    assert any("full weight" in err for err in weak_full_diag["errors"])
+
+    # 3. Draft with bloated water beyond fact capacity (> 260 words for 1 claim)
+    water_text = "## Решение\n\n" + ("Это общая фраза без чисел и игровых решений. " * 45)
+    bloated = plan_density_diagnostics(good, handoff(), text=water_text)
+    assert bloated["status"] == "blocked"
+    assert any("draft density blocker" in err for err in bloated["errors"])
+
+    # 4. Anchorless long non-framing section (>= 120 words, even if total <= 260)
+    empty_heading = "## Основной совет\n\n## Детали\n\nХороший короткий совет на 1 ходу."
+    assert any("empty heading" in err for err in plan_density_diagnostics(good, handoff(), text=empty_heading)["errors"])
+
+    anchorless = "## Основной блок\n\n" + ("Просто красивый абстрактный текст о важности правильного настроя перед партией без конкретики и советов. " * 11)
+    assert any("no decision/number anchors" in err for err in plan_density_diagnostics(good, handoff(), text=anchorless)["errors"])
+
+    # Короткий раздел законен: строка «данных нет» или только код колоды под заголовком.
+    gap_note = "## Жрец\n\nДанных нет.\n\n## Колода\n\nAAECAa0GHo0E\n\n## Решение\n\nПокупайте существо на 1 ходу."
+    assert plan_density_diagnostics(good, handoff(), text=gap_note)["errors"] == []
+
+    # 5. Зацикленная вода блокируется, длинный живой текст — нет (окно 100 слов, а не весь текст).
+    loop = "## Решение\n\n" + ("Это важно. Стол сильный и это важно для игры. " * 30)
+    assert any("repetitive filler" in err for err in plan_density_diagnostics(good, handoff(), text=loop)["errors"])
+    varied = " ".join(f"ход{i} монета{i % 7} стол{i % 13} герой{i % 17} существо{i % 5}" for i in range(40))
+    assert not any("repetitive filler" in err for err in plan_density_diagnostics(good, handoff(), text=varied)["errors"])
