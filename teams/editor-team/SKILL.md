@@ -2,7 +2,7 @@
 name: editor-team
 description: "Редактура игровых материалов в стиле Манакоста с сохранением фактов и авторского голоса."
 metadata:
-  version: "1.20.0"
+  version: "1.21.0"
 ---
 
 # EditorTeam

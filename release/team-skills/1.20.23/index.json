@@ -1,0 +1,29 @@
+{
+  "version": "1.20.23",
+  "teams": 7,
+  "skills": 10,
+  "archives": {
+    "editor-team-1.21.0.zip": "0013204fa49ca2fad662e8b9760ea832e6e7a849e2f193abb4a34aa7ea1b2689",
+    "editor-team-1.21.0.skill": "0013204fa49ca2fad662e8b9760ea832e6e7a849e2f193abb4a34aa7ea1b2689",
+    "research-team-1.13.0.zip": "c0bf195c9312aecd94654be1d88a5cf365e8267b13dc8068adcac8ea6a1e7801",
+    "research-team-1.13.0.skill": "c0bf195c9312aecd94654be1d88a5cf365e8267b13dc8068adcac8ea6a1e7801",
+    "svg-team-1.0.1.zip": "2280d80ca18c50fbb87cb78484c937ccf0dffea5f179b5447a7203aead5faef6",
+    "svg-team-1.0.1.skill": "2280d80ca18c50fbb87cb78484c937ccf0dffea5f179b5447a7203aead5faef6",
+    "translate-team-1.2.3.zip": "60d20dc4c1eb90e0bb957f24c616c3f37204fd2c581432003113045418c9a54d",
+    "translate-team-1.2.3.skill": "60d20dc4c1eb90e0bb957f24c616c3f37204fd2c581432003113045418c9a54d",
+    "xml-team-1.0.1.zip": "97f2180376d6c994b7ec436f388c1f0938a0a2ec4093c6335a63109d08a263f9",
+    "xml-team-1.0.1.skill": "97f2180376d6c994b7ec436f388c1f0938a0a2ec4093c6335a63109d08a263f9",
+    "job-team-1.0.2.zip": "0e61c6995eb6cdd97f6493a32f2b17ccd64e1e54e6a2c579e734d95da2ffd583",
+    "job-team-1.0.2.skill": "0e61c6995eb6cdd97f6493a32f2b17ccd64e1e54e6a2c579e734d95da2ffd583",
+    "marketing-team-1.0.1.zip": "1ed6e95b060140b55221934f0cbafe4ab38cd00c394a8e094322c6d4e4a4215a",
+    "marketing-team-1.0.1.skill": "1ed6e95b060140b55221934f0cbafe4ab38cd00c394a8e094322c6d4e4a4215a",
+    "card-shortcodes-1.0.3.zip": "f7d0b5da65b54fd684effda4aed05b718340d82b700a0563386e4399de60c291",
+    "card-shortcodes-1.0.3.skill": "f7d0b5da65b54fd684effda4aed05b718340d82b700a0563386e4399de60c291",
+    "manacost-publish-1.17.0.zip": "79390d19ca700190312d2fc1a10957ee54b8876518e99e1f64f30a470d7f4875",
+    "manacost-publish-1.17.0.skill": "79390d19ca700190312d2fc1a10957ee54b8876518e99e1f64f30a470d7f4875",
+    "article-seo-1.1.0.zip": "7aa24808589ce19752c48c050a5235b40d5a5656644948d2b3e3ca626b6cf9c7",
+    "article-seo-1.1.0.skill": "7aa24808589ce19752c48c050a5235b40d5a5656644948d2b3e3ca626b6cf9c7",
+    "manacost-team-1.20.23-plugin.zip": "3af262461dd076fb6098dd412afa32b122c1a1ab2982001a627f4bd47cbd3eaf"
+  },
+  "download_base": "https://github.com/Manacost-Labs/ManacostTeam/releases/download/v1.20.23/"
+}
