@@ -242,14 +242,24 @@ def simulate_turn1(
     trials: int = 2000,
     seed: int | None = 0,
     first: str = "random",
+    keyword: str | None = None,
+    buff: tuple[int, int] = (0, 0),
 ) -> dict:
     """Доли побед/ничьих/поражений player против каждого соперника и в среднем.
 
     weights — частота пиков соперников (по умолчанию равная).
     first — 'player', 'opponent' или 'random'.
+    keyword — фиксированное бонусное свойство Пузырькового стрелка игрока.
+    buff — (+атака, +здоровье) от заклинания таверны, сыгранного на существо до боя;
+    Перерождение возвращает базовые характеристики карты без этой прибавки.
     """
     rng = random.Random(seed)
     player = resolve_name(player)
+    if keyword is not None and not TIER1[player].get("bonus"):
+        raise ValueError("keyword задаётся только существу с бонусным свойством")
+    add_atk, add_hp = buff
+    if add_atk < 0 or add_hp < 0:
+        raise ValueError("buff не может уменьшать характеристики")
     if opponent_pool is None:
         pool = default_opponent_pool()
     elif isinstance(opponent_pool, dict):
@@ -261,7 +271,9 @@ def simulate_turn1(
     for name, opts in pool.items():
         counts = {"a": 0, "b": 0, "tie": 0}
         for _ in range(trials):
-            mine = make_minion(player, gems=gems, rng=rng)
+            mine = make_minion(player, gems=gems, keyword=keyword, rng=rng)
+            mine["atk"] += add_atk
+            mine["hp"] += add_hp
             theirs = make_minion(name, gems=opts.get("gems"), keyword=opts.get("keyword"), rng=rng)
             counts[duel([mine], [theirs], first=side, rng=rng)] += 1
         by_opponent[name] = {
@@ -273,8 +285,13 @@ def simulate_turn1(
         key: sum(r[key] * weights.get(n, 1.0) for n, r in by_opponent.items()) / total
         for key in ("win", "tie", "loss")
     }
-    return {"player": player, "gems": gems, "trials": trials, "first": first,
-            "overall": overall, "by_opponent": by_opponent}
+    report = {"player": player, "gems": gems, "trials": trials, "first": first,
+              "overall": overall, "by_opponent": by_opponent}
+    if keyword is not None:
+        report["keyword"] = keyword
+    if buff != (0, 0):
+        report["buff"] = [add_atk, add_hp]
+    return report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -289,6 +306,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--first", choices=("random", "player", "opponent"), default="random")
     parser.add_argument("--weights", help="JSON-файл {имя: вес} частоты соперников")
+    parser.add_argument("--keyword", choices=BONUS_KEYWORDS,
+                        help="фиксированное бонусное свойство Пузырькового стрелка игрока")
+    parser.add_argument("--buff", type=int, nargs=2, metavar=("ATK", "HP"), default=(0, 0),
+                        help="прибавка от заклинания таверны на существо игрока до боя")
     args = parser.parse_args(argv)
     weights = None
     if args.weights:
@@ -302,7 +323,8 @@ def main(argv: list[str] | None = None) -> int:
         variants = args.gems if (args.gems and "gems" in TIER1[resolve_name(name)]) else [None]
         for gems in variants:
             result = simulate_turn1(name, gems=gems, weights=weights, trials=args.trials,
-                                    seed=args.seed, first=args.first)
+                                    seed=args.seed, first=args.first, keyword=args.keyword,
+                                    buff=tuple(args.buff))
             if args.all:
                 result.pop("by_opponent")
             report.append(result)

@@ -498,6 +498,26 @@ class TestSim:
                                        first="opponent", trials=50)
         assert report["by_opponent"]["Razorfen Geomancer"]["loss"] == 1.0
 
+    def test_fixed_bubble_keyword_and_spell_buff(self):
+        venom = bg_sim.simulate_turn1("Bubble Gunner", keyword="ven", trials=200, seed=3)
+        assert venom["keyword"] == "ven" and venom["overall"]["loss"] == 0.0
+        plain = bg_sim.simulate_turn1("Bubble Gunner", keyword="stealth", trials=200, seed=3)
+        assert plain["overall"]["loss"] > venom["overall"]["loss"]
+        seer = bg_sim.simulate_turn1("Wrath Weaver", trials=50)
+        assert "buff" not in seer
+        banana = bg_sim.simulate_turn1("Зловещая пророчица", buff=(2, 2), trials=200, seed=3)
+        assert banana["buff"] == [2, 2] and banana["overall"]["loss"] == 0.0
+        with pytest.raises(ValueError):
+            bg_sim.simulate_turn1("Glim Guardian", keyword="ds", trials=1)
+        with pytest.raises(ValueError):
+            bg_sim.simulate_turn1("Glim Guardian", buff=(-1, 0), trials=1)
+
+    def test_cli_keyword_and_buff(self, capsys):
+        assert bg_sim.main(["--player", "Bubble Gunner", "--keyword", "reborn", "--trials", "20"]) == 0
+        assert json.loads(capsys.readouterr().out)[0]["keyword"] == "reborn"
+        assert bg_sim.main(["--player", "Зловещая пророчица", "--buff", "1", "3", "--trials", "20"]) == 0
+        assert json.loads(capsys.readouterr().out)[0]["buff"] == [1, 3]
+
     def test_glim_rally_trades_when_attacking_first(self):
         glim, geo = bg_sim.make_minion("Glim Guardian"), bg_sim.make_minion("Razorfen Geomancer")
         assert bg_sim.duel([glim], [geo], first="a", rng=random.Random(0)) == "tie"
