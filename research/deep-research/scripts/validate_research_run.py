@@ -9,6 +9,13 @@ import json
 import re
 import sys
 from claim_semantics import CLAIM_CONTRACT_VERSION, claim_errors, strategy_decision_coverage, experience_errors, experience_coverage
+from source_receipts import (
+    SEARCH_SUMMARY_TYPES,
+    SNIPPET_INTEGRITY,
+    receipt_problem,
+    record_problems,
+    snapshot_url_mismatch,
+)
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -1161,6 +1168,9 @@ def main() -> int:
                             errors.append(f"{label}: invalid snapshot_path: {exc}")
             elif string_in(status, {"unavailable", "exempt"}):
                 require_fields(record, ("fingerprint_reason",), label, errors)
+        if schema_version == "1.2":
+            for problem in record_problems(record):
+                (errors if args.stage == "final" else warnings).append(f"{label}: {problem}")
 
     snapshot_by_source: dict[str, Path] = {}
     if schema_version == "1.2":
@@ -1183,6 +1193,21 @@ def main() -> int:
                     snapshot_by_source[source_id] = candidate
     snapshot_text_cache: dict[str, str] = {}
     anchored_evidence_ids: set[str] = set()
+    if schema_version == "1.2":
+        for record in sources:
+            source_id = record.get("source_id")
+            if not isinstance(source_id, str) or source_id not in snapshot_by_source:
+                continue
+            try:
+                with snapshot_by_source[source_id].open(encoding="utf-8", errors="replace") as handle:
+                    head = handle.read(4096)
+            except OSError:
+                continue
+            mismatch = snapshot_url_mismatch(record, head)
+            if mismatch:
+                (errors if args.stage == "final" else warnings).append(
+                    f"sources.jsonl:{record['__line__']}: {mismatch}"
+                )
 
     for record in evidence:
         label = f"evidence.jsonl:{record['__line__']}"
@@ -1368,6 +1393,64 @@ def main() -> int:
                     errors.append(message)
                 else:
                     warnings.append(message)
+            support_records = [
+                semantic_evidence[evidence_id]
+                for evidence_id in list_or_empty(record, "supporting_evidence_ids")
+                if isinstance(evidence_id, str) and evidence_id in semantic_evidence
+            ]
+            summaries = [
+                str(item.get("evidence_id"))
+                for item in support_records
+                if str(item.get("evidence_type", "")).strip().lower() in SEARCH_SUMMARY_TYPES
+                or semantic_sources.get(str(item.get("source_id")), {}).get("access_integrity")
+                in SNIPPET_INTEGRITY
+            ]
+            if summaries:
+                message = (
+                    f"{label}: {importance} claim rests on a search summary or snippet "
+                    f"({', '.join(summaries)}); open the page with fetch_source.py and quote it"
+                )
+                (errors if args.stage == "final" else warnings).append(message)
+            support_sources = [
+                semantic_sources[str(item.get("source_id"))]
+                for item in support_records
+                if str(item.get("source_id")) in semantic_sources
+            ]
+            problems = [receipt_problem(source) for source in support_sources]
+            if support_sources and all(problems):
+                reasons = "; ".join(
+                    f"{source.get('source_id')}: {problem}"
+                    for source, problem in zip(support_sources, problems)
+                )
+                message = (
+                    f"{label}: {importance} claim has no supporting source with a network "
+                    f"receipt ({reasons})"
+                )
+                (errors if args.stage == "final" else warnings).append(message)
+        if (
+            schema_version == "1.2"
+            and args.stage == "final"
+            and record.get("status") != "rejected"
+            and record.get("confidence") in {"HIGH", "VERY_HIGH"}
+            and record.get("claim_kind") != "mechanic"
+        ):
+            # One decisive official source may settle a narrow rule (claim_kind
+            # mechanic); any other high-confidence claim needs corroboration.
+            lineages = {
+                str(semantic_sources[str(item.get("source_id"))].get("lineage_id") or item.get("source_id"))
+                for item in (
+                    semantic_evidence[evidence_id]
+                    for evidence_id in list_or_empty(record, "supporting_evidence_ids")
+                    if isinstance(evidence_id, str) and evidence_id in semantic_evidence
+                )
+                if str(item.get("source_id")) in semantic_sources
+            }
+            if len(lineages) < 2:
+                errors.append(
+                    f"{label}: {record.get('confidence')} confidence needs supporting sources "
+                    f"from two independent lineages, found {len(lineages)}; lower the "
+                    "confidence or add an independent source"
+                )
         if (
             args.stage == "final"
             and isinstance(record.get("importance"), str)

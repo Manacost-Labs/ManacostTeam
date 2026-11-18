@@ -424,6 +424,7 @@ class FetchSourceTest(unittest.TestCase):
             record = read_jsonl(run_dir / "sources.jsonl")[0]
             self.assertFalse(record["mutable"])
             self.assertEqual(record["retrieved_by"], "fetch_source.py --file")
+            self.assertEqual(record["access_integrity"], "local_import")
             self.assertNotIn("http_status", record)
             self.assertTrue(record["lineage_id"].startswith("LIN-EXAMPLE-COM-"))
 

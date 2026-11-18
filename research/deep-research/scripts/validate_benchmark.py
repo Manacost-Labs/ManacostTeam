@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -92,6 +93,41 @@ def semantic_record_is_acceptable(record: dict[str, Any], importance: str) -> bo
     )
 
 
+def count_invented_sources(
+    bundle: Path, evidence: list[dict[str, Any]], sources: list[dict[str, Any]]
+) -> int:
+    """Sources the bundle cites but cannot show: unknown IDs and phantom snapshots.
+
+    Evidence that names a source absent from sources.jsonl, and a source that
+    claims a verified fingerprint without a matching snapshot file, both count.
+    """
+
+    known = {str(item.get("source_id")) for item in sources if item.get("source_id")}
+    unknown = {
+        str(item.get("source_id"))
+        for item in evidence
+        if item.get("source_id") and str(item.get("source_id")) not in known
+    }
+    phantom = 0
+    root = bundle.resolve()
+    for item in sources:
+        if item.get("fingerprint_status") != "verified":
+            continue
+        snapshot_value = item.get("snapshot_path")
+        if not isinstance(snapshot_value, str) or not snapshot_value or "\x00" in snapshot_value:
+            phantom += 1
+            continue
+        try:
+            snapshot = (root / snapshot_value).resolve()
+            data = snapshot.read_bytes() if snapshot.is_relative_to(root) and snapshot.is_file() else None
+        except (OSError, ValueError):
+            data = None
+        digest = hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest() if data is not None else None
+        if digest is None or digest != item.get("content_sha256"):
+            phantom += 1
+    return len(unknown) + phantom
+
+
 def derive_bundle_metrics(bundle: Path, errors: list[str]) -> dict[str, Any]:
     manifest = load_json(bundle / "manifest.json", errors)
     audit = load_json(bundle / "audit.json", errors)
@@ -124,6 +160,7 @@ def derive_bundle_metrics(bundle: Path, errors: list[str]) -> dict[str, Any]:
         )
 
     mutable = [item for item in sources if item.get("mutable") is True]
+    invented_source_count = count_invented_sources(bundle, evidence, sources)
     snippet_evidence = 0
     for item in evidence:
         source = next(
@@ -161,7 +198,7 @@ def derive_bundle_metrics(bundle: Path, errors: list[str]) -> dict[str, Any]:
         "material_claims_semantically_supported": sum(
             claim_traceable(item, "material") for item in material
         ),
-        "invented_source_count": 0,
+        "invented_source_count": invented_source_count,
         "snippet_evidence_count": snippet_evidence,
         "false_ready_count": false_ready,
         "mutable_sources_total": len(mutable),

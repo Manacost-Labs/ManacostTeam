@@ -12,7 +12,9 @@ paywall, or consent flow. A page that requires JavaScript, authentication, or a
 binary format must be recorded manually with an honest ``access_integrity``.
 
 Use ``--file`` to ingest a page already saved by the host tool without
-network access; the URL is then recorded as requested and final.
+network access; the URL is then recorded as requested and final, and the record
+gets ``access_integrity: local_import``. Such a source has no network receipt
+and cannot carry a critical or material claim alone at ``--stage final``.
 """
 
 from __future__ import annotations
@@ -266,13 +268,14 @@ def build_snapshot(
     accessed_at: str,
     content_type: str,
     text: str,
+    via: str = "fetch_source.py",
 ) -> str:
     return (
         f"Source: {title}\n"
         f"URL: {final_url}\n"
         f"Requested: {requested_url}\n"
         f"Canonical: {canonical_url(final_url)}\n"
-        f"Accessed: {accessed_at} via fetch_source.py\n"
+        f"Accessed: {accessed_at} via {via}\n"
         f"Content-Type: {content_type}\n"
         "\n"
         f"{text}"
@@ -446,6 +449,7 @@ def main(argv: list[str] | None = None, *, transport: Transport | None = None) -
         accessed_at=accessed_at,
         content_type=fetched["content_type"],
         text=text,
+        via="fetch_source.py --file (local import)" if args.file else "fetch_source.py",
     )
     payload = snapshot_text.encode("utf-8")
     record: dict[str, Any] = {
@@ -455,7 +459,9 @@ def main(argv: list[str] | None = None, *, transport: Transport | None = None) -
         "final_url": fetched["final_url"],
         "canonical_url": canonical_url(fetched["final_url"]),
         "accessed_at": accessed_at,
-        "access_integrity": "full",
+        # A file saved outside this tool has no network receipt: it is a local
+        # import and cannot carry a critical or material claim on its own.
+        "access_integrity": "local_import" if args.file else "full",
         "source_type": args.source_type,
         "lineage_id": args.lineage or lineage_hint(fetched["final_url"]),
         "mutable": not args.immutable,

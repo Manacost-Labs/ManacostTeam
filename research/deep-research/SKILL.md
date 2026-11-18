@@ -151,7 +151,7 @@ Run an evidence-availability gate early for every required evidence class. If bo
 
 After each major pass record: `WHAT WE KNOW`, `WHAT WE THINK`, `WHAT IS CONTESTED`, `WHAT WE DON'T KNOW`, and `WHAT NEEDS MORE EVIDENCE`. Search again only for named gaps.
 
-In a persistent run, seed known venues for the domain with `scripts/registry_seed.py` when a registry exists, generate the query matrix with `scripts/plan_queries.py` before the first pass, open pages with `scripts/fetch_source.py`, record seen-but-rejected results with `scripts/candidates.py`, run `scripts/lineage_suggest.py` before counting corroboration, and run `scripts/search_coverage.py` after each pass. Checkpoint the query, source, evidence, and claim ledgers after each pass so the work can be resumed without silently changing provenance.
+In a persistent run, seed known venues for the domain with `scripts/registry_seed.py` when a registry exists, generate the query matrix with `scripts/plan_queries.py` before the first pass, open pages with `scripts/fetch_source.py` (a `--file` import is a `local_import` without a network receipt and cannot carry a critical or material claim alone; see `references/research-bundle.md`), record seen-but-rejected results with `scripts/candidates.py`, run `scripts/lineage_suggest.py` before counting corroboration, and run `scripts/search_coverage.py` after each pass. Checkpoint the query, source, evidence, and claim ledgers after each pass so the work can be resumed without silently changing provenance.
 
 Record important sources with [source-record.md](references/templates/source-record.md). Search snippets, AI summaries, aggregators, and reposts may locate evidence but cannot replace inspection of the original.
 

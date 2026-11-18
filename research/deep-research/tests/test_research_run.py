@@ -85,6 +85,8 @@ def write_minimal_linked_fixture(run: Path) -> None:
                 "mutable": False,
                 "fingerprint_status": "exempt",
                 "fingerprint_reason": "Immutable offline test fixture.",
+                "retrieved_by": "fetch_source.py",
+                "http_status": 200,
             }
         ],
     )
@@ -114,7 +116,7 @@ def write_minimal_linked_fixture(run: Path) -> None:
                 "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"},
                 "importance": "critical",
                 "status": "supported",
-                "confidence": "HIGH",
+                "confidence": "MEDIUM",
                 "supporting_evidence_ids": ["EVD-0001"],
                 "challenging_evidence_ids": [],
                 "challenge_search": {"query_ids": ["QRY-0001"], "result": "none_found"},
@@ -1814,6 +1816,8 @@ class ResearchRunToolsTest(unittest.TestCase):
                         "mutable": True,
                         "fingerprint_status": "unavailable",
                         "fingerprint_reason": "Fixture has no preserved source content.",
+                        "retrieved_by": "fetch_source.py",
+                        "http_status": 200,
                     }
                 ],
             )
@@ -1841,7 +1845,7 @@ class ResearchRunToolsTest(unittest.TestCase):
                         "observation_scope": {"sample_size": 1, "unit": "fixture", "slice": "offline synthetic example"},
                         "importance": "critical",
                         "status": "supported",
-                        "confidence": "HIGH",
+                        "confidence": "MEDIUM",
                         "supporting_evidence_ids": ["EVD-0001"],
                         "challenging_evidence_ids": [],
                         "challenge_search": {"query_ids": ["QRY-0001"], "result": "none_found"},
@@ -1922,6 +1926,37 @@ class ResearchRunToolsTest(unittest.TestCase):
                 text=True,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            # Network receipts: a hand-saved page, a retold search result or a
+            # single-lineage HIGH claim must not pass the final stage.
+            sources_ok = read_ledger(run / "sources.jsonl")
+            evidence_ok = read_ledger(run / "evidence.jsonl")
+            claims_ok = read_ledger(run / "claims.jsonl")
+
+            def final_with(*, source=None, evidence=None, claim=None) -> str:
+                write_jsonl(run / "sources.jsonl", [{**sources_ok[0], **(source or {})}])
+                write_jsonl(run / "evidence.jsonl", [{**evidence_ok[0], **(evidence or {})}])
+                write_jsonl(run / "claims.jsonl", [{**claims_ok[0], **(claim or {})}])
+                checked = subprocess.run(
+                    [sys.executable, str(VALIDATE), str(run), "--stage", "final"],
+                    check=False, capture_output=True, text=True,
+                )
+                self.assertNotEqual(checked.returncode, 0, checked.stdout)
+                return checked.stdout
+
+            local = final_with(source={"retrieved_by": "fetch_source.py --file", "access_integrity": "local_import", "http_status": None})
+            self.assertIn("critical claim has no supporting source with a network receipt", local)
+            self.assertIn("SRC-0001: local_import", local)
+            mislabeled = final_with(source={"retrieved_by": "fetch_source.py --file"})
+            self.assertIn("a --file import must use access_integrity local_import", mislabeled)
+            handwritten = final_with(source={"retrieved_by": None, "http_status": None})
+            self.assertIn("SRC-0001: no retrieved_by", handwritten)
+            failed_fetch = final_with(source={"http_status": 404})
+            self.assertIn("fetch_source.py record needs http_status 2xx", failed_fetch)
+            summary = final_with(evidence={"evidence_type": "search_summary"})
+            self.assertIn("critical claim rests on a search summary or snippet (EVD-0001)", summary)
+            single_lineage = final_with(claim={"confidence": "HIGH"})
+            self.assertIn("HIGH confidence needs supporting sources from two independent lineages, found 1", single_lineage)
 
     def test_broken_evidence_reference_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

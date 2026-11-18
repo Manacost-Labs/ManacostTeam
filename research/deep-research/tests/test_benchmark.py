@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -68,6 +69,24 @@ class BenchmarkValidationTest(unittest.TestCase):
             )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("does not match bundle", result.stdout)
+
+    def test_invented_sources_are_counted_not_assumed_zero(self) -> None:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from validate_benchmark import count_invented_sources
+
+        with tempfile.TemporaryDirectory() as temp:
+            bundle = Path(temp)
+            (bundle / "snapshots").mkdir()
+            (bundle / "snapshots" / "SRC-1.txt").write_text("real page\n", encoding="utf-8")
+            real_digest = hashlib.sha256(b"real page\n").hexdigest()
+            sources = [
+                {"source_id": "SRC-1", "fingerprint_status": "verified", "snapshot_path": "snapshots/SRC-1.txt", "content_sha256": real_digest},
+                {"source_id": "SRC-2", "fingerprint_status": "verified", "snapshot_path": "snapshots/missing.txt", "content_sha256": real_digest},
+                {"source_id": "SRC-3", "fingerprint_status": "exempt"},
+            ]
+            evidence = [{"source_id": "SRC-1"}, {"source_id": "SRC-3"}, {"source_id": "SRC-404"}]
+            self.assertEqual(count_invented_sources(bundle, evidence, sources), 2)
+            self.assertEqual(count_invented_sources(bundle, evidence[:2], sources[::2]), 0)
 
     def test_duplicate_case_id_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

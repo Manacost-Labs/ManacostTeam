@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Network receipts at `--stage final` (schema 1.2): critical and material claims need a supporting source fetched by a known tool (`retrieved_by` plus `http_status` 2xx for `fetch_source.py`/`curl`, a verified API snapshot for `community_sources.py`); `fetch_source.py --file` now records `access_integrity: local_import`; `search_summary` evidence cannot support such claims; non-mechanic `HIGH`/`VERY_HIGH` claims need two lineages; the `fetch_source` snapshot URL must match `final_url` (shared module `scripts/source_receipts.py`). `validate_benchmark.py` derives `invented_source_count` (unknown source IDs plus verified fingerprints without a matching snapshot) instead of reporting a constant 0.
+
 - Added non-obvious material for editors: the `references/insight-material.md` collection guide, an optional `insights.jsonl` ledger (accepted records need evidence, matching sources, confidence, type-specific minimums, and no card-text restatement), and the «Неочевидное» block in `editor-ready` with its editor contract (`references/editor-insights-contract.md`). `validate_editor_output.py` checks the block and gains `--require-insights`; the final bundle gate requires the block when insights are accepted and binds each item to an accepted insight source.
 
 - Added `scripts/model_trial.py`: `start` prepares a schema 1.2 bundle from a recall case with registry opens, a query plan, and a self-contained `TASK.md` for any agent host (Codex, Claude Code, Gemini CLI, ChatGPT); `score` runs every deterministic gate and writes a transparent 0-100 scorecard; `compare` tabulates several trials side by side.
