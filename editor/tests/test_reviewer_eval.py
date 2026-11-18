@@ -157,3 +157,64 @@ def test_owner_eval_baseline_flags_regression():
     delta = OwnerEval.compare(worse, base)
     assert delta["detected"] == -1 and delta["clean_review"] == 1
     assert OwnerEval.is_regression(delta)
+
+
+def test_pairwise_swap_debiasing_and_positional_bias_detection(tmp_path):
+    folder = make_set(tmp_path)
+    calls = []
+
+    def smart_judge(system, prompt):
+        calls.append(prompt)
+        assert "R1" not in prompt and "labels" not in prompt
+        assert "ЭТАЛОН ВЛАДЕЛЬЦА (REFERENCE)" in prompt
+        # Determine which slot contains the GOOD text
+        text_a = prompt.split("=== ТЕКСТ A ===\n", 1)[1].split("=== ТЕКСТ B ===\n", 1)[0]
+        text_b = prompt.split("=== ТЕКСТ B ===\n", 1)[1]
+        winner = "A" if "Совет с условием и причиной" in text_a else ("B" if "Совет с условием и причиной" in text_b else "tie")
+        return json.dumps({"winner": winner, "confidence": "high", "reason": "ближе к эталону", "loser_flaws": ["вода"]})
+
+    cache = tmp_path / "cache"
+    result = RE.evaluate_pairwise(folder, smart_judge, cache=cache)
+    t = result["totals"]
+    assert t["pairs"] == 3
+    # v1 shared by R1 and R3 -> only 2 unique pairs * 2 orders = 4 calls!
+    assert t["unique_calls"] == 4 == RE.pairwise_calls_needed(folder)
+    assert len(calls) == 4
+    assert t["correct_wins"] == 3 and t["discrimination_accuracy"] == 1.0
+    assert t["swap_consistent"] == 3 and t["swap_consistency"] == 1.0
+    assert t["positional_bias_cases"] == 0
+    assert "дискриминация" in RE.render_pairwise(result)
+
+    # Cached rerun makes zero model calls
+    def must_not_call(system, prompt):
+        raise AssertionError("cache miss")
+
+    cached = RE.evaluate_pairwise(folder, must_not_call, cache=cache)
+    assert cached["totals"] == result["totals"]
+
+    # Positional bias judge: always picks slot A regardless of swap
+    def biased_judge(system, prompt):
+        return json.dumps({"winner": "A", "confidence": "high", "reason": "первый лучше", "loser_flaws": []})
+
+    biased = RE.evaluate_pairwise(folder, biased_judge)
+    bt = biased["totals"]
+    assert bt["correct_wins"] == 0
+    assert bt["swap_consistency"] == 0.0
+    assert bt["positional_bias_cases"] == 3
+
+
+def test_pairwise_supports_evals_pairs_directory(tmp_path):
+    p = tmp_path / "pair-1"
+    p.mkdir()
+    (p / "draft.md").write_text("Водяной черновик без сути.", encoding="utf-8")
+    (p / "reference.md").write_text("Плотный совет с точным ходом.", encoding="utf-8")
+    (p / "meta.json").write_text(json.dumps({"id": "pair-1", "type": "GUIDE"}), encoding="utf-8")
+
+    def judge(system, prompt):
+        text_a = prompt.split("=== ТЕКСТ A ===\n", 1)[1].split("=== ТЕКСТ B ===\n", 1)[0]
+        winner = "A" if "Плотный совет" in text_a else "B"
+        return json.dumps({"winner": winner, "confidence": "high", "reason": "плотность", "loser_flaws": []})
+
+    res = RE.evaluate_pairwise(tmp_path, judge)
+    assert res["totals"]["correct_wins"] == 1
+    assert res["totals"]["discrimination_accuracy"] == 1.0

@@ -1016,3 +1016,45 @@ def test_exhausted_revision_budget_never_creates_feedback_capture(tmp_path):
             synthetic=True,
         )
     assert not (tmp_path / "capture").exists()
+
+
+def test_draft_stage_exposes_plan_density_and_blocks_bloated_water_and_hollow_sections(tmp_path):
+    from editorteam.publication_run import thesis_card
+
+    run = tmp_path / "run"
+    init_run(run, brief="Гайд", patch="test", profile="guide", shortcodes="off")
+    hollow_plan = article_plan()
+    hollow_plan["sections"].append(
+        {"id": "water", "question": "Вода?", "contribution": "Пересказ.", "depends_on": ["decision"], "claim_ids": []}
+    )
+    configure_context(run, artifact=write(tmp_path, "ctx.json", {
+        "schema_version": 1, "profile": "guide",
+        "article_plan": hollow_plan,
+        "requirements": [{"id": "conditions", "instruction": "Сохрани условие."}],
+        "style_examples": [], "style_note": "Тест плотности.",
+    }))
+    rows = [{
+        "id": "one", "source": "mcp", "url": "https://example.org/guide", "text": TEXT,
+        "access": "full", "sha256": hashlib.sha256(TEXT.encode()).hexdigest(), "retrieved_at": "2026-10-10T12:00:00Z",
+    }]
+    submit(run, stage="sources", artifact=write(tmp_path, "sources.json", rows))
+    submit(run, stage="research", artifact=write(tmp_path, "handoff.json", handoff()))
+    task = next_task(run)
+    assert task["plan_density"]["status"] == "blocked"
+    assert not task["publication_ready"]
+    assert "БЛОКЕР ПЛОТНОСТИ" in thesis_card(run)
+    with pytest.raises(ValueError, match="density blocker"):
+        submit(run, stage="draft", artifact=write(tmp_path, "draft.md", TEXT))
+
+    configure_context(run, artifact=write(tmp_path, "ctx-ok.json", {
+        "schema_version": 1, "profile": "guide",
+        "article_plan": article_plan(),
+        "requirements": [{"id": "conditions", "instruction": "Сохрани условие."}],
+        "style_examples": [], "style_note": "Тест плотности.",
+    }))
+    ok_task = next_task(run)
+    assert ok_task["plan_density"]["status"] == "ok"
+    assert "Бюджет объёма" in ok_task["instructions"]
+    bloated_text = TEXT + "\n\n## Детали\n\n" + ("Пустая фраза для объёма. " * 70)
+    with pytest.raises(ValueError, match="draft density blocker"):
+        submit(run, stage="draft", artifact=write(tmp_path, "bloated.md", bloated_text))

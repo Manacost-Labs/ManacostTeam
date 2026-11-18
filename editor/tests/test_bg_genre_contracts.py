@@ -65,7 +65,7 @@ def tierlist_plan(**changes):
         "main_answer": "Сильнейшие первые ходы и когда от них отказаться.",
         "sections": [
             section("intro", "intro"),
-            section("changes", "changes", ["intro"]),
+            section("changes", "changes", ["intro"], ["CLM-1"]),
             section("tier-1", "tier", ["intro"], ["CLM-1"], ["VER-1"]),
             section("outro", "conclusion", ["tier-1"]),
         ],
@@ -79,7 +79,7 @@ def guide_plan(**changes):
         "genre": "bg_guide",
         "reader_question": "Когда входить в сборку?",
         "main_answer": "Сигнал входа, кривая золота и момент отказа.",
-        "sections": [section("entry", claims=["CLM-1"]), section("abort", depends_on=["entry"])],
+        "sections": [section("entry", claims=["CLM-1"]), section("abort", depends_on=["entry"], claims=["CLM-1"])],
     }
     plan.update(changes)
     return plan

@@ -35,6 +35,16 @@ from typing import Callable, Iterable
 from editorteam import publication_context
 
 FREQ = Path(__file__).with_name("corpus_nouns_ru.json")
+SLOP_FREQ = Path(__file__).with_name("slop_frequencies_ru.json")
+
+SLOP_UNI_MIN_COUNT = 4
+SLOP_UNI_MIN_PER_1K = 3.5
+SLOP_UNI_MIN_RATIO = 12.0
+SLOP_UNI_MAX_HUMAN_PER_1K = 0.06
+SLOP_NGRAM_MIN_COUNT = 2
+SLOP_NGRAM_MIN_RATIO = 15.0
+SLOP_NGRAM_MAX_HUMAN_PER_1K = 0.02
+SLOP_MAX_FINDINGS = 5
 
 # Слово-паразит. Калибровка 2026-11-10: существительные вне словаря карт,
 # корпус corpus-bg 45 + corpus-archive 297 гайдов (1,76 млн слов), каждый
@@ -178,6 +188,134 @@ def overused_words(text: str, freq: dict, morph, prose: Callable[[str], str]) ->
             }
         )
     return out
+
+
+@lru_cache(maxsize=4)
+def _load_slop_cached(resolved: str, mtime_ns: int) -> dict:
+    try:
+        data = json.loads(Path(resolved).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def load_slop_frequencies(path: Path = SLOP_FREQ) -> dict:
+    """Загрузить калиброванный словарь AI-слопа (или пустой словарь при отсутствии)."""
+    target = Path(path)
+    if not target.is_file():
+        return {}
+    try:
+        stat = target.stat()
+    except OSError:
+        return {}
+    return _load_slop_cached(str(target.resolve()), stat.st_mtime_ns)
+
+
+_SLOP_CHUNK_SPLIT = re.compile(r"[.!?…]+|[—–:;()«»\"\[\]]")
+
+
+def slop_frequency(text: str, slop: dict, morph, prose: Callable[[str], str]) -> list[dict]:
+    """Слова и 2–3-словные конструкции, типичные для ИИ-черновиков и редкие у человека."""
+    uni_ref = slop.get("unigrams") or {}
+    ng_ref = slop.get("ngrams") or {}
+    if not uni_ref and not ng_ref:
+        return []
+    lemma = _Lemmas(morph)
+    total = 0
+    uni_counts: Counter[str] = Counter()
+    uni_forms: dict[str, Counter[str]] = {}
+    uni_first: dict[str, int] = {}
+    ng_counts: Counter[str] = Counter()
+    ng_forms: dict[str, Counter[str]] = {}
+    ng_first: dict[str, int] = {}
+
+    for line_no, line in enumerate(prose(text).split("\n"), 1):
+        stripped = _strip(line)
+        if not stripped.strip():
+            continue
+        for chunk in _SLOP_CHUNK_SPLIT.split(stripped):
+            raw_tokens = [tok for tok in _RU_WORD.findall(chunk) if len(tok) >= 2]
+            if not raw_tokens:
+                continue
+            total += len(raw_tokens)
+            lemmas = [lemma(tok)[0] for tok in raw_tokens]
+            for raw, lw in zip(raw_tokens, lemmas):
+                if lw in uni_ref:
+                    uni_counts[lw] += 1
+                    uni_forms.setdefault(lw, Counter())[raw.lower()] += 1
+                    uni_first.setdefault(lw, line_no)
+            for n in (2, 3):
+                for i in range(len(lemmas) - n + 1):
+                    phrase = " ".join(lemmas[i : i + n])
+                    if phrase in ng_ref:
+                        ng_counts[phrase] += 1
+                        surface = " ".join(tok.lower() for tok in raw_tokens[i : i + n])
+                        ng_forms.setdefault(phrase, Counter())[surface] += 1
+                        ng_first.setdefault(phrase, line_no)
+
+    if not total:
+        return []
+
+    hits: list[tuple[float, dict]] = []
+    for phrase, count in ng_counts.items():
+        meta = ng_ref[phrase]
+        if (
+            count < SLOP_NGRAM_MIN_COUNT
+            or float(meta.get("ratio", 0.0)) < SLOP_NGRAM_MIN_RATIO
+            or float(meta.get("human_per_1k", 0.0)) > SLOP_NGRAM_MAX_HUMAN_PER_1K
+        ):
+            continue
+        per_1k = count / total * 1000.0
+        score = float(meta.get("score", 0.0)) * count
+        hits.append(
+            (
+                score,
+                {
+                    "kind": "ngram",
+                    "term": phrase,
+                    "count": count,
+                    "words": total,
+                    "per_1k": round(per_1k, 2),
+                    "ai_per_1k": float(meta.get("ai_per_1k", 0.0)),
+                    "human_per_1k": float(meta.get("human_per_1k", 0.0)),
+                    "ratio": float(meta.get("ratio", 0.0)),
+                    "forms": [f for f, _ in ng_forms[phrase].most_common(4)],
+                    "line": ng_first[phrase],
+                },
+            )
+        )
+
+    for lw, count in uni_counts.items():
+        meta = uni_ref[lw]
+        per_1k = count / total * 1000.0
+        if (
+            count < SLOP_UNI_MIN_COUNT
+            or per_1k < SLOP_UNI_MIN_PER_1K
+            or float(meta.get("ratio", 0.0)) < SLOP_UNI_MIN_RATIO
+            or float(meta.get("human_per_1k", 0.0)) > SLOP_UNI_MAX_HUMAN_PER_1K
+        ):
+            continue
+        score = float(meta.get("score", 0.0)) * count
+        hits.append(
+            (
+                score,
+                {
+                    "kind": "unigram",
+                    "term": lw,
+                    "count": count,
+                    "words": total,
+                    "per_1k": round(per_1k, 2),
+                    "ai_per_1k": float(meta.get("ai_per_1k", 0.0)),
+                    "human_per_1k": float(meta.get("human_per_1k", 0.0)),
+                    "ratio": float(meta.get("ratio", 0.0)),
+                    "forms": [f for f, _ in uni_forms[lw].most_common(4)],
+                    "line": uni_first[lw],
+                },
+            )
+        )
+
+    hits.sort(key=lambda item: (-item[0], item[1]["line"], item[1]["term"]))
+    return [row for _, row in hits[:SLOP_MAX_FINDINGS]]
 
 
 # ── Повтор между разделами ────────────────────────────────────────────────
