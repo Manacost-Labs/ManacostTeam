@@ -604,6 +604,8 @@ func completePositiveFactReview(review FactReview, h *ResearchHandoff) bool {
 	return len(want) == 0
 }
 
+var candidateLinkRE = regexp.MustCompile(`https?://`)
+
 func validateFactReview(raw string, h *ResearchHandoff, candidate string) (FactReview, error) {
 	var review FactReview
 	if err := json.Unmarshal([]byte(strings.TrimSpace(raw)), &review); err != nil {
@@ -620,6 +622,7 @@ func validateFactReview(raw string, h *ResearchHandoff, candidate string) (FactR
 			return review, fmt.Errorf("decision_cards_checked must confirm every grounded field, inference and example")
 		}
 	}
+	hasLinks := candidateLinkRE.MatchString(candidate)
 	seen := map[string]FactAttestation{}
 	for _, item := range review.Claims {
 		if _, ok := seen[item.ClaimID]; ok {
@@ -657,9 +660,11 @@ func validateFactReview(raw string, h *ResearchHandoff, candidate string) (FactR
 		if !valid {
 			return review, fmt.Errorf("нет evidence для %s", claim.ID)
 		}
+		// An article without links (owner requirement) keeps provenance in the
+		// review receipt; once the body links sources, every link is exact.
 		for _, id := range item.EvidenceRefs {
 			for _, source := range h.Sources {
-				if source.ID == id && !strings.Contains(candidate, source.URL) {
+				if hasLinks && source.ID == id && !strings.Contains(candidate, source.URL) {
 					return review, fmt.Errorf("нет ссылки для %s", claim.ID)
 				}
 			}

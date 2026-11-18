@@ -100,7 +100,8 @@ func TestFactReviewRejectsLostConditionAndInventedQuotes(t *testing.T) {
 			t.Fatal("unreviewed/additional claim accepted")
 		}
 	}
-	if _, err := validateFactReview(good, h, strings.ReplaceAll(candidate, "https://example.org/guide", "")); err == nil {
+	// A linked article must still cite the approved evidence exactly.
+	if _, err := validateFactReview(good, h, strings.ReplaceAll(candidate, "https://example.org/guide", "https://example.org/other")); err == nil {
 		t.Fatal("missing source citation accepted")
 	}
 }
@@ -186,5 +187,17 @@ func TestFactReviewRequiresConfidenceAttestation(t *testing.T) {
 	h.Claims[0].Confidence = "high"
 	if _, err := validateFactReview(strings.Replace(good, `"confidence_quote":"может помочь",`, "", 1), h, candidate); err != nil {
 		t.Fatal("high-confidence claim requires no hedge:", err)
+	}
+}
+
+func TestFactReviewWithoutLinksKeepsProvenanceInReceipt(t *testing.T) {
+	h := readyHandoff()
+	candidate := "Сохраняйте ресурс при слабой позиции, кроме угрозы поражения. Совет может помочь."
+	good := `{"candidate_checked":true,"confidence_preserved":true,"unsupported_claims":[],"claims":[{"claim_id":"CLM-1","status":"supported","action_quote":"Сохраняйте ресурс","condition_quote":"при слабой позиции","exception_quote":"кроме угрозы поражения","confidence_quote":"может помочь","evidence_refs":["SRC-1"]}]}`
+	if _, err := validateFactReview(good, h, candidate); err != nil {
+		t.Fatalf("article without links rejected: %v", err)
+	}
+	if _, err := validateFactReview(good, h, candidate+" https://example.org/other"); err == nil {
+		t.Fatal("linked article must cite approved evidence exactly")
 	}
 }

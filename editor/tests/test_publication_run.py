@@ -747,7 +747,11 @@ def test_sources_cannot_hide_missing_provenance_or_partial_content(tmp_path, bad
 
 def test_missing_condition_and_missing_citation_cannot_pass(tmp_path):
     run = prepared(tmp_path)
-    revised = TEXT.replace("при слабой позиции, ", "").replace(" https://example.org/guide", "")
+    # A linked article must cite approved evidence exactly; an article without
+    # any link keeps provenance in the review receipt instead.
+    revised = TEXT.replace("при слабой позиции, ", "").replace(
+        "https://example.org/guide", "https://example.org/other"
+    )
     revise(run, artifact=write(tmp_path, "missing.md", revised))
     fact, _ = reviews(run)
     result = submit(run, stage="fact_review", artifact=write(tmp_path, "fact.json", fact))

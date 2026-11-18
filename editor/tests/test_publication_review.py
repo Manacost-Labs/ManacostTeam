@@ -403,3 +403,56 @@ def test_unknown_stable_ids_cannot_hide_behind_an_approved_name(bundle, tag):
     fact["article_sha256"] = article_hash(text)
     fact["handoff_sha256"] = handoff_hash(h)
     assert any("card_id" in error for error in validate_factual(h, text, fact))
+
+
+def _rehash(h, text, fact):
+    fact["article_sha256"] = article_hash(text)
+    fact["handoff_sha256"] = handoff_hash(h)
+    return validate_factual(h, text, fact)
+
+
+def test_article_without_links_keeps_provenance_in_review(bundle):
+    h, text, fact, _ = bundle
+    plain = text.replace(" [Источник](https://example.org/guide)", "")
+    assert _rehash(h, plain, fact) == []
+    other = plain + " [Другое](https://example.org/other)"
+    errors = _rehash(h, other, fact)
+    assert any("not cited exactly" in error for error in errors)
+    assert any("unapproved URL" in error for error in errors)
+
+
+def _battlegrounds_card_source(h, quote="CARD BG36_201 | Затаившаяся лев-рыба"):
+    h["profile"] = "battlegrounds-tierlist"
+    h["sources"][0]["quote"] = quote
+    h["sources"][0]["source_context"] = {"kind": "card_text", "card_id": "BG36_201"}
+
+
+def test_card_text_evidence_approves_its_shortcode_id_and_type(bundle):
+    h, text, fact, _ = bundle
+    _battlegrounds_card_source(h)
+    card = ' [hs_bg id="BG36_201"]Затаившуюся лев-рыбу[/hs_bg]'
+    assert _rehash(h, text + card, fact) == []
+    for changed in (card.replace("hs_bg", "hs_card"), card.replace("BG36_201", "BG36_202")):
+        assert any("card_id" in error for error in _rehash(h, text + changed, fact))
+
+
+def test_card_id_must_be_named_in_the_snapshot_quote(bundle):
+    h, text, fact, _ = bundle
+    _battlegrounds_card_source(h, quote="CARD BG36_2015 | Другая карта")
+    card = ' [hs_bg id="BG36_201"]Затаившаяся лев-рыба[/hs_bg]'
+    assert any("card_id" in error for error in _rehash(h, text + card, fact))
+
+
+def test_shortcode_markup_and_update_date_are_not_numeric_claims(bundle):
+    h, text, fact, _ = bundle
+    for claim in h["claims"]:
+        claim["patch"] = "37.0.3"
+    h["patch"] = "37.0.3"
+    panel = (
+        '\n[su_panel background="#e2eaff" color="#000000" radius="6"]'
+        "Материал обновлен 18 ноября 2026 года (патч 37.0.3).[/su_panel]"
+    )
+    assert _rehash(h, text + panel, fact) == []
+    for extra in (" [Патч 41] 95% побед.", " Через 3 хода.", " Патч 37.0.4."):
+        errors = _rehash(h, text + panel + extra, fact)
+        assert any("new number" in error for error in errors)

@@ -296,7 +296,24 @@ def validate_handoff(handoff: dict, current_patch: str) -> list[str]:
 
 
 _URL = re.compile(r"https?://[^\s<>\[\]\"')]+", re.IGNORECASE)
+# Opening/closing shortcode tags with attributes (``[su_panel radius="6"]``):
+# markup values are not numeric game claims. A bracketed phrase without
+# ``name=value`` attributes (``[Patch 37.0.3]``) stays visible to the gate.
+_SHORTCODE_TAG = re.compile(
+    r"\[/?[a-z_][a-z0-9_-]*(?:\s+[a-z_][\w-]*\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s\]]+))*\s*/?\]",
+    re.IGNORECASE,
+)
+# Calendar date of the material or an event («18 ноября 2026 года»): the date
+# is checked semantically (patch_matches, claims), not as a numeric fact.
+_CALENDAR_DATE = re.compile(
+    r"(?<!\w)\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|"
+    r"сентября|октября|ноября|декабря)(?:\s+\d{4}(?:\s*(?:года|г\.))?)?(?!\w)",
+    re.IGNORECASE,
+)
 _NUMBER = re.compile(r"(?<!\w)\d+(?:[.,]\d+)?\s*%?(?!\w)")
+# Patch versions and numeric dates (``37.0.3``, ``17.11.2026``) are one token,
+# so an approved version does not approve its separate digits as game numbers.
+_VERSION = re.compile(r"(?<![\w.])\d+(?:\.\d+){2,}(?![\w]|\.\d)")
 _CARD = re.compile(
     r"\[(?:card|cardlink|hs_card|hs_bg)\b[^\]]*\].*?\[/(?:card|cardlink|hs_card|hs_bg)\]",
     re.IGNORECASE | re.DOTALL,
@@ -314,8 +331,11 @@ def _entities(text: str) -> dict[str, set[str]]:
     # URL digits and ordered-list markers are not new factual numeric claims.
     prose = _URL.sub("", text)
     prose = re.sub(r"(?m)^\s*\d+[.)]\s+", "", prose)
+    numbers = _CALENDAR_DATE.sub(" ", _SHORTCODE_TAG.sub(" ", prose))
+    versions = set(_VERSION.findall(numbers))
+    numbers = _VERSION.sub(" ", numbers)
     return {
-        "number": {match.strip() for match in _NUMBER.findall(prose)},
+        "number": versions | {match.strip() for match in _NUMBER.findall(numbers)},
         "card_id": {
             f"{tag.group(1).lower()}:{next(value for value in identity if value)}"
             for tag in _CARD_OPEN.finditer(prose)
@@ -332,6 +352,28 @@ def _approved_text(handoff: dict) -> str:
         if claim["claim_id"] in required
         for field in ("meaning", "action", "condition", "exception")
     )
+
+
+def _source_card_ids(handoff: dict, claims: dict, sources: dict) -> set[str]:
+    """Card shortcodes approved by the card-text evidence of required claims.
+
+    The ID must be named in ``source_context.card_id`` and in the snapshot quote
+    itself; the shortcode type follows the handoff profile (``hs_bg`` only for
+    Battlegrounds), so an approved ID still cannot change its card type.
+    """
+    battlegrounds = str(handoff.get("profile") or "").startswith("battlegrounds")
+    tags = ("hs_bg",) if battlegrounds else ("card", "cardlink", "hs_card")
+    approved: set[str] = set()
+    for claim in claims.values():
+        for ref in claim.get("evidence_refs", []):
+            source = sources.get(ref) or {}
+            context = source.get("source_context")
+            card_id = context.get("card_id") if isinstance(context, dict) else None
+            if _text(card_id) and re.search(
+                rf"(?<!\w){re.escape(card_id)}(?!\w)", str(source.get("quote", ""))
+            ):
+                approved.update(f"{tag}:{card_id}" for tag in tags)
+    return approved
 
 
 def entity_hints(handoff: dict, text: str) -> list[str]:
@@ -474,7 +516,9 @@ def validate_factual(
         ):
             errors.append(f"factual: {cid} invalid evidence_refs")
             continue
-        if any(sources[ref]["url"] not in cited for ref in refs):
+        # An article without links (owner requirement) keeps provenance in the
+        # review receipt; once the body links sources, every link is exact.
+        if cited and any(sources[ref]["url"] not in cited for ref in refs):
             errors.append(f"factual: {cid} approved evidence not cited exactly")
     for cid in required - seen:
         errors.append(f"factual: missing attestation for {cid}")
@@ -495,7 +539,9 @@ def validate_factual(
     }
     for url in sorted(cited - approved_urls):
         errors.append(f"factual: unapproved URL {url}")
-    before, after = _entities(approved), _entities(text)
+    before = _entities(f"{approved}\n{handoff.get('patch') or ''}")
+    before["card_id"] |= _source_card_ids(handoff, claims, sources)
+    after = _entities(text)
     for kind in before:
         for value in sorted(after[kind] - before[kind]):
             errors.append(f"factual: new {kind}: {value}")
