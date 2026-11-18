@@ -45,3 +45,16 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(report["missing_numbers"], ["20%"])
         self.assertEqual(report["missing_links"], ["https://example.com/a"])
         self.assertEqual(report["missing_terms"], ["Нужное усиление"])
+
+    def test_qa_accepts_case_forms_of_terms(self) -> None:
+        source = "Play [[[TERM_1]]] with [[[TERM_2]]] and [[[TERM_3]]]."
+        terms = {"[[[TERM_1]]]": "Изера", "[[[TERM_2]]]": "Тёмный дар", "[[[TERM_3]]]": "Рагнарос"}
+        report = qa_translation(source, "Разыграйте Изеру вместе с тёмного дара и Рагнаросом.", terms)
+        self.assertEqual(report["missing_terms"], [])
+        self.assertEqual(report["inflected_terms"], ["Изера", "Тёмный дар"])
+        self.assertTrue(report["ready_for_editor"])
+
+    def test_qa_inflection_does_not_hide_a_different_word(self) -> None:
+        report = qa_translation("[[[TERM_1]]]", "Изумрудный дракон.", {"[[[TERM_1]]]": "Изера"})
+        self.assertEqual(report["missing_terms"], ["Изера"])
+        self.assertFalse(report["ready_for_editor"])

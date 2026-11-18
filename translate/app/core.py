@@ -214,8 +214,52 @@ def find_review_candidates(text: str, glossary: dict[str, str]) -> list[str]:
     return sorted(term for term in found if term not in glossary)[:40]
 
 
+_TERM_TOKEN = re.compile(r"[^\W\d_]+|\s+|[^\w\s]+|\d+")
+_ADJ_ENDING = re.compile(r"(?:ый|ий|ой|ая|яя|ое|ее|ые|ие|ых|их)$")
+
+
+def _fold(text: str) -> str:
+    return text.casefold().replace("ё", "е")
+
+
+def _term_stem(word: str) -> str:
+    if len(word) <= 4:
+        return word
+    if _ADJ_ENDING.search(word):
+        return word[:-2]
+    if word[-1] in "аеиоуыэюяьй":
+        return word[:-1]
+    return word
+
+
+def _term_form_pattern(term: str) -> re.Pattern[str]:
+    """Match a glossary term in any Russian case form: «Изера» → «Изеру», «тёмный дар» → «тёмного дара»."""
+    parts: list[str] = []
+    for token in _TERM_TOKEN.findall(_fold(term)):
+        if token.isspace():
+            parts.append(r"\s+")
+        elif token.isalpha():
+            parts.append(re.escape(_term_stem(token)) + r"\w*")
+        else:
+            parts.append(re.escape(token))
+    return re.compile(r"(?<!\w)" + "".join(parts) + r"(?!\w)")
+
+
+def term_presence(term: str, translated: str) -> str:
+    """Return ``exact``, ``inflected`` or ``missing`` for a protected glossary term."""
+    if term in translated:
+        return "exact"
+    if _term_form_pattern(term).search(_fold(translated)):
+        return "inflected"
+    return "missing"
+
+
 def qa_translation(protected_source: str, translated: str, replacements: dict[str, str]) -> dict[str, object]:
-    """Mechanical fidelity checks; linguistic judgment remains with Codex editor."""
+    """Mechanical fidelity checks; linguistic judgment remains with Codex editor.
+
+    A term found only in another grammatical case is not missing: it goes to
+    ``inflected_terms`` for the editor instead of failing the whole translation.
+    """
     source_without_markers = re.sub(r"\[\[\[TERM_\d+\]\]\]", "", protected_source)
     source_numbers = sorted(re.findall(r"\d+(?:[.,]\d+)?%?", source_without_markers))
     target_numbers = sorted(re.findall(r"\d+(?:[.,]\d+)?%?", translated))
@@ -224,7 +268,9 @@ def qa_translation(protected_source: str, translated: str, replacements: dict[st
     source_codes = len(re.findall(r"`[^`]+`", protected_source))
     target_codes = len(re.findall(r"`[^`]+`", translated))
     expected_terms = sorted(set(replacements.values()))
-    missing_terms = [term for term in expected_terms if term not in translated]
+    presence = {term: term_presence(term, translated) for term in expected_terms}
+    missing_terms = [term for term in expected_terms if presence[term] == "missing"]
+    inflected_terms = [term for term in expected_terms if presence[term] == "inflected"]
     leaked_markers = re.findall(r"\[\[\[TERM_\d+\]\]\]", translated)
     return {
         "numbers_match": source_numbers == target_numbers,
@@ -233,6 +279,7 @@ def qa_translation(protected_source: str, translated: str, replacements: dict[st
         "missing_links": sorted(set(source_links) - set(target_links)),
         "code_spans_match": source_codes == target_codes,
         "missing_terms": missing_terms,
+        "inflected_terms": inflected_terms,
         "leaked_markers": leaked_markers,
         "table_row_delta": _table_rows(translated) - _table_rows(protected_source),
         "ready_for_editor": not (
