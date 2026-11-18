@@ -5,7 +5,7 @@
       "name": "editor-team",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.19.0",
+      "version": "1.20.0",
       "source": "teams/editor-team",
       "resources": [
         {
@@ -122,7 +122,7 @@
       "name": "research-team",
       "team": "ResearchTeam",
       "module": "research",
-      "version": "1.12.0",
+      "version": "1.13.0",
       "source": "teams/research-team",
       "resources": [
         {
@@ -200,7 +200,7 @@
       "name": "translate-team",
       "team": "TranslateTeam",
       "module": "translate",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "source": "teams/translate-team",
       "resources": [
         {
@@ -282,7 +282,7 @@
       "name": "job-team",
       "team": "JobTeam",
       "module": "job",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "source": "teams/job-team",
       "resources": [
         {
@@ -349,7 +349,7 @@
       "name": "manacost-publish",
       "team": "EditorTeam",
       "module": "editor",
-      "version": "1.15.0",
+      "version": "1.16.0",
       "source": "teams/manacost-publish",
       "resources": [
         {
@@ -469,6 +469,10 @@
           "destination": "python/editorteam/bg_mechanics_gate.py"
         },
         {
+          "source": "editor/src/editorteam/ladder_mechanics_gate.py",
+          "destination": "python/editorteam/ladder_mechanics_gate.py"
+        },
+        {
           "source": "editor/src/editorteam/bg_sim.py",
           "destination": "python/editorteam/bg_sim.py"
         },
@@ -495,5 +499,5 @@
       "resources": []
     }
   ],
-  "release_version": "1.20.21"
+  "release_version": "1.20.22"
 }
